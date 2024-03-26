@@ -1,5 +1,4 @@
 #include "ast.h"
-#include "utils.h"
 
 using namespace ast;
 
@@ -45,7 +44,7 @@ void UnaryExpr::prettyPrint(std::ofstream &f, int depth) const {
 
 void BinaryExpr::prettyPrint(std::ofstream &f, int depth) const {
     f << std::string(2*depth, ' ') << "BinaryExpr" << "\n";
-    f << std::string(2*depth+2, ' ') << "(Op:) " << BinaryOpToString(op) << "\n";
+    f << std::string(2*depth+2, ' ') << "(Op:) " << "\n";
     f << std::string(2*depth+2, ' ') << "(LHS:)" << "\n";
     lhs->prettyPrint(f, depth+1);
     f << std::string(2*depth+2, ' ') << "(RHS:)" << "\n";

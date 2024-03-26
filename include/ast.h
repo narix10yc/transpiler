@@ -6,7 +6,7 @@
 #include <vector>
 #include <fstream>
 
-#include "utils.h"
+#include "token.h"
 
 namespace ast {
 

@@ -84,7 +84,7 @@ public:
 };
 
 
-int getBinopPrecedence(BinaryOp op) {
+static int getBinopPrecedence(BinaryOp op) {
     switch (op) {
         case BinaryOp::Greater: return 10;
         case BinaryOp::Less: return 10;

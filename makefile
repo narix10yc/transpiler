@@ -5,14 +5,19 @@ INCLUDE_DIR = include
 OBJ_DIR = obj
 SRC_DIR = src
 
-CFLAGS = -I$(INCLUDE_DIR)
+CXXFLAGS = -I$(INCLUDE_DIR)
 
+SRC_FILES := $(wildcard $(SRC_DIR)/*.cpp)
+OBJ_FILES := $(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(SRC_FILES))
 
-openqasm: $(OBJ_DIR)/openqasm.o
-	$(CXX) $(CFLAGS) $^ -o $@
+all: $(OBJ_FILES)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) $^ -o openqasm.exe
+
+# openqasm: $(addprefix $(OBJ_DIR)/,$(addsuffix .o,$(TARGETS)))
+# $(CXX) $(CFLAGS) $^ -o $@
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
-	$(CXX) $(CFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
 	rm $(OBJ_DIR)/*

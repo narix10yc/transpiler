@@ -35,3 +35,7 @@ std::unique_ptr<ast::Statement> Parser::parseStmt() {
 
     return std::move(stmt);
 }
+
+std::unique_ptr<ast::VersionStmt> Parser::parseVersionStmt() {
+    return nullptr;
+}
