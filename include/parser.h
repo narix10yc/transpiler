@@ -1,0 +1,116 @@
+#ifndef PARSER_H_
+#define PARSER_H_
+
+#include <string>
+#include <memory>
+#include <queue>
+#include "lexer.h"
+#include "utils.h"
+#include "ast.h"
+
+
+class Parser {
+    int debugLevel;
+    std::unique_ptr<Lexer> lexer;
+    std::unique_ptr<ast::RootNode> root;
+    std::queue<Token> tokenBuf;
+    Token curToken;
+public:
+    Parser(std::string& fileName, int debugLevel=1) :
+        debugLevel(debugLevel),
+        lexer(std::make_unique<Lexer>(fileName)),
+        root(std::make_unique<ast::RootNode>()),
+        curToken(TokenTy::Unknown) {}
+
+    void logError(std::string str) const { 
+        fprintf(stderr, "== Parser Error ==  %s\n", str.c_str());
+    }
+
+    void logDebug(int level, std::string str) const {
+        if (debugLevel < level) return;
+        fprintf(stderr, "  [parser DEBUG %d] %s\n", level, str.c_str());
+    }
+
+    void nextToken() { 
+        if (tokenBuf.empty())
+            curToken = lexer->getToken(); 
+        else {
+            curToken = tokenBuf.front();
+            tokenBuf.pop();
+        }
+    }
+
+    void skipSeparators() {
+        while (curToken.type == TokenTy::Semicolon ||
+               curToken.type == TokenTy::LineFeed ||
+               curToken.type == TokenTy::CarriageReturn)
+            { nextToken(); }
+    }
+
+
+    /*
+        return the next token;
+        curToken does not change.
+    */
+    Token Peek() {
+        Token curTokenCopy = curToken;
+        nextToken();
+        Token nextTokenCopy = curToken;
+        tokenBuf.push(nextTokenCopy);
+        curToken = curTokenCopy;
+        return nextTokenCopy;
+    }
+
+    /*
+        The entry point of the parsing process. This will update the root 
+        variable
+    */
+    void parse();
+
+    void prettyPrintRoot(std::ofstream &f) const { root->prettyPrint(f, 0); }
+
+    ast::RootNode* getRoot() { return root.get(); }
+
+private:
+    /*
+        Parse a statement.
+        After this method returns, curToken is always at the start
+        of the next statement.
+    */
+    std::unique_ptr<ast::Statement> parseStmt();
+
+    std::unique_ptr<ast::IfThenElseStmt> parseIfThenElseStmt();
+
+    std::unique_ptr<ast::VersionStmt> parseVersionStmt();
+
+    /* Call this when curToken is the first Token in an expression */
+    std::unique_ptr<ast::Expression> parseExpr();
+
+    std::unique_ptr<ast::Expression> 
+    parseExprRHS(BinaryOp lhsBinop, std::unique_ptr<ast::Expression> &&lhs);
+
+    /*
+        There are 3 types of primary expr:
+        - numerics
+        - variable or funcCall
+        - paranthesis
+    */
+    std::unique_ptr<ast::Expression> parsePrimaryExpr();
+
+    std::unique_ptr<ast::NumericExpr> parseNumericExpr();
+
+    /* Call this when curToken is an identifier */
+    std::unique_ptr<ast::VariableExpr> parseVariableExpr();
+
+    std::unique_ptr<ast::Expression> parseParenExpr();
+};
+
+
+
+
+
+
+
+
+
+#endif // PARSER_H_
