@@ -40,6 +40,15 @@ public:
         }
     }
 
+    bool expectNextToken(TokenTy type, std::string msg="") {
+        nextToken();
+        if (curToken.type != type) {
+            logError("Expect token with type " + tokenTypeToString(type) + msg);
+            return false;
+        }
+        return true;
+    }
+
     void skipSeparators() {
         while (curToken.type == TokenTy::Semicolon ||
                curToken.type == TokenTy::LineFeed ||
@@ -82,6 +91,10 @@ private:
     std::unique_ptr<ast::IfThenElseStmt> parseIfThenElseStmt();
 
     std::unique_ptr<ast::VersionStmt> parseVersionStmt();
+
+    std::unique_ptr<ast::QRegStmt> parseQRegStmt();
+    
+    std::unique_ptr<ast::CRegStmt> parseCRegStmt();
 
     /* Call this when curToken is the first Token in an expression */
     std::unique_ptr<ast::Expression> parseExpr();

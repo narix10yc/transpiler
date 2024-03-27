@@ -136,10 +136,61 @@ class VersionStmt : public Statement {
 public:
     VersionStmt(std::string version) : version(version) {}
     std::string getVersion() const { return version; }
-    
+
+    virtual std::string ToString() const override 
+    { return "Version(" + version + ")"; }
+
     virtual void prettyPrint(std::ofstream& f, int depth) const override;
 };
 
+
+class QRegStmt : public Statement {
+    std::string name;
+    int size;
+public:
+    QRegStmt(std::string name, int size) : name(name), size(size) {}
+
+    std::string getName() const { return name; }
+    int getSize() const { return size; }
+
+    virtual std::string ToString() const override 
+    { return "QReg(" + name + ", " + std::to_string(size) + ")"; }
+
+    virtual void prettyPrint(std::ofstream& f, int depth) const override;
+};
+
+class CRegStmt : public Statement {
+    std::string name;
+    int size;
+public:
+    CRegStmt(std::string name, int size) : name(name), size(size) {}
+
+    std::string getName() const { return name; }
+    int getSize() const { return size; }
+    
+    virtual std::string ToString() const override 
+    { return "CReg(" + name + ", " + std::to_string(size) + ")"; }
+
+    virtual void prettyPrint(std::ofstream& f, int depth) const override;
+};
+
+
+class GateApplyStmt : public Statement {
+    std::string name;
+    std::vector<std::unique_ptr<ast::Expression>> parameters;
+    std::vector<std::unique_ptr<ast::Expression>> targets;
+public:
+    GateApplyStmt(std::string name) : name(name) {}
+
+    void addParameter(std::unique_ptr<ast::Expression> param)
+    { parameters.push_back(std::move(param)); }
+
+    void addTarget(std::unique_ptr<ast::Expression> targ)
+    { targets.push_back(std::move(targ)); }
+
+    virtual void prettyPrint(std::ofstream& f, int depth) const override;
+
+};
 
 } // end of namespace ast
 

@@ -17,6 +17,9 @@ enum class TokenTy : int {
     Then = -11,
     Else = -12,
     Openqasm = -13,
+    Qreg = -14,
+    Creg = -15,
+    Gate = -16,
 
     // operators
     Add = -30,
@@ -27,7 +30,6 @@ enum class TokenTy : int {
     Less = -35,
     GreaterEqual = -36,
     LessEqual = -37,
-
 
     Comma = -104,
     Semicolon = -105,
@@ -83,6 +85,9 @@ public:
     }
 };
 
+static std::string tokenTypeToString(TokenTy ty) {
+    return std::to_string((int)ty);
+}
 
 static int getBinopPrecedence(BinaryOp op) {
     switch (op) {

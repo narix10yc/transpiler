@@ -113,6 +113,9 @@ Token Lexer::TokenizeIdentifier() {
     if (identifier == "if") return TokenTy::If;
     if (identifier == "else") return TokenTy::Else;
     if (identifier == "OPENQASM") return TokenTy::Openqasm;
+    if (identifier == "qreg") return TokenTy::Qreg;
+    if (identifier == "creg") return TokenTy::Creg;
+    if (identifier == "gate") return TokenTy::Gate;
     
     return { TokenTy::Identifier, identifier };
     
