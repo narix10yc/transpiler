@@ -29,19 +29,23 @@ std::unique_ptr<ast::Statement> Parser::parseStmt() {
         stmt = parseIfThenElseStmt();
     } 
     else if (curToken.type == TokenTy::Openqasm) {
-        logDebug(2, "ready to parse openqasm");
+        logDebug(1, "ready to parse openqasm");
         stmt = parseVersionStmt();
     }
     else if (curToken.type == TokenTy::Qreg) {
-        logDebug(2, "ready to parse qreg");
+        logDebug(1, "ready to parse qreg");
         stmt = parseQRegStmt();
     }
     else if (curToken.type == TokenTy::Creg) {
-        logDebug(2, "ready to parse creg");
+        logDebug(1, "ready to parse creg");
         stmt = parseCRegStmt();
     }
+    else if (curToken.type == TokenTy::Identifier) {
+        logDebug(1, "ready to parse gate apply");
+        stmt = parseGateApplyStmt();
+    }
     else {
-        logError("Encountered TokenType " + tokenTypeToString(curToken.type));
+        logError("Unknown token type: " + tokenTypeToString(curToken.type));
     }
 
     skipSeparators();
@@ -98,3 +102,55 @@ std::unique_ptr<ast::CRegStmt> Parser::parseCRegStmt() {
     nextToken();
     return std::move(stmt);
 }
+
+std::unique_ptr<ast::GateApplyStmt> Parser::parseGateApplyStmt() {
+    auto stmt = std::make_unique<ast::GateApplyStmt>(curToken.str);
+    nextToken(); // eat the identifier
+    logDebug(2, "parsing GateApplyStmt " + stmt->getName());
+    if (curToken.type == TokenTy::L_RoundBraket) {
+        // parameters
+        nextToken(); // eat '('
+        while (true) {
+            if (curToken.type == TokenTy::R_RoundBraket)
+                { nextToken(); break; }
+            if (curToken.type == TokenTy::LineFeed ||
+            curToken.type == TokenTy::CarriageReturn) {
+                logError("Expect ')'");
+                return nullptr;
+            }
+            if (curToken.type == TokenTy::Comma)
+                { nextToken(); continue; }
+            auto param = parseExpr();
+
+            if (!param) {
+                logError("GateApply: failed to parse parameter");
+                return nullptr;
+            }
+            stmt->addParameter(std::move(param));
+        }
+    }
+    logDebug(2, "GateApplyStmt " + stmt->getName() + ": " + \
+        std::to_string(stmt->countParameters()) + " parameters parsed");
+
+    logDebug(1, "Current Token: " + tokenTypeToString(curToken.type));
+    while (true) {
+        if (curToken.type == TokenTy::Semicolon ||
+        curToken.type == TokenTy::LineFeed ||
+        curToken.type == TokenTy::CarriageReturn || 
+        curToken.type == TokenTy::Eof)
+            break;
+        if (curToken.type == TokenTy::Comma)
+            { nextToken(); continue; }
+        auto targ = parseExpr();
+        if (!targ) {
+            logError("GateApply: failed to parse target");
+            return nullptr;
+        }
+        stmt->addTarget(std::move(targ));
+    }
+
+    logDebug(2, std::to_string(stmt->countTargets()) + " targets parsed");
+
+    return stmt;
+}
+

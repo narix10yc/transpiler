@@ -39,6 +39,16 @@ void CRegStmt::prettyPrint(std::ofstream &f, int depth) const {
     INDENT << "CReg: " << getName() << "[" << getSize() << "]\n";
 }
 
+void GateApplyStmt::prettyPrint(std::ofstream &f, int depth) const {
+    INDENT << "GateApply: " << getName() << "\n";
+    INDENT2 << "(Parameters:)\n";
+    for (const auto& item : parameters)
+        item->prettyPrint(f, depth+1);
+    INDENT2 << "(Targets:)\n";
+    for (const auto& item : targets)
+        item->prettyPrint(f, depth+1);
+}
+
 void NumericExpr::prettyPrint(std::ofstream &f, int depth) const {
     INDENT << "Numeric[" << value << "]";
     f << "\n";
@@ -47,6 +57,10 @@ void NumericExpr::prettyPrint(std::ofstream &f, int depth) const {
 void VariableExpr::prettyPrint(std::ofstream &f, int depth) const {
     INDENT << "Variable[" << name << "]";
     f << "\n";
+}
+
+void SubscriptExpr::prettyPrint(std::ofstream &f, int depth) const {
+    INDENT << name << "[" << index << "]\n";
 }
 
 void UnaryExpr::prettyPrint(std::ofstream &f, int depth) const {

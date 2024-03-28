@@ -26,9 +26,10 @@ public:
         fprintf(stderr, "== Parser Error ==  %s\n", str.c_str());
     }
 
-    void logDebug(int level, std::string str) const {
+    void logDebug(int level, std::string msg) const {
         if (debugLevel < level) return;
-        fprintf(stderr, "  [parser DEBUG %d] %s\n", level, str.c_str());
+        std::cerr << std::string(" ", level) <<
+            "[parser DEBUG " << level << "] " << msg << "\n";
     }
 
     void nextToken() { 
@@ -55,7 +56,6 @@ public:
                curToken.type == TokenTy::CarriageReturn)
             { nextToken(); }
     }
-
 
     /*
         return the next token;
@@ -96,7 +96,12 @@ private:
     
     std::unique_ptr<ast::CRegStmt> parseCRegStmt();
 
-    /* Call this when curToken is the first Token in an expression */
+    std::unique_ptr<ast::GateApplyStmt> parseGateApplyStmt();
+
+    /* 
+        Call this when curToken is at the first Token in an expression 
+        After this methods returns, curToken will be at the next Token
+    */
     std::unique_ptr<ast::Expression> parseExpr();
 
     std::unique_ptr<ast::Expression> 
@@ -105,7 +110,7 @@ private:
     /*
         There are 3 types of primary expr:
         - numerics
-        - variable or funcCall
+        - variable (including funcCall and subscipt)
         - paranthesis
     */
     std::unique_ptr<ast::Expression> parsePrimaryExpr();
@@ -113,7 +118,7 @@ private:
     std::unique_ptr<ast::NumericExpr> parseNumericExpr();
 
     /* Call this when curToken is an identifier */
-    std::unique_ptr<ast::VariableExpr> parseVariableExpr();
+    std::unique_ptr<ast::Expression> parseVariableExpr();
 
     std::unique_ptr<ast::Expression> parseParenExpr();
 };

@@ -6,40 +6,40 @@ std::unique_ptr<ast::Expression> Parser::parseExpr() {
     
     auto lhs = parsePrimaryExpr();
     if (!lhs) {
-        logError("Failed to parse LHS when attempting to parse an expression");
+        logError("Expression: unable to parse lhs");
         return nullptr;
     }
-    logDebug(3, "Expression: Parsed LHS " + lhs->ToString());
+    logDebug(3, "Expression: parsed lhs " + lhs->ToString());
     
-    nextToken(); // eat lhs expression
     BinaryOp binop = curToken.toBinaryOp();
     if (binop == BinaryOp::None) { // Not a binop
         logDebug(3, "Not a binop, return lhs");
         return lhs;
     }
 
+    nextToken(); // eat the binop
     return parseExprRHS(binop, std::move(lhs));
 }
 
 std::unique_ptr<ast::Expression> 
 Parser::parseExprRHS(BinaryOp lhsBinop, std::unique_ptr<ast::Expression> &&lhs) {
-    logDebug(3, "Expression: ready to parse RHS");
+    logDebug(3, "Expression: ready to parse rhs");
     auto rhs = parsePrimaryExpr();
     if (!rhs) {
-        logError("Missing RHS of a binary expression");
-        return std::move(lhs);
+        logError("Expression: unable to parse rhs");
+        return nullptr;
     }
-    logDebug(3, "Expression: Parsed RHS " + rhs->ToString());
+    logDebug(3, "Expression: parsed rhs " + rhs->ToString());
 
-    nextToken(); // eat rhs expression
     BinaryOp binop = curToken.toBinaryOp();
     if (binop == BinaryOp::None) {
+        logDebug(3, "Expression: No more binop, return");
         auto ret = std::make_unique<ast::BinaryExpr>(lhsBinop, std::move(lhs), std::move(rhs));
-        logDebug(3, "Expression: No more binop, returning " + ret->ToString());
         return std::move(ret);
     }
 
     // Encounter another binop
+    nextToken(); // eat the binop
     if (getBinopPrecedence(binop) > getBinopPrecedence(lhsBinop)) {
         auto newRHS = parseExprRHS(binop, std::move(rhs));
         return std::make_unique<ast::BinaryExpr>(lhsBinop, std::move(lhs), std::move(newRHS));
@@ -49,7 +49,6 @@ Parser::parseExprRHS(BinaryOp lhsBinop, std::unique_ptr<ast::Expression> &&lhs) 
         return parseExprRHS(binop, std::move(newLHS));
     }
 }
-
 
 std::unique_ptr<ast::Expression> Parser::parsePrimaryExpr() {
     if (curToken.type == TokenTy::Numeric) {
@@ -73,10 +72,33 @@ std::unique_ptr<ast::NumericExpr> Parser::parseNumericExpr() {
     return expr;
 }
 
-std::unique_ptr<ast::VariableExpr> Parser::parseVariableExpr() {
-    auto expr = std::make_unique<ast::VariableExpr>(curToken.str);
-    nextToken();
-    return expr;
+std::unique_ptr<ast::Expression> Parser::parseVariableExpr() {
+    auto name = curToken.str;
+    nextToken(); // eat the identifier
+
+    if (curToken.type == TokenTy::L_RoundBraket) {
+        // funcCall
+        logError("NOT IMPLEMENTED");
+    }
+    else if (curToken.type == TokenTy::L_SquareBraket) {
+        // subscript
+        nextToken(); // eat '['
+        auto numericExpr = parseNumericExpr();
+        if (!numericExpr) {
+            logError("Expect index");
+            return nullptr;
+        }
+        int index = static_cast<int>(numericExpr->getValue());
+        if (curToken.type != TokenTy::R_SquareBraket) {
+            logError("Subscript Expression: expect ']'");
+            return nullptr;
+        }
+
+        nextToken(); // eat ']'
+        return std::make_unique<ast::SubscriptExpr>(name, index);
+    }
+
+    return std::make_unique<ast::VariableExpr>(name);
 }
 
 std::unique_ptr<ast::Expression> Parser::parseParenExpr() {

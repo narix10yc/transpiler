@@ -72,14 +72,31 @@ class VariableExpr : public Expression {
     std::string name;
 public:
     VariableExpr(std::string name) : name(name) {}
+    
+    std::string getName() const { return name; }
+    
     virtual std::string ToString() const override
     { return "Variable(" + name + ")"; }
 
     virtual void prettyPrint(std::ofstream& f, int depth) const override;
 
-    std::string getName() const { return name; }
 };
 
+class SubscriptExpr : public Expression {
+    std::string name;
+    int index;
+public:
+    SubscriptExpr(std::string name, int index) : name(name), index(index) {}
+
+    std::string getName() const { return name; }
+    int getIndex() const { return index; }
+
+    virtual std::string ToString() const override
+    { return name + "[" + std::to_string(index) + "]"; }
+
+    virtual void prettyPrint(std::ofstream& f, int depth) const override;
+
+};
 
 class UnaryExpr : public Expression {
     UnaryOp op;
@@ -104,8 +121,8 @@ public:
     virtual std::string ToString() const override { return ""; }
     virtual void prettyPrint(std::ofstream& f, int depth) const override;
 
-    const Expression& getLHS() const { return *lhs; }
-    const Expression& getRHS() const { return *rhs; }
+    const Expression getLHS() const { return *lhs; }
+    const Expression getRHS() const { return *rhs; }
     const BinaryOp getOp() const { return op; }
 };
 
@@ -167,7 +184,7 @@ public:
 
     std::string getName() const { return name; }
     int getSize() const { return size; }
-    
+
     virtual std::string ToString() const override 
     { return "CReg(" + name + ", " + std::to_string(size) + ")"; }
 
@@ -177,16 +194,29 @@ public:
 
 class GateApplyStmt : public Statement {
     std::string name;
-    std::vector<std::unique_ptr<ast::Expression>> parameters;
-    std::vector<std::unique_ptr<ast::Expression>> targets;
+    std::vector<std::unique_ptr<Expression>> parameters;
+    std::vector<std::unique_ptr<Expression>> targets;
 public:
     GateApplyStmt(std::string name) : name(name) {}
 
-    void addParameter(std::unique_ptr<ast::Expression> param)
+    void addParameter(std::unique_ptr<Expression> param)
     { parameters.push_back(std::move(param)); }
 
-    void addTarget(std::unique_ptr<ast::Expression> targ)
+    void addTarget(std::unique_ptr<Expression> targ)
     { targets.push_back(std::move(targ)); }
+
+    std::string getName() const { return name; }
+
+    size_t countParameters() const { return parameters.size(); }
+    size_t countTargets() const { return targets.size(); }
+
+    const Expression getParameter(size_t index) {
+        return *(parameters[index]);
+    }
+
+    const Expression getTarget(size_t index) {
+        return *(targets[index]);
+    }
 
     virtual void prettyPrint(std::ofstream& f, int depth) const override;
 
