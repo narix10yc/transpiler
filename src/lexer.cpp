@@ -36,7 +36,7 @@ Token Lexer::getToken() {
 
     waitFlag = false;
     // numerics
-    if (std::isdigit(curChar) || curChar == '.') 
+    if (std::isdigit(curChar) || curChar == '.' || curChar == '-') 
         return TokenizeNumeric();
     if (std::isalpha(curChar) || curChar == '_')
         return TokenizeIdentifier();
