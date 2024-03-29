@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
 
     std::cerr << "-- Input file: " << inputFilename << std::endl;
 
-    Parser parser(inputFilename, 3);
+    Parser parser(inputFilename, 0);
 
     std::string astFileName = augmentFileName(inputFilename, "_ast.txt");
 

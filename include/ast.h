@@ -21,6 +21,14 @@ class VariableExpr;
 class UnaryExpr;
 class BinaryExpr;
 
+class ExpressionValue {
+public:
+    const bool isConstant;
+    const double value;
+    ExpressionValue(double value) : isConstant(true), value(value) {}
+    ExpressionValue(bool isConstant) : isConstant(isConstant), value(0) {}
+};
+
 
 class Node {
 public:
@@ -52,6 +60,7 @@ class Expression : public Node {
 public:
     virtual std::string toString() const { return "Expr"; }
     virtual void prettyPrint(std::ofstream& f, int depth) const {}
+    virtual ExpressionValue getExprValue() const {}
 };
 
 
@@ -65,6 +74,7 @@ public:
     virtual void prettyPrint(std::ofstream& f, int depth) const override;
 
     double getValue() const { return value; }
+    virtual ExpressionValue getExprValue() const override { return value; }
 };
 
 
@@ -79,6 +89,10 @@ public:
     { return "(" + name + ")"; }
 
     virtual void prettyPrint(std::ofstream& f, int depth) const override;
+
+    virtual ExpressionValue getExprValue() const override {
+        return (name == "pi") ? 3.14159265358979323846 : false;
+    }
 
 };
 
@@ -96,6 +110,7 @@ public:
 
     virtual void prettyPrint(std::ofstream& f, int depth) const override;
 
+    virtual ExpressionValue getExprValue() const override { return false; }
 };
 
 class UnaryExpr : public Expression {
@@ -124,6 +139,20 @@ public:
     const Expression getLHS() const { return *lhs; }
     const Expression getRHS() const { return *rhs; }
     const BinaryOp getOp() const { return op; }
+    virtual ExpressionValue getExprValue() const override {
+        auto lhsValue = lhs->getExprValue();
+        auto rhsValue = rhs->getExprValue();
+        if (!lhsValue.isConstant || !rhsValue.isConstant) {
+            return false;
+        }
+        // both are constant
+        switch (op) {
+        case BinaryOp::Add: return lhsValue.value + rhsValue.value;
+        case BinaryOp::Sub: return lhsValue.value - rhsValue.value;
+        case BinaryOp::Mul: return lhsValue.value * rhsValue.value;
+        case BinaryOp::Div: return lhsValue.value / rhsValue.value;
+        default: return false;
+    }
 };
 
 
