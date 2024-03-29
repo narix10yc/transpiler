@@ -60,7 +60,7 @@ class Expression : public Node {
 public:
     virtual std::string toString() const { return "Expr"; }
     virtual void prettyPrint(std::ofstream& f, int depth) const {}
-    virtual ExpressionValue getExprValue() const {}
+    virtual ExpressionValue getExprValue() const { return false; }
 };
 
 
