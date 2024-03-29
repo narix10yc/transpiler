@@ -45,7 +45,7 @@ public:
     bool expectNextToken(TokenTy type, std::string msg="") {
         nextToken();
         if (curToken.type != type) {
-            logError("Expect token with type " + tokenTypeToString(type) + msg);
+            logError("Expect token with type " + tokenTypetoString(type) + msg);
             return false;
         }
         return true;
@@ -62,7 +62,7 @@ public:
         return the next token;
         curToken does not change.
     */
-    Token Peek() {
+    Token peek() {
         Token curTokenCopy = curToken;
         nextToken();
         Token nextTokenCopy = curToken;

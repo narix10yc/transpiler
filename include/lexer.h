@@ -6,7 +6,7 @@
 #include <queue>
 #include "token.h"
 
-
+namespace openqasm {
 
 class Lexer {
     std::ifstream file;
@@ -42,9 +42,10 @@ private:
         while (curChar != EOF && curChar != '\n' && curChar != '\r');
     }
     
-    Token TokenizeNumeric();
-    Token TokenizeIdentifier();
+    Token tokenizeNumeric();
+    Token tokenizeIdentifier();
 };
 
+} // namespace openqasm
 
 #endif // LEXER_H_

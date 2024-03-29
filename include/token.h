@@ -3,6 +3,8 @@
 
 #include <string>
 
+namespace openqasm {
+
 enum class TokenTy;
 enum class UnaryOp;
 enum class BinaryOp;
@@ -67,7 +69,7 @@ public:
     Token(TokenTy type) : type(type), str("") {}
     Token(TokenTy type, const std::string& str) : type(type), str(str) {}
 
-    std::string ToString() const;
+    std::string toString() const;
 
     BinaryOp toBinaryOp() const {
         switch (type) {
@@ -85,7 +87,7 @@ public:
     }
 };
 
-static std::string tokenTypeToString(TokenTy ty) {
+static std::string tokenTypetoString(TokenTy ty) {
     switch (ty) {
     case TokenTy::Eof: return "EOF";
     case TokenTy::Identifier: return "identifier";
@@ -114,5 +116,7 @@ static int getBinopPrecedence(BinaryOp op) {
             return -1;
     }
 }
+
+} // namespace openqasm
 
 #endif // TOKEN_H_

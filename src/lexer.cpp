@@ -1,6 +1,8 @@
 #include "lexer.h"
 
-std::string Token::ToString() const {
+using namespace openqasm;
+
+std::string Token::toString() const {
     if (type == TokenTy::Eof) { return "EOF"; }
     if (type == TokenTy::If) { return "if"; }
     if (type == TokenTy::Else) { return "else"; }
@@ -37,9 +39,9 @@ Token Lexer::getToken() {
     waitFlag = false;
     // numerics
     if (std::isdigit(curChar) || curChar == '.') 
-        return TokenizeNumeric();
+        return tokenizeNumeric();
     if (std::isalpha(curChar) || curChar == '_')
-        return TokenizeIdentifier();
+        return tokenizeIdentifier();
 
     if (curChar == '#') { // comments
         skipToEndOfLine();
@@ -79,7 +81,7 @@ Token Lexer::getToken() {
     }
 }
 
-Token Lexer::TokenizeNumeric() {
+Token Lexer::tokenizeNumeric() {
     waitFlag = true;
     std::string numericStr;
     do {
@@ -102,7 +104,7 @@ Token Lexer::TokenizeNumeric() {
     return { TokenTy::Numeric, numericStr };
 }
 
-Token Lexer::TokenizeIdentifier() {
+Token Lexer::tokenizeIdentifier() {
     waitFlag = true;
     std::string identifier = "";
     do {

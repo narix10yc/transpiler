@@ -13,7 +13,7 @@
 #endif
 
 
-std::string AugmentFileName(std::string& fileName, std::string by) {
+std::string augmentFileName(std::string& fileName, std::string by) {
     auto lastDotPos = fileName.find_last_of(".");
     std::string newName;
     if (lastDotPos == std::string::npos) { newName = fileName; }
@@ -22,15 +22,17 @@ std::string AugmentFileName(std::string& fileName, std::string by) {
     return newName + by;
 }
 
+using namespace openqasm;
+
 int main(int argc, char *argv[]) {
 
     std::string inputFilename = argv[1];
 
     std::cerr << "-- Input file: " << inputFilename << std::endl;
 
-    openqasm::Parser parser(inputFilename, 3);
+    Parser parser(inputFilename, 3);
 
-    std::string astFileName = AugmentFileName(inputFilename, "_ast.txt");
+    std::string astFileName = augmentFileName(inputFilename, "_ast.txt");
 
     // parse and write ast
     parser.parse();

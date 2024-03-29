@@ -27,7 +27,7 @@ std::unique_ptr<ast::IfThenElseStmt> Parser::parseIfThenElseStmt() {
                 logError("IfThenElseStmt: cannot parse thenBody stmt");
                 return nullptr;
             }
-            logDebug(2, "IfThenElseStmt: parsed thenBody stmt " + item->ToString());
+            logDebug(2, "IfThenElseStmt: parsed thenBody stmt " + item->toString());
             ifThenElseStmr->addThenBody(std::move(item));
         }
         nextToken(); // eat '}'
@@ -53,7 +53,7 @@ std::unique_ptr<ast::IfThenElseStmt> Parser::parseIfThenElseStmt() {
                 logError("IfThenElseStmt: cannot parse elseBody stmt");
                 return nullptr;
             }
-            logDebug(2, "IfThenElseStmt: parsed elseBody stmt " + item->ToString());
+            logDebug(2, "IfThenElseStmt: parsed elseBody stmt " + item->toString());
             ifThenElseStmr->addElseBody(std::move(item));
         }
         nextToken(); // eat '}'

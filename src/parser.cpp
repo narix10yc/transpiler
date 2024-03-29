@@ -15,7 +15,7 @@ void Parser::parse() {
             logError("Failed to parse stmt");
             return;
         }
-        logDebug(1, "Parsed Stmt " + stmt->ToString());
+        logDebug(1, "Parsed Stmt " + stmt->toString());
         root->addStmt(std::move(stmt));
     }
 
@@ -46,7 +46,7 @@ std::unique_ptr<ast::Statement> Parser::parseStmt() {
         stmt = parseGateApplyStmt();
     }
     else {
-        logError("Unknown token type: " + tokenTypeToString(curToken.type));
+        logError("Unknown token type: " + tokenTypetoString(curToken.type));
     }
 
     skipSeparators();
@@ -133,7 +133,7 @@ std::unique_ptr<ast::GateApplyStmt> Parser::parseGateApplyStmt() {
     logDebug(2, "GateApplyStmt " + stmt->getName() + ": " + \
         std::to_string(stmt->countParameters()) + " parameters parsed");
 
-    logDebug(1, "Current Token: " + tokenTypeToString(curToken.type));
+    logDebug(1, "Current Token: " + tokenTypetoString(curToken.type));
     while (true) {
         if (curToken.type == TokenTy::Semicolon ||
         curToken.type == TokenTy::LineFeed ||

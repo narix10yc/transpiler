@@ -3,14 +3,14 @@
 using namespace openqasm;
 
 std::unique_ptr<ast::Expression> Parser::parseExpr() {
-    logDebug(2, "Expression: ready to parse; curToken = " + curToken.ToString());
+    logDebug(2, "Expression: ready to parse; curToken = " + curToken.toString());
     
     auto lhs = parsePrimaryExpr();
     if (!lhs) {
         logError("Expression: unable to parse lhs");
         return nullptr;
     }
-    logDebug(3, "Expression: parsed lhs " + lhs->ToString());
+    logDebug(3, "Expression: parsed lhs " + lhs->toString());
     
     BinaryOp binop = curToken.toBinaryOp();
     if (binop == BinaryOp::None) { // Not a binop
@@ -30,7 +30,7 @@ Parser::parseExprRHS(BinaryOp lhsBinop, std::unique_ptr<ast::Expression> &&lhs) 
         logError("Expression: unable to parse rhs");
         return nullptr;
     }
-    logDebug(3, "Expression: parsed rhs " + rhs->ToString());
+    logDebug(3, "Expression: parsed rhs " + rhs->toString());
 
     BinaryOp binop = curToken.toBinaryOp();
     if (binop == BinaryOp::None) {

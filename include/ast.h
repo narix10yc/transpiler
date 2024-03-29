@@ -25,14 +25,14 @@ class BinaryExpr;
 class Node {
 public:
     virtual ~Node() = default;
-    virtual std::string ToString() const = 0;
+    virtual std::string toString() const = 0;
     virtual void prettyPrint(std::ofstream& f, int depth) const = 0;
 };
 
 
 class Statement : public Node {
 public:
-    std::string ToString() const { return "Stmt"; }
+    std::string toString() const { return "Stmt"; }
     virtual void prettyPrint(std::ofstream& f, int depth) const {}
 };
 
@@ -40,7 +40,7 @@ public:
 class RootNode : public Node {
     std::vector<std::unique_ptr<Statement>> stmts;
 public:
-    std::string ToString() const { return "Root"; }
+    std::string toString() const { return "Root"; }
     void addStmt(std::unique_ptr<Statement> stmt) {
         stmts.push_back(std::move(stmt));
     }
@@ -50,7 +50,7 @@ public:
 
 class Expression : public Node {
 public:
-    virtual std::string ToString() const { return "Expr"; }
+    virtual std::string toString() const { return "Expr"; }
     virtual void prettyPrint(std::ofstream& f, int depth) const {}
 };
 
@@ -59,7 +59,7 @@ class NumericExpr : public Expression {
     double value;
 public:
     NumericExpr(double value) : value(value) {}
-    virtual std::string ToString() const override 
+    virtual std::string toString() const override 
     { return "(" + std::to_string(value) + ")"; }
 
     virtual void prettyPrint(std::ofstream& f, int depth) const override;
@@ -75,7 +75,7 @@ public:
     
     std::string getName() const { return name; }
     
-    virtual std::string ToString() const override
+    virtual std::string toString() const override
     { return "(" + name + ")"; }
 
     virtual void prettyPrint(std::ofstream& f, int depth) const override;
@@ -91,7 +91,7 @@ public:
     std::string getName() const { return name; }
     int getIndex() const { return index; }
 
-    virtual std::string ToString() const override
+    virtual std::string toString() const override
     { return name + "[" + std::to_string(index) + "]"; }
 
     virtual void prettyPrint(std::ofstream& f, int depth) const override;
@@ -104,7 +104,7 @@ class UnaryExpr : public Expression {
 public:
     UnaryExpr(UnaryOp op, std::unique_ptr<Expression> expr)
         : op(op), expr(std::move(expr)) {}
-    virtual std::string ToString() const override { return "UnaryExpr"; }
+    virtual std::string toString() const override { return "UnaryExpr"; }
     virtual void prettyPrint(std::ofstream& f, int depth) const override;
 };
 
@@ -118,7 +118,7 @@ public:
                std::unique_ptr<Expression> rhs)
         : op(op), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
 
-    virtual std::string ToString() const override { return "BinaryExpr"; }
+    virtual std::string toString() const override { return "BinaryExpr"; }
     virtual void prettyPrint(std::ofstream& f, int depth) const override;
 
     const Expression getLHS() const { return *lhs; }
@@ -135,7 +135,7 @@ public:
     IfThenElseStmt(std::unique_ptr<Expression> ifExpr) 
         : ifExpr(std::move(ifExpr)) {}
 
-    virtual std::string ToString() const override 
+    virtual std::string toString() const override 
     { return "IfThenElseStmt"; }
 
     virtual void prettyPrint(std::ofstream& f, int depth) const override;
@@ -154,7 +154,7 @@ public:
     VersionStmt(std::string version) : version(version) {}
     std::string getVersion() const { return version; }
 
-    virtual std::string ToString() const override 
+    virtual std::string toString() const override 
     { return "Version(" + version + ")"; }
 
     virtual void prettyPrint(std::ofstream& f, int depth) const override;
@@ -170,7 +170,7 @@ public:
     std::string getName() const { return name; }
     int getSize() const { return size; }
 
-    virtual std::string ToString() const override 
+    virtual std::string toString() const override 
     { return "QReg(" + name + ", " + std::to_string(size) + ")"; }
 
     virtual void prettyPrint(std::ofstream& f, int depth) const override;
@@ -185,7 +185,7 @@ public:
     std::string getName() const { return name; }
     int getSize() const { return size; }
 
-    virtual std::string ToString() const override 
+    virtual std::string toString() const override 
     { return "CReg(" + name + ", " + std::to_string(size) + ")"; }
 
     virtual void prettyPrint(std::ofstream& f, int depth) const override;
