@@ -147,11 +147,12 @@ public:
         }
         // both are constant
         switch (op) {
-        case BinaryOp::Add: return lhsValue.value + rhsValue.value;
-        case BinaryOp::Sub: return lhsValue.value - rhsValue.value;
-        case BinaryOp::Mul: return lhsValue.value * rhsValue.value;
-        case BinaryOp::Div: return lhsValue.value / rhsValue.value;
-        default: return false;
+            case BinaryOp::Add: return lhsValue.value + rhsValue.value;
+            case BinaryOp::Sub: return lhsValue.value - rhsValue.value;
+            case BinaryOp::Mul: return lhsValue.value * rhsValue.value;
+            case BinaryOp::Div: return lhsValue.value / rhsValue.value;
+            default: return false;
+        }
     }
 };
 
