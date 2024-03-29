@@ -51,7 +51,7 @@ Parser::parseExprRHS(BinaryOp lhsBinop, std::unique_ptr<ast::Expression> &&lhs) 
 }
 
 std::unique_ptr<ast::Expression> Parser::parsePrimaryExpr() {
-    if (curToken.type == TokenTy::Numeric) {
+    if (curToken.type == TokenTy::Numeric || curToken.type == TokenTy::Sub) {
         return parseNumericExpr();
     }
     else if (curToken.type == TokenTy::Identifier) {
@@ -66,8 +66,17 @@ std::unique_ptr<ast::Expression> Parser::parsePrimaryExpr() {
 }
 
 std::unique_ptr<ast::NumericExpr> Parser::parseNumericExpr() {
+    bool negFlag = false;
+    if (curToken.type == TokenTy::Sub) {
+        negFlag = true;
+        nextToken();
+    }
+    if (curToken.type != TokenTy::Numeric) {
+        logError("Expect numerics when parsing Numerics Expression");
+        return nullptr;
+    }
     double numeric = std::stod(curToken.str);
-    auto expr = std::make_unique<ast::NumericExpr>(numeric);
+    auto expr = std::make_unique<ast::NumericExpr>(negFlag ? -numeric : numeric);
     nextToken();
     return expr;
 }

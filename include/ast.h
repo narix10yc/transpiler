@@ -60,7 +60,7 @@ class NumericExpr : public Expression {
 public:
     NumericExpr(double value) : value(value) {}
     virtual std::string ToString() const override 
-    { return "Numeric(" + std::to_string(value) + ")"; }
+    { return "(" + std::to_string(value) + ")"; }
 
     virtual void prettyPrint(std::ofstream& f, int depth) const override;
 
@@ -76,7 +76,7 @@ public:
     std::string getName() const { return name; }
     
     virtual std::string ToString() const override
-    { return "Variable(" + name + ")"; }
+    { return "(" + name + ")"; }
 
     virtual void prettyPrint(std::ofstream& f, int depth) const override;
 
@@ -104,7 +104,7 @@ class UnaryExpr : public Expression {
 public:
     UnaryExpr(UnaryOp op, std::unique_ptr<Expression> expr)
         : op(op), expr(std::move(expr)) {}
-    virtual std::string ToString() const override { return ""; }
+    virtual std::string ToString() const override { return "UnaryExpr"; }
     virtual void prettyPrint(std::ofstream& f, int depth) const override;
 };
 
@@ -118,7 +118,7 @@ public:
                std::unique_ptr<Expression> rhs)
         : op(op), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
 
-    virtual std::string ToString() const override { return ""; }
+    virtual std::string ToString() const override { return "BinaryExpr"; }
     virtual void prettyPrint(std::ofstream& f, int depth) const override;
 
     const Expression getLHS() const { return *lhs; }

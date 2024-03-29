@@ -86,7 +86,17 @@ public:
 };
 
 static std::string tokenTypeToString(TokenTy ty) {
-    return std::to_string((int)ty);
+    switch (ty) {
+    case TokenTy::Eof: return "EOF";
+    case TokenTy::Identifier: return "identifier";
+    case TokenTy::Numeric: return "numeric";
+    case TokenTy::If: return "if";
+    case TokenTy::Else: return "else";
+    case TokenTy::Then: return "then";
+    // TODO
+    default:
+        return "<unknown>";
+    }
 }
 
 static int getBinopPrecedence(BinaryOp op) {
