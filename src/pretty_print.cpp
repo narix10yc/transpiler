@@ -1,6 +1,6 @@
 #include "ast.h"
 
-using namespace ast;
+using namespace openqasm::ast;
 
 #define INDENT f << std::string(2*depth, ' ')
 #define INDENT2 f << std::string(2*depth + 2, ' ')

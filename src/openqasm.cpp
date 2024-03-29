@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
 
     std::cerr << "-- Input file: " << inputFilename << std::endl;
 
-    Parser parser(inputFilename, 3);
+    openqasm::Parser parser(inputFilename, 3);
 
     std::string astFileName = AugmentFileName(inputFilename, "_ast.txt");
 

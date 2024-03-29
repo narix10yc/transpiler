@@ -1,5 +1,6 @@
 #include "parser.h"
 
+using namespace openqasm;
 
 void Parser::parse() {
     if (!lexer->checkFileOpen()) {

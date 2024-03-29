@@ -1,5 +1,8 @@
 #include "parser.h"
 
+using namespace openqasm;
+
+
 std::unique_ptr<ast::IfThenElseStmt> Parser::parseIfThenElseStmt() {
     logDebug(2, "IfThenElseStmt: ready to parse");
     nextToken(); // eat 'if'

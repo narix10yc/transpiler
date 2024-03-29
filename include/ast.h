@@ -8,7 +8,7 @@
 
 #include "token.h"
 
-namespace ast {
+namespace openqasm::ast {
 
 class Node;
 class RootNode;
@@ -222,6 +222,6 @@ public:
 
 };
 
-} // end of namespace ast
+} // namespace openqasm::ast
 
 #endif // AST_H_

@@ -8,6 +8,7 @@
 #include "utils.h"
 #include "ast.h"
 
+namespace openqasm {
 
 class Parser {
     int debugLevel;
@@ -124,11 +125,6 @@ private:
 };
 
 
-
-
-
-
-
-
+} // namespace openqasm
 
 #endif // PARSER_H_

@@ -1,5 +1,6 @@
 #include "parser.h"
 
+using namespace openqasm;
 
 std::unique_ptr<ast::Expression> Parser::parseExpr() {
     logDebug(2, "Expression: ready to parse; curToken = " + curToken.ToString());
