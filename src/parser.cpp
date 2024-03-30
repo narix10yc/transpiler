@@ -3,7 +3,7 @@
 using namespace openqasm;
 
 void Parser::parse() {
-    if (!lexer->checkFileOpen()) {
+    if (!lexer->openFile()) {
         logError("Unable to open file");
         return;
     }
@@ -20,6 +20,7 @@ void Parser::parse() {
     }
 
     logDebug(1, "Reached the end of file");
+    lexer->closeFile();
 }
 
 std::unique_ptr<ast::Statement> Parser::parseStmt() {

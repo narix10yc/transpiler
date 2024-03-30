@@ -9,12 +9,13 @@
 namespace openqasm {
 
 class Lexer {
-    std::ifstream file;
+    std::string fileName;
     std::queue<int> charBuf;
     bool waitFlag = false;
     int curChar;
+    std::ifstream file;
 public:
-    Lexer(std::string& fileName) : file(fileName) {}
+    Lexer(std::string& fileName) : fileName(fileName) {}
     ~Lexer() { file.close(); }
 
     int peekChar();
@@ -25,7 +26,12 @@ public:
         std::cerr << "== Lexer Error == " << msg << "\n";
     }
 
-    bool checkFileOpen() const { return file.is_open(); }
+    bool openFile() { 
+        file = std::ifstream(fileName);
+        return file.is_open();
+    }
+
+    void closeFile() { file.close(); }
 
 private:
     void nextChar() {
