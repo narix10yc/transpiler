@@ -48,3 +48,4 @@ endif()
 
 add_subdirectory(openqasm)
 add_subdirectory(timeit)
+add_subdirectory(simulation)

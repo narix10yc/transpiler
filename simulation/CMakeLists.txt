@@ -1,0 +1,7 @@
+add_executable(codegen "codegen.cpp" "gen_u3.cpp")
+target_include_directories(codegen PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+if(APPLE)
+    target_link_libraries(codegen "${LLVM_ROOT}/lib/libLLVM-17.dylib")
+else()
+    target_link_libraries(codegen "/usr/lib/llvm-17/lib/libLLVM-17.so")
+endif()
