@@ -23,7 +23,7 @@ std::unique_ptr<ast::RootNode> Parser::parse() {
 
     logDebug(1, "Reached the end of file");
     lexer->closeFile();
-    return std::move(root);
+    return root;
 }
 
 std::unique_ptr<ast::Statement> Parser::parseStmt() {
@@ -55,7 +55,7 @@ std::unique_ptr<ast::Statement> Parser::parseStmt() {
 
     skipSeparators();
 
-    return std::move(stmt);
+    return stmt;
 }
 
 std::unique_ptr<ast::VersionStmt> Parser::parseVersionStmt() {
@@ -85,7 +85,7 @@ std::unique_ptr<ast::QRegStmt> Parser::parseQRegStmt() {
 
     auto stmt = std::make_unique<ast::QRegStmt>(name, size);
     nextToken();
-    return std::move(stmt);
+    return stmt;
 }
 
 std::unique_ptr<ast::CRegStmt> Parser::parseCRegStmt() {
@@ -105,7 +105,7 @@ std::unique_ptr<ast::CRegStmt> Parser::parseCRegStmt() {
 
     auto stmt = std::make_unique<ast::CRegStmt>(name, size);
     nextToken();
-    return std::move(stmt);
+    return stmt;
 }
 
 std::unique_ptr<ast::GateApplyStmt> Parser::parseGateApplyStmt() {

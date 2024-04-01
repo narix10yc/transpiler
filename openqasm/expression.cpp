@@ -37,7 +37,7 @@ Parser::parseExprRHS(BinaryOp lhsBinop, std::unique_ptr<ast::Expression> &&lhs) 
         logDebug(3, "Expression: No more binop, return");
         auto ret = std::make_unique<ast::BinaryExpr>
             (lhsBinop, std::move(lhs), std::move(rhs));
-        return std::move(ret);
+        return ret;
     }
 
     // Encounter another binop

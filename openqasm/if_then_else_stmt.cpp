@@ -37,7 +37,7 @@ std::unique_ptr<ast::IfThenElseStmt> Parser::parseIfThenElseStmt() {
     // parse else block
     if (curToken.type != TokenTy::Else) {
         logDebug(2, "IfThenElseStmt: success (no parse body)");
-        return std::move(ifThenElseStmr);
+        return ifThenElseStmr;
     }
 
     nextToken(); // eat 'else'
@@ -60,5 +60,5 @@ std::unique_ptr<ast::IfThenElseStmt> Parser::parseIfThenElseStmt() {
         logDebug(2, "IfThenElseStmt: thenBody successfully parsed");
     }
 
-    return std::move(ifThenElseStmr);
+    return ifThenElseStmr;
 }

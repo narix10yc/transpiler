@@ -40,26 +40,26 @@ public:
 
 class Statement : public Node {
 public:
-    std::string toString() const { return "Stmt"; }
-    virtual void prettyPrint(std::ofstream& f, int depth) const {}
+    std::string toString() const override { return "Stmt"; }
+    void prettyPrint(std::ofstream& f, int depth) const override {}
 };
 
 
 class RootNode : public Node {
     std::vector<std::unique_ptr<Statement>> stmts;
 public:
-    std::string toString() const { return "Root"; }
+    std::string toString() const override { return "Root"; }
+    void prettyPrint(std::ofstream& f, int depth) const override;
     void addStmt(std::unique_ptr<Statement> stmt) {
         stmts.push_back(std::move(stmt));
     }
-    virtual void prettyPrint(std::ofstream& f, int depth) const;
 };
 
 
 class Expression : public Node {
 public:
-    virtual std::string toString() const { return "Expr"; }
-    virtual void prettyPrint(std::ofstream& f, int depth) const {}
+    std::string toString() const override { return "Expr"; }
+    void prettyPrint(std::ofstream& f, int depth) const override {}
     virtual ExpressionValue getExprValue() const { return false; }
 };
 
@@ -68,10 +68,11 @@ class NumericExpr : public Expression {
     double value;
 public:
     NumericExpr(double value) : value(value) {}
-    virtual std::string toString() const override 
-    { return "(" + std::to_string(value) + ")"; }
+    std::string toString() const override {
+        return "(" + std::to_string(value) + ")";
+    }
 
-    virtual void prettyPrint(std::ofstream& f, int depth) const override;
+    void prettyPrint(std::ofstream& f, int depth) const override;
 
     double getValue() const { return value; }
     virtual ExpressionValue getExprValue() const override { return value; }
@@ -85,10 +86,10 @@ public:
     
     std::string getName() const { return name; }
     
-    virtual std::string toString() const override
-    { return "(" + name + ")"; }
-
-    virtual void prettyPrint(std::ofstream& f, int depth) const override;
+    std::string toString() const override {
+        return "(" + name + ")";
+    }
+    void prettyPrint(std::ofstream& f, int depth) const override;
 
     virtual ExpressionValue getExprValue() const override {
         return (name == "pi") ? 3.14159265358979323846 : false;
@@ -105,10 +106,10 @@ public:
     std::string getName() const { return name; }
     int getIndex() const { return index; }
 
-    virtual std::string toString() const override
-    { return name + "[" + std::to_string(index) + "]"; }
-
-    virtual void prettyPrint(std::ofstream& f, int depth) const override;
+    std::string toString() const override {
+        return name + "[" + std::to_string(index) + "]";
+    }
+    void prettyPrint(std::ofstream& f, int depth) const override;
 
     virtual ExpressionValue getExprValue() const override { return false; }
 };
@@ -119,8 +120,8 @@ class UnaryExpr : public Expression {
 public:
     UnaryExpr(UnaryOp op, std::unique_ptr<Expression> expr)
         : op(op), expr(std::move(expr)) {}
-    virtual std::string toString() const override { return "UnaryExpr"; }
-    virtual void prettyPrint(std::ofstream& f, int depth) const override;
+    std::string toString() const override { return "UnaryExpr"; }
+    void prettyPrint(std::ofstream& f, int depth) const override;
 };
 
 
@@ -133,12 +134,12 @@ public:
                std::unique_ptr<Expression> rhs)
         : op(op), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
 
-    virtual std::string toString() const override { return "BinaryExpr"; }
-    virtual void prettyPrint(std::ofstream& f, int depth) const override;
+    std::string toString() const override { return "BinaryExpr"; }
+    void prettyPrint(std::ofstream& f, int depth) const override;
 
     const Expression getLHS() const { return *lhs; }
     const Expression getRHS() const { return *rhs; }
-    const BinaryOp getOp() const { return op; }
+    BinaryOp getOp() const { return op; }
     virtual ExpressionValue getExprValue() const override {
         auto lhsValue = lhs->getExprValue();
         auto rhsValue = rhs->getExprValue();
