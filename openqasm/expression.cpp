@@ -1,4 +1,4 @@
-#include "parser.h"
+#include "openqasm/parser.h"
 
 using namespace openqasm;
 

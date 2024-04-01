@@ -4,9 +4,9 @@
 #include <string>
 #include <memory>
 #include <queue>
-#include "lexer.h"
-#include "utils.h"
-#include "ast.h"
+#include "openqasm/lexer.h"
+#include "openqasm/utils.h"
+#include "openqasm/ast.h"
 
 namespace openqasm {
 

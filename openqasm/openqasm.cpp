@@ -4,13 +4,9 @@
 #include <fstream>
 #include <filesystem>
 
-#include "parser.h"
-#include "ast.h"
-#include "utils.h"
-
-#ifndef EXAMPLE_DIR 
-#define EXAMPLE_DIR "."
-#endif
+#include "openqasm/parser.h"
+#include "openqasm/ast.h"
+#include "openqasm/utils.h"
 
 
 std::string augmentFileName(std::string& fileName, std::string by) {
