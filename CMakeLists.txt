@@ -46,5 +46,5 @@ if(SIMULATION_USE_OPENMP)
     add_compile_definitions(SIMULATION_USE_OPENMP)
 endif()
 
-
 add_subdirectory(openqasm)
+add_subdirectory(timeit)
