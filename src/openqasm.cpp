@@ -35,9 +35,9 @@ int main(int argc, char *argv[]) {
     std::string astFileName = augmentFileName(inputFilename, "_ast.txt");
 
     // parse and write ast
-    parser.parse();
+    auto root = parser.parse();
     std::ofstream f(astFileName);
-    parser.prettyPrintRoot(f);
+    root->prettyPrint(f, 0);
     std::cerr << "AST written at " << astFileName << std::endl;
     f.close();
 

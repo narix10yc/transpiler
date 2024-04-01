@@ -2,10 +2,12 @@
 
 using namespace openqasm;
 
-void Parser::parse() {
+std::unique_ptr<ast::RootNode> Parser::parse() {
+    auto root = std::make_unique<ast::RootNode>();
+
     if (!lexer->openFile()) {
         logError("Unable to open file");
-        return;
+        return nullptr;
     }
     nextToken();
 
@@ -13,7 +15,7 @@ void Parser::parse() {
         auto stmt = parseStmt();
         if (!stmt) {
             logError("Failed to parse stmt");
-            return;
+            return nullptr;
         }
         logDebug(1, "Parsed Stmt " + stmt->toString());
         root->addStmt(std::move(stmt));
@@ -21,6 +23,7 @@ void Parser::parse() {
 
     logDebug(1, "Reached the end of file");
     lexer->closeFile();
+    return std::move(root);
 }
 
 std::unique_ptr<ast::Statement> Parser::parseStmt() {

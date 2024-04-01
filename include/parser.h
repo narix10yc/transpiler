@@ -13,14 +13,12 @@ namespace openqasm {
 class Parser {
     int debugLevel;
     std::unique_ptr<Lexer> lexer;
-    std::unique_ptr<ast::RootNode> root;
     std::queue<Token> tokenBuf;
     Token curToken;
 public:
     Parser(std::string& fileName, int debugLevel=1) :
         debugLevel(debugLevel),
         lexer(std::make_unique<Lexer>(fileName)),
-        root(std::make_unique<ast::RootNode>()),
         curToken(TokenTy::Unknown) {}
 
     void logError(std::string str) const { 
@@ -75,11 +73,7 @@ public:
         The entry point of the parsing process. This will update the root 
         variable
     */
-    void parse();
-
-    void prettyPrintRoot(std::ofstream &f) const { root->prettyPrint(f, 0); }
-
-    ast::RootNode* getRoot() { return root.get(); }
+    std::unique_ptr<ast::RootNode> parse();
 
 private:
     /*
