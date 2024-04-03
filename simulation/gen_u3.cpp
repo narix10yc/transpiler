@@ -1,4 +1,4 @@
-#include "simulation/codegen.h"
+#include "simulation/irGen.h"
 #include <iostream>
 
 using namespace llvm;
@@ -23,7 +23,7 @@ using namespace simulation::codegen;
         newname = builder.CreateFMul(newname, with, #newname);}
 
 
-Value* CodeGen::genMulAddOrMulSub(Value* aa, bool add, Value* bb, Value* cc, 
+Value* IRGenerator::genMulAddOrMulSub(Value* aa, bool add, Value* bb, Value* cc, 
         int bbFlag, const Twine& bbccName, const Twine& aaName) {
     if (bbFlag == 0) 
         return aa;
@@ -57,7 +57,7 @@ Value* CodeGen::genMulAddOrMulSub(Value* aa, bool add, Value* bb, Value* cc,
 }
 
 
-void CodeGen::genU3(const int64_t k, 
+void IRGenerator::genU3(const int64_t k, 
         const llvm::StringRef funcName, 
         const RealTy realType,
         std::optional<double> _theta, 

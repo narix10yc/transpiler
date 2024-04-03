@@ -1,4 +1,4 @@
-#include "simulation/codegen.h"
+#include "simulation/irGen.h"
 #include "llvm/Support/CommandLine.h"
 #include <sstream>
 
@@ -6,7 +6,7 @@ using namespace llvm;
 using namespace simulation::codegen;
 
 int main(int argc, char **argv) {
-    using RealTy = simulation::codegen::CodeGen::RealTy;
+    using RealTy = simulation::codegen::IRGenerator::RealTy;
 
     cl::opt<std::string> 
     FileName("F", cl::Prefix, cl::desc("file name"), cl::init(""));
@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
 
     cl::ParseCommandLineOptions(argc, argv, "");
 
-    CodeGen gen;
+    IRGenerator gen;
     gen.setVectorSizeInBits(VecSize);
 
     RealTy ty = RealTy::Double;

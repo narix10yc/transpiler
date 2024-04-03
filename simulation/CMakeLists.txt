@@ -1,7 +1,11 @@
-add_executable(codegen "codegen.cpp" "gen_u3.cpp")
-target_include_directories(codegen PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+add_executable(ir_gen "irGen.cpp" "gen_u3.cpp")
+add_executable(openqasm_to_ir "openqasm_to_ir.cpp")
+
 if(APPLE)
-    target_link_libraries(codegen "${LLVM_ROOT}/lib/libLLVM-17.dylib")
+    target_link_libraries(ir_gen "${LLVM_ROOT}/lib/libLLVM-17.dylib")
+    target_link_libraries(openqasm_to_ir "${LLVM_ROOT}/lib/libLLVM-17.dylib")
 else()
-    target_link_libraries(codegen "/usr/lib/llvm-17/lib/libLLVM-17.so")
+    target_link_libraries(ir_gen "/usr/lib/llvm-17/lib/libLLVM-17.so")
+    target_link_libraries(openqasm_to_ir "/usr/lib/llvm-17/lib/libLLVM-17.so")
 endif()
+

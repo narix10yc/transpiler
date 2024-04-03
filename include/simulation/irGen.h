@@ -138,7 +138,7 @@ public:
     }
 };
     
-class CodeGen {
+class IRGenerator {
     llvm::LLVMContext llvmContext;
     llvm::IRBuilder<> builder;
     std::unique_ptr<llvm::Module> mod;
@@ -163,7 +163,7 @@ private:
     }
 
 public:
-    CodeGen() : 
+    IRGenerator() : 
         builder(llvmContext), 
         mod(std::make_unique<llvm::Module>("myModule", llvmContext)) {
         vector_size_in_bits = 2;
