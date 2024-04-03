@@ -3,10 +3,10 @@
 #include <sstream>
 
 using namespace llvm;
-using namespace simulation::codegen;
+using namespace simulation;
 
 int main(int argc, char **argv) {
-    using RealTy = simulation::codegen::IRGenerator::RealTy;
+    using RealTy = simulation::IRGenerator::RealTy;
 
     cl::opt<std::string> 
     FileName("F", cl::Prefix, cl::desc("file name"), cl::init(""));

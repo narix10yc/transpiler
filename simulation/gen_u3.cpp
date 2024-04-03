@@ -2,7 +2,7 @@
 #include <iostream>
 
 using namespace llvm;
-using namespace simulation::codegen;
+using namespace simulation;
 
 Value* IRGenerator::genMulAddOrMulSub(Value* aa, bool add, Value* bb, Value* cc, 
         int bbFlag, const Twine& bbccName, const Twine& aaName) {
