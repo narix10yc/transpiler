@@ -24,7 +24,7 @@ class IRGenerator {
     std::unique_ptr<llvm::Module> mod;
 
     // parameters
-    int vector_size_in_bits;
+    unsigned vecSizeInBits;
 private:
     llvm::Value* getVectorWithSameElem(llvm::Type* realTy, const unsigned length, 
             llvm::Value* elem, const llvm::Twine &name = "") {
@@ -46,16 +46,16 @@ public:
     IRGenerator() : 
         builder(llvmContext), 
         mod(std::make_unique<llvm::Module>("myModule", llvmContext)) {
-        vector_size_in_bits = 2;
+        vecSizeInBits = 2;
     }
 
-    void setVectorSizeInBits(const unsigned bits) {
-        vector_size_in_bits = bits;
+    void setVectorSizeInBits(unsigned bits) {
+        vecSizeInBits = bits;
     }
 
     enum RealTy : int { Float, Double };
     
-    llvm::Module& getModule() const { return *mod; }
+    const llvm::Module& getModule() const { return *mod; }
 
     /// @brief Generate the IR that applies new_aa = aa +/- bb * cc
     /// @param aa can be nullptr. In such case, new_aa will be assigned to bb * cc

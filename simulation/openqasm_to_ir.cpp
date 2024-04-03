@@ -61,7 +61,7 @@ public:
 
 class IRContext {
     std::map<uint32_t, std::string> gateMap;
-    // IRGenerator
+    simulation::IRGenerator irGenerator;
 
 };
 

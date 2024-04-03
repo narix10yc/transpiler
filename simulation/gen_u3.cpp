@@ -54,15 +54,15 @@ void IRGenerator::genU3(const int64_t k,
 
     errs() << "Generating function " << funcName << "\n";
 
-    int64_t _S = 1 << vector_size_in_bits;
+    int64_t _S = 1 << vecSizeInBits;
     int64_t _K = 1 << k;
-    int64_t _inner = (1 << (k - vector_size_in_bits)) - 1;
+    int64_t _inner = (1 << (k - vecSizeInBits)) - 1;
     int64_t _outer = static_cast<int64_t>(-1) - _inner;
     auto* K = builder.getInt64(_K);
     auto* inner = builder.getInt64(_inner);
     auto* outer = builder.getInt64(_outer);
-    auto* s = builder.getInt64(vector_size_in_bits);
-    auto* s_add_1 = builder.getInt64(vector_size_in_bits + 1);
+    auto* s = builder.getInt64(vecSizeInBits);
+    auto* s_add_1 = builder.getInt64(vecSizeInBits + 1);
 
     Type* realTy = (realType == RealTy::Float) ? builder.getFloatTy() : builder.getDoubleTy();
     Type* vectorTy = VectorType::get(realTy, _S, false);
