@@ -2,29 +2,32 @@
 #include "openqasm/ast.h"
 #include <map>
 
-class U3Matrix {
-private:
-    static uint32_t elemToID(std::optional<double> v) {
-        if (!v.has_value())
-            return 0b11;
-        double value = v.value();
-        if (value == 1)
-            return 0b01;
-        if (value == 0)
-            return 0b00;
-        if (value == -1)
-            return 0b10;
+namespace {
+uint32_t elemToID(std::optional<double> v) {
+    if (!v.has_value())
         return 0b11;
+    double value = v.value();
+    if (value == 1)
+        return 0b01;
+    if (value == 0)
+        return 0b00;
+    if (value == -1)
+        return 0b10;
+    return 0b11;
+}
+
+std::optional<double> idToElem(uint32_t id) {
+    switch (id & 3) {
+        case 0: return 0;
+        case 1: return 1;
+        case 2: return -1;
+        case 3: return {};
     }
-    static std::optional<double> idToElem(uint32_t id) {
-        switch (id & 3) {
-            case 0: return 0;
-            case 1: return 1;
-            case 2: return -1;
-            case 3: return {};
-        }
-        return {};
-    }
+    return {};
+}
+} // <anonymous> namespace
+
+class U3Matrix {
 public:
     std::optional<double> ar, br, cr, dr, bi, ci, di;
     uint8_t qubit;
@@ -58,6 +61,7 @@ public:
 
 class IRContext {
     std::map<uint32_t, std::string> gateMap;
+    // IRGenerator
 
 };
 

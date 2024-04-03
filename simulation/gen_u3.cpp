@@ -4,25 +4,6 @@
 using namespace llvm;
 using namespace simulation::codegen;
 
-#define GEN_ADD(newname, with)\
-    {if (newname == nullptr)\
-        newname = with;\
-    else\
-        newname = builder.CreateFAdd(newname, with, #newname);}
-
-#define GEN_SUB(newname, with)\
-    {if (newname == nullptr)\
-        newname = with;\
-    else\
-        newname = builder.CreateFSub(newname, with, #newname);}
-
-#define GEN_MUL(newname, with)\
-    {if (newname == nullptr)\
-        newname = with;\
-    else\
-        newname = builder.CreateFMul(newname, with, #newname);}
-
-
 Value* IRGenerator::genMulAddOrMulSub(Value* aa, bool add, Value* bb, Value* cc, 
         int bbFlag, const Twine& bbccName, const Twine& aaName) {
     if (bbFlag == 0) 
@@ -305,65 +286,11 @@ void IRGenerator::genU3(const int64_t k,
     newAr = genMulAddOrMulSub(newAr, true, br, Br, brFlag, "brBr", "newAr");
     newAr = genMulAddOrMulSub(newAr, false, bi, Bi, biFlag, "biBi", "newAr");
 
-    // if (_ar == 1)
-    //     GEN_ADD(newAr, Ar)
-    // else if (_ar == -1) 
-    //     GEN_SUB(newAr, Ar)
-    // else if (_ar != 0) {
-    //     auto* arAr = builder.CreateFMul(ar, Ar, "arAr");
-    //     GEN_ADD(newAr, arAr)
-    // }
-
-    // if (_br == 1)
-    //     GEN_ADD(newAr, Br)
-    // else if (_br == -1) 
-    //     GEN_SUB(newAr, Br)
-    // else if (_br != 0) {
-    //     auto* brBr = builder.CreateFMul(br, Br, "brBr");
-    //     GEN_ADD(newAr, brBr)
-    // }
-    
-    // if (_bi == 1)
-    //     GEN_SUB(newAr, Bi)
-    // else if (_bi == -1) 
-    //     GEN_ADD(newAr, Bi)
-    // else if (_bi != 0) {
-    //     auto* biBi = builder.CreateFMul(bi, Bi, "biBi");
-    //     GEN_SUB(newAr, biBi)
-    // }
-    
     // newAi = ar Ai + ai Ar + br Bi + bi Br
     Value* newAi = nullptr;
     newAi = genMulAddOrMulSub(newAi, true, ar, Ai, arFlag, "arAi", "newAi");
     newAi = genMulAddOrMulSub(newAi, true, br, Bi, brFlag, "brBi", "newAi");
     newAi = genMulAddOrMulSub(newAi, true, bi, Br, biFlag, "biBr", "newAi");
-
-    // if (_ar == 1)
-    //     GEN_ADD(newAi, Ai)
-    // else if (_ar == -1) 
-    //     GEN_SUB(newAi, Ai)
-    // else if (_ar != 0) {
-    //     auto* arAi = builder.CreateFMul(ar, Ai, "arAi");
-    //     GEN_ADD(newAi, arAi)
-    // }
-
-    // if (_br == 1)
-    //     GEN_ADD(newAi, Bi)
-    // else if (_br == -1) 
-    //     GEN_SUB(newAi, Bi)
-    // else if (_br != 0) {
-    //     auto* brBi = builder.CreateFMul(br, Bi, "brBi");
-    //     GEN_ADD(newAi, brBi)
-    // }
-
-    // if (_bi == 1)
-    //     GEN_ADD(newAi, Br)
-    // else if (_bi == -1) 
-    //     GEN_SUB(newAi, Br)
-    // else if (_bi != 0) {
-    //     auto* biBr = builder.CreateFMul(bi, Br, "biBr");
-    //     GEN_ADD(newAi, biBr)
-    // }
 
     // newBr = (cr Ar + dr Br) - (ci Ai + di Bi)
     Value* newBr = nullptr;
@@ -372,85 +299,12 @@ void IRGenerator::genU3(const int64_t k,
     newBr = genMulAddOrMulSub(newBr, false, ci, Ai, ciFlag, "ciAi", "newBr");
     newBr = genMulAddOrMulSub(newBr, false, di, Bi, diFlag, "diBi", "newBr");
 
-    // if (_cr == 1)
-    //     GEN_ADD(newBr, Ar)
-    // else if (_cr == -1) 
-    //     GEN_SUB(newBr, Ar)
-    // else if (_cr != 0) {
-    //     auto* crAr = builder.CreateFMul(cr, Ar, "crAr");
-    //     GEN_ADD(newBr, crAr)
-    // }
-
-    // if (_dr == 1)
-    //     GEN_ADD(newBr, Br)
-    // else if (_dr == -1) 
-    //     GEN_SUB(newBr, Br)
-    // else if (_dr != 0) {
-    //     auto* drBr = builder.CreateFMul(dr, Br, "drBr");
-    //     GEN_ADD(newBr, drBr)
-    // }
-
-    // if (_ci == 1)
-    //     GEN_SUB(newBr, Ai)
-    // else if (_ci == -1) 
-    //     GEN_ADD(newBr, Ai)
-    // else if (_ci != 0) {
-    //     auto* ciAi = builder.CreateFMul(ci, Ai, "ciAi");
-    //     GEN_SUB(newBr, ciAi)
-    // }
-
-    // if (_di == 1)
-    //     GEN_SUB(newBr, Bi)
-    // else if (_di == -1) 
-    //     GEN_ADD(newBr, Bi)
-    // else if (_di != 0) {
-    //     auto* diBi = builder.CreateFMul(di, Bi, "diBi");
-    //     GEN_SUB(newBr, diBi)
-    // }
-
     // newBi = cr Ai + ci Ar + di Br + dr Bi
     Value* newBi = nullptr;
     newBi = genMulAddOrMulSub(newBi, true, cr, Ai, crFlag, "crAi", "newBi");
     newBi = genMulAddOrMulSub(newBi, true, ci, Ar, ciFlag, "ciAr", "newBi");
     newBi = genMulAddOrMulSub(newBi, true, di, Br, diFlag, "diBr", "newBi");
     newBi = genMulAddOrMulSub(newBi, true, dr, Bi, drFlag, "drBi", "newBi");
-
-    // if (_cr == 1)
-    //     GEN_ADD(newBi, Ai)
-    // else if (_cr == -1) 
-    //     GEN_SUB(newBi, Ai)
-    // else if (_cr != 0) {
-    //     auto* crAi = builder.CreateFMul(cr, Ai, "crAi");
-    //     GEN_ADD(newBi, crAi)
-    // }
-
-    // if (_ci == 1)
-    //     GEN_ADD(newBi, Ar)
-    // else if (_ci == -1) 
-    //     GEN_SUB(newBi, Ar)
-    // else if (_ci != 0) {
-    //     auto* ciAr = builder.CreateFMul(ci, Ar, "ciAr");
-    //     GEN_ADD(newBi, ciAr)
-    // }
-
-    // if (_di == 1)
-    //     GEN_ADD(newBi, Br)
-    // else if (_di == -1) 
-    //     GEN_SUB(newBi, Br)
-    // else if (_di != 0) {
-    //     auto* diBr = builder.CreateFMul(di, Br, "diBr");
-    //     GEN_ADD(newBi, diBr)
-    // }
-
-    // if (_dr == 1)
-    //     GEN_ADD(newBi, Bi)
-    // else if (_dr == -1) 
-    //     GEN_SUB(newBi, Bi)
-    // else if (_dr != 0) {
-    //     auto* drBi = builder.CreateFMul(dr, Bi, "drBi");
-    //     GEN_ADD(newBi, drBi)
-    // }
-
 
     // store back 
     builder.CreateStore(newAr, ptrAr);
