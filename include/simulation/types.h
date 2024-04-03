@@ -126,6 +126,65 @@ public:
     }
 }; // OptionalComplexMat2x2
 
+
+
+class U3Gate {
+private:
+    static uint32_t elemToID(std::optional<double> v) {
+        if (!v.has_value())
+            return 0b11;
+        double value = v.value();
+        if (value == 1)
+            return 0b01;
+        if (value == 0)
+            return 0b00;
+        if (value == -1)
+            return 0b10;
+        return 0b11;
+    }
+
+    static std::optional<double> idToElem(uint32_t id) {
+        switch (id & 3) {
+            case 0: return 0;
+            case 1: return 1;
+            case 2: return -1;
+            case 3: return {};
+        }
+        return {};
+    }
+public:
+    OptionalComplexMat2x2 mat;
+    uint8_t qubit;
+
+    U3Gate(const OptionalComplexMat2x2& mat, uint8_t qubit)
+        : mat(mat), qubit(qubit) {}
+
+    static U3Gate FromID(uint32_t id) {
+        uint8_t qubit = static_cast<uint8_t>(id & 0xF000);
+        OptionalComplexMat2x2 m { idToElem(id >> 12), 
+        idToElem(id >> 10), idToElem(id >> 8), idToElem(id >> 6),
+        idToElem(id >> 4), idToElem(id >> 2), idToElem(id >> 0) };
+
+        return { m, qubit };
+    }
+
+    /// @brief 32-bit id. From most to least significant: k (8-bit), 0 (10-bit),
+    /// ar, br, cr, dr, bi, ci, di. Each number takes 2 bits following the rule: 
+    /// +1 -> 01; 0 -> 00; -1 -> 10; others -> 11
+    uint32_t getID() const {
+        uint32_t id = 0;
+        id += elemToID(mat.di);
+        id += elemToID(mat.ci) << 2;
+        id += elemToID(mat.bi) << 4;
+        id += elemToID(mat.dr) << 6;
+        id += elemToID(mat.cr) << 8;
+        id += elemToID(mat.br) << 10;
+        id += elemToID(mat.ar) << 12;
+        id += static_cast<uint32_t>(qubit) << 24;
+        return id;
+    }
+}; // U3Gate
+
 } // namespace simulation
 
 #endif // SIMULATION_TYPES_H_

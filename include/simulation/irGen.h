@@ -43,15 +43,10 @@ private:
     }
 
 public:
-    IRGenerator() : 
+    IRGenerator(unsigned vecSizeInBits=2) : 
         builder(llvmContext), 
-        mod(std::make_unique<llvm::Module>("myModule", llvmContext)) {
-        vecSizeInBits = 2;
-    }
-
-    void setVectorSizeInBits(unsigned bits) {
-        vecSizeInBits = bits;
-    }
+        mod(std::make_unique<llvm::Module>("myModule", llvmContext)),
+        vecSizeInBits(vecSizeInBits) {}
 
     enum RealTy : int { Float, Double };
     

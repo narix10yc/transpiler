@@ -38,8 +38,7 @@ int main(int argc, char **argv) {
 
     cl::ParseCommandLineOptions(argc, argv, "");
 
-    IRGenerator gen;
-    gen.setVectorSizeInBits(VecSize);
+    IRGenerator gen(VecSize);
 
     RealTy ty = RealTy::Double;
     if (Ty == "double")

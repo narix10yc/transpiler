@@ -1,12 +1,17 @@
 #ifndef AST_H_
 #define AST_H_
 
+
 #include <iostream>
 #include <string>
 #include <vector>
 #include <fstream>
-
 #include "token.h"
+
+namespace simulation {
+class CPUGenContext;
+class FPGAGenContext;
+} // namespace simulation
 
 namespace openqasm::ast {
 
@@ -35,6 +40,7 @@ public:
     virtual ~Node() = default;
     virtual std::string toString() const = 0;
     virtual void prettyPrint(std::ofstream& f, int depth) const = 0;
+    virtual void genCPU(const simulation::CPUGenContext&) const {}
 };
 
 
@@ -52,6 +58,15 @@ public:
     void prettyPrint(std::ofstream& f, int depth) const override;
     void addStmt(std::unique_ptr<Statement> stmt) {
         stmts.push_back(std::move(stmt));
+    }
+    
+    size_t countStmts() { return stmts.size(); }
+    Statement getStmt(size_t index) { return *(stmts[index]); }
+
+    void genCPU(const simulation::CPUGenContext& ctx) const {
+        for (auto& stmt : stmts) {
+            stmt->genCPU(ctx);
+        }
     }
 };
 
@@ -251,6 +266,7 @@ public:
 
     virtual void prettyPrint(std::ofstream& f, int depth) const override;
 
+    // void genCPU(const simulation::CPUGenContext& ctx) const override;
 };
 
 } // namespace openqasm::ast
