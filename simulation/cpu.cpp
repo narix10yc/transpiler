@@ -30,10 +30,10 @@ void CPUGenContext::generate(const RootNode& root) {
 }
 
 // void GateApplyStmt::genCPU(const CPUGenContext& ctx) const {
-    // std::cerr << "Gate Apply\n";
+//     std::cerr << "Gate Apply\n";
 // }
 
 
-int main() {
-    return 0;
-}
+// int main() {
+//     return 0;
+// }

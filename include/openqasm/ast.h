@@ -63,11 +63,12 @@ public:
     size_t countStmts() { return stmts.size(); }
     Statement getStmt(size_t index) { return *(stmts[index]); }
 
-    void genCPU(const simulation::CPUGenContext& ctx) const {
+    void genCPU(const simulation::CPUGenContext& ctx) const override {
         for (auto& stmt : stmts) {
             stmt->genCPU(ctx);
         }
     }
+    
 };
 
 
