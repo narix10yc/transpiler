@@ -86,33 +86,47 @@ std::unique_ptr<ast::NumericExpr> Parser::parseNumericExpr() {
 }
 
 std::unique_ptr<ast::Expression> Parser::parseVariableExpr() {
-    auto name = curToken.str;
-    nextToken(); // eat the identifier
+    auto next = peek();
 
-    if (curToken.type == TokenTy::L_RoundBraket) {
+    if (next.type == TokenTy::L_RoundBraket) {
         // funcCall
         logError("NOT IMPLEMENTED");
+        return nullptr;
     }
-    else if (curToken.type == TokenTy::L_SquareBraket) {
+    else if (next.type == TokenTy::L_SquareBraket) {
         // subscript
-        nextToken(); // eat '['
-        auto numericExpr = parseNumericExpr();
-        if (!numericExpr) {
-            logError("Expect index");
-            return nullptr;
-        }
-        int index = static_cast<int>(numericExpr->getValue());
-        if (curToken.type != TokenTy::R_SquareBraket) {
-            logError("Subscript Expression: expect ']'");
-            return nullptr;
-        }
-
-        nextToken(); // eat ']'
-        return std::make_unique<ast::SubscriptExpr>(name, index);
+        return parseSubscriptExpr();
     }
 
+    // variable expression
+    auto name = curToken.str;
+    nextToken();
     return std::make_unique<ast::VariableExpr>(name);
 }
+
+std::unique_ptr<ast::SubscriptExpr> Parser::parseSubscriptExpr() {
+    auto name = curToken.str;
+    if (!expectNextToken(TokenTy::L_SquareBraket)) {
+        logError("Subscript expr: expect '['");
+        return nullptr;
+    }
+        
+    nextToken(); // eat '['
+    auto numericExpr = parseNumericExpr();
+    if (!numericExpr) {
+        logError("Expect index");
+        return nullptr;
+    }
+    int index = static_cast<int>(numericExpr->getValue());
+    if (curToken.type != TokenTy::R_SquareBraket) {
+        logError("Subscript Expression: expect ']'");
+        return nullptr;
+    }
+
+    nextToken(); // eat ']'
+    return std::make_unique<ast::SubscriptExpr>(name, index);
+}
+
 
 std::unique_ptr<ast::Expression> Parser::parseParenExpr() {
     nextToken(); // Eat '('

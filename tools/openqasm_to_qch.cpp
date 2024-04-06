@@ -1,19 +1,13 @@
-#include <iostream>
-#include <string>
-#include <memory>
-#include <fstream>
-#include <filesystem>
-
 #include "openqasm/parser.h"
-#include "openqasm/ast.h"
-#include "openqasm/utils.h"
-
+#include "qch/ast.h"
 
 std::string augmentFileName(std::string& fileName, std::string by) {
     auto lastDotPos = fileName.find_last_of(".");
     std::string newName;
-    if (lastDotPos == std::string::npos) { newName = fileName; }
-    else { newName = fileName.substr(0, lastDotPos); }
+    if (lastDotPos == std::string::npos) 
+        newName = fileName;
+    else 
+        newName = fileName.substr(0, lastDotPos);
 
     return newName + by;
 }
@@ -26,7 +20,7 @@ int main(int argc, char *argv[]) {
 
     std::cerr << "-- Input file: " << inputFilename << std::endl;
 
-    Parser parser(inputFilename, 3);
+    Parser parser(inputFilename, 0);
 
     std::string astFileName = augmentFileName(inputFilename, "_ast.txt");
 

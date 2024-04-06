@@ -146,7 +146,7 @@ std::unique_ptr<ast::GateApplyStmt> Parser::parseGateApplyStmt() {
             break;
         if (curToken.type == TokenTy::Comma)
             { nextToken(); continue; }
-        auto targ = parseExpr();
+        auto targ = parseSubscriptExpr();
         if (!targ) {
             logError("GateApply: failed to parse target");
             return nullptr;

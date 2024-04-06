@@ -7,6 +7,7 @@
 #include <vector>
 #include <fstream>
 #include "token.h"
+#include "qch/ast.h"
 
 namespace simulation {
 class CPUGenContext;
@@ -30,8 +31,17 @@ class ExpressionValue {
 public:
     const bool isConstant;
     const double value;
-    ExpressionValue(double value) : isConstant(true), value(value) {}
-    ExpressionValue(bool isConstant) : isConstant(isConstant), value(0) {}
+    const bool isMultipleOfPI;
+    ExpressionValue(double value) :
+        isConstant(true), value(value), isMultipleOfPI(false) {}
+    ExpressionValue(bool isConstant) :
+        isConstant(isConstant), value(0), isMultipleOfPI(false) {}
+    ExpressionValue(bool isConstant, double value, bool isMultipleOfPI) :
+        isConstant(isConstant), value(value), isMultipleOfPI(isMultipleOfPI) {}
+
+    static ExpressionValue MultipleOfPI(double m) {
+        return { true, m, true };
+    }
 };
 
 
@@ -40,7 +50,6 @@ public:
     virtual ~Node() = default;
     virtual std::string toString() const = 0;
     virtual void prettyPrint(std::ofstream& f, int depth) const = 0;
-    virtual void genCPU(const simulation::CPUGenContext&) const {}
 };
 
 
@@ -48,6 +57,9 @@ class Statement : public Node {
 public:
     std::string toString() const override { return "Stmt"; }
     void prettyPrint(std::ofstream& f, int depth) const override {}
+
+    virtual std::unique_ptr<qch::ast::Statement>
+    toQchStmt() const { return nullptr; }
 };
 
 
@@ -63,12 +75,15 @@ public:
     size_t countStmts() { return stmts.size(); }
     Statement getStmt(size_t index) { return *(stmts[index]); }
 
-    void genCPU(const simulation::CPUGenContext& ctx) const override {
-        for (auto& stmt : stmts) {
-            stmt->genCPU(ctx);
+    std::unique_ptr<qch::ast::RootNode> toQch() const {
+        auto root = std::make_unique<qch::ast::RootNode>();
+        for (auto& s : stmts) {
+            auto qchStmt = s->toQchStmt();
+            if (qchStmt)
+                root->addStmt(std::move(qchStmt));
         }
+        return nullptr;
     }
-    
 };
 
 
@@ -91,7 +106,7 @@ public:
     void prettyPrint(std::ofstream& f, int depth) const override;
 
     double getValue() const { return value; }
-    virtual ExpressionValue getExprValue() const override { return value; }
+    ExpressionValue getExprValue() const override { return value; }
 };
 
 
@@ -107,7 +122,7 @@ public:
     }
     void prettyPrint(std::ofstream& f, int depth) const override;
 
-    virtual ExpressionValue getExprValue() const override {
+    ExpressionValue getExprValue() const override {
         return (name == "pi") ? 3.14159265358979323846 : false;
     }
 
@@ -127,7 +142,7 @@ public:
     }
     void prettyPrint(std::ofstream& f, int depth) const override;
 
-    virtual ExpressionValue getExprValue() const override { return false; }
+    ExpressionValue getExprValue() const override { return false; }
 };
 
 class UnaryExpr : public Expression {
@@ -156,7 +171,7 @@ public:
     const Expression getLHS() const { return *lhs; }
     const Expression getRHS() const { return *rhs; }
     BinaryOp getOp() const { return op; }
-    virtual ExpressionValue getExprValue() const override {
+    ExpressionValue getExprValue() const override {
         auto lhsValue = lhs->getExprValue();
         auto rhsValue = rhs->getExprValue();
         if (!lhsValue.isConstant || !rhsValue.isConstant) {
@@ -182,10 +197,10 @@ public:
     IfThenElseStmt(std::unique_ptr<Expression> ifExpr) 
         : ifExpr(std::move(ifExpr)) {}
 
-    virtual std::string toString() const override 
+    std::string toString() const override 
     { return "IfThenElseStmt"; }
 
-    virtual void prettyPrint(std::ofstream& f, int depth) const override;
+    void prettyPrint(std::ofstream& f, int depth) const override;
 
     void addThenBody(std::unique_ptr<Statement> stmt)
     { thenBody.push_back(std::move(stmt)); }
@@ -201,10 +216,10 @@ public:
     VersionStmt(std::string version) : version(version) {}
     std::string getVersion() const { return version; }
 
-    virtual std::string toString() const override 
+    std::string toString() const override 
     { return "Version(" + version + ")"; }
 
-    virtual void prettyPrint(std::ofstream& f, int depth) const override;
+    void prettyPrint(std::ofstream& f, int depth) const override;
 };
 
 
@@ -217,10 +232,10 @@ public:
     std::string getName() const { return name; }
     int getSize() const { return size; }
 
-    virtual std::string toString() const override 
+    std::string toString() const override 
     { return "QReg(" + name + ", " + std::to_string(size) + ")"; }
 
-    virtual void prettyPrint(std::ofstream& f, int depth) const override;
+    void prettyPrint(std::ofstream& f, int depth) const override;
 };
 
 class CRegStmt : public Statement {
@@ -232,24 +247,24 @@ public:
     std::string getName() const { return name; }
     int getSize() const { return size; }
 
-    virtual std::string toString() const override 
+    std::string toString() const override 
     { return "CReg(" + name + ", " + std::to_string(size) + ")"; }
 
-    virtual void prettyPrint(std::ofstream& f, int depth) const override;
+    void prettyPrint(std::ofstream& f, int depth) const override;
 };
 
 
 class GateApplyStmt : public Statement {
     std::string name;
     std::vector<std::unique_ptr<Expression>> parameters;
-    std::vector<std::unique_ptr<Expression>> targets;
+    std::vector<std::unique_ptr<SubscriptExpr>> targets;
 public:
     GateApplyStmt(std::string name) : name(name) {}
 
     void addParameter(std::unique_ptr<Expression> param)
     { parameters.push_back(std::move(param)); }
 
-    void addTarget(std::unique_ptr<Expression> targ)
+    void addTarget(std::unique_ptr<SubscriptExpr> targ)
     { targets.push_back(std::move(targ)); }
 
     std::string getName() const { return name; }
@@ -257,17 +272,27 @@ public:
     size_t countParameters() const { return parameters.size(); }
     size_t countTargets() const { return targets.size(); }
 
-    const Expression getParameter(size_t index) {
-        return *(parameters[index]);
+    const Expression& getParameter(size_t index) {
+        return *parameters[index];
     }
 
-    const Expression getTarget(size_t index) {
-        return *(targets[index]);
+    const Expression& getTarget(size_t index) {
+        return *targets[index];
     }
 
-    virtual void prettyPrint(std::ofstream& f, int depth) const override;
+    void prettyPrint(std::ofstream& f, int depth) const override;
 
-    // void genCPU(const simulation::CPUGenContext& ctx) const override;
+    std::unique_ptr<qch::ast::Statement> toQchStmt() const override {
+        std::vector<double> pp;
+        for (auto& p : parameters) {
+            auto exprValue = p->getExprValue();
+            if (!(exprValue.isConstant))
+                std::cerr << "expect constant expression value?";
+            else
+                pp.push_back(exprValue.value);
+        }
+
+    }
 };
 
 } // namespace openqasm::ast

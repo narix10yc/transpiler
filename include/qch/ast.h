@@ -7,14 +7,34 @@
 
 namespace qch::ast {
 
-class ASTNode {
+class Node {
 public:
-    virtual ~ASTNode() = default;
+    virtual ~Node() = default;
     virtual void print(std::ostream&) const = 0;
 };
 
+class Statement : public Node {};
 
-class GateApply : public ASTNode {
+class RootNode : public Node {
+    std::vector<std::unique_ptr<Statement>> stmts;
+public:
+    void addStmt(std::unique_ptr<Statement> stmt) {
+        stmts.push_back(std::move(stmt));
+    }
+
+    size_t countStmt() const {
+        return stmts.size();
+    }
+
+    const Statement& getStmt(size_t index) const {
+        return *stmts[index];
+    }
+
+    void print(std::ostream&) const override {}
+};
+
+
+class GateApply : public Node {
     std::string name;
     std::vector<double> parameters;
     std::vector<unsigned> qubits;

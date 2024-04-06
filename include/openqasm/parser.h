@@ -115,6 +115,8 @@ private:
     /* Call this when curToken is an identifier */
     std::unique_ptr<ast::Expression> parseVariableExpr();
 
+    std::unique_ptr<ast::SubscriptExpr> parseSubscriptExpr();
+
     std::unique_ptr<ast::Expression> parseParenExpr();
 };
 
