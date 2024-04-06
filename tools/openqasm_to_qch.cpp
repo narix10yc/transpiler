@@ -12,7 +12,6 @@ std::string augmentFileName(std::string& fileName, std::string by) {
     return newName + by;
 }
 
-using namespace openqasm;
 
 int main(int argc, char *argv[]) {
 
@@ -20,15 +19,23 @@ int main(int argc, char *argv[]) {
 
     std::cerr << "-- Input file: " << inputFilename << std::endl;
 
-    Parser parser(inputFilename, 0);
+    openqasm::Parser parser(inputFilename, 0);
 
-    std::string astFileName = augmentFileName(inputFilename, "_ast.txt");
+    std::string qchFileName = augmentFileName(inputFilename, ".qch");
 
     // parse and write ast
-    auto root = parser.parse();
-    std::ofstream f(astFileName);
-    root->prettyPrint(f, 0);
-    std::cerr << "AST written at " << astFileName << std::endl;
+    auto qasmRoot = parser.parse();
+    std::cerr << "-- qasm AST built\n";
+
+    auto qchRoot = qasmRoot->toQch();
+    std::cerr << "-- converted to qch AST\n";
+
+    std::ofstream f(qchFileName);
+    std::cerr << "-- opened " << qchFileName << "\n";
+
+    qchRoot->print(f);
+
+    std::cerr << "qch file written at " << qchFileName << std::endl;
     f.close();
 
     return 0;

@@ -1,9 +1,9 @@
 #ifndef QCH_AST_H_
 #define QCH_AST_H_
 
-#include <ostream>
 #include <string>
 #include <vector>
+#include <iostream>
 
 namespace qch::ast {
 
@@ -13,7 +13,11 @@ public:
     virtual void print(std::ostream&) const = 0;
 };
 
-class Statement : public Node {};
+class Statement : public Node {
+public:
+    Statement() {}
+    void print(std::ostream&) const override {}
+};
 
 class RootNode : public Node {
     std::vector<std::unique_ptr<Statement>> stmts;
@@ -30,19 +34,28 @@ public:
         return *stmts[index];
     }
 
-    void print(std::ostream&) const override {}
+    void print(std::ostream& os) const override {
+        for (auto& s : stmts) {
+            s->print(os);
+        }
+    }
 };
 
 
-class GateApply : public Node {
+class GateApplyStmt : public Statement {
     std::string name;
     std::vector<double> parameters;
     std::vector<unsigned> qubits;
 public:
-    GateApply(std::string name,
-              std::initializer_list<double> parameters,
-              std::initializer_list<unsigned> qubits)
+    GateApplyStmt(std::string name) : name(name), parameters(), qubits() {}
+
+    GateApplyStmt(std::string name,
+                  std::initializer_list<double> parameters,
+                  std::initializer_list<unsigned> qubits)
         : name(name), parameters(parameters), qubits(qubits) {}
+    
+    void addParameter(double p) { parameters.push_back(p); }
+    void addTargetQubit(unsigned q) { qubits.push_back(q); }
 
     void print(std::ostream&) const override;
 };

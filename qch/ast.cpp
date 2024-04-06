@@ -2,7 +2,7 @@
 
 using namespace qch::ast;
 
-void GateApply::print(std::ostream& os) const {
+void GateApplyStmt::print(std::ostream& os) const {
     os << name;
     auto pSize = parameters.size();
 
@@ -17,8 +17,8 @@ void GateApply::print(std::ostream& os) const {
     // qubits
     os << " ";
     auto qSize = qubits.size();
-    for (size_t i = 0; i < qSize; i++)
+    for (size_t i = 0; i < qSize-1; i++)
         os << qubits[i] << " ";
 
-    os << qubits[qSize] << "\n";
+    os << qubits[qSize-1] << "\n";
 }

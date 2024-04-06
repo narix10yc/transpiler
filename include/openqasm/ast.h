@@ -55,7 +55,7 @@ public:
 
 class Statement : public Node {
 public:
-    std::string toString() const override { return "Stmt"; }
+    std::string toString() const override { return "statement"; }
     void prettyPrint(std::ofstream& f, int depth) const override {}
 
     virtual std::unique_ptr<qch::ast::Statement>
@@ -76,20 +76,24 @@ public:
     Statement getStmt(size_t index) { return *(stmts[index]); }
 
     std::unique_ptr<qch::ast::RootNode> toQch() const {
-        auto root = std::make_unique<qch::ast::RootNode>();
+        auto qchRoot = std::make_unique<qch::ast::RootNode>();
         for (auto& s : stmts) {
             auto qchStmt = s->toQchStmt();
-            if (qchStmt)
-                root->addStmt(std::move(qchStmt));
+            if (qchStmt) {
+                std::cerr << "converted " << s->toString() << " to qch\n";
+                qchRoot->addStmt(std::move(qchStmt));
+            } else {
+                std::cerr << "cannot convert " << s->toString() << " to qch\n";
+            }
         }
-        return nullptr;
+        return qchRoot;
     }
 };
 
 
 class Expression : public Node {
 public:
-    std::string toString() const override { return "Expr"; }
+    std::string toString() const override { return "expression"; }
     void prettyPrint(std::ofstream& f, int depth) const override {}
     virtual ExpressionValue getExprValue() const { return false; }
 };
@@ -280,18 +284,29 @@ public:
         return *targets[index];
     }
 
+    std::string toString() const override {
+        return "gate " + name;
+    }
+
     void prettyPrint(std::ofstream& f, int depth) const override;
 
     std::unique_ptr<qch::ast::Statement> toQchStmt() const override {
-        std::vector<double> pp;
+        auto qchStmt = std::make_unique<qch::ast::GateApplyStmt>(name);
+    
+        // parameters
         for (auto& p : parameters) {
             auto exprValue = p->getExprValue();
             if (!(exprValue.isConstant))
-                std::cerr << "expect constant expression value?";
+                std::cerr << "expect constant expression value?\n";
             else
-                pp.push_back(exprValue.value);
+                qchStmt->addParameter(exprValue.value);
+        }
+        // targets
+        for (auto& t : targets) {
+            qchStmt->addTargetQubit(t->getIndex());
         }
 
+        return qchStmt;
     }
 };
 

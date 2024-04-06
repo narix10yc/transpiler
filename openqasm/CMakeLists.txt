@@ -1,2 +1,2 @@
 file(GLOB SRC_FILES "*.cpp")
-add_executable(parse ${SRC_FILES})
+add_library(qasm STATIC ${SRC_FILES})
