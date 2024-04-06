@@ -120,21 +120,8 @@ Token Lexer::tokenizeIdentifier() {
     if (identifier == "gate") return TokenTy::Gate;
     
     return { TokenTy::Identifier, identifier };
-    
-
 
 }
-
-
-
-
-
-
-
-
-
-
-
 
 
 

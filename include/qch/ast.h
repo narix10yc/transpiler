@@ -5,12 +5,18 @@
 #include <vector>
 #include <iostream>
 
+namespace simulation {
+class CPUGenContext;
+}
+
+
 namespace qch::ast {
 
 class Node {
 public:
     virtual ~Node() = default;
     virtual void print(std::ostream&) const = 0;
+    virtual void genCPU(simulation::CPUGenContext&) const = 0;
 };
 
 class Statement : public Node {
@@ -39,6 +45,11 @@ public:
             s->print(os);
         }
     }
+
+    void genCPU(simulation::CPUGenContext& ctx) const override {
+        for (auto& s : stmts)
+            s->genCPU(ctx);
+    }
 };
 
 
@@ -58,17 +69,10 @@ public:
     void addTargetQubit(unsigned q) { qubits.push_back(q); }
 
     void print(std::ostream&) const override;
+
+    void genCPU(simulation::CPUGenContext& ctx) const override;
 };
 
-// class Measure : public ASTNode {
-// public:
-//     void print(const std::ostream&) const override;
-// };
-
-// class IfThenElse : public ASTNode {
-// public:
-//     void print(const std::ostream&) const override;
-// };
 
 } // namespace qch
 

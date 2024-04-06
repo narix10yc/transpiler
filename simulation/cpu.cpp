@@ -22,12 +22,7 @@ void applyGateCZ
 }
 } // <anonymous> namespace
 
-using namespace simulation;
-using namespace openqasm::ast;
 
-void CPUGenContext::generate(const RootNode& root) {
-    root.genCPU(*this);
-}
 
 // void GateApplyStmt::genCPU(const CPUGenContext& ctx) const {
 //     std::cerr << "Gate Apply\n";
