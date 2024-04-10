@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
        << "_K" << Qubit << "_S" << VecSize;
     std::string funcName = ss.str();
     
-    gen.genU3(Qubit, funcName, ty, theta, phi, lambd, Thres);
+    gen.genU3(Qubit, funcName, theta, phi, lambd, ty, Thres);
 
     // print to file 
     if (FileName != "") {

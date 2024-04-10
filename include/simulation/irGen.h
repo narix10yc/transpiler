@@ -70,10 +70,10 @@ public:
 
     void genU3(const int64_t k, 
             const llvm::StringRef funcName, 
-            const RealTy realType,
             std::optional<double> theta, 
             std::optional<double> phi, 
             std::optional<double> lambd, 
+            const RealTy realType=RealTy::Double,
             double thres=1e-8);
 };
 

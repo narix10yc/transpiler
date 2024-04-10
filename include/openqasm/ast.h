@@ -76,16 +76,14 @@ public:
     Statement getStmt(size_t index) { return *(stmts[index]); }
 
     std::unique_ptr<qch::ast::RootNode> toQch() const {
-        auto qchRoot = std::make_unique<qch::ast::RootNode>();
+        auto qchCircuit = std::make_unique<qch::ast::CircuitStmt>("mycircuit");
         for (auto& s : stmts) {
             auto qchStmt = s->toQchStmt();
-            if (qchStmt) {
-                std::cerr << "converted " << s->toString() << " to qch\n";
-                qchRoot->addStmt(std::move(qchStmt));
-            } else {
-                std::cerr << "cannot convert " << s->toString() << " to qch\n";
-            }
+            std::cerr << "converted " << s->toString() << " to qch Stmt\n";
+            qchCircuit->addStmt(std::move(qchStmt));
         }
+        auto qchRoot = std::make_unique<qch::ast::RootNode>();
+        qchRoot->addStmt(std::move(qchCircuit));
         return qchRoot;
     }
 };

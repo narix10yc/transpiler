@@ -3,7 +3,7 @@
 using namespace qch::ast;
 
 void GateApplyStmt::print(std::ostream& os) const {
-    os << name;
+    os << "  " << name;
     auto pSize = parameters.size();
 
     // parameter
@@ -21,4 +21,13 @@ void GateApplyStmt::print(std::ostream& os) const {
         os << qubits[i] << " ";
 
     os << qubits[qSize-1] << "\n";
+}
+
+void CircuitStmt::print(std::ostream& os) const {
+    os << "circuit<" << nqubits << "> " << name << "()\n{\n";
+    
+    for (auto& s : stmts)
+        s->print(os);
+
+    os << "}\n";
 }

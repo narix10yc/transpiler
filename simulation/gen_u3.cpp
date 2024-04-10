@@ -40,10 +40,10 @@ Value* IRGenerator::genMulAddOrMulSub(Value* aa, bool add, Value* bb, Value* cc,
 
 void IRGenerator::genU3(const int64_t k, 
         const llvm::StringRef funcName, 
-        const RealTy realType,
         std::optional<double> _theta, 
         std::optional<double> _phi, 
         std::optional<double> _lambd, 
+        const RealTy realType,
         double thres) {
     auto mat = OptionalComplexMat2x2::FromAngles(_theta, _phi, _lambd, thres);
 

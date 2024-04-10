@@ -2,8 +2,9 @@
 #define SIMULATION_CPU_H_
 
 #include <map>
-// #include <iostream>
+#include <iomanip>
 #include <fstream>
+#include <sstream>
 #include "simulation/irGen.h"
 #include "qch/ast.h"
 
@@ -23,41 +24,60 @@ std::string augmentFileName(std::string& fileName, std::string by) {
 namespace simulation {
 
 class CPUGenContext {
-    unsigned vecSizeInBits;
     std::map<uint32_t, std::string> gateMap;
     simulation::IRGenerator irGenerator;
     std::string fileName;
-    std::ofstream shellFile;
-    std::ofstream cFile;
-    std::ofstream incFile;
-    std::ofstream irFile;
+    std::error_code EC;
 public:
+    unsigned gateCount;
+    std::stringstream shellStream;
+    std::stringstream cStream;
+    std::stringstream incStream;
+    std::stringstream irStream;
+    unsigned vecSizeInBits;
+    unsigned nqubits;
+
     CPUGenContext(unsigned vecSizeInBits, std::string fileName)
       : vecSizeInBits(vecSizeInBits),
         gateMap(),
+        gateCount(0),
         irGenerator(vecSizeInBits),
         fileName(fileName) {}
 
     void logError(std::string msg) {}
 
+    simulation::IRGenerator& getGenerator() { return irGenerator; }
+
     void generate(qch::ast::RootNode& root) {
+        std::error_code EC;
         auto shellName = augmentFileName(fileName, "sh");
-        shellFile = std::ofstream(shellName);
+        auto shellFile = llvm::raw_fd_ostream(shellName, EC);
         std::cerr << "shell script will be written to: " << shellName << "\n";
 
         auto cName = augmentFileName(fileName, "c");
-        cFile = std::ofstream(cName);
+        auto cFile = llvm::raw_fd_ostream(cName, EC);
         std::cerr << "C script will be written to: " << cName << "\n";
 
         auto incName = augmentFileName(fileName, "inc");
-        incFile = std::ofstream(incName);
+        auto incFile = llvm::raw_fd_ostream(incName, EC);
         std::cerr << "include file will be written to: " << incName << "\n";
 
         auto irName = augmentFileName(fileName, "ll");
-        irFile = std::ofstream(irName);
+        auto irFile = llvm::raw_fd_ostream(irName, EC);
         std::cerr << "IR file will be written to: " << irName << "\n";
 
+        cStream << std::setprecision(16);
+        cStream << "#include \"" << incName << "\"\n\n";
+        cStream << "void simulate_circuit(double* real, double* imag) {\n";
+
         root.genCPU(*this);
+
+        cStream << "}";
+
+        shellFile << shellStream.str();
+        cFile << cStream.str();
+        incFile << incStream.str();
+        irGenerator.getModule().print(irFile, nullptr);
 
         shellFile.close();
         cFile.close();
