@@ -38,14 +38,10 @@ Value* IRGenerator::genMulAddOrMulSub(Value* aa, bool add, Value* bb, Value* cc,
 }
 
 
-void IRGenerator::genU3(const int64_t k, 
-        const llvm::StringRef funcName, 
-        std::optional<double> _theta, 
-        std::optional<double> _phi, 
-        std::optional<double> _lambd, 
-        const RealTy realType,
-        double thres) {
-    auto mat = OptionalComplexMat2x2::FromAngles(_theta, _phi, _lambd, thres);
+void IRGenerator::genU3(const U3Gate& u3,
+                        const llvm::StringRef funcName, 
+                        RealTy realType) {
+    const OptionalComplexMat2x2& mat = u3.mat;
 
     errs() << mat.ar.has_value() << " " <<  mat.br.has_value() << " "
         << mat.cr.has_value() << " " << mat.dr.has_value() << " "
@@ -54,6 +50,7 @@ void IRGenerator::genU3(const int64_t k,
 
     errs() << "Generating function " << funcName << "\n";
 
+    auto k = u3.qubit;
     int64_t _S = 1 << vecSizeInBits;
     int64_t _K = 1 << k;
     int64_t _inner = (1 << (k - vecSizeInBits)) - 1;
@@ -64,8 +61,10 @@ void IRGenerator::genU3(const int64_t k,
     auto* s = builder.getInt64(vecSizeInBits);
     auto* s_add_1 = builder.getInt64(vecSizeInBits + 1);
 
-    Type* realTy = (realType == RealTy::Float) ? builder.getFloatTy() : builder.getDoubleTy();
+    Type* realTy = (realType == RealTy::Float) ? builder.getFloatTy()
+                                               : builder.getDoubleTy();
     Type* vectorTy = VectorType::get(realTy, _S, false);
+    Type* realTyx8 = VectorType::get(realTy, 8, false);
 
     // create function
     Type* retTy = builder.getVoidTy();
@@ -75,45 +74,24 @@ void IRGenerator::genU3(const int64_t k,
     argTy.push_back(builder.getPtrTy()); // ptr to imag amp
     argTy.push_back(builder.getInt64Ty()); // idx_start
     argTy.push_back(builder.getInt64Ty()); // idx_end
-    if (!_theta.has_value()) 
-        argTy.push_back(realTy); // theta
-    if (!_phi.has_value()) 
-        argTy.push_back(realTy); // phi
-    if (!_lambd.has_value()) 
-        argTy.push_back(realTy); // lambd
+    argTy.push_back(realTyx8); // matrix
 
     FunctionType* funcTy = FunctionType::get(retTy, argTy, false);
     Function* func = Function::Create(funcTy, Function::ExternalLinkage, funcName, mod.get());
-
-    SmallVector<StringRef> argNames { "preal", "pimag", "idx_start", "idx_end" };
-    if (!_theta.has_value()) 
-        argNames.push_back("theta");
-    if (!_phi.has_value()) 
-        argNames.push_back("phi");
-    if (!_lambd.has_value()) 
-        argNames.push_back("lambda");
 
     auto* preal = func->getArg(0);
     auto* pimag = func->getArg(1);
     auto* idx_start = func->getArg(2);
     auto* idx_end = func->getArg(3);
-    Value *theta = nullptr, *phi = nullptr, *lambd = nullptr;
+    Value* pmat = func->getArg(4);
 
+    SmallVector<StringRef> argNames
+        { "preal", "pimag", "idx_start", "idx_end", "mat"};
+
+    // set arg names
     size_t i = 0;
-    for (auto& arg : func->args()) {
-        arg.setName(argNames[i]);
-        if (argNames[i] == "theta")
-            theta = func->getArg(i);
-        if (argNames[i] == "phi") 
-            phi = func->getArg(i); 
-        if (argNames[i] == "lambda")
-            lambd = func->getArg(i);
-        ++i;
-    }
-
-    assert(_theta.has_value() ^ (theta != nullptr));
-    assert(_phi.has_value() ^ (phi != nullptr));
-    assert(_lambd.has_value() ^ (lambd != nullptr));
+    for (auto& arg : func->args())
+        arg.setName(argNames[i++]);
 
     // init basic blocks
     BasicBlock* entryBB = BasicBlock::Create(llvmContext, "entry", func);
@@ -122,44 +100,6 @@ void IRGenerator::genU3(const int64_t k,
     BasicBlock* retBB = BasicBlock::Create(llvmContext, "ret", func);
 
     builder.SetInsertPoint(entryBB);
-    Value *ctheta, *stheta, *cphi, *sphi, *clambd, *slambd, *cphi_lambd, *sphi_lambd;
-    // All theta, if used, will present in the form of theta/2
-    if (theta) {
-        theta = builder.CreateFMul(theta, ConstantFP::get(realTy, 0.5), "theta");
-        ctheta = builder.CreateUnaryIntrinsic(Intrinsic::cos, theta, nullptr, "cos_theta");
-        stheta = builder.CreateUnaryIntrinsic(Intrinsic::sin, theta, nullptr, "sin_theta");
-    } else {
-        ctheta = ConstantFP::get(realTy, cos(_theta.value() * 0.5));
-        stheta = ConstantFP::get(realTy, sin(_theta.value() * 0.5));
-    }
-
-    if (phi) {
-        cphi = builder.CreateUnaryIntrinsic(Intrinsic::cos, phi, nullptr, "cos_phi");
-        sphi = builder.CreateUnaryIntrinsic(Intrinsic::sin, phi, nullptr, "sin_phi");
-    } else {
-        cphi = ConstantFP::get(realTy, cos(_phi.value()));
-        sphi = ConstantFP::get(realTy, sin(_phi.value()));
-    }
-    
-    if (lambd) {
-        clambd = builder.CreateUnaryIntrinsic(Intrinsic::cos, lambd, nullptr, "cos_lambda");
-        slambd = builder.CreateUnaryIntrinsic(Intrinsic::sin, lambd, nullptr, "sin_lambda");
-    } else {
-        clambd = ConstantFP::get(realTy, cos(_lambd.value()));
-        slambd = ConstantFP::get(realTy, sin(_lambd.value()));
-    }
-
-    if (!phi && !lambd) {
-        // both are compile-time known
-        cphi_lambd = ConstantFP::get(realTy, cos(_phi.value() + _lambd.value()));
-        sphi_lambd = ConstantFP::get(realTy, sin(_phi.value() + _lambd.value()));
-    } else {
-        Value* phiV = (phi) ? phi : ConstantFP::get(realTy, _phi.value());
-        Value* lambdV = (lambd) ? lambd : ConstantFP::get(realTy, _lambd.value());
-        auto* phi_add_lambd = builder.CreateFAdd(phiV, lambdV, "phi_add_lambda");
-        cphi_lambd = builder.CreateUnaryIntrinsic(Intrinsic::cos, phi_add_lambd, nullptr, "cos_phi_add_lambda");
-        sphi_lambd = builder.CreateUnaryIntrinsic(Intrinsic::sin, phi_add_lambd, nullptr, "sin_phi_add_lambda");
-    }
 
     // load matrix to vector reg
     // Special optimization only applies when +1, -1, or 0
@@ -171,14 +111,6 @@ void IRGenerator::genU3(const int64_t k,
         return 2;
     };
 
-    double _ar = mat.ar.value_or(2);
-    double _br = mat.br.value_or(2);
-    double _cr = mat.cr.value_or(2);
-    double _dr = mat.dr.value_or(2);
-    double _bi = mat.bi.value_or(2);
-    double _ci = mat.ci.value_or(2);
-    double _di = mat.di.value_or(2);
-
     int arFlag = getFlag(mat.ar);
     int brFlag = getFlag(mat.br);
     int crFlag = getFlag(mat.cr);
@@ -187,56 +119,13 @@ void IRGenerator::genU3(const int64_t k,
     int ciFlag = getFlag(mat.ci);
     int diFlag = getFlag(mat.di);
 
-    Value *arElem, *brElem, *crElem, *drElem, *biElem, *ciElem, *diElem;
-
-    errs() << _ar << " " << _br << " " << _cr << " " << _dr << " "
-           << _bi << " " << _ci << " " << _di << "\n";
-
-    // ar: cos(theta/2)
-    if (mat.ar.has_value()) 
-        arElem = ConstantFP::get(realTy, mat.ar.value());
-    else 
-        arElem = ctheta;
-        
-    // br: -cos(lambd) sin(theta/2)    
-    if (mat.br.has_value()) 
-        brElem = ConstantFP::get(realTy, mat.br.value());
-    else {
-        brElem = builder.CreateFMul(clambd, stheta, "clambd_mul_stheta");
-        brElem = builder.CreateFNeg(brElem, "br_elem");
-    }
-
-    // cr: cos(phi) sin(theta/2)
-    if (mat.cr.has_value()) 
-        crElem = ConstantFP::get(realTy, mat.cr.value());
-    else 
-        crElem = builder.CreateFMul(cphi, stheta, "cr_elem");
-    
-    // dr: cos(phi+lambda) cos(theta/2)
-    if (mat.dr.has_value()) 
-        drElem = ConstantFP::get(realTy, mat.dr.value());
-    else 
-        drElem = builder.CreateFMul(cphi_lambd, ctheta, "dr_elem");
-
-    // bi: -sin(lambd) sin(theta/2)    
-    if (mat.bi.has_value()) 
-        biElem = ConstantFP::get(realTy, mat.bi.value());
-    else {
-        biElem = builder.CreateFMul(slambd, stheta, "slambd_mul_stheta");
-        biElem = builder.CreateFNeg(biElem, "bi_elem");
-    }
-
-    // ci: sin(phi) sin(theta/2)
-    if (mat.ci.has_value()) 
-        ciElem = ConstantFP::get(realTy, mat.ci.value());
-    else 
-        ciElem = builder.CreateFMul(sphi, stheta, "ci_elem");
-    
-    // di: sin(phi+lambda) cos(theta/2)
-    if (mat.di.has_value()) 
-        diElem = ConstantFP::get(realTy, mat.di.value());
-    else 
-        diElem = builder.CreateFMul(sphi_lambd, ctheta, "di_elem");
+    auto* arElem = builder.CreateExtractElement(pmat, (uint64_t)0, "arElem");
+    auto* brElem = builder.CreateExtractElement(pmat, 1, "brElem");
+    auto* crElem = builder.CreateExtractElement(pmat, 2, "crElem");
+    auto* drElem = builder.CreateExtractElement(pmat, 3, "drElem");
+    auto* biElem = builder.CreateExtractElement(pmat, 4, "biElem");
+    auto* ciElem = builder.CreateExtractElement(pmat, 5, "ciElem");
+    auto* diElem = builder.CreateExtractElement(pmat, 6, "diElem");
 
     Value* ar = getVectorWithSameElem(realTy, _S, arElem, "ar");
     Value* br = getVectorWithSameElem(realTy, _S, brElem, "br");
@@ -259,7 +148,7 @@ void IRGenerator::genU3(const int64_t k,
     // loop body
     builder.SetInsertPoint(loopBodyBB);
 
-    // idxA = ((idx & outer) << k_sub_s) + ((idx & inner) << s)
+    // idxA = ((idx & outer) << k_sub_s) + ((idx & inner) x<< s)
     auto* idx_and_outer = builder.CreateAnd(idx, outer, "idx_and_outer");
     auto* shifted_outer = builder.CreateShl(idx_and_outer, s_add_1, "shl_outer");
     auto* idx_and_inner = builder.CreateAnd(idx, inner, "idx_and_inner");

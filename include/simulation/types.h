@@ -34,7 +34,7 @@ static double approxSin(double a, double thres=1e-8) {
 
 class OptionalComplexMat2x2 {
 public:
-    std::optional<double> ar, br, cr, dr, bi, ci, di;
+    std::optional<double> ar, br, cr, dr, ai, bi, ci, di;
 public:
     OptionalComplexMat2x2(std::optional<double> ar, 
     std::optional<double> br, std::optional<double> cr,
@@ -156,7 +156,7 @@ public:
     OptionalComplexMat2x2 mat;
     uint8_t qubit;
 
-    U3Gate(const OptionalComplexMat2x2& mat, uint8_t qubit)
+    U3Gate(OptionalComplexMat2x2 mat, uint8_t qubit)
         : mat(mat), qubit(qubit) {}
 
     static U3Gate FromID(uint32_t id) {
@@ -166,6 +166,15 @@ public:
         idToElem(id >> 4), idToElem(id >> 2), idToElem(id >> 0) };
 
         return { m, qubit };
+    }
+
+    static U3Gate FromAngles(uint8_t qubit,
+                             std::optional<double> theta,
+                             std::optional<double> phi, 
+                             std::optional<double> lambd,
+                             double thres=1e-8) {
+        auto mat = OptionalComplexMat2x2::FromAngles(theta, phi, lambd, thres);
+        return { mat, qubit };
     }
 
     /// @brief 32-bit id. From most to least significant: k (8-bit), 0 (10-bit),

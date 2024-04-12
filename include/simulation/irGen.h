@@ -68,13 +68,7 @@ public:
             const llvm::Twine& bbccName = "",
             const llvm::Twine& aaName = "");
 
-    void genU3(const int64_t k, 
-            const llvm::StringRef funcName, 
-            std::optional<double> theta, 
-            std::optional<double> phi, 
-            std::optional<double> lambd, 
-            const RealTy realType=RealTy::Double,
-            double thres=1e-8);
+    void genU3(const U3Gate&, const llvm::StringRef, RealTy realType=RealTy::Double);
 };
 
 

@@ -69,7 +69,9 @@ int main(int argc, char **argv) {
        << "_K" << Qubit << "_S" << VecSize;
     std::string funcName = ss.str();
     
-    gen.genU3(Qubit, funcName, theta, phi, lambd, ty, Thres);
+    auto u3 = U3Gate::FromAngles(static_cast<uint8_t>(Qubit), theta, phi, lambd);
+
+    gen.genU3(u3, funcName, ty);
 
     // print to file 
     if (FileName != "") {
