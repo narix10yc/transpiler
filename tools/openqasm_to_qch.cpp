@@ -1,16 +1,8 @@
 #include "openqasm/parser.h"
 #include "qch/ast.h"
+#include "simulation/cpu.h"
 
-std::string augmentFileName(std::string& fileName, std::string by) {
-    auto lastDotPos = fileName.find_last_of(".");
-    std::string newName;
-    if (lastDotPos == std::string::npos) 
-        newName = fileName;
-    else 
-        newName = fileName.substr(0, lastDotPos);
-
-    return newName + by;
-}
+using namespace simulation;
 
 
 int main(int argc, char *argv[]) {
@@ -37,6 +29,9 @@ int main(int argc, char *argv[]) {
 
     std::cerr << "qch file written at " << qchFileName << std::endl;
     f.close();
+    
+    CPUGenContext ctx {2, "gen_file"};
+    ctx.generate(*qchRoot);
 
     return 0;
 }

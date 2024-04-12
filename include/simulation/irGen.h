@@ -68,7 +68,9 @@ public:
             const llvm::Twine& bbccName = "",
             const llvm::Twine& aaName = "");
 
-    void genU3(const U3Gate&, const llvm::StringRef, RealTy realType=RealTy::Double);
+    void genU3(const U3Gate& u3,
+               const llvm::StringRef funcName,
+               RealTy realType=RealTy::Double);
 };
 
 

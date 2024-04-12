@@ -17,7 +17,7 @@ std::string augmentFileName(std::string& fileName, std::string by) {
     else 
         newName = fileName.substr(0, lastDotPos);
 
-    return newName + by;
+    return newName + "." + by;
 }
 } // <anonymous> namespace
 
@@ -69,6 +69,9 @@ public:
         cStream << std::setprecision(16);
         cStream << "#include \"" << incName << "\"\n\n";
         cStream << "void simulate_circuit(double* real, double* imag) {\n";
+
+        incStream << "#include <stdint.h>\n\n";
+        incStream << "typedef double v8double __attribute__((vector_size(64)));\n\n";
 
         root.genCPU(*this);
 

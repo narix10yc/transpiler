@@ -43,11 +43,6 @@ void IRGenerator::genU3(const U3Gate& u3,
                         RealTy realType) {
     const OptionalComplexMat2x2& mat = u3.mat;
 
-    errs() << mat.ar.has_value() << " " <<  mat.br.has_value() << " "
-        << mat.cr.has_value() << " " << mat.dr.has_value() << " "
-        << mat.bi.has_value() << " " << mat.ci.has_value() << " "
-        << mat.di.has_value() << "\n";
-
     errs() << "Generating function " << funcName << "\n";
 
     auto k = u3.qubit;
@@ -115,6 +110,7 @@ void IRGenerator::genU3(const U3Gate& u3,
     int brFlag = getFlag(mat.br);
     int crFlag = getFlag(mat.cr);
     int drFlag = getFlag(mat.dr);
+    int aiFlag = getFlag(mat.ai);
     int biFlag = getFlag(mat.bi);
     int ciFlag = getFlag(mat.ci);
     int diFlag = getFlag(mat.di);
@@ -123,15 +119,17 @@ void IRGenerator::genU3(const U3Gate& u3,
     auto* brElem = builder.CreateExtractElement(pmat, 1, "brElem");
     auto* crElem = builder.CreateExtractElement(pmat, 2, "crElem");
     auto* drElem = builder.CreateExtractElement(pmat, 3, "drElem");
-    auto* biElem = builder.CreateExtractElement(pmat, 4, "biElem");
-    auto* ciElem = builder.CreateExtractElement(pmat, 5, "ciElem");
-    auto* diElem = builder.CreateExtractElement(pmat, 6, "diElem");
+    auto* aiElem = builder.CreateExtractElement(pmat, 4, "aiElem");
+    auto* biElem = builder.CreateExtractElement(pmat, 5, "biElem");
+    auto* ciElem = builder.CreateExtractElement(pmat, 6, "ciElem");
+    auto* diElem = builder.CreateExtractElement(pmat, 7, "diElem");
 
     Value* ar = getVectorWithSameElem(realTy, _S, arElem, "ar");
     Value* br = getVectorWithSameElem(realTy, _S, brElem, "br");
     Value* cr = getVectorWithSameElem(realTy, _S, crElem, "cr");
     Value* dr = getVectorWithSameElem(realTy, _S, drElem, "dr");
     
+    Value* ai = getVectorWithSameElem(realTy, _S, aiElem, "ai");
     Value* bi = getVectorWithSameElem(realTy, _S, biElem, "bi");
     Value* ci = getVectorWithSameElem(realTy, _S, ciElem, "ci");
     Value* di = getVectorWithSameElem(realTy, _S, diElem, "di");
@@ -173,11 +171,13 @@ void IRGenerator::genU3(const U3Gate& u3,
     Value* newAr = nullptr;
     newAr = genMulAddOrMulSub(newAr, true, ar, Ar, arFlag, "arAr", "newAr");
     newAr = genMulAddOrMulSub(newAr, true, br, Br, brFlag, "brBr", "newAr");
+    newAr = genMulAddOrMulSub(newAr, false, ai, Ai, aiFlag, "aiAi", "newAr");
     newAr = genMulAddOrMulSub(newAr, false, bi, Bi, biFlag, "biBi", "newAr");
 
     // newAi = ar Ai + ai Ar + br Bi + bi Br
     Value* newAi = nullptr;
     newAi = genMulAddOrMulSub(newAi, true, ar, Ai, arFlag, "arAi", "newAi");
+    newAi = genMulAddOrMulSub(newAi, true, ai, Ar, aiFlag, "aiAr", "newAi");
     newAi = genMulAddOrMulSub(newAi, true, br, Bi, brFlag, "brBi", "newAi");
     newAi = genMulAddOrMulSub(newAi, true, bi, Br, biFlag, "biBr", "newAi");
 

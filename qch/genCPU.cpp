@@ -12,22 +12,25 @@ void GateApplyStmt::genCPU(simulation::CPUGenContext& ctx) const {
         return;
     }
 
-    // auto mat = 
-    // OptionalComplexMat2x2::FromAngles(parameters[0], parameters[1], parameters[2]);
-    // U3Gate gate { mat, qubits[0] };
-    // auto id = gate.getID();
+    auto u3 = U3Gate::FromAngles(qubits[0],
+        parameters[0], parameters[1], parameters[2]);
 
-    std::string funcName = "gate_u3_" + std::to_string(ctx.gateCount);
+    std::stringstream funcNameSS;
+    funcNameSS << "u3_" << ctx.gateCount << "_" << std::hex << u3.getID();
 
-    ctx.getGenerator().genU3(qubits[0], funcName, 
-                parameters[0], parameters[1], parameters[2]);
+    std::string funcName = funcNameSS.str();
+
+    ctx.getGenerator().genU3(u3, funcName);
 
     ctx.incStream << "void " << funcName
-        << "(double*, double*, int64_t, int64_t, double, double, double);\n";
+        << "(double*, double*, int64_t, int64_t, v8double);\n";
 
-    ctx.cStream << funcName << "(real, real, 0, " << idxMax << ", "
-        << parameters[0] << ", " << parameters[1] << ", " << parameters[2]
-        << ");\n";
+    ctx.cStream << "  " << funcName << "(real, imag, 0, " << idxMax << ",\n    "
+        << "(v8double){"
+        << u3.mat.ar.value_or(0) << "," << u3.mat.br.value_or(0) << ","
+        << u3.mat.cr.value_or(0) << "," << u3.mat.dr.value_or(0) << ","
+        << u3.mat.ai.value_or(0) << "," << u3.mat.bi.value_or(0) << ","
+        << u3.mat.ci.value_or(0) << "," << u3.mat.di.value_or(0) << "});\n";
 
     ctx.gateCount ++;
 }
