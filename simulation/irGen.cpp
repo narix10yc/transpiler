@@ -64,12 +64,12 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    auto u3 = U3Gate::FromAngles(static_cast<uint8_t>(Qubit), theta, phi, lambd);
+    
     std::stringstream ss;
     ss << "kernel_" << ((ty == RealTy::Double) ? "f64" : "f32")
-       << "_K" << Qubit << "_S" << VecSize;
+       << "_K" << Qubit << "_S" << VecSize << "_" << std::hex << u3.getID();
     std::string funcName = ss.str();
-    
-    auto u3 = U3Gate::FromAngles(static_cast<uint8_t>(Qubit), theta, phi, lambd);
 
     gen.genU3(u3, funcName, ty);
 
