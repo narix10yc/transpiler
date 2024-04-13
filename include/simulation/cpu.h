@@ -50,19 +50,19 @@ public:
 
     void generate(qch::ast::RootNode& root) {
         std::error_code EC;
-        auto shellName = augmentFileName(fileName, "sh");
+        auto shellName = fileName + ".sh";
         auto shellFile = llvm::raw_fd_ostream(shellName, EC);
         std::cerr << "shell script will be written to: " << shellName << "\n";
 
-        auto cName = augmentFileName(fileName, "c");
+        auto cName = fileName + ".c";
         auto cFile = llvm::raw_fd_ostream(cName, EC);
         std::cerr << "C script will be written to: " << cName << "\n";
 
-        auto incName = augmentFileName(fileName, "inc");
+        auto incName = fileName + ".inc";
         auto incFile = llvm::raw_fd_ostream(incName, EC);
         std::cerr << "include file will be written to: " << incName << "\n";
 
-        auto irName = augmentFileName(fileName, "ll");
+        auto irName = fileName + ".ll";
         auto irFile = llvm::raw_fd_ostream(irName, EC);
         std::cerr << "IR file will be written to: " << irName << "\n";
 
@@ -72,10 +72,12 @@ public:
 
         incStream << "#include <stdint.h>\n\n";
         incStream << "typedef double v8double __attribute__((vector_size(64)));\n\n";
+        incStream << "extern \"C\" {\n";
 
         root.genCPU(*this);
 
         cStream << "}";
+        incStream << "}";
 
         shellFile << shellStream.str();
         cFile << cStream.str();

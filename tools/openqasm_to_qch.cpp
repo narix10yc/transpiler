@@ -9,7 +9,10 @@ int main(int argc, char *argv[]) {
 
     std::string inputFilename = argv[1];
 
-    std::cerr << "-- Input file: " << inputFilename << std::endl;
+    std::string outputFilename = argv[2];
+
+    std::cerr << "-- Input file: " << inputFilename << "\n";
+    std::cerr << "-- Output file: " << outputFilename << "\n";
 
     openqasm::Parser parser(inputFilename, 0);
 
@@ -21,16 +24,8 @@ int main(int argc, char *argv[]) {
 
     auto qchRoot = qasmRoot->toQch();
     std::cerr << "-- converted to qch AST\n";
-
-    std::ofstream f(qchFileName);
-    std::cerr << "-- opened " << qchFileName << "\n";
-
-    qchRoot->print(f);
-
-    std::cerr << "qch file written at " << qchFileName << std::endl;
-    f.close();
     
-    CPUGenContext ctx {2, "gen_file"};
+    CPUGenContext ctx {2, outputFilename};
     ctx.generate(*qchRoot);
 
     return 0;

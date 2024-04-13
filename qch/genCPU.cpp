@@ -6,7 +6,7 @@ using namespace qch::ast;
 using namespace simulation;
 
 void GateApplyStmt::genCPU(simulation::CPUGenContext& ctx) const {
-    int64_t idxMax = 1 << (ctx.nqubits - ctx.vecSizeInBits);
+    int64_t idxMax = static_cast<int64_t>(1) << (ctx.nqubits - ctx.vecSizeInBits);
     if (name != "u3") {
         std::cerr << "skipped gate " << name << "\n";
         return;
