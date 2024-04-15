@@ -109,10 +109,7 @@ public:
 
     void print(std::ostream&) const override;
 
-    void genCPU(simulation::CPUGenContext& ctx) const override {
-        for (auto& s : stmts)
-            s->genCPU(ctx);
-    }
+    void genCPU(simulation::CPUGenContext& ctx) const override;
 };
 
 

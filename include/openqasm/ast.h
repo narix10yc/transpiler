@@ -79,6 +79,10 @@ public:
         auto qchCircuit = std::make_unique<qch::ast::CircuitStmt>("mycircuit");
         for (auto& s : stmts) {
             auto qchStmt = s->toQchStmt();
+            if (qchStmt == nullptr) {
+                std::cerr << "cannot convert " << s->toString() << " to qch Stmt\n";
+                continue;
+            }
             std::cerr << "converted " << s->toString() << " to qch Stmt\n";
             qchCircuit->addStmt(std::move(qchStmt));
         }

@@ -27,11 +27,10 @@ void TimingResult::calcStats() {
         return;
     }
     std::sort(tarr.begin(), tarr.end());
-    min = tarr[0];
-    med = getMedian(tarr, 0, tarr.size());
-    
-    min /= repeat;
-    med /= repeat;
+    min = tarr[0] / repeat;
+    med = getMedian(tarr, 0, tarr.size()) / repeat;
+    q1 = getMedian(tarr, 0, tarr.size() / 2) / repeat;
+    q3 = getMedian(tarr, tarr.size() / 2, tarr.size()) / repeat;
 }
 
 std::string TimingResult::timeToString(double t, int n_sig_dig) {

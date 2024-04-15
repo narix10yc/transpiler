@@ -38,11 +38,11 @@ public:
     unsigned nqubits;
 
     CPUGenContext(unsigned vecSizeInBits, std::string fileName)
-      : vecSizeInBits(vecSizeInBits),
-        gateMap(),
-        gateCount(0),
-        irGenerator(vecSizeInBits),
-        fileName(fileName) {}
+        : gateCount(0),
+          vecSizeInBits(vecSizeInBits),
+          gateMap(),
+          irGenerator(vecSizeInBits),
+          fileName(fileName) {}
 
     void logError(std::string msg) {}
 
@@ -66,7 +66,6 @@ public:
         auto irFile = llvm::raw_fd_ostream(irName, EC);
         std::cerr << "IR file will be written to: " << irName << "\n";
 
-        cStream << std::setprecision(16);
         cStream << "#include \"" << incName << "\"\n\n";
         cStream << "void simulate_circuit(double* real, double* imag) {\n";
 
