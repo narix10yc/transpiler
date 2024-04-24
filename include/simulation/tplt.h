@@ -43,10 +43,11 @@ void applyTwoQubit(real_ty* real,
                    size_t k, size_t l) {
     size_t K = 1 << k;
     size_t L = 1 << l;
+    size_t N = 1 << nqubits;
     real_ty *amp_pt_r, *amp_pt_i;
     real_ty amp_r[4], amp_i[4];
 
-    for (size_t t = 0; t < sv->namp; t += (K << 1)) {
+    for (size_t t = 0; t < N; t += (K << 1)) {
     for (size_t tt = 0; tt < K; tt += (L << 1)) {
     for (size_t ttt = 0; ttt < L; ttt++) {
         amp_pt_r = sv->real + t + tt + ttt;
