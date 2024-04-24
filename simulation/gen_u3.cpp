@@ -38,6 +38,34 @@ Value* IRGenerator::genMulAddOrMulSub(Value* aa, bool add, Value* bb, Value* cc,
 }
 
 
+Value* IRGenerator::genMulAdd(Value* aa, Value* bb, Value* cc, 
+                              int bbFlag, const Twine& bbccName,
+                              const Twine& aaName) {
+    if (bbFlag == 0) 
+        return aa;
+    
+    // new_aa = aa + cc
+    if (bbFlag == 1) {
+        if (aa == nullptr)
+            return cc;
+        return builder.CreateFAdd(aa, cc, aaName);
+    }
+
+    // new_aa = aa - cc
+    if (bbFlag == -1) {
+        if (aa == nullptr)
+            return cc;
+        return builder.CreateFSub(aa, cc, aaName);
+    }
+
+    // new_aa = aa + bb * cc
+    auto* bbcc = builder.CreateFMul(bb, cc, bbccName);
+    if (aa == nullptr)
+        return bbcc;
+    return builder.CreateFAdd(aa, bbcc, aaName);
+}
+
+
 void IRGenerator::genU3(const U3Gate& u3,
                         const llvm::StringRef funcName, 
                         RealTy realType) {
@@ -45,10 +73,10 @@ void IRGenerator::genU3(const U3Gate& u3,
 
     errs() << "Generating function " << funcName << "\n";
 
-    auto k = u3.qubit;
-    int64_t _S = 1 << vecSizeInBits;
-    int64_t _K = 1 << k;
-    int64_t _inner = (1 << (k - vecSizeInBits)) - 1;
+    uint8_t k = u3.qubit;
+    int64_t _S = 1ULL << vecSizeInBits;
+    int64_t _K = 1ULL << k;
+    int64_t _inner = (1ULL << (k - vecSizeInBits)) - 1;
     int64_t _outer = static_cast<int64_t>(-1) - _inner;
     auto* K = builder.getInt64(_K);
     auto* inner = builder.getInt64(_inner);

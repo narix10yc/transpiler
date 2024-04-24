@@ -3,6 +3,10 @@
 
 #include <optional>
 #include <cmath>
+#include <initializer_list>
+#include <array>
+#include <iostream>
+#include <iomanip>
 
 namespace simulation {
 
@@ -193,6 +197,91 @@ public:
         return id;
     }
 }; // U3Gate
+
+
+template<typename real_ty=double>
+class ComplexMatrix2 {
+public:
+    std::array<real_ty, 4> real, imag;
+
+    ComplexMatrix2() : real(), imag() {}
+    
+    ComplexMatrix2(std::array<real_ty, 4> real, std::array<real_ty, 4> imag)
+        : real(real), imag(imag) {}
+
+    static ComplexMatrix2 GetIdentity() {
+        return {{1,0,0,1}, {}};
+    }
+
+};
+
+template<typename real_ty=double>
+class ComplexMatrix4 {
+public:
+    std::array<real_ty, 16> real, imag;
+
+    ComplexMatrix4() : real(), imag() {}
+
+    ComplexMatrix4(std::array<real_ty, 16> real, std::array<real_ty, 16> imag)
+        : real(real), imag(imag) {}
+
+    static ComplexMatrix4 GetIdentity() {
+        return {{1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1}, {}};
+    }
+
+    ComplexMatrix4 matmul(ComplexMatrix4 other) {
+        ComplexMatrix4 newMat {};
+        for (size_t i = 0; i < 4; i++) {
+        for (size_t j = 0; j < 4; j++) {
+        for (size_t k = 0; k < 4; k++) {
+            // A_ij B_jk
+            newMat.real[4*i+k] += real[4*i+j] * other.real[4*j+k]
+                                 -imag[4*i+j] * other.imag[4*j+k];
+            newMat.imag[4*i+k] += real[4*i+j] * other.imag[4*j+k]
+                                 +imag[4*i+j] * other.real[4*j+k];
+        }}}
+        return newMat;
+    }
+
+    void print(std::ostream& os) const {
+        const auto outNumber = [&](size_t idx) {
+            if (real[idx] >= 0)
+                os << " ";
+            os << real[idx] << "+";
+            if (imag[idx] >= 0)
+                os << " ";
+            os << imag[idx] << " i";
+        };
+        os << std::scientific << std::setprecision(4) << "[";
+        for (size_t r = 0; r < 4; r++) {
+            if (r > 0)
+                os << " ";
+            for (size_t c = 0; c < 4; c++) {
+                outNumber(4*r + c);
+                if (r == 3 && c == 3)
+                    os << "]";
+                else if (c == 3)
+                    os << ",\n";
+                else 
+                    os << ", ";
+            }
+        }
+    }
+        
+};
+
+
+class U2qGate {
+    ComplexMatrix4<> mat;
+    int q0, q1;
+public:
+    U2qGate(ComplexMatrix4<> mat, int q0, int q1) : mat(mat), q0(q0), q1(q1) {}
+};
+
+
+
+
+
 
 } // namespace simulation
 
