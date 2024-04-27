@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
 
     openqasm::Parser parser(inputFilename, 0);
 
-    std::string qchFileName = augmentFileName(inputFilename, ".qch");
+    std::string qchFileName = inputFilename + ".qch";
 
     // parse and write ast
     auto qasmRoot = parser.parse();

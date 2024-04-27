@@ -8,19 +8,6 @@
 #include "simulation/irGen.h"
 #include "qch/ast.h"
 
-namespace {
-std::string augmentFileName(std::string& fileName, std::string by) {
-    auto lastDotPos = fileName.find_last_of(".");
-    std::string newName;
-    if (lastDotPos == std::string::npos) 
-        newName = fileName;
-    else 
-        newName = fileName.substr(0, lastDotPos);
-
-    return newName + "." + by;
-}
-} // <anonymous> namespace
-
 namespace simulation {
 
 class CPUGenContext {
@@ -31,18 +18,15 @@ class CPUGenContext {
 public:
     unsigned gateCount;
     std::stringstream shellStream;
-    std::stringstream cStream;
-    std::stringstream incStream;
+    std::stringstream declStream;
+    std::stringstream kernelStream;
     std::stringstream irStream;
     unsigned vecSizeInBits;
     unsigned nqubits;
 
     CPUGenContext(unsigned vecSizeInBits, std::string fileName)
-        : gateCount(0),
-          vecSizeInBits(vecSizeInBits),
-          gateMap(),
-          irGenerator(vecSizeInBits),
-          fileName(fileName) {}
+        : fileName(fileName),
+          vecSizeInBits(vecSizeInBits) {}
 
     void logError(std::string msg) {}
 
@@ -54,38 +38,31 @@ public:
         auto shellFile = llvm::raw_fd_ostream(shellName, EC);
         std::cerr << "shell script will be written to: " << shellName << "\n";
 
-        auto cName = fileName + ".c";
-        auto cFile = llvm::raw_fd_ostream(cName, EC);
-        std::cerr << "C script will be written to: " << cName << "\n";
-
-        auto incName = fileName + ".inc";
-        auto incFile = llvm::raw_fd_ostream(incName, EC);
-        std::cerr << "include file will be written to: " << incName << "\n";
+        auto hName = fileName + ".h";
+        auto hFile = llvm::raw_fd_ostream(hName, EC);
+        std::cerr << "header file will be written to: " << hName << "\n";
 
         auto irName = fileName + ".ll";
         auto irFile = llvm::raw_fd_ostream(irName, EC);
         std::cerr << "IR file will be written to: " << irName << "\n";
 
-        cStream << "#include \"" << incName << "\"\n\n";
-        cStream << "void simulate_circuit(double* real, double* imag) {\n";
+        hFile << "#include <stdint.h>\n\n";
+        hFile << "typedef double v8double __attribute__((vector_size(64)));\n\n";
 
-        incStream << "#include <stdint.h>\n\n";
-        incStream << "typedef double v8double __attribute__((vector_size(64)));\n\n";
-        incStream << "extern \"C\" {\n";
+        declStream << "extern \"C\" {\n";
+        kernelStream << "void simulate_circuit(double* real, double* imag) {\n";
 
         root.genCPU(*this);
 
-        cStream << "}";
-        incStream << "}";
+        declStream << "}";
+        kernelStream << "}";
 
         shellFile << shellStream.str();
-        cFile << cStream.str();
-        incFile << incStream.str();
+        hFile << declStream.str() << "\n\n" << kernelStream.str();
         irGenerator.getModule().print(irFile, nullptr);
 
         shellFile.close();
-        cFile.close();
-        incFile.close();
+        hFile.close();
         irFile.close();
     }
 };

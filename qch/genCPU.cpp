@@ -12,7 +12,7 @@ void CircuitStmt::genCPU(CPUGenContext& ctx) const {
 }
 
 void GateApplyStmt::genCPU(CPUGenContext& ctx) const {
-    uint64_t idxMax = static_cast<uint64_t>(1) << (ctx.nqubits - ctx.vecSizeInBits - 1);
+    uint64_t idxMax = 1ULL << (ctx.nqubits - ctx.vecSizeInBits - 1);
     if (name != "u3") {
         std::cerr << "skipped gate " << name << "\n";
         return;
@@ -29,10 +29,10 @@ void GateApplyStmt::genCPU(CPUGenContext& ctx) const {
 
     ctx.getGenerator().genU3(u3, funcName);
 
-    ctx.incStream << "void " << funcName
+    ctx.declStream << "void " << funcName
         << "(double*, double*, uint64_t, uint64_t, v8double);\n";
 
-    ctx.cStream << "  " << funcName << "(real, imag, 0, " << idxMax << ",\n    "
+    ctx.kernelStream << "  " << funcName << "(real, imag, 0, " << idxMax << ",\n    "
         << "(v8double){" << std::setprecision(16)
         << u3.mat.ar.value_or(0) << "," << u3.mat.br.value_or(0) << ","
         << u3.mat.cr.value_or(0) << "," << u3.mat.dr.value_or(0) << ","

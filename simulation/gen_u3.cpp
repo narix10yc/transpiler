@@ -74,10 +74,10 @@ void IRGenerator::genU3(const U3Gate& u3,
     errs() << "Generating function " << funcName << "\n";
 
     uint8_t k = u3.qubit;
-    int64_t _S = 1ULL << vecSizeInBits;
-    int64_t _K = 1ULL << k;
-    int64_t _inner = (1ULL << (k - vecSizeInBits)) - 1;
-    int64_t _outer = static_cast<int64_t>(-1) - _inner;
+    uint64_t _S = 1ULL << vecSizeInBits;
+    uint64_t _K = 1ULL << k;
+    uint64_t _inner = (1ULL << (k - vecSizeInBits)) - 1;
+    uint64_t _outer = ~_inner;
     auto* K = builder.getInt64(_K);
     auto* inner = builder.getInt64(_inner);
     auto* outer = builder.getInt64(_outer);
@@ -174,12 +174,11 @@ void IRGenerator::genU3(const U3Gate& u3,
     // loop body
     builder.SetInsertPoint(loopBodyBB);
 
-    // idxA = ((idx & outer) << k_sub_s) + ((idx & inner) x<< s)
+    // idxA = ((idx & outer) << s_add_1) + ((idx & inner) << s)
     auto* idx_and_outer = builder.CreateAnd(idx, outer, "idx_and_outer");
     auto* shifted_outer = builder.CreateShl(idx_and_outer, s_add_1, "shl_outer");
     auto* idx_and_inner = builder.CreateAnd(idx, inner, "idx_and_inner");
     auto* shifted_inner = builder.CreateShl(idx_and_inner, s, "shl_inner");
-
     auto* idxA = builder.CreateAdd(shifted_outer, shifted_inner, "alpha");
     auto* idxB = builder.CreateAdd(idxA, K, "beta");
 
@@ -236,4 +235,10 @@ void IRGenerator::genU3(const U3Gate& u3,
     // return 
     builder.SetInsertPoint(retBB);
     builder.CreateRetVoid();
+}
+
+void IRGenerator::genU2q(const U2qGate& u2q,
+            const llvm::StringRef funcName,
+            RealTy realType) {
+    auto mat = u2q.mat;
 }

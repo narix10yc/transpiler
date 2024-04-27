@@ -272,10 +272,12 @@ public:
 
 
 class U2qGate {
-    ComplexMatrix4<> mat;
-    int q0, q1;
 public:
-    U2qGate(ComplexMatrix4<> mat, int q0, int q1) : mat(mat), q0(q0), q1(q1) {}
+    ComplexMatrix4<> mat;
+    uint8_t q0, q1;
+public:
+    U2qGate(ComplexMatrix4<> mat, uint8_t q0, uint8_t q1)
+        : mat(mat), q0(q0), q1(q1) {}
 };
 
 

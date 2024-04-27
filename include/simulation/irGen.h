@@ -86,6 +86,10 @@ public:
     void genU3(const U3Gate& u3,
                const llvm::StringRef funcName,
                RealTy realType=RealTy::Double);
+    
+    void genU2q(const U2qGate& u2q,
+                const llvm::StringRef funcName,
+                RealTy realType=RealTy::Double);
 };
 
 
