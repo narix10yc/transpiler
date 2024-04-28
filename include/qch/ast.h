@@ -2,6 +2,7 @@
 #define QCH_AST_H_
 
 #include <string>
+#include <memory>
 #include <vector>
 #include <iostream>
 
