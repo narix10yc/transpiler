@@ -54,7 +54,7 @@ Value* IRGenerator::genMulAdd(Value* aa, Value* bb, Value* cc,
     // new_aa = aa - cc
     if (bbFlag == -1) {
         if (aa == nullptr)
-            return cc;
+            return builder.CreateFNeg(cc, aaName);
         return builder.CreateFSub(aa, cc, aaName);
     }
 
@@ -63,6 +63,33 @@ Value* IRGenerator::genMulAdd(Value* aa, Value* bb, Value* cc,
     if (aa == nullptr)
         return bbcc;
     return builder.CreateFAdd(aa, bbcc, aaName);
+}
+
+Value* IRGenerator::genMulSub(Value* aa, Value* bb, Value* cc, 
+                              int bbFlag, const Twine& bbccName,
+                              const Twine& aaName) {
+    if (bbFlag == 0) 
+        return aa;
+    
+    // new_aa = aa - cc
+    if (bbFlag == 1) {
+        if (aa == nullptr)
+            return builder.CreateFNeg(cc, aaName);
+        return builder.CreateFSub(aa, cc, aaName);
+    }
+
+    // new_aa = aa + cc
+    if (bbFlag == -1) {
+        if (aa == nullptr)
+            return cc;
+        return builder.CreateFAdd(aa, cc, aaName);
+    }
+
+    // new_aa = aa - bb * cc
+    auto* bbcc = builder.CreateFMul(bb, cc, bbccName);
+    if (aa == nullptr)
+        return builder.CreateFNeg(bbcc, aaName);
+    return builder.CreateFSub(aa, bbcc, aaName);
 }
 
 

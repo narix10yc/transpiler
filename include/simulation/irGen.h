@@ -83,6 +83,21 @@ public:
             const llvm::Twine& bbccName = "",
             const llvm::Twine& aaName = "");
 
+    /// @brief Generate the IR that applies new_aa = aa - bb * cc
+    /// @param aa can be nullptr. In such case, new_aa will be assigned to -bb * cc
+    /// @param bb
+    /// @param cc 
+    /// @param bbFlag either Add (for bb = 1), Sub (for bb = -1), Zero (for bb 
+    ///   = 0), or Normal (otherwise)
+    /// @return aa - bb * cc
+    llvm::Value* genMulSub(
+            llvm::Value* aa,
+            llvm::Value* bb,
+            llvm::Value* cc,
+            int bbFlag,
+            const llvm::Twine& bbccName = "",
+            const llvm::Twine& aaName = "");
+
     void genU3(const U3Gate& u3,
                const llvm::StringRef funcName,
                RealTy realType=RealTy::Double);

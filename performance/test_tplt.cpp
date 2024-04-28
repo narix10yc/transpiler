@@ -1,30 +1,11 @@
-// #include "gen_file.h"
-
-#include <string>
-#include <iostream>
-#include <ctime>
-#include <fstream>
+#include "simulation/tplt.h"
+#include "timeit/timeit.h"
 #include <sstream>
-#include <chrono>
+#include <iostream>
+#include <functional>
+#include <ctime>
 #include <thread>
-
-typedef double v8double __attribute__((vector_size(64)));
-
-extern "C" {
-void u3_0_02003fff(double*, double*, uint64_t, uint64_t, v8double);
-void u3_1_02001080(double*, double*, uint64_t, uint64_t, v8double);
-void u3_2_02003fc0(double*, double*, uint64_t, uint64_t, v8double);
-}
-
-void simulate_circuit(double* real, double* imag, size_t idxMax) {
-  u3_0_02003fff(real, imag, 0, idxMax,
-    (v8double){0.7455743899704769,-0.6611393443073451,0.5681414468755827,0.6795542237022189,0,0.08374721744037222,0.3483304829644841,0.3067364145782554});
-//   u3_1_02001080(real, imag, 0, idxMax,
-    // (v8double){1,0,0,-1,0,0,0,0});
-//   u3_2_02003fc0(real, imag, 0, idxMax,
-    // (v8double){0.9984574954665696,-0.05552143501950479,0.05552143501950479,0.9984574954665696,0,0,0,0});
-}
-
+#include <fstream>
 
 std::string getCurrentTime() {
     auto t = std::time(nullptr);
@@ -38,10 +19,9 @@ std::string getOutputFilename() {
     return "out_" + getCurrentTime() + ".csv";
 }
 
-#include "timeit/timeit.h"
-#include <functional>
-
 using namespace timeit;
+using namespace simulation;
+using namespace simulation::tplt;
 
 int main() {
     Timer timer;
@@ -73,15 +53,19 @@ int main() {
     f << "method,compiler,test_name,real_ty,num_threads,nqubits,k,s,t_min,t_q1,t_med,t_q3\n";
     f << std::scientific;
 
+    size_t k = 2;
+    ComplexMatrix2<double> mat {{0.7455743899704769,-0.6611393443073451,0.5681414468755827,0.6795542237022189},
+                {0,0.08374721744037222,0.3483304829644841,0.3067364145782554}};
+
     for (uint64_t nqubit = 4; nqubit < 28; nqubit += 2) {
         tr = timer.timeit(
-            [&](){ simulate_circuit(real, imag, (1<<(nqubit-3))); },
+            [&](){ applySingleQubit(real, imag, mat, nqubit, 2); },
             setup(nqubit),
             teardown
         );
         std::cerr << "nqubits = " << nqubit << "\n";
         tr.display();
-        f << "ir_gen,clang-17,3,f64,1," << nqubit << ",2,2,"
+        f << "double-loop,clang-17,u3,f64,1," << nqubit << ",2,2,"
           << tr.min << "," << tr.q1 << "," << tr.med << "," << tr.q3 << "\n";
     }
     

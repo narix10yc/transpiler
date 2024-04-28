@@ -49,8 +49,8 @@ void applyTwoQubit(real_ty* real,
     for (size_t t = 0; t < N; t += (K << 1)) {
     for (size_t tt = 0; tt < K; tt += (L << 1)) {
     for (size_t ttt = 0; ttt < L; ttt++) {
-        amp_pt_r = sv->real + t + tt + ttt;
-        amp_pt_i = sv->imag + t + tt + ttt;
+        amp_pt_r = real + t + tt + ttt;
+        amp_pt_i = imag + t + tt + ttt;
         amp_r[0] = (mat.real[0] * amp_pt_r[0]   - mat.imag[0] * amp_pt_i[0]) + 
                    (mat.real[1] * amp_pt_r[L]   - mat.imag[1] * amp_pt_i[L]) +
                    (mat.real[2] * amp_pt_r[K]   - mat.imag[2] * amp_pt_i[K]) +
