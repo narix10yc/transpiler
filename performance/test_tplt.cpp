@@ -2,6 +2,7 @@
 #include "timeit/timeit.h"
 #include <sstream>
 #include <iostream>
+#include <iomanip>
 #include <functional>
 #include <ctime>
 #include <thread>
@@ -32,8 +33,8 @@ int main() {
     auto setup = [&](uint64_t _nqubits) {
         nqubits = _nqubits;
         return [&]() {
-            real = (double*) malloc(sizeof(double) * (1<<nqubits));
-            imag = (double*) malloc(sizeof(double) * (1<<nqubits));
+            real = (double*) aligned_alloc(64, sizeof(double) * (1<<nqubits));
+            imag = (double*) aligned_alloc(64, sizeof(double) * (1<<nqubits));
         };
     };
 
