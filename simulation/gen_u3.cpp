@@ -1,5 +1,6 @@
 #include "simulation/irGen.h"
 #include <iostream>
+#include "llvm/IR/Intrinsics.h"
 
 using namespace llvm;
 using namespace simulation;
@@ -59,10 +60,14 @@ Value* IRGenerator::genMulAdd(Value* aa, Value* bb, Value* cc,
     }
 
     // new_aa = aa + bb * cc
-    auto* bbcc = builder.CreateFMul(bb, cc, bbccName);
     if (aa == nullptr)
-        return bbcc;
-    return builder.CreateFAdd(aa, bbcc, aaName);
+        return builder.CreateFMul(bb, cc, aaName);
+    return builder.CreateIntrinsic(bb->getType(), Intrinsic::fmuladd,
+                                  {bb, cc, aa}, nullptr, aaName);
+    // auto* bbcc = builder.CreateFMul(bb, cc, bbccName);
+    // if (aa == nullptr)
+    //     return bbcc;
+    // return builder.CreateFAdd(aa, bbcc, aaName);
 }
 
 Value* IRGenerator::genMulSub(Value* aa, Value* bb, Value* cc, 
@@ -223,31 +228,31 @@ void IRGenerator::genU3(const U3Gate& u3,
     // mat-vec mul (new value should never automatically be 0)
     // newAr = (ar Ar + br Br) - (ai Ai + bi Bi)
     Value* newAr = nullptr;
-    newAr = genMulAddOrMulSub(newAr, true, ar, Ar, arFlag, "arAr", "newAr");
-    newAr = genMulAddOrMulSub(newAr, true, br, Br, brFlag, "brBr", "newAr");
-    newAr = genMulAddOrMulSub(newAr, false, ai, Ai, aiFlag, "aiAi", "newAr");
-    newAr = genMulAddOrMulSub(newAr, false, bi, Bi, biFlag, "biBi", "newAr");
+    newAr = genMulAdd(newAr, ar, Ar, arFlag, "arAr", "newAr");
+    newAr = genMulAdd(newAr, br, Br, brFlag, "brBr", "newAr");
+    newAr = genMulSub(newAr, ai, Ai, aiFlag, "aiAi", "newAr");
+    newAr = genMulSub(newAr, bi, Bi, biFlag, "biBi", "newAr");
 
     // newAi = ar Ai + ai Ar + br Bi + bi Br
     Value* newAi = nullptr;
-    newAi = genMulAddOrMulSub(newAi, true, ar, Ai, arFlag, "arAi", "newAi");
-    newAi = genMulAddOrMulSub(newAi, true, ai, Ar, aiFlag, "aiAr", "newAi");
-    newAi = genMulAddOrMulSub(newAi, true, br, Bi, brFlag, "brBi", "newAi");
-    newAi = genMulAddOrMulSub(newAi, true, bi, Br, biFlag, "biBr", "newAi");
+    newAi = genMulAdd(newAi, ar, Ai, arFlag, "arAi", "newAi");
+    newAi = genMulAdd(newAi, ai, Ar, aiFlag, "aiAr", "newAi");
+    newAi = genMulAdd(newAi, br, Bi, brFlag, "brBi", "newAi");
+    newAi = genMulAdd(newAi, bi, Br, biFlag, "biBr", "newAi");
 
     // newBr = (cr Ar + dr Br) - (ci Ai + di Bi)
     Value* newBr = nullptr;
-    newBr = genMulAddOrMulSub(newBr, true, cr, Ar, crFlag, "crAr", "newBr");
-    newBr = genMulAddOrMulSub(newBr, true, dr, Br, drFlag, "drBr", "newBr");
-    newBr = genMulAddOrMulSub(newBr, false, ci, Ai, ciFlag, "ciAi", "newBr");
-    newBr = genMulAddOrMulSub(newBr, false, di, Bi, diFlag, "diBi", "newBr");
+    newBr = genMulAdd(newBr, cr, Ar, crFlag, "crAr", "newBr");
+    newBr = genMulAdd(newBr, dr, Br, drFlag, "drBr", "newBr");
+    newBr = genMulSub(newBr, ci, Ai, ciFlag, "ciAi", "newBr");
+    newBr = genMulSub(newBr, di, Bi, diFlag, "diBi", "newBr");
 
     // newBi = cr Ai + ci Ar + di Br + dr Bi
     Value* newBi = nullptr;
-    newBi = genMulAddOrMulSub(newBi, true, cr, Ai, crFlag, "crAi", "newBi");
-    newBi = genMulAddOrMulSub(newBi, true, ci, Ar, ciFlag, "ciAr", "newBi");
-    newBi = genMulAddOrMulSub(newBi, true, di, Br, diFlag, "diBr", "newBi");
-    newBi = genMulAddOrMulSub(newBi, true, dr, Bi, drFlag, "drBi", "newBi");
+    newBi = genMulAdd(newBi, cr, Ai, crFlag, "crAi", "newBi");
+    newBi = genMulAdd(newBi, ci, Ar, ciFlag, "ciAr", "newBi");
+    newBi = genMulAdd(newBi, di, Br, diFlag, "diBr", "newBi");
+    newBi = genMulAdd(newBi, dr, Bi, drFlag, "drBi", "newBi");
 
     // store back 
     builder.CreateStore(newAr, ptrAr);

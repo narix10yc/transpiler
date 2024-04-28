@@ -65,44 +65,39 @@ loopBody:                                         ; preds = %loop
   %Ai = load <4 x double>, ptr %ptrAi, align 32
   %Br = load <4 x double>, ptr %ptrBr, align 32
   %Bi = load <4 x double>, ptr %ptrBi, align 32
-  %arAr = fmul <4 x double> %ar_vec, %Ar
-  %brBr = fmul <4 x double> %br_vec, %Br
-  %newAr = fadd <4 x double> %arAr, %brBr
+  %newAr = fmul <4 x double> %ar_vec, %Ar
+  %newAr1 = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> %br_vec, <4 x double> %Br, <4 x double> %newAr)
   %aiAi = fmul <4 x double> %ai_vec, %Ai
-  %newAr1 = fsub <4 x double> %newAr, %aiAi
+  %newAr2 = fsub <4 x double> %newAr1, %aiAi
   %biBi = fmul <4 x double> %bi_vec, %Bi
-  %newAr2 = fsub <4 x double> %newAr1, %biBi
-  %arAi = fmul <4 x double> %ar_vec, %Ai
-  %aiAr = fmul <4 x double> %ai_vec, %Ar
-  %newAi = fadd <4 x double> %arAi, %aiAr
-  %brBi = fmul <4 x double> %br_vec, %Bi
-  %newAi3 = fadd <4 x double> %newAi, %brBi
-  %biBr = fmul <4 x double> %bi_vec, %Br
-  %newAi4 = fadd <4 x double> %newAi3, %biBr
-  %crAr = fmul <4 x double> %cr_vec, %Ar
-  %drBr = fmul <4 x double> %dr_vec, %Br
-  %newBr = fadd <4 x double> %crAr, %drBr
+  %newAr3 = fsub <4 x double> %newAr2, %biBi
+  %newAi = fmul <4 x double> %ar_vec, %Ai
+  %newAi4 = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> %ai_vec, <4 x double> %Ar, <4 x double> %newAi)
+  %newAi5 = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> %br_vec, <4 x double> %Bi, <4 x double> %newAi4)
+  %newAi6 = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> %bi_vec, <4 x double> %Br, <4 x double> %newAi5)
+  %newBr = fmul <4 x double> %cr_vec, %Ar
+  %newBr7 = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> %dr_vec, <4 x double> %Br, <4 x double> %newBr)
   %ciAi = fmul <4 x double> %ci_vec, %Ai
-  %newBr5 = fsub <4 x double> %newBr, %ciAi
+  %newBr8 = fsub <4 x double> %newBr7, %ciAi
   %diBi = fmul <4 x double> %di_vec, %Bi
-  %newBr6 = fsub <4 x double> %newBr5, %diBi
-  %crAi = fmul <4 x double> %cr_vec, %Ai
-  %ciAr = fmul <4 x double> %ci_vec, %Ar
-  %newBi = fadd <4 x double> %crAi, %ciAr
-  %diBr = fmul <4 x double> %di_vec, %Br
-  %newBi7 = fadd <4 x double> %newBi, %diBr
-  %drBi = fmul <4 x double> %dr_vec, %Bi
-  %newBi8 = fadd <4 x double> %newBi7, %drBi
-  store <4 x double> %newAr2, ptr %ptrAr, align 32
-  store <4 x double> %newAi4, ptr %ptrAi, align 32
-  store <4 x double> %newBr6, ptr %ptrBr, align 32
-  store <4 x double> %newBi8, ptr %ptrBi, align 32
+  %newBr9 = fsub <4 x double> %newBr8, %diBi
+  %newBi = fmul <4 x double> %cr_vec, %Ai
+  %newBi10 = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> %ci_vec, <4 x double> %Ar, <4 x double> %newBi)
+  %newBi11 = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> %di_vec, <4 x double> %Br, <4 x double> %newBi10)
+  %newBi12 = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> %dr_vec, <4 x double> %Bi, <4 x double> %newBi11)
+  store <4 x double> %newAr3, ptr %ptrAr, align 32
+  store <4 x double> %newAi6, ptr %ptrAi, align 32
+  store <4 x double> %newBr9, ptr %ptrBr, align 32
+  store <4 x double> %newBi12, ptr %ptrBi, align 32
   %idx_next = add i64 %idx, 1
   br label %loop
 
 ret:                                              ; preds = %loop
   ret void
 }
+
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <4 x double> @llvm.fmuladd.v4f64(<4 x double>, <4 x double>, <4 x double>) #0
 
 define void @u3_1_02001080(ptr %preal, ptr %pimag, i64 %idx_start, i64 %idx_end, <8 x double> %mat) {
 entry:
@@ -170,8 +165,7 @@ loopBody:                                         ; preds = %loop
   %Bi = load <4 x double>, ptr %ptrBi, align 32
   %aiAi = fmul <4 x double> %ai_vec, %Ai
   %newAr = fsub <4 x double> %Ar, %aiAi
-  %aiAr = fmul <4 x double> %ai_vec, %Ar
-  %newAi = fadd <4 x double> %Ai, %aiAr
+  %newAi = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> %ai_vec, <4 x double> %Ar, <4 x double> %Ai)
   %newBr = fneg <4 x double> %Br
   %newBi = fneg <4 x double> %Bi
   store <4 x double> %newAr, ptr %ptrAr, align 32
@@ -249,29 +243,26 @@ loopBody:                                         ; preds = %loop
   %Ai = load <4 x double>, ptr %ptrAi, align 32
   %Br = load <4 x double>, ptr %ptrBr, align 32
   %Bi = load <4 x double>, ptr %ptrBi, align 32
-  %arAr = fmul <4 x double> %ar_vec, %Ar
-  %brBr = fmul <4 x double> %br_vec, %Br
-  %newAr = fadd <4 x double> %arAr, %brBr
+  %newAr = fmul <4 x double> %ar_vec, %Ar
+  %newAr1 = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> %br_vec, <4 x double> %Br, <4 x double> %newAr)
   %aiAi = fmul <4 x double> %ai_vec, %Ai
-  %newAr1 = fsub <4 x double> %newAr, %aiAi
-  %arAi = fmul <4 x double> %ar_vec, %Ai
-  %aiAr = fmul <4 x double> %ai_vec, %Ar
-  %newAi = fadd <4 x double> %arAi, %aiAr
-  %brBi = fmul <4 x double> %br_vec, %Bi
-  %newAi2 = fadd <4 x double> %newAi, %brBi
-  %crAr = fmul <4 x double> %cr_vec, %Ar
-  %drBr = fmul <4 x double> %dr_vec, %Br
-  %newBr = fadd <4 x double> %crAr, %drBr
-  %crAi = fmul <4 x double> %cr_vec, %Ai
-  %drBi = fmul <4 x double> %dr_vec, %Bi
-  %newBi = fadd <4 x double> %crAi, %drBi
-  store <4 x double> %newAr1, ptr %ptrAr, align 32
-  store <4 x double> %newAi2, ptr %ptrAi, align 32
-  store <4 x double> %newBr, ptr %ptrBr, align 32
-  store <4 x double> %newBi, ptr %ptrBi, align 32
+  %newAr2 = fsub <4 x double> %newAr1, %aiAi
+  %newAi = fmul <4 x double> %ar_vec, %Ai
+  %newAi3 = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> %ai_vec, <4 x double> %Ar, <4 x double> %newAi)
+  %newAi4 = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> %br_vec, <4 x double> %Bi, <4 x double> %newAi3)
+  %newBr = fmul <4 x double> %cr_vec, %Ar
+  %newBr5 = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> %dr_vec, <4 x double> %Br, <4 x double> %newBr)
+  %newBi = fmul <4 x double> %cr_vec, %Ai
+  %newBi6 = call <4 x double> @llvm.fmuladd.v4f64(<4 x double> %dr_vec, <4 x double> %Bi, <4 x double> %newBi)
+  store <4 x double> %newAr2, ptr %ptrAr, align 32
+  store <4 x double> %newAi4, ptr %ptrAi, align 32
+  store <4 x double> %newBr5, ptr %ptrBr, align 32
+  store <4 x double> %newBi6, ptr %ptrBi, align 32
   %idx_next = add i64 %idx, 1
   br label %loop
 
 ret:                                              ; preds = %loop
   ret void
 }
+
+attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

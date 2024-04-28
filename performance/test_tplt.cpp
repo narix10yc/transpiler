@@ -59,13 +59,13 @@ int main() {
 
     for (uint64_t nqubit = 4; nqubit < 28; nqubit += 2) {
         tr = timer.timeit(
-            [&](){ applySingleQubit(real, imag, mat, nqubit, 2); },
+            [&](){ applySingleQubitQuEST(real, imag, mat, nqubit, 2); },
             setup(nqubit),
             teardown
         );
         std::cerr << "nqubits = " << nqubit << "\n";
         tr.display();
-        f << "double-loop,clang-17,u3,f64,1," << nqubit << ",2,2,"
+        f << "quest,clang-17,u3,f64,1," << nqubit << ",2,2,"
           << tr.min << "," << tr.q1 << "," << tr.med << "," << tr.q3 << "\n";
     }
     

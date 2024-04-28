@@ -33,6 +33,33 @@ void applySingleQubit(real_ty* real,
     } }
 }
 
+template<typename real_ty>
+void applySingleQubitQuEST(real_ty* real,
+                           real_ty* imag,
+                           const ComplexMatrix2<real_ty>& mat,
+                           size_t nqubits,
+                           size_t k) {
+    size_t K = 1 << k;
+    size_t sizeBlock = 2 * K;
+    size_t N = 1 << nqubits;
+    real_ty x_real, x_imag, y_real, y_imag;
+    size_t thisBlock, alpha, beta;
+
+    for (size_t t = 0; t < (N>>1); t++) {
+        thisBlock = t / K;
+        alpha = thisBlock * sizeBlock + t % K;
+        beta = alpha + K;
+
+        real[alpha] = mat.real[0] * real[alpha] + mat.real[1] * real[beta]
+                -mat.imag[0] * imag[alpha] - mat.imag[1] * imag[beta];
+        imag[alpha] = mat.real[0] * imag[alpha] + mat.real[1] * imag[beta]
+                +mat.imag[0] * real[alpha] + mat.imag[1] * real[beta];
+        real[beta] = mat.real[2] * real[alpha] + mat.real[3] * real[beta]
+                -mat.imag[2] * imag[alpha] - mat.imag[3] * imag[beta];
+        imag[beta] = mat.real[2] * imag[alpha] + mat.real[3] * imag[beta]
+                +mat.imag[2] * real[alpha] + mat.imag[3] * real[beta];
+    }
+}
 
 template<typename real_ty>
 void applyTwoQubit(real_ty* real,
