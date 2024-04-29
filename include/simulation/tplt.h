@@ -51,13 +51,13 @@ void applySingleQubitQuEST(real_ty* real,
         beta = alpha + K;
 
         real[alpha] = mat.real[0] * real[alpha] + mat.real[1] * real[beta]
-                -mat.imag[0] * imag[alpha] - mat.imag[1] * imag[beta];
+                     -mat.imag[0] * imag[alpha] - mat.imag[1] * imag[beta];
         imag[alpha] = mat.real[0] * imag[alpha] + mat.real[1] * imag[beta]
-                +mat.imag[0] * real[alpha] + mat.imag[1] * real[beta];
+                     +mat.imag[0] * real[alpha] + mat.imag[1] * real[beta];
         real[beta] = mat.real[2] * real[alpha] + mat.real[3] * real[beta]
-                -mat.imag[2] * imag[alpha] - mat.imag[3] * imag[beta];
+                     -mat.imag[2] * imag[alpha] - mat.imag[3] * imag[beta];
         imag[beta] = mat.real[2] * imag[alpha] + mat.real[3] * imag[beta]
-                +mat.imag[2] * real[alpha] + mat.imag[3] * real[beta];
+                     +mat.imag[2] * real[alpha] + mat.imag[3] * real[beta];
     }
 }
 

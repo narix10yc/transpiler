@@ -22,11 +22,15 @@ public:
     std::stringstream kernelStream;
     std::stringstream irStream;
     unsigned vecSizeInBits;
+    RealTy realTy;
     unsigned nqubits;
 
     CPUGenContext(unsigned vecSizeInBits, std::string fileName)
         : fileName(fileName),
-          vecSizeInBits(vecSizeInBits) {}
+          vecSizeInBits(vecSizeInBits),
+          realTy(RealTy::Double) {}
+    
+    void setRealTy(RealTy ty) { realTy = ty; }
 
     void logError(std::string msg) {}
 
@@ -47,10 +51,15 @@ public:
         std::cerr << "IR file will be written to: " << irName << "\n";
 
         hFile << "#include <stdint.h>\n\n";
-        hFile << "typedef double v8double __attribute__((vector_size(64)));\n\n";
+        if (realTy == RealTy::Double) {
+            hFile << "typedef struct { double data[8]; } v8double;\n\n";
+            kernelStream << "void simulate_circuit(double* real, double* imag) {\n";
+        } else {
+            hFile << "typedef struct { float data[8]; } v8float;\n\n";
+            kernelStream << "void simulate_circuit(float* real, float* imag) {\n";
+        }
 
         declStream << "extern \"C\" {\n";
-        kernelStream << "void simulate_circuit(double* real, double* imag) {\n";
 
         root.genCPU(*this);
 

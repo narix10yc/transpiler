@@ -25,7 +25,10 @@ int main(int argc, char *argv[]) {
     auto qchRoot = qasmRoot->toQch();
     std::cerr << "-- converted to qch AST\n";
     
-    CPUGenContext ctx {2, outputFilename};
+    CPUGenContext ctx {3, outputFilename};
+    if (argc > 3 && std::string(argv[3]) == "-f32")
+        ctx.setRealTy(RealTy::Float);
+
     ctx.generate(*qchRoot);
 
     return 0;

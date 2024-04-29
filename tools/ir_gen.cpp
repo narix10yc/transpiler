@@ -6,8 +6,6 @@ using namespace llvm;
 using namespace simulation;
 
 int main(int argc, char **argv) {
-    using RealTy = simulation::IRGenerator::RealTy;
-
     cl::opt<std::string> 
     FileName("F", cl::Prefix, cl::desc("file name"), cl::init(""));
 
@@ -46,7 +44,7 @@ int main(int argc, char **argv) {
     else if (Ty == "float")
         ty = RealTy::Float;
     else {
-        errs() << "Unrecognized type " << ty << "\n";
+        errs() << "Unrecognized type " << Ty << "\n";
         return 1;
     }
 

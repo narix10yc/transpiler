@@ -36,6 +36,10 @@ static double approxSin(double a, double thres=1e-8) {
     return v; 
 }
 
+enum class RealTy {
+    Double, Float
+};
+
 class OptionalComplexMat2x2 {
 public:
     std::optional<double> ar, br, cr, dr, ai, bi, ci, di;

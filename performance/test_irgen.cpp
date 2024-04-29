@@ -1,12 +1,38 @@
-#include "simulation/tplt.h"
-#include "timeit/timeit.h"
-#include <sstream>
+// #include "gen_file.h"
+
+#include <string>
 #include <iostream>
 #include <iomanip>
-#include <functional>
 #include <ctime>
-#include <thread>
 #include <fstream>
+#include <sstream>
+#include <chrono>
+#include <thread>
+
+typedef struct { double data[8]; } v8double;
+
+extern "C" {
+void u3_f64_0_00003fff(double*, double*, uint64_t, uint64_t, v8double);
+void u3_f64_1_01003fff(double*, double*, uint64_t, uint64_t, v8double);
+void u3_f64_2_02003fff(double*, double*, uint64_t, uint64_t, v8double);
+void u3_f64_3_03003fff(double*, double*, uint64_t, uint64_t, v8double);
+}
+
+void simulate_circuit(double* real, double* imag, uint64_t idxMax) {
+//   u3_f64_0_00003fff(real, imag, 0, 1,
+    // (v8double){0.7455743899704769,-0.6611393443073451,0.5681414468755827,0.6795542237022189,0,0.08374721744037222,0.3483304829644841,0.3067364145782554});
+//   u3_f64_1_01003fff(real, imag, 0, 1,
+    // (v8double){0.7455743899704769,-0.6611393443073451,0.5681414468755827,0.6795542237022189,0,0.08374721744037222,0.3483304829644841,0.3067364145782554});
+//   u3_f64_2_02003fff(real, imag, 0, 1,
+    // (v8double){0.7455743899704769,-0.6611393443073451,0.5681414468755827,0.6795542237022189,0,0.08374721744037222,0.3483304829644841,0.3067364145782554});
+  u3_f64_3_03003fff(real, imag, 0, idxMax,
+    (v8double){0.7455743899704769,-0.6611393443073451,0.5681414468755827,0.6795542237022189,0,0.08374721744037222,0.3483304829644841,0.3067364145782554});
+}
+
+
+using real_ty = double;
+size_t k = 3;
+size_t s = 3;
 
 std::string getCurrentTime() {
     auto t = std::time(nullptr);
@@ -20,13 +46,10 @@ std::string getOutputFilename() {
     return "out_" + getCurrentTime() + ".csv";
 }
 
+#include "timeit/timeit.h"
+#include <functional>
+
 using namespace timeit;
-using namespace simulation;
-using namespace simulation::tplt;
-
-
-using real_ty = double;
-size_t k = 3;
 
 int main() {
     Timer timer;
@@ -58,46 +81,22 @@ int main() {
     f << "method,compiler,test_name,real_ty,num_threads,nqubits,k,s,t_min,t_q1,t_med,t_q3\n";
     f << std::scientific;
 
-    ComplexMatrix2<real_ty> mat {
-        {0.7455743899704769,-0.6611393443073451,0.5681414468755827,0.6795542237022189},
-        {0,0.08374721744037222,0.3483304829644841,0.3067364145782554}};
-
     for (uint64_t nqubit = 4; nqubit < 30; nqubit += 2) {
-        // QuEST
         tr = timer.timeit(
-            [&](){ applySingleQubitQuEST(real, imag, mat, nqubit, k); },
+            [&](){ simulate_circuit(real, imag, (1<<(nqubit-3))); },
             setup(nqubit),
             teardown
         );
-        std::cerr << "QuEST: nqubits = " << nqubit << "\n";
+        std::cerr << "nqubits = " << nqubit << "\n";
         tr.display();
-        f << "quest" // method
+        f << "ir_gen" // method
           << "," << "clang-17" // compiler
           << "," << "u3" // test_name
           << "," << "f" << 8*sizeof(real_ty) // real_ty
           << "," << 1 // num_threads
           << "," << nqubit // nqubits
           << "," << k // k
-          << "," << "N/A" // s
-          << ","
-          << tr.min << "," << tr.q1 << "," << tr.med << "," << tr.q3 << "\n";
-
-        // double loop
-        tr = timer.timeit(
-            [&](){ applySingleQubit(real, imag, mat, nqubit, k); },
-            setup(nqubit),
-            teardown
-        );
-        std::cerr << "double loop: nqubits = " << nqubit << "\n";
-        tr.display();
-        f << "double-loop" // method
-          << "," << "clang-17" // compiler
-          << "," << "u3" // test_name
-          << "," << "f" << 8*sizeof(real_ty) // real_ty
-          << "," << 1 // num_threads
-          << "," << nqubit // nqubits
-          << "," << k // k
-          << "," << "N/A" // s
+          << "," << s // s
           << ","
           << tr.min << "," << tr.q1 << "," << tr.med << "," << tr.q3 << "\n";
     }

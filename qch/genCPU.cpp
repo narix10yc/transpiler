@@ -22,18 +22,23 @@ void GateApplyStmt::genCPU(CPUGenContext& ctx) const {
         parameters[0], parameters[1], parameters[2]);
 
     std::stringstream funcNameSS;
-    funcNameSS << "u3_" << ctx.gateCount << "_" 
+    funcNameSS << "u3_" << ((ctx.realTy == RealTy::Double) ? "f64_" : "f32_")
+        << ctx.gateCount << "_" 
         << std::setfill('0') << std::setw(8) << std::hex << u3.getID();
 
     std::string funcName = funcNameSS.str();
 
-    ctx.getGenerator().genU3(u3, funcName);
+    ctx.getGenerator().genU3(u3, funcName, ctx.realTy);
 
-    ctx.declStream << "void " << funcName
-        << "(double*, double*, uint64_t, uint64_t, v8double);\n";
+    ctx.declStream << "void " << funcName;
+    if (ctx.realTy == RealTy::Double)
+        ctx.declStream << "(double*, double*, uint64_t, uint64_t, v8double);\n";
+    else
+        ctx.declStream << "(float*, float*, uint64_t, uint64_t, v8float);\n";
 
     ctx.kernelStream << "  " << funcName << "(real, imag, 0, " << idxMax << ",\n    "
-        << "(v8double){" << std::setprecision(16)
+        << ((ctx.realTy == RealTy::Double) ? "(v8double){" : "(v8float){")
+        << std::setprecision(16)
         << u3.mat.ar.value_or(0) << "," << u3.mat.br.value_or(0) << ","
         << u3.mat.cr.value_or(0) << "," << u3.mat.dr.value_or(0) << ","
         << u3.mat.ai.value_or(0) << "," << u3.mat.bi.value_or(0) << ","

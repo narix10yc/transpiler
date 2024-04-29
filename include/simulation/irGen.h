@@ -47,8 +47,6 @@ public:
         builder(llvmContext), 
         mod(std::make_unique<llvm::Module>("myModule", llvmContext)),
         vecSizeInBits(vecSizeInBits) {}
-
-    enum RealTy : int { Float, Double };
     
     const llvm::Module& getModule() const { return *mod; }
 
