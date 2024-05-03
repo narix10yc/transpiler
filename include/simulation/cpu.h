@@ -5,7 +5,7 @@
 #include <iomanip>
 #include <fstream>
 #include <sstream>
-#include "simulation/irGen.h"
+#include "simulation/ir_generator.h"
 #include "qch/ast.h"
 
 namespace simulation {
@@ -22,15 +22,27 @@ public:
     std::stringstream kernelStream;
     std::stringstream irStream;
     unsigned vecSizeInBits;
-    RealTy realTy;
     unsigned nqubits;
 
     CPUGenContext(unsigned vecSizeInBits, std::string fileName)
         : fileName(fileName),
-          vecSizeInBits(vecSizeInBits),
-          realTy(RealTy::Double) {}
+          vecSizeInBits(vecSizeInBits) {}
     
-    void setRealTy(RealTy ty) { realTy = ty; }
+    void setRealTy(ir::RealTy ty) { irGenerator.setRealTy(ty); }
+    void setAmpFormat(ir::AmpFormat format) { irGenerator.setAmpFormat(format); }
+
+    ir::RealTy getRealTy() const { return irGenerator.realTy; }
+    ir::AmpFormat getAmpFormat() const { return irGenerator.ampFormat; }
+
+    void setF32() { irGenerator.setRealTy(ir::RealTy::Float); }
+    void setF64() { irGenerator.setRealTy(ir::RealTy::Double); }
+    
+    void setAlternatingAmpFormat() {
+        irGenerator.setAmpFormat(ir::AmpFormat::Alternating);
+    }
+    void setSeparateAmpFormat() {
+        irGenerator.setAmpFormat(ir::AmpFormat::Separate);
+    }
 
     void logError(std::string msg) {}
 
@@ -51,7 +63,7 @@ public:
         std::cerr << "IR file will be written to: " << irName << "\n";
 
         hFile << "#include <stdint.h>\n\n";
-        if (realTy == RealTy::Double) {
+        if (getRealTy() == ir::RealTy::Double) {
             hFile << "typedef struct { double data[8]; } v8double;\n\n";
             kernelStream << "void simulate_circuit(double* real, double* imag) {\n";
         } else {

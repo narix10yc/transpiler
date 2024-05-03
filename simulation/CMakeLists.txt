@@ -1,4 +1,5 @@
-add_library(simulation STATIC "gen_u3.cpp" "utils.cpp")
+file(GLOB SRC_FILES "*.cpp")
+add_library(simulation STATIC ${SRC_FILES})
 
 ## TODO: This is an awkward way of linking to LLVM library
 if(APPLE)

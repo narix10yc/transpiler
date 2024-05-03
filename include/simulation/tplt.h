@@ -55,10 +55,36 @@ void applySingleQubitQuEST(real_ty* real,
         imag[alpha] = mat.real[0] * imag[alpha] + mat.real[1] * imag[beta]
                      +mat.imag[0] * real[alpha] + mat.imag[1] * real[beta];
         real[beta] = mat.real[2] * real[alpha] + mat.real[3] * real[beta]
-                     -mat.imag[2] * imag[alpha] - mat.imag[3] * imag[beta];
+                    -mat.imag[2] * imag[alpha] - mat.imag[3] * imag[beta];
         imag[beta] = mat.real[2] * imag[alpha] + mat.real[3] * imag[beta]
-                     +mat.imag[2] * real[alpha] + mat.imag[3] * real[beta];
+                    +mat.imag[2] * real[alpha] + mat.imag[3] * real[beta];
     }
+}
+
+template<typename real_ty, size_t k>
+void applySingleQubitTemplate(real_ty* real,
+                           real_ty* imag,
+                           const ComplexMatrix2<real_ty>& mat,
+                           size_t nqubits) {
+    size_t K = 1 << k;
+    size_t N = 1 << nqubits;
+    real_ty x_real, x_imag, y_real, y_imag;
+
+    for (size_t t = 0; t < N; t += (2*K)) {
+    for (size_t tt = 0; tt < K; tt++) {
+        x_real = mat.real[0] * real[t+tt] + mat.real[1] * real[t+tt+K]
+                -mat.imag[0] * imag[t+tt] - mat.imag[1] * imag[t+tt+K];
+        x_imag = mat.real[0] * imag[t+tt] + mat.real[1] * imag[t+tt+K]
+                +mat.imag[0] * real[t+tt] + mat.imag[1] * real[t+tt+K];
+        y_real = mat.real[2] * real[t+tt] + mat.real[3] * real[t+tt+K]
+                -mat.imag[2] * imag[t+tt] - mat.imag[3] * imag[t+tt+K];
+        y_imag = mat.real[2] * imag[t+tt] + mat.real[3] * imag[t+tt+K]
+                +mat.imag[2] * real[t+tt] + mat.imag[3] * real[t+tt+K];
+        real[t+tt] = x_real;
+        imag[t+tt] = x_imag;
+        real[t+tt+K] = y_real;
+        imag[t+tt+K] = y_imag;
+    } }
 }
 
 template<typename real_ty>

@@ -19,25 +19,19 @@ void GateApplyStmt::genCPU(CPUGenContext& ctx) const {
     }
 
     auto u3 = U3Gate::FromAngles(qubits[0],
-        parameters[0], parameters[1], parameters[2]);
-
-    std::stringstream funcNameSS;
-    funcNameSS << "u3_" << ((ctx.realTy == RealTy::Double) ? "f64_" : "f32_")
-        << ctx.gateCount << "_" 
-        << std::setfill('0') << std::setw(8) << std::hex << u3.getID();
-
-    std::string funcName = funcNameSS.str();
-
-    ctx.getGenerator().genU3(u3, funcName, ctx.realTy);
+                                 parameters[0], parameters[1], parameters[2]);
+                                
+    auto func = ctx.getGenerator().genU3(u3);
+    std::string funcName = func->getName().str();
 
     ctx.declStream << "void " << funcName;
-    if (ctx.realTy == RealTy::Double)
+    if (ctx.getRealTy() == ir::RealTy::Double)
         ctx.declStream << "(double*, double*, uint64_t, uint64_t, v8double);\n";
     else
         ctx.declStream << "(float*, float*, uint64_t, uint64_t, v8float);\n";
 
     ctx.kernelStream << "  " << funcName << "(real, imag, 0, " << idxMax << ",\n    "
-        << ((ctx.realTy == RealTy::Double) ? "(v8double){" : "(v8float){")
+        << ((ctx.getRealTy() == ir::RealTy::Double) ? "(v8double){" : "(v8float){")
         << std::setprecision(16)
         << u3.mat.ar.value_or(0) << "," << u3.mat.br.value_or(0) << ","
         << u3.mat.cr.value_or(0) << "," << u3.mat.dr.value_or(0) << ","

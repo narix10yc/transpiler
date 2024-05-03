@@ -1,107 +1,30 @@
-#include "simulation/irGen.h"
-#include <iostream>
+#include "simulation/ir_generator.h"
+
 #include "llvm/IR/Intrinsics.h"
+#include <iostream>
+#include <iomanip>
+#include <sstream>
 
 using namespace llvm;
 using namespace simulation;
 
-Value* IRGenerator::genMulAddOrMulSub(Value* aa, bool add, Value* bb, Value* cc, 
-        int bbFlag, const Twine& bbccName, const Twine& aaName) {
-    if (bbFlag == 0) 
-        return aa;
-    
-    if (bbFlag == 1) {
-        if (aa == nullptr) {
-            if (add) return cc;
-            return builder.CreateFNeg(cc, aaName);
-        }
-        if (add) return builder.CreateFAdd(aa, cc, aaName);
-        return builder.CreateFSub(aa, cc, aaName);
-    }
-
-    if (bbFlag == -1) {
-        if (aa == nullptr) {
-            if (add) return builder.CreateFNeg(cc, aaName);
-            return cc;
-        }
-        if (add) return builder.CreateFSub(aa, cc, aaName);
-        return builder.CreateFAdd(aa, cc, aaName);
-    }
-
-    auto* bbcc = builder.CreateFMul(bb, cc, bbccName);
-    if (aa == nullptr) {
-        if (add) return bbcc;
-        return builder.CreateFNeg(bbcc, aaName);
-    }
-    if (add)
-        return builder.CreateFAdd(aa, bbcc, aaName);
-    return builder.CreateFSub(aa, bbcc, aaName);
+std::string getDefaultU3FuncName(
+        const U3Gate& u3, ir::RealTy realTy, ir::AmpFormat ampFormat) {
+    std::stringstream ss;
+    ss << "u3_"
+       << ((realTy == ir::RealTy::Double) ? "f64" : "f32") << "_"
+       << ((ampFormat == ir::AmpFormat::Separate) ? "sep" : "alt") << "_"
+       << std::setfill('0') << std::setw(8) << std::hex << u3.getID();
+    return ss.str();
 }
 
 
-Value* IRGenerator::genMulAdd(Value* aa, Value* bb, Value* cc, 
-                              int bbFlag, const Twine& bbccName,
-                              const Twine& aaName) {
-    if (bbFlag == 0) 
-        return aa;
-    
-    // new_aa = aa + cc
-    if (bbFlag == 1) {
-        if (aa == nullptr)
-            return cc;
-        return builder.CreateFAdd(aa, cc, aaName);
-    }
-
-    // new_aa = aa - cc
-    if (bbFlag == -1) {
-        if (aa == nullptr)
-            return builder.CreateFNeg(cc, aaName);
-        return builder.CreateFSub(aa, cc, aaName);
-    }
-
-    // new_aa = aa + bb * cc
-    if (aa == nullptr)
-        return builder.CreateFMul(bb, cc, aaName);
-    return builder.CreateIntrinsic(bb->getType(), Intrinsic::fmuladd,
-                                  {bb, cc, aa}, nullptr, aaName);
-    // auto* bbcc = builder.CreateFMul(bb, cc, bbccName);
-    // if (aa == nullptr)
-    //     return bbcc;
-    // return builder.CreateFAdd(aa, bbcc, aaName);
-}
-
-Value* IRGenerator::genMulSub(Value* aa, Value* bb, Value* cc, 
-                              int bbFlag, const Twine& bbccName,
-                              const Twine& aaName) {
-    if (bbFlag == 0) 
-        return aa;
-    
-    // new_aa = aa - cc
-    if (bbFlag == 1) {
-        if (aa == nullptr)
-            return builder.CreateFNeg(cc, aaName);
-        return builder.CreateFSub(aa, cc, aaName);
-    }
-
-    // new_aa = aa + cc
-    if (bbFlag == -1) {
-        if (aa == nullptr)
-            return cc;
-        return builder.CreateFAdd(aa, cc, aaName);
-    }
-
-    // new_aa = aa - bb * cc
-    auto* bbcc = builder.CreateFMul(bb, cc, bbccName);
-    if (aa == nullptr)
-        return builder.CreateFNeg(bbcc, aaName);
-    return builder.CreateFSub(aa, bbcc, aaName);
-}
-
-
-void IRGenerator::genU3(const U3Gate& u3,
-                        const llvm::StringRef funcName, 
-                        RealTy realType) {
+Function* IRGenerator::genU3(const U3Gate& u3,
+                             std::string _funcName) {
     const OptionalComplexMat2x2& mat = u3.mat;
+
+    std::string funcName = (_funcName != "") ? _funcName
+                         : getDefaultU3FuncName(u3, realTy, ampFormat);
 
     errs() << "Generating function " << funcName << "\n";
 
@@ -116,10 +39,10 @@ void IRGenerator::genU3(const U3Gate& u3,
     auto* s = builder.getInt64(vecSizeInBits);
     auto* s_add_1 = builder.getInt64(vecSizeInBits + 1);
 
-    Type* realTy = (realType == RealTy::Float) ? builder.getFloatTy()
-                                               : builder.getDoubleTy();
-    Type* vectorTy = VectorType::get(realTy, _S, false);
-    Type* realTyx8 = VectorType::get(realTy, 8, false);
+    Type* scalarTy = (realTy == ir::RealTy::Float) ? builder.getFloatTy()
+                                                   : builder.getDoubleTy();
+    Type* vectorTy = VectorType::get(scalarTy, _S, false);
+    Type* scalarTyx8 = VectorType::get(scalarTy, 8, false);
 
     // create function
     Type* retTy = builder.getVoidTy();
@@ -129,7 +52,7 @@ void IRGenerator::genU3(const U3Gate& u3,
     argTy.push_back(builder.getPtrTy()); // ptr to imag amp
     argTy.push_back(builder.getInt64Ty()); // idx_start
     argTy.push_back(builder.getInt64Ty()); // idx_end
-    argTy.push_back(realTyx8); // matrix
+    argTy.push_back(scalarTyx8); // matrix
 
     FunctionType* funcTy = FunctionType::get(retTy, argTy, false);
     Function* func = Function::Create(funcTy, Function::ExternalLinkage, funcName, mod.get());
@@ -184,15 +107,15 @@ void IRGenerator::genU3(const U3Gate& u3,
     auto* ciElem = builder.CreateExtractElement(pmat, 6, "ciElem");
     auto* diElem = builder.CreateExtractElement(pmat, 7, "diElem");
 
-    Value* ar = getVectorWithSameElem(realTy, _S, arElem, "ar");
-    Value* br = getVectorWithSameElem(realTy, _S, brElem, "br");
-    Value* cr = getVectorWithSameElem(realTy, _S, crElem, "cr");
-    Value* dr = getVectorWithSameElem(realTy, _S, drElem, "dr");
+    Value* ar = genVectorWithSameElem(scalarTy, _S, arElem, "ar");
+    Value* br = genVectorWithSameElem(scalarTy, _S, brElem, "br");
+    Value* cr = genVectorWithSameElem(scalarTy, _S, crElem, "cr");
+    Value* dr = genVectorWithSameElem(scalarTy, _S, drElem, "dr");
     
-    Value* ai = getVectorWithSameElem(realTy, _S, aiElem, "ai");
-    Value* bi = getVectorWithSameElem(realTy, _S, biElem, "bi");
-    Value* ci = getVectorWithSameElem(realTy, _S, ciElem, "ci");
-    Value* di = getVectorWithSameElem(realTy, _S, diElem, "di");
+    Value* ai = genVectorWithSameElem(scalarTy, _S, aiElem, "ai");
+    Value* bi = genVectorWithSameElem(scalarTy, _S, biElem, "bi");
+    Value* ci = genVectorWithSameElem(scalarTy, _S, ciElem, "ci");
+    Value* di = genVectorWithSameElem(scalarTy, _S, diElem, "di");
 
     builder.CreateBr(loopBB);
 
@@ -215,10 +138,10 @@ void IRGenerator::genU3(const U3Gate& u3,
     auto* idxB = builder.CreateAdd(idxA, K, "beta");
 
     // A = Ar + i*Ai and B = Br + i*Bi
-    auto* ptrAr = builder.CreateGEP(realTy, preal, idxA, "ptrAr");
-    auto* ptrAi = builder.CreateGEP(realTy, pimag, idxA, "ptrAi");
-    auto* ptrBr = builder.CreateGEP(realTy, preal, idxB, "ptrBr");
-    auto* ptrBi = builder.CreateGEP(realTy, pimag, idxB, "ptrBi");
+    auto* ptrAr = builder.CreateGEP(scalarTy, preal, idxA, "ptrAr");
+    auto* ptrAi = builder.CreateGEP(scalarTy, pimag, idxA, "ptrAi");
+    auto* ptrBr = builder.CreateGEP(scalarTy, preal, idxB, "ptrBr");
+    auto* ptrBi = builder.CreateGEP(scalarTy, pimag, idxB, "ptrBi");
 
     auto* Ar = builder.CreateLoad(vectorTy, ptrAr, "Ar");
     auto* Ai = builder.CreateLoad(vectorTy, ptrAi, "Ai");
@@ -267,10 +190,11 @@ void IRGenerator::genU3(const U3Gate& u3,
     // return 
     builder.SetInsertPoint(retBB);
     builder.CreateRetVoid();
+
+    return func;
 }
 
-void IRGenerator::genU2q(const U2qGate& u2q,
-            const llvm::StringRef funcName,
-            RealTy realType) {
-    auto mat = u2q.mat;
+Function* IRGenerator::genU2q(const U2qGate& u2q,
+                              std::string funcName) {
+    return nullptr;
 }

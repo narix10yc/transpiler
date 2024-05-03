@@ -10,15 +10,52 @@
 
 namespace simulation {
 
-// static std::optional<double> optionalCos(std::optional<double> a) {
-//     if (!a.has_value()) return {};
-//     return { cos(a.value()) };
-// }
+namespace ir {
+    enum class RealTy {
+    Double, Float
+};
 
-// static std::optional<double> optionalSin(std::optional<double> a) {
-//     if (!a.has_value()) return {};
-//     return { sin(a.value()) };
-// }
+enum class AmpFormat {
+    Separate, Alternating
+};
+
+/// @brief Sperial complex matrix representation used in IR generation.
+/// Its entries are ints, only with special meanings when equal to +1, -1, or 0.
+/// All other cases are treated equal.
+/// It should only be created from simulation::ComplexMatrix2::toIRMatrix()
+class ComplexMatrix2 {
+public:
+    std::array<int, 4> real, imag;
+    ComplexMatrix2() = delete;
+    explicit ComplexMatrix2(std::array<int, 4> real, std::array<int, 4> imag)
+        : real(real), imag(imag) {}
+};
+
+/// @brief Sperial complex matrix representation used in IR generation.
+/// Its entries are ints, only with special meanings when equal to +1, -1, or 0.
+/// All other cases are treated equal.
+/// It should only be created from simulation::ComplexMatrix4::toIRMatrix()
+class ComplexMatrix4 {
+public:
+    std::array<int, 16> real, imag;
+    ComplexMatrix4() = delete;
+    explicit ComplexMatrix4(std::array<int, 16> real, std::array<int, 16> imag)
+        : real(real), imag(imag) {}
+};
+
+
+class U3Gate {
+public:
+    uint8_t k;
+    ComplexMatrix2 mat;
+    U3Gate(uint8_t k, ComplexMatrix2 mat) : k(k), mat(mat) {}
+
+    static U3Gate FromID(uint32_t id);
+
+    uint32_t getID() const;
+};
+
+} // namespace ir
 
 static double approxCos(double a, double thres=1e-8) {
     double v = cos(a);
@@ -36,9 +73,7 @@ static double approxSin(double a, double thres=1e-8) {
     return v; 
 }
 
-enum class RealTy {
-    Double, Float
-};
+
 
 class OptionalComplexMat2x2 {
 public:
@@ -217,6 +252,30 @@ public:
         return {{1,0,0,1}, {}};
     }
 
+    ir::ComplexMatrix2 toIRMatrix(real_ty threshold=1e-8) const {
+        std::array<int, 4> realArr, imagArr;
+        for (size_t i = 0; i < 4; i++) {
+            if (std::abs(real[i] - 1) < threshold)
+                realArr[i] = 1;
+            else if (std::abs(real[i] + 1) < threshold)
+                realArr[i] = -1;
+            else if (std::abs(real[i]) < threshold)
+                realArr[i] = 0;
+            else
+                realArr[i] = 2;
+
+            if (std::abs(imag[i] - 1) < threshold)
+                imagArr[i] = 1;
+            else if (std::abs(imag[i] + 1) < threshold)
+                imagArr[i] = -1;
+            else if (std::abs(imag[i]) < threshold)
+                imagArr[i] = 0;
+            else
+                imagArr[i] = 2;    
+        }
+        return ir::ComplexMatrix2 { realArr, imagArr };
+    }
+
 };
 
 template<typename real_ty=double>
@@ -231,6 +290,30 @@ public:
 
     static ComplexMatrix4 GetIdentity() {
         return {{1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1}, {}};
+    }
+
+    ir::ComplexMatrix4 toIRMatrix(real_ty threshold=1e-8) const {
+        std::array<int, 16> realArr, imagArr;
+        for (size_t i = 0; i < 16; i++) {
+            if (std::abs(real[i] - 1) < threshold)
+                realArr[i] = 1;
+            else if (std::abs(real[i] + 1) < threshold)
+                realArr[i] = -1;
+            else if (std::abs(real[i]) < threshold)
+                realArr[i] = 0;
+            else
+                realArr[i] = 2;
+
+            if (std::abs(imag[i] - 1) < threshold)
+                imagArr[i] = 1;
+            else if (std::abs(imag[i] + 1) < threshold)
+                imagArr[i] = -1;
+            else if (std::abs(imag[i]) < threshold)
+                imagArr[i] = 0;
+            else
+                imagArr[i] = 2;
+        }
+        return ir::ComplexMatrix4 { realArr, imagArr };
     }
 
     ComplexMatrix4 matmul(ComplexMatrix4 other) {

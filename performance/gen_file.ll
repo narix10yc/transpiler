@@ -1,7 +1,7 @@
 ; ModuleID = 'myModule'
 source_filename = "myModule"
 
-define void @u3_f64_0_00003fff(ptr %preal, ptr %pimag, i64 %idx_start, i64 %idx_end, <8 x double> %mat) {
+define void @u3_f64_sep_00003fff(ptr %preal, ptr %pimag, i64 %idx_start, i64 %idx_end, <8 x double> %mat) {
 entry:
   %arElem = extractelement <8 x double> %mat, i64 0
   %brElem = extractelement <8 x double> %mat, i64 1
@@ -99,7 +99,7 @@ ret:                                              ; preds = %loop
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare <4 x double> @llvm.fmuladd.v4f64(<4 x double>, <4 x double>, <4 x double>) #0
 
-define void @u3_f64_1_01003fff(ptr %preal, ptr %pimag, i64 %idx_start, i64 %idx_end, <8 x double> %mat) {
+define void @u3_f64_sep_01003fff(ptr %preal, ptr %pimag, i64 %idx_start, i64 %idx_end, <8 x double> %mat) {
 entry:
   %arElem = extractelement <8 x double> %mat, i64 0
   %brElem = extractelement <8 x double> %mat, i64 1
@@ -194,7 +194,7 @@ ret:                                              ; preds = %loop
   ret void
 }
 
-define void @u3_f64_2_02003fff(ptr %preal, ptr %pimag, i64 %idx_start, i64 %idx_end, <8 x double> %mat) {
+define void @u3_f64_sep_02003fff(ptr %preal, ptr %pimag, i64 %idx_start, i64 %idx_end, <8 x double> %mat) {
 entry:
   %arElem = extractelement <8 x double> %mat, i64 0
   %brElem = extractelement <8 x double> %mat, i64 1
@@ -289,7 +289,7 @@ ret:                                              ; preds = %loop
   ret void
 }
 
-define void @u3_f64_3_03003fff(ptr %preal, ptr %pimag, i64 %idx_start, i64 %idx_end, <8 x double> %mat) {
+define void @u3_f64_sep_03003fff(ptr %preal, ptr %pimag, i64 %idx_start, i64 %idx_end, <8 x double> %mat) {
 entry:
   %arElem = extractelement <8 x double> %mat, i64 0
   %brElem = extractelement <8 x double> %mat, i64 1

@@ -3,19 +3,19 @@
 typedef struct { double data[8]; } v8double;
 
 extern "C" {
-void u3_f64_0_00003fff(double*, double*, uint64_t, uint64_t, v8double);
-void u3_f64_1_01003fff(double*, double*, uint64_t, uint64_t, v8double);
-void u3_f64_2_02003fff(double*, double*, uint64_t, uint64_t, v8double);
-void u3_f64_3_03003fff(double*, double*, uint64_t, uint64_t, v8double);
+void u3_f64_sep_00003fff(double*, double*, uint64_t, uint64_t, v8double);
+void u3_f64_sep_01003fff(double*, double*, uint64_t, uint64_t, v8double);
+void u3_f64_sep_02003fff(double*, double*, uint64_t, uint64_t, v8double);
+void u3_f64_sep_03003fff(double*, double*, uint64_t, uint64_t, v8double);
 }
 
 void simulate_circuit(double* real, double* imag) {
-  u3_f64_0_00003fff(real, imag, 0, 1,
+  u3_f64_sep_00003fff(real, imag, 0, 1,
     (v8double){0.7455743899704769,-0.6611393443073451,0.5681414468755827,0.6795542237022189,0,0.08374721744037222,0.3483304829644841,0.3067364145782554});
-  u3_f64_1_01003fff(real, imag, 0, 1,
+  u3_f64_sep_01003fff(real, imag, 0, 1,
     (v8double){0.7455743899704769,-0.6611393443073451,0.5681414468755827,0.6795542237022189,0,0.08374721744037222,0.3483304829644841,0.3067364145782554});
-  u3_f64_2_02003fff(real, imag, 0, 1,
+  u3_f64_sep_02003fff(real, imag, 0, 1,
     (v8double){0.7455743899704769,-0.6611393443073451,0.5681414468755827,0.6795542237022189,0,0.08374721744037222,0.3483304829644841,0.3067364145782554});
-  u3_f64_3_03003fff(real, imag, 0, 1,
+  u3_f64_sep_03003fff(real, imag, 0, 1,
     (v8double){0.7455743899704769,-0.6611393443073451,0.5681414468755827,0.6795542237022189,0,0.08374721744037222,0.3483304829644841,0.3067364145782554});
 }

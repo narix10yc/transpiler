@@ -1,9 +1,12 @@
-#include "simulation/irGen.h"
+#include "simulation/ir_generator.h"
 #include "llvm/Support/CommandLine.h"
 #include <sstream>
 
 using namespace llvm;
 using namespace simulation;
+
+using RealTy = ir::RealTy;
+using AmpFormat = ir::AmpFormat;
 
 int main(int argc, char **argv) {
     cl::opt<std::string> 
@@ -36,7 +39,7 @@ int main(int argc, char **argv) {
 
     cl::ParseCommandLineOptions(argc, argv, "");
 
-    IRGenerator gen(VecSize);
+    IRGenerator generator(VecSize);
 
     RealTy ty = RealTy::Double;
     if (Ty == "double")
@@ -63,13 +66,10 @@ int main(int argc, char **argv) {
     }
 
     auto u3 = U3Gate::FromAngles(static_cast<uint8_t>(Qubit), theta, phi, lambd);
-    
-    std::stringstream ss;
-    ss << "kernel_" << ((ty == RealTy::Double) ? "f64" : "f32")
-       << "_K" << Qubit << "_S" << VecSize << "_" << std::hex << u3.getID();
-    std::string funcName = ss.str();
 
-    gen.genU3(u3, funcName, ty);
+    generator.setRealTy(ty);
+
+    generator.genU3(u3);
 
     // print to file 
     if (FileName != "") {
@@ -79,9 +79,9 @@ int main(int argc, char **argv) {
             errs() << "Error opening file: " << ec.message() << "\n";
             return 1;
         }
-        gen.getModule().print(fIR, nullptr);
+        generator.getModule().print(fIR, nullptr);
     } else {
-        gen.getModule().print(errs(), nullptr);
+        generator.getModule().print(errs(), nullptr);
     }
 
     return 0;

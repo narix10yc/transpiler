@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
     
     CPUGenContext ctx {3, outputFilename};
     if (argc > 3 && std::string(argv[3]) == "-f32")
-        ctx.setRealTy(RealTy::Float);
+        ctx.setRealTy(ir::RealTy::Float);
 
     ctx.generate(*qchRoot);
 
