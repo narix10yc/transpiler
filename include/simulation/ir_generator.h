@@ -94,7 +94,7 @@ public:
             const llvm::Twine& bbccName="",
             const llvm::Twine& aaName="");
 
-    llvm::Function* genU3(const U3Gate& u3,
+    llvm::Function* genU3(const ir::U3Gate& u3,
                           std::string funcName="");
     
     llvm::Function* genU2q(const U2qGate& u2q,

@@ -18,8 +18,9 @@ void GateApplyStmt::genCPU(CPUGenContext& ctx) const {
         return;
     }
 
-    auto u3 = U3Gate::FromAngles(qubits[0],
-                                 parameters[0], parameters[1], parameters[2]);
+    auto mat = OptionalComplexMatrix2::FromEulerAngles(parameters[0], parameters[1], parameters[2]);
+
+    auto u3 = ir::U3Gate { static_cast<uint8_t>(qubits[0]), mat.ToIRMatrix(1e-8) };
                                 
     auto func = ctx.getGenerator().genU3(u3);
     std::string funcName = func->getName().str();
@@ -33,10 +34,10 @@ void GateApplyStmt::genCPU(CPUGenContext& ctx) const {
     ctx.kernelStream << "  " << funcName << "(real, imag, 0, " << idxMax << ",\n    "
         << ((ctx.getRealTy() == ir::RealTy::Double) ? "(v8double){" : "(v8float){")
         << std::setprecision(16)
-        << u3.mat.ar.value_or(0) << "," << u3.mat.br.value_or(0) << ","
-        << u3.mat.cr.value_or(0) << "," << u3.mat.dr.value_or(0) << ","
-        << u3.mat.ai.value_or(0) << "," << u3.mat.bi.value_or(0) << ","
-        << u3.mat.ci.value_or(0) << "," << u3.mat.di.value_or(0) << "});\n";
+        << mat.ar.value_or(0) << "," << mat.br.value_or(0) << ","
+        << mat.cr.value_or(0) << "," << mat.dr.value_or(0) << ","
+        << mat.ai.value_or(0) << "," << mat.bi.value_or(0) << ","
+        << mat.ci.value_or(0) << "," << mat.di.value_or(0) << "});\n";
 
     ctx.gateCount ++;
 }

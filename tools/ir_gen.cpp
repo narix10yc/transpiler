@@ -65,7 +65,8 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    auto u3 = U3Gate::FromAngles(static_cast<uint8_t>(Qubit), theta, phi, lambd);
+    auto mat = ir::ComplexMatrix2::FromEulerAngles(theta, phi, lambd);
+    auto u3 = ir::U3Gate { static_cast<uint8_t>(Qubit), mat };
 
     generator.setRealTy(ty);
 

@@ -9,7 +9,7 @@ using namespace llvm;
 using namespace simulation;
 
 std::string getDefaultU3FuncName(
-        const U3Gate& u3, ir::RealTy realTy, ir::AmpFormat ampFormat) {
+        const ir::U3Gate& u3, ir::RealTy realTy, ir::AmpFormat ampFormat) {
     std::stringstream ss;
     ss << "u3_"
        << ((realTy == ir::RealTy::Double) ? "f64" : "f32") << "_"
@@ -19,16 +19,16 @@ std::string getDefaultU3FuncName(
 }
 
 
-Function* IRGenerator::genU3(const U3Gate& u3,
+Function* IRGenerator::genU3(const ir::U3Gate& u3,
                              std::string _funcName) {
-    const OptionalComplexMat2x2& mat = u3.mat;
+    const ir::ComplexMatrix2& mat = u3.mat;
 
     std::string funcName = (_funcName != "") ? _funcName
                          : getDefaultU3FuncName(u3, realTy, ampFormat);
 
     errs() << "Generating function " << funcName << "\n";
 
-    uint8_t k = u3.qubit;
+    uint8_t k = u3.k;
     uint64_t _S = 1ULL << vecSizeInBits;
     uint64_t _K = 1ULL << k;
     uint64_t _inner = (1ULL << (k - vecSizeInBits)) - 1;
@@ -79,33 +79,14 @@ Function* IRGenerator::genU3(const U3Gate& u3,
 
     builder.SetInsertPoint(entryBB);
 
-    // load matrix to vector reg
-    // Special optimization only applies when +1, -1, or 0
-    auto getFlag = [](std::optional<double> v) -> int {
-        if (!v.has_value()) return 2; 
-        if (v.value() == 1) return 1;
-        if (v.value() == -1) return -1;
-        if (v.value() == 0) return 0;
-        return 2;
-    };
-
-    int arFlag = getFlag(mat.ar);
-    int brFlag = getFlag(mat.br);
-    int crFlag = getFlag(mat.cr);
-    int drFlag = getFlag(mat.dr);
-    int aiFlag = getFlag(mat.ai);
-    int biFlag = getFlag(mat.bi);
-    int ciFlag = getFlag(mat.ci);
-    int diFlag = getFlag(mat.di);
-
-    auto* arElem = builder.CreateExtractElement(pmat, (uint64_t)0, "arElem");
-    auto* brElem = builder.CreateExtractElement(pmat, 1, "brElem");
-    auto* crElem = builder.CreateExtractElement(pmat, 2, "crElem");
-    auto* drElem = builder.CreateExtractElement(pmat, 3, "drElem");
-    auto* aiElem = builder.CreateExtractElement(pmat, 4, "aiElem");
-    auto* biElem = builder.CreateExtractElement(pmat, 5, "biElem");
-    auto* ciElem = builder.CreateExtractElement(pmat, 6, "ciElem");
-    auto* diElem = builder.CreateExtractElement(pmat, 7, "diElem");
+    auto* arElem = builder.CreateExtractElement(pmat, 0ULL, "arElem");
+    auto* brElem = builder.CreateExtractElement(pmat, 1ULL, "brElem");
+    auto* crElem = builder.CreateExtractElement(pmat, 2ULL, "crElem");
+    auto* drElem = builder.CreateExtractElement(pmat, 3ULL, "drElem");
+    auto* aiElem = builder.CreateExtractElement(pmat, 4ULL, "aiElem");
+    auto* biElem = builder.CreateExtractElement(pmat, 5ULL, "biElem");
+    auto* ciElem = builder.CreateExtractElement(pmat, 6ULL, "ciElem");
+    auto* diElem = builder.CreateExtractElement(pmat, 7ULL, "diElem");
 
     Value* ar = genVectorWithSameElem(scalarTy, _S, arElem, "ar");
     Value* br = genVectorWithSameElem(scalarTy, _S, brElem, "br");
@@ -151,31 +132,31 @@ Function* IRGenerator::genU3(const U3Gate& u3,
     // mat-vec mul (new value should never automatically be 0)
     // newAr = (ar Ar + br Br) - (ai Ai + bi Bi)
     Value* newAr = nullptr;
-    newAr = genMulAdd(newAr, ar, Ar, arFlag, "arAr", "newAr");
-    newAr = genMulAdd(newAr, br, Br, brFlag, "brBr", "newAr");
-    newAr = genMulSub(newAr, ai, Ai, aiFlag, "aiAi", "newAr");
-    newAr = genMulSub(newAr, bi, Bi, biFlag, "biBi", "newAr");
+    newAr = genMulAdd(newAr, ar, Ar, mat.real[0], "arAr", "newAr");
+    newAr = genMulAdd(newAr, br, Br, mat.real[1], "brBr", "newAr");
+    newAr = genMulSub(newAr, ai, Ai, mat.imag[0], "aiAi", "newAr");
+    newAr = genMulSub(newAr, bi, Bi, mat.imag[1], "biBi", "newAr");
 
     // newAi = ar Ai + ai Ar + br Bi + bi Br
     Value* newAi = nullptr;
-    newAi = genMulAdd(newAi, ar, Ai, arFlag, "arAi", "newAi");
-    newAi = genMulAdd(newAi, ai, Ar, aiFlag, "aiAr", "newAi");
-    newAi = genMulAdd(newAi, br, Bi, brFlag, "brBi", "newAi");
-    newAi = genMulAdd(newAi, bi, Br, biFlag, "biBr", "newAi");
+    newAi = genMulAdd(newAi, ar, Ai, mat.real[0], "arAi", "newAi");
+    newAi = genMulAdd(newAi, ai, Ar, mat.imag[0], "aiAr", "newAi");
+    newAi = genMulAdd(newAi, br, Bi, mat.real[1], "brBi", "newAi");
+    newAi = genMulAdd(newAi, bi, Br, mat.imag[1], "biBr", "newAi");
 
     // newBr = (cr Ar + dr Br) - (ci Ai + di Bi)
     Value* newBr = nullptr;
-    newBr = genMulAdd(newBr, cr, Ar, crFlag, "crAr", "newBr");
-    newBr = genMulAdd(newBr, dr, Br, drFlag, "drBr", "newBr");
-    newBr = genMulSub(newBr, ci, Ai, ciFlag, "ciAi", "newBr");
-    newBr = genMulSub(newBr, di, Bi, diFlag, "diBi", "newBr");
+    newBr = genMulAdd(newBr, cr, Ar, mat.real[2], "crAr", "newBr");
+    newBr = genMulAdd(newBr, dr, Br, mat.real[3], "drBr", "newBr");
+    newBr = genMulSub(newBr, ci, Ai, mat.imag[2], "ciAi", "newBr");
+    newBr = genMulSub(newBr, di, Bi, mat.imag[3], "diBi", "newBr");
 
     // newBi = cr Ai + ci Ar + di Br + dr Bi
     Value* newBi = nullptr;
-    newBi = genMulAdd(newBi, cr, Ai, crFlag, "crAi", "newBi");
-    newBi = genMulAdd(newBi, ci, Ar, ciFlag, "ciAr", "newBi");
-    newBi = genMulAdd(newBi, di, Br, diFlag, "diBr", "newBi");
-    newBi = genMulAdd(newBi, dr, Bi, drFlag, "drBi", "newBi");
+    newBi = genMulAdd(newBi, cr, Ai, mat.real[2], "crAi", "newBi");
+    newBi = genMulAdd(newBi, ci, Ar, mat.imag[2], "ciAr", "newBi");
+    newBi = genMulAdd(newBi, di, Br, mat.imag[3], "diBr", "newBi");
+    newBi = genMulAdd(newBi, dr, Bi, mat.real[3], "drBi", "newBi");
 
     // store back 
     builder.CreateStore(newAr, ptrAr);
@@ -194,7 +175,3 @@ Function* IRGenerator::genU3(const U3Gate& u3,
     return func;
 }
 
-Function* IRGenerator::genU2q(const U2qGate& u2q,
-                              std::string funcName) {
-    return nullptr;
-}
