@@ -36,6 +36,9 @@ int main(int argc, char **argv) {
     cl::opt<bool>
     InUnitsOfPI("in-units-of-pi", cl::desc("is the input angles in the unit of pi"),
         cl::init("False"));
+    
+    cl::opt<bool>
+    AlternatingFormat("alt", cl::desc("use alternating format"), cl::init("False"));
 
     cl::ParseCommandLineOptions(argc, argv, "");
 
@@ -69,6 +72,9 @@ int main(int argc, char **argv) {
     auto u3 = ir::U3Gate { static_cast<uint8_t>(Qubit), mat };
 
     generator.setRealTy(ty);
+
+    generator.setAmpFormat((AlternatingFormat) ? ir::AmpFormat::Alternating
+                                               : ir::AmpFormat::Separate);
 
     generator.genU3(u3);
 

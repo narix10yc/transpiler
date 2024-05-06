@@ -35,20 +35,16 @@ public:
     ir::RealTy realTy;
     ir::AmpFormat ampFormat;
 private:
-    llvm::Value* genVectorWithSameElem(llvm::Type* realTy, const unsigned length, 
-            llvm::Value* elem, const llvm::Twine &name = "") {
-        llvm::Value* vec = llvm::UndefValue::get(llvm::VectorType::get(realTy, length, false));
+    llvm::Value* 
+    genVectorWithSameElem(llvm::Type* elemTy, unsigned length, 
+                          llvm::Value* elem, const llvm::Twine &name = "") {
+        llvm::Type* vecTy = llvm::VectorType::get(elemTy, length, false);
+        llvm::Value* vec = llvm::UndefValue::get(vecTy);
         for (size_t i = 0; i < length - 1; ++i) {
             vec = builder.CreateInsertElement(vec, elem, i, name + "_insert_" + std::to_string(i));
         }
         vec = builder.CreateInsertElement(vec, elem, length - 1, name + "_vec");  
         return vec;  
-    }
-
-    llvm::Value* genVectorWithSameElem(llvm::Type* realTy, const unsigned length, 
-            const double value, const llvm::Twine &name = "") {
-        auto* elem = llvm::ConstantFP::get(llvmContext, llvm::APFloat(value));
-        return genVectorWithSameElem(realTy, length, elem, name);
     }
 
     llvm::Function* genU3_Sep(const ir::U3Gate& u3, std::string funcName="");
