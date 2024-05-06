@@ -51,6 +51,9 @@ private:
         return genVectorWithSameElem(realTy, length, elem, name);
     }
 
+    llvm::Function* genU3_Sep(const ir::U3Gate& u3, std::string funcName="");
+    llvm::Function* genU3_Alt(const ir::U3Gate& u3, std::string funcName="");
+
 public:
     IRGenerator(unsigned vecSizeInBits=2) : 
         builder(llvmContext), 
@@ -94,8 +97,12 @@ public:
             const llvm::Twine& bbccName="",
             const llvm::Twine& aaName="");
 
-    llvm::Function* genU3(const ir::U3Gate& u3,
-                          std::string funcName="");
+    llvm::Function* genU3(const ir::U3Gate& u3, std::string funcName="") {
+        if (ampFormat == ir::AmpFormat::Separate)
+            return genU3_Sep(u3, funcName);
+        else
+            return genU3_Alt(u3, funcName);
+    }
     
     llvm::Function* genU2q(const U2qGate& u2q,
                            std::string funcName="");

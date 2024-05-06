@@ -19,8 +19,7 @@ std::string getDefaultU3FuncName(
 }
 
 
-Function* IRGenerator::genU3(const ir::U3Gate& u3,
-                             std::string _funcName) {
+Function* IRGenerator::genU3_Sep(const ir::U3Gate& u3, std::string _funcName) {
     const ir::ComplexMatrix2& mat = u3.mat;
 
     std::string funcName = (_funcName != "") ? _funcName
@@ -175,3 +174,6 @@ Function* IRGenerator::genU3(const ir::U3Gate& u3,
     return func;
 }
 
+Function* IRGenerator::genU3_Alt(const ir::U3Gate& u3, std::string _funcName) {
+    throw;
+}
