@@ -50,7 +50,7 @@ Function* IRGenerator::genU3_Sep(const ir::U3Gate& u3, std::string _funcName) {
     argTy.push_back(builder.getPtrTy()); // ptr to imag amp
     argTy.push_back(builder.getInt64Ty()); // idx_start
     argTy.push_back(builder.getInt64Ty()); // idx_end
-    argTy.push_back(scalarTyx8); // matrix
+    argTy.push_back(builder.getPtrTy()); // matrix
 
     FunctionType* funcTy = FunctionType::get(retTy, argTy, false);
     Function* func = Function::Create(funcTy, Function::ExternalLinkage, funcName, mod.get());
@@ -59,10 +59,10 @@ Function* IRGenerator::genU3_Sep(const ir::U3Gate& u3, std::string _funcName) {
     auto* pimag = func->getArg(1);
     auto* idx_start = func->getArg(2);
     auto* idx_end = func->getArg(3);
-    Value* pmat = func->getArg(4);
+    auto* pmat = func->getArg(4);
 
     SmallVector<StringRef> argNames
-        { "preal", "pimag", "idx_start", "idx_end", "mat"};
+        { "preal", "pimag", "idx_start", "idx_end", "pmat"};
 
     // set arg names
     size_t i = 0;
@@ -77,24 +77,17 @@ Function* IRGenerator::genU3_Sep(const ir::U3Gate& u3, std::string _funcName) {
 
     builder.SetInsertPoint(entryBB);
 
-    auto* arElem = builder.CreateExtractElement(pmat, 0ULL, "arElem");
-    auto* brElem = builder.CreateExtractElement(pmat, 1ULL, "brElem");
-    auto* crElem = builder.CreateExtractElement(pmat, 2ULL, "crElem");
-    auto* drElem = builder.CreateExtractElement(pmat, 3ULL, "drElem");
-    auto* aiElem = builder.CreateExtractElement(pmat, 4ULL, "aiElem");
-    auto* biElem = builder.CreateExtractElement(pmat, 5ULL, "biElem");
-    auto* ciElem = builder.CreateExtractElement(pmat, 6ULL, "ciElem");
-    auto* diElem = builder.CreateExtractElement(pmat, 7ULL, "diElem");
+    auto* matV = builder.CreateLoad(scalarTyx8, pmat, 0ULL, "mat");
 
-    Value* ar = genVectorWithSameElem(scalarTy, _S, arElem, "ar");
-    Value* br = genVectorWithSameElem(scalarTy, _S, brElem, "br");
-    Value* cr = genVectorWithSameElem(scalarTy, _S, crElem, "cr");
-    Value* dr = genVectorWithSameElem(scalarTy, _S, drElem, "dr");
-    
-    Value* ai = genVectorWithSameElem(scalarTy, _S, aiElem, "ai");
-    Value* bi = genVectorWithSameElem(scalarTy, _S, biElem, "bi");
-    Value* ci = genVectorWithSameElem(scalarTy, _S, ciElem, "ci");
-    Value* di = genVectorWithSameElem(scalarTy, _S, diElem, "di");
+    auto* ar = builder.CreateShuffleVector(matV, std::vector<int>(_S, 0), "ar");
+    auto* br = builder.CreateShuffleVector(matV, std::vector<int>(_S, 1), "br");
+    auto* cr = builder.CreateShuffleVector(matV, std::vector<int>(_S, 2), "cr");
+    auto* dr = builder.CreateShuffleVector(matV, std::vector<int>(_S, 3), "dr");
+
+    auto* ai = builder.CreateShuffleVector(matV, std::vector<int>(_S, 4), "ai");
+    auto* bi = builder.CreateShuffleVector(matV, std::vector<int>(_S, 5), "bi");
+    auto* ci = builder.CreateShuffleVector(matV, std::vector<int>(_S, 6), "ci");
+    auto* di = builder.CreateShuffleVector(matV, std::vector<int>(_S, 7), "di");
 
     builder.CreateBr(loopBB);
 
@@ -183,13 +176,13 @@ Function* IRGenerator::genU3_Alt(const ir::U3Gate& u3, std::string _funcName) {
     uint8_t k = u3.k;
     uint64_t _S = 1ULL << vecSizeInBits;
     uint64_t _Kx2 = 1ULL << (k + 1);
-    uint64_t _inner = (1ULL << (k - vecSizeInBits)) - 1;
+    uint64_t _inner = (1ULL << (k - vecSizeInBits + 1)) - 1;
     uint64_t _outer = ~_inner;
     auto* Kx2 = builder.getInt64(_Kx2);
     auto* inner = builder.getInt64(_inner);
     auto* outer = builder.getInt64(_outer);
     auto* s = builder.getInt64(vecSizeInBits);
-    auto* s_add_2 = builder.getInt64(vecSizeInBits + 2);
+    auto* s_add_1 = builder.getInt64(vecSizeInBits + 1);
 
     Type* scalarTy = (realTy == ir::RealTy::Float) ? builder.getFloatTy()
                                                    : builder.getDoubleTy();
@@ -203,7 +196,7 @@ Function* IRGenerator::genU3_Alt(const ir::U3Gate& u3, std::string _funcName) {
     argTy.push_back(builder.getPtrTy()); // ptr to sv
     argTy.push_back(builder.getInt64Ty()); // idx_start
     argTy.push_back(builder.getInt64Ty()); // idx_end
-    argTy.push_back(scalarTyx8); // matrix
+    argTy.push_back(builder.getPtrTy()); // matrix
 
     FunctionType* funcTy = FunctionType::get(retTy, argTy, false);
     Function* func = Function::Create(funcTy, Function::ExternalLinkage, funcName, mod.get());
@@ -211,9 +204,9 @@ Function* IRGenerator::genU3_Alt(const ir::U3Gate& u3, std::string _funcName) {
     auto* psv = func->getArg(0);
     auto* idx_start = func->getArg(1);
     auto* idx_end = func->getArg(2);
-    Value* matV = func->getArg(3);
+    auto* pmat = func->getArg(3);
 
-    SmallVector<StringRef> argNames { "psv", "idx_start", "idx_end", "mat"};
+    SmallVector<StringRef> argNames { "psv", "idx_start", "idx_end", "pmat"};
 
     // set arg names
     size_t i = 0;
@@ -227,6 +220,8 @@ Function* IRGenerator::genU3_Alt(const ir::U3Gate& u3, std::string _funcName) {
     BasicBlock* retBB = BasicBlock::Create(llvmContext, "ret", func);
 
     builder.SetInsertPoint(entryBB);
+
+    auto* matV = builder.CreateLoad(scalarTyx8, pmat, 0ULL, "mat");
 
     auto* ar = builder.CreateShuffleVector(matV, std::vector<int>(_S, 0), "ar");
     auto* br = builder.CreateShuffleVector(matV, std::vector<int>(_S, 1), "br");
@@ -274,7 +269,7 @@ Function* IRGenerator::genU3_Alt(const ir::U3Gate& u3, std::string _funcName) {
 
     // idxA = ((idx & outer) << s_add_2) + ((idx & inner) << s_add_1)
     auto* idx_and_outer = builder.CreateAnd(idx, outer, "idx_and_outer");
-    auto* shifted_outer = builder.CreateShl(idx_and_outer, s_add_2, "shl_outer");
+    auto* shifted_outer = builder.CreateShl(idx_and_outer, s_add_1, "shl_outer");
     auto* idx_and_inner = builder.CreateAnd(idx, inner, "idx_and_inner");
     auto* shifted_inner = builder.CreateShl(idx_and_inner, s, "shl_inner");
     auto* idxA = builder.CreateAdd(shifted_outer, shifted_inner, "alpha");
@@ -301,11 +296,11 @@ Function* IRGenerator::genU3_Alt(const ir::U3Gate& u3, std::string _funcName) {
     // newHi = (cr Lo + dr Hi) + i(ci Lo + di Hi)
 
     Value* HiRe = nullptr;
-    HiRe = genMulAdd(HiRe, cr, Hi, mat.real[2], "crHi", "HiRe");
-    HiRe = genMulAdd(HiRe, dr, Lo, mat.real[3], "drLo", "HiRe");
+    HiRe = genMulAdd(HiRe, cr, Lo, mat.real[2], "crLo", "HiRe");
+    HiRe = genMulAdd(HiRe, dr, Hi, mat.real[3], "drHi", "HiRe");
     Value* HiIm = nullptr;
-    HiIm = genMulAdd(HiIm, ci_n, Hi, mat.imag[2], "ciHi", "HiIm_s");
-    HiIm = genMulAdd(HiIm, di_n, Lo, mat.imag[3], "diLo", "HiIm_s");
+    HiIm = genMulAdd(HiIm, ci_n, Lo, mat.imag[2], "ciLo", "HiIm_s");
+    HiIm = genMulAdd(HiIm, di_n, Hi, mat.imag[3], "diHi", "HiIm_s");
     HiIm = builder.CreateShuffleVector(HiIm, _shuffleMask, "HiIm");
     Value* newHi = builder.CreateFAdd(HiRe, HiIm, "newHi");
 
