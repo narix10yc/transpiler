@@ -1,3 +1,5 @@
+$llvm_root/bin/clang -Ofast -S -emit-llvm ../performance/gen_file.ll -o ../performance/gen_file.ll.ll
+
 $llvm_root/bin/clang++ -Ofast ../performance/test_irgen.cpp ../performance/gen_file.ll \
 -o irgen_perftest -I../include -Ltimeit -ltimeit
 

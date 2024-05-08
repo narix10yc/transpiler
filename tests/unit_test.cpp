@@ -13,6 +13,9 @@ extern "C" {
     void u3_f64_alt_0200ffff(double*, uint64_t, uint64_t, void*);
     void u3_f64_alt_0000ffff(double*, uint64_t, uint64_t, void*);
     void u3_f64_sep_0200ffff(double*, double*, uint64_t, uint64_t, void*);
+    void f64_sep_u3_k0_33330333(double*, double*, uint64_t, uint64_t, void*);
+    void f64_sep_u3_k1_33330333(double*, double*, uint64_t, uint64_t, void*);
+
 }
 
 using namespace simulation;
@@ -71,14 +74,46 @@ public:
     }
 };
 
+class TestSepShuffle : public Test {
+    StatevectorSep<double> sv0, sv1;
+    double m[8] = {INV_SQRT2, INV_SQRT2, INV_SQRT2, -INV_SQRT2, 0, 0, 0, 0};
+public:
+    TestSepShuffle(unsigned nqubits=12)
+        : sv0(nqubits, false), sv1(nqubits, false) {
+        name = "test sep shuffled vectorization";
+
+        addTestCase([&]() -> bool {
+            sv0.randomize();
+            sv1 = sv0;
+            applySingleQubit<double>(sv0.real, sv0.imag, {
+                {INV_SQRT2, INV_SQRT2, INV_SQRT2, -INV_SQRT2}, {0, 0, 0, 0}},
+                sv0.nqubits, 0);
+            f64_sep_u3_k0_33330333(sv1.real, sv1.imag, 0, 1 << (sv1.nqubits - 3), m);
+            return is_close(fidelity(sv0, sv1), 1);
+        });
+
+        addTestCase([&]() -> bool {
+            sv0.randomize();
+            sv1 = sv0;
+            applySingleQubit<double>(sv0.real, sv0.imag, {
+                {INV_SQRT2, INV_SQRT2, INV_SQRT2, -INV_SQRT2}, {0, 0, 0, 0}},
+                sv0.nqubits, 1);
+            f64_sep_u3_k1_33330333(sv1.real, sv1.imag, 0, 1 << (sv1.nqubits - 3), m);
+            return is_close(fidelity(sv0, sv1), 1);
+        });
+    }
+};
+
 int main() {
     auto testSuite = TestSuite();
 
     auto t0 = TestH { };
     auto t1 = TestSepAlt { };
+    auto t2 = TestSepShuffle { };
 
     testSuite.addTest(&t0);
     testSuite.addTest(&t1);
+    testSuite.addTest(&t2);
 
     testSuite.runAll();
 

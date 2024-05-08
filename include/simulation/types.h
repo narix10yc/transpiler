@@ -61,6 +61,8 @@ public:
 
     uint32_t getID() const;
 
+    std::string getRepr() const;
+
 };
 
 } // namespace ir
@@ -74,7 +76,7 @@ public:
     std::optional<double> br, std::optional<double> cr,
     std::optional<double> dr, std::optional<double> bi,
     std::optional<double> ci, std::optional<double> di) 
-    : ar(ar), br(br), cr(cr), dr(dr), bi(bi), ci(ci), di(di) {}
+    : ar(ar), br(br), cr(cr), dr(dr), ai({}), bi(bi), ci(ci), di(di) {}
 
     ir::ComplexMatrix2 ToIRMatrix(double thres=1e-8) const;
     

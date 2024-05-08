@@ -70,7 +70,7 @@ public:
     /// @param bb
     /// @param cc 
     /// @param bbFlag special values are +1, -1, or 0
-    /// @return aa + bb * cc
+    /// @return aa + bb * cc. Possible nullptr, when aa is nullptr and bbFlag = 0
     llvm::Value* genMulAdd(
             llvm::Value* aa,
             llvm::Value* bb,

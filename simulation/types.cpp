@@ -1,6 +1,7 @@
 #include "simulation/types.h"
 
 #include <functional>
+#include <sstream>
 
 using namespace simulation;
 
@@ -147,6 +148,14 @@ uint32_t ir::U3Gate::getID() const {
     id += f(mat.real[0]) << 14;
     id += static_cast<uint32_t>(k) << 24;
     return id;
+}
+
+std::string ir::U3Gate::getRepr() const {
+    std::stringstream ss;
+    ss << "u3_k" << k << "_"
+       << f(mat.real[0]) << f(mat.real[1]) << f(mat.real[2]) << f(mat.real[3])
+       << f(mat.imag[0]) << f(mat.imag[1]) << f(mat.imag[2]) << f(mat.imag[3]);
+    return ss.str();
 }
 
 ir::ComplexMatrix2 
