@@ -1,6 +1,118 @@
 ; ModuleID = 'myModule'
 source_filename = "myModule"
 
+
+define void @f32_s2_sep_u3_k1_33330333(ptr %preal, ptr %pimag, i64 %idx_start, i64 %idx_end, ptr %pmat) {
+entry:
+  %mat = load <8 x float>, ptr %pmat, align 32
+  %ar = shufflevector <8 x float> %mat, <8 x float> poison, <4 x i32> zeroinitializer
+  %br = shufflevector <8 x float> %mat, <8 x float> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %cr = shufflevector <8 x float> %mat, <8 x float> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
+  %dr = shufflevector <8 x float> %mat, <8 x float> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  %ai = shufflevector <8 x float> %mat, <8 x float> poison, <4 x i32> <i32 4, i32 4, i32 4, i32 4>
+  %bi = shufflevector <8 x float> %mat, <8 x float> poison, <4 x i32> <i32 5, i32 5, i32 5, i32 5>
+  %ci = shufflevector <8 x float> %mat, <8 x float> poison, <4 x i32> <i32 6, i32 6, i32 6, i32 6>
+  %di = shufflevector <8 x float> %mat, <8 x float> poison, <4 x i32> <i32 7, i32 7, i32 7, i32 7>
+  br label %loop
+
+loop:                                             ; preds = %loopBody, %entry
+  %idx = phi i64 [ %idx_start, %entry ], [ %idx_next, %loopBody ]
+  %cond = icmp slt i64 %idx, %idx_end
+  br i1 %cond, label %loopBody, label %ret
+
+loopBody:                                         ; preds = %loop
+  %pRe = getelementptr <8 x float>, ptr %preal, i64 %idx
+  %pIm = getelementptr <8 x float>, ptr %pimag, i64 %idx
+  %Re = load <8 x float>, ptr %pRe, align 32
+  %Im = load <8 x float>, ptr %pIm, align 32
+  %Ar = shufflevector <8 x float> %Re, <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  %Ai = shufflevector <8 x float> %Im, <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  %Br = shufflevector <8 x float> %Re, <8 x float> poison, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
+  %Bi = shufflevector <8 x float> %Im, <8 x float> poison, <4 x i32> <i32 2, i32 3, i32 6, i32 7>
+  %newAr = fmul <4 x float> %ar, %Ar
+  %newAr1 = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %br, <4 x float> %Br, <4 x float> %newAr)
+  %biBi = fmul <4 x float> %bi, %Bi
+  %newAr2 = fsub <4 x float> %newAr1, %biBi
+  %newAi = fmul <4 x float> %ar, %Ai
+  %newAi3 = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %br, <4 x float> %Bi, <4 x float> %newAi)
+  %newAi4 = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %bi, <4 x float> %Br, <4 x float> %newAi3)
+  %newBr = fmul <4 x float> %cr, %Ar
+  %newBr5 = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %dr, <4 x float> %Br, <4 x float> %newBr)
+  %ciAi = fmul <4 x float> %ci, %Ai
+  %newBr6 = fsub <4 x float> %newBr5, %ciAi
+  %diBi = fmul <4 x float> %di, %Bi
+  %newBr7 = fsub <4 x float> %newBr6, %diBi
+  %newBi = fmul <4 x float> %cr, %Ai
+  %newBi8 = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %ci, <4 x float> %Ar, <4 x float> %newBi)
+  %newBi9 = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %di, <4 x float> %Br, <4 x float> %newBi8)
+  %newBi10 = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %dr, <4 x float> %Bi, <4 x float> %newBi9)
+  %newRe = shufflevector <4 x float> %newAr2, <4 x float> %newBr7, <8 x i32> <i32 0, i32 1, i32 4, i32 5, i32 2, i32 3, i32 6, i32 7>
+  %newIm = shufflevector <4 x float> %newAi4, <4 x float> %newBi10, <8 x i32> <i32 0, i32 1, i32 4, i32 5, i32 2, i32 3, i32 6, i32 7>
+  store <8 x float> %newRe, ptr %pRe, align 32
+  store <8 x float> %newIm, ptr %pIm, align 32
+  %idx_next = add i64 %idx, 1
+  br label %loop
+
+ret:                                              ; preds = %loop
+  ret void
+}
+
+define void @f32_s2_sep_u3_k0_33330333(ptr %preal, ptr %pimag, i64 %idx_start, i64 %idx_end, ptr %pmat) {
+entry:
+  %mat = load <8 x float>, ptr %pmat, align 32
+  %ar = shufflevector <8 x float> %mat, <8 x float> poison, <4 x i32> zeroinitializer
+  %br = shufflevector <8 x float> %mat, <8 x float> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %cr = shufflevector <8 x float> %mat, <8 x float> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
+  %dr = shufflevector <8 x float> %mat, <8 x float> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  %ai = shufflevector <8 x float> %mat, <8 x float> poison, <4 x i32> <i32 4, i32 4, i32 4, i32 4>
+  %bi = shufflevector <8 x float> %mat, <8 x float> poison, <4 x i32> <i32 5, i32 5, i32 5, i32 5>
+  %ci = shufflevector <8 x float> %mat, <8 x float> poison, <4 x i32> <i32 6, i32 6, i32 6, i32 6>
+  %di = shufflevector <8 x float> %mat, <8 x float> poison, <4 x i32> <i32 7, i32 7, i32 7, i32 7>
+  br label %loop
+
+loop:                                             ; preds = %loopBody, %entry
+  %idx = phi i64 [ %idx_start, %entry ], [ %idx_next, %loopBody ]
+  %cond = icmp slt i64 %idx, %idx_end
+  br i1 %cond, label %loopBody, label %ret
+
+loopBody:                                         ; preds = %loop
+  %pRe = getelementptr <8 x float>, ptr %preal, i64 %idx
+  %pIm = getelementptr <8 x float>, ptr %pimag, i64 %idx
+  %Re = load <8 x float>, ptr %pRe, align 32
+  %Im = load <8 x float>, ptr %pIm, align 32
+  %Ar = shufflevector <8 x float> %Re, <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %Ai = shufflevector <8 x float> %Im, <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %Br = shufflevector <8 x float> %Re, <8 x float> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %Bi = shufflevector <8 x float> %Im, <8 x float> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %newAr = fmul <4 x float> %ar, %Ar
+  %newAr1 = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %br, <4 x float> %Br, <4 x float> %newAr)
+  %biBi = fmul <4 x float> %bi, %Bi
+  %newAr2 = fsub <4 x float> %newAr1, %biBi
+  %newAi = fmul <4 x float> %ar, %Ai
+  %newAi3 = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %br, <4 x float> %Bi, <4 x float> %newAi)
+  %newAi4 = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %bi, <4 x float> %Br, <4 x float> %newAi3)
+  %newBr = fmul <4 x float> %cr, %Ar
+  %newBr5 = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %dr, <4 x float> %Br, <4 x float> %newBr)
+  %ciAi = fmul <4 x float> %ci, %Ai
+  %newBr6 = fsub <4 x float> %newBr5, %ciAi
+  %diBi = fmul <4 x float> %di, %Bi
+  %newBr7 = fsub <4 x float> %newBr6, %diBi
+  %newBi = fmul <4 x float> %cr, %Ai
+  %newBi8 = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %ci, <4 x float> %Ar, <4 x float> %newBi)
+  %newBi9 = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %di, <4 x float> %Br, <4 x float> %newBi8)
+  %newBi10 = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %dr, <4 x float> %Bi, <4 x float> %newBi9)
+  %newRe = shufflevector <4 x float> %newAr2, <4 x float> %newBr7, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+  %newIm = shufflevector <4 x float> %newAi4, <4 x float> %newBi10, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+  store <8 x float> %newRe, ptr %pRe, align 32
+  store <8 x float> %newIm, ptr %pIm, align 32
+  %idx_next = add i64 %idx, 1
+  br label %loop
+
+ret:                                              ; preds = %loop
+  ret void
+}
+
+
 define void @f64_sep_u3_k1_33330333(ptr %preal, ptr %pimag, i64 %idx_start, i64 %idx_end, ptr %pmat) {
 entry:
   %mat = load <8 x double>, ptr %pmat, align 64
@@ -284,6 +396,9 @@ ret:                                              ; preds = %loop
   ret void
 }
 
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
+declare <4 x float> @llvm.fmuladd.v4f32(<4 x float>, <4 x float>, <4 x float>) #0
+; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare <2 x double> @llvm.fmuladd.v2f64(<2 x double>, <2 x double>, <2 x double>) #0
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 declare <4 x double> @llvm.fmuladd.v4f64(<4 x double>, <4 x double>, <4 x double>) #0

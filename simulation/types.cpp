@@ -152,7 +152,7 @@ uint32_t ir::U3Gate::getID() const {
 
 std::string ir::U3Gate::getRepr() const {
     std::stringstream ss;
-    ss << "u3_k" << k << "_"
+    ss << "u3_k" << static_cast<int>(k) << "_"
        << f(mat.real[0]) << f(mat.real[1]) << f(mat.real[2]) << f(mat.real[3])
        << f(mat.imag[0]) << f(mat.imag[1]) << f(mat.imag[2]) << f(mat.imag[3]);
     return ss.str();

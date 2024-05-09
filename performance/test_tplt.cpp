@@ -26,7 +26,7 @@ using namespace simulation::tplt;
 
 
 using real_ty = double;
-size_t k = 3;
+size_t k = 1;
 
 int main() {
     Timer timer;
@@ -62,7 +62,7 @@ int main() {
         {0.7455743899704769,-0.6611393443073451,0.5681414468755827,0.6795542237022189},
         {0,0.08374721744037222,0.3483304829644841,0.3067364145782554}};
 
-    for (uint64_t nqubit = 4; nqubit < 30; nqubit += 2) {
+    for (uint64_t nqubit = 4; nqubit < 28; nqubit += 2) {
         // QuEST
         tr = timer.timeit(
             [&](){ applySingleQubitQuEST(real, imag, mat, nqubit, k); },

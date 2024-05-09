@@ -8,19 +8,19 @@
 using namespace llvm;
 using namespace simulation;
 
-std::string getDefaultU3FuncName(
-        const ir::U3Gate& u3, ir::RealTy realTy, ir::AmpFormat ampFormat) {
+std::string getDefaultU3FuncName(const ir::U3Gate& u3, const IRGenerator& gen) {
     std::stringstream ss;
-    ss << ((realTy == ir::RealTy::Double) ? "f64" : "f32") << "_"
-       << ((ampFormat == ir::AmpFormat::Separate) ? "sep" : "alt") << "_";
-    return ss.str() + u3.getRepr();;
+    ss << ((gen.realTy == ir::RealTy::Double) ? "f64" : "f32") << "_"
+       << "s" << gen.vecSizeInBits << "_"
+       << ((gen.ampFormat == ir::AmpFormat::Separate) ? "sep" : "alt") << "_"
+       << u3.getRepr();
+    return ss.str();
 }
-
 
 Function* IRGenerator::genU3_Sep(const ir::U3Gate& u3, std::string _funcName) {
     const ir::ComplexMatrix2& mat = u3.mat;
     std::string funcName = (_funcName != "") ? _funcName
-                         : getDefaultU3FuncName(u3, realTy, ampFormat);
+                         : getDefaultU3FuncName(u3, *this);
 
     errs() << "Generating function " << funcName << "\n";
 
@@ -203,7 +203,7 @@ Function* IRGenerator::genU3_Sep(const ir::U3Gate& u3, std::string _funcName) {
 Function* IRGenerator::genU3_Alt(const ir::U3Gate& u3, std::string _funcName) {
     const ir::ComplexMatrix2& mat = u3.mat;
     std::string funcName = (_funcName != "") ? _funcName
-                         : getDefaultU3FuncName(u3, realTy, ampFormat);
+                         : getDefaultU3FuncName(u3, *this);
 
     errs() << "Generating function " << funcName << "\n";
 

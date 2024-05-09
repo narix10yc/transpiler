@@ -12,14 +12,14 @@
 typedef struct { double data[8]; } v8double;
 
 using real_ty = double;
-size_t k = 2;
+size_t k = 1;
 size_t s = 2;
-#define SEP_KERNEL f64_sep_u3_k2_33330000
-#define ALT_KERNEL f64_alt_u3_k2_33330000
+#define SEP_KERNEL f64_s2_sep_u3_k1_33330333
+// #define ALT_KERNEL f64_alt_u3_k2_33330000
 
 extern "C" {
     void SEP_KERNEL(real_ty*, real_ty*, uint64_t, uint64_t, void*);
-    void ALT_KERNEL(real_ty*, uint64_t, uint64_t, void*);
+    // void ALT_KERNEL(real_ty*, uint64_t, uint64_t, void*);
 }
 
 std::string getCurrentTime() {
@@ -45,7 +45,7 @@ int main() {
     real_ty *real, *imag, *data;
     uint64_t nqubits;
 
-    double m[8] = {0.7455743899704769,-0.6611393443073451,0.5681414468755827,0.6795542237022189,0,0.08374721744037222,0.3483304829644841,0.3067364145782554};
+    real_ty m[8] = {0.7455743899704769,-0.6611393443073451,0.5681414468755827,0.6795542237022189,0,0.08374721744037222,0.3483304829644841,0.3067364145782554};
 
     auto setup_sep = [&](uint64_t _nqubits) {
         nqubits = _nqubits;
@@ -55,22 +55,22 @@ int main() {
         };
     };
 
-    auto setup_alt = [&](uint64_t _nqubits) {
-        nqubits = _nqubits;
-        return [&]() {
-            data = (real_ty*) aligned_alloc(64, 2 * sizeof(real_ty) * (1<<nqubits));
-        };
-    };
-
     auto teardown_sep = [&]() {
         free(real); free(imag);
         std::this_thread::sleep_for(std::chrono::seconds(2));
     };
 
-    auto teardown_alt = [&]() {
-        free(data);
-        std::this_thread::sleep_for(std::chrono::seconds(2));
-    };
+    // auto setup_alt = [&](uint64_t _nqubits) {
+    //     nqubits = _nqubits;
+    //     return [&]() {
+    //         data = (real_ty*) aligned_alloc(64, 2 * sizeof(real_ty) * (1<<nqubits));
+    //     };
+    // };
+
+    // auto teardown_alt = [&]() {
+    //     free(data);
+    //     std::this_thread::sleep_for(std::chrono::seconds(2));
+    // };
 
     // open output file
     auto filename = getOutputFilename();
@@ -104,23 +104,23 @@ int main() {
           << tr.min << "," << tr.q1 << "," << tr.med << "," << tr.q3 << "\n";
 
         // Alternating Format
-        tr = timer.timeit(
-            [&](){ ALT_KERNEL(data, 0, 1 << (nqubit - s), m); },
-            setup_alt(nqubit),
-            teardown_alt
-        );
-        std::cerr << "nqubits = " << nqubit << "\n";
-        tr.display();
-        f << "ir_gen_alt" // method
-          << "," << "clang-17" // compiler
-          << "," << "u3" // test_name
-          << "," << "f" << 8 * sizeof(real_ty) // real_ty
-          << "," << 1 // num_threads
-          << "," << nqubit // nqubits
-          << "," << k // k
-          << "," << s // s
-          << ","
-          << tr.min << "," << tr.q1 << "," << tr.med << "," << tr.q3 << "\n";
+        // tr = timer.timeit(
+        //     [&](){ ALT_KERNEL(data, 0, 1 << (nqubit - s), m); },
+        //     setup_alt(nqubit),
+        //     teardown_alt
+        // );
+        // std::cerr << "nqubits = " << nqubit << "\n";
+        // tr.display();
+        // f << "ir_gen_alt" // method
+        //   << "," << "clang-17" // compiler
+        //   << "," << "u3" // test_name
+        //   << "," << "f" << 8 * sizeof(real_ty) // real_ty
+        //   << "," << 1 // num_threads
+        //   << "," << nqubit // nqubits
+        //   << "," << k // k
+        //   << "," << s // s
+        //   << ","
+        //   << tr.min << "," << tr.q1 << "," << tr.med << "," << tr.q3 << "\n";
     }
     
     return 0;
