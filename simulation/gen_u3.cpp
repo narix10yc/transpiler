@@ -24,22 +24,22 @@ Function* IRGenerator::genU3_Sep(const ir::U3Gate& u3, std::string _funcName) {
 
     errs() << "Generating function " << funcName << "\n";
 
-    uint8_t _k = u3.k;
-    uint8_t _s = static_cast<uint8_t>(vecSizeInBits);
-    uint64_t _S = 1ULL << _s;
-    uint64_t _K = 1ULL << _k;
-    uint64_t _inner = (1ULL << (_k - _s)) - 1;
+    uint8_t k = u3.k;
+    uint8_t s = static_cast<uint8_t>(vecSizeInBits);
+    uint64_t S = 1ULL << s;
+    uint64_t K = 1ULL << k;
+    uint64_t _inner = (1ULL << (k - s)) - 1;
     uint64_t _outer = ~_inner;
-    auto* K = builder.getInt64(_K);
-    auto* inner = builder.getInt64(_inner);
-    auto* outer = builder.getInt64(_outer);
-    auto* s = builder.getInt64(_s);
-    auto* s_add_1 = builder.getInt64(_s + 1);
+    auto* KVal = builder.getInt64(K);
+    auto* innerVal = builder.getInt64(_inner);
+    auto* outerVal = builder.getInt64(_outer);
+    auto* sVal = builder.getInt64(s);
+    auto* s_add_1_Val = builder.getInt64(s + 1);
 
     Type* scalarTy = (realTy == ir::RealTy::Float) ? builder.getFloatTy()
                                                    : builder.getDoubleTy();
-    Type* vectorTy = VectorType::get(scalarTy, _S, false);
-    Type* vecTyx2 = VectorType::get(scalarTy, 2 * _S, false);
+    Type* vectorTy = VectorType::get(scalarTy, S, false);
+    Type* vecTyx2 = VectorType::get(scalarTy, 2 * S, false);
     Type* scalarTyx8 = VectorType::get(scalarTy, 8, false);
 
     // create function
@@ -79,15 +79,15 @@ Function* IRGenerator::genU3_Sep(const ir::U3Gate& u3, std::string _funcName) {
 
     auto* matV = builder.CreateLoad(scalarTyx8, pmat, 0ULL, "mat");
 
-    auto* ar = builder.CreateShuffleVector(matV, std::vector<int>(_S, 0), "ar");
-    auto* br = builder.CreateShuffleVector(matV, std::vector<int>(_S, 1), "br");
-    auto* cr = builder.CreateShuffleVector(matV, std::vector<int>(_S, 2), "cr");
-    auto* dr = builder.CreateShuffleVector(matV, std::vector<int>(_S, 3), "dr");
+    auto* ar = builder.CreateShuffleVector(matV, std::vector<int>(S, 0), "ar");
+    auto* br = builder.CreateShuffleVector(matV, std::vector<int>(S, 1), "br");
+    auto* cr = builder.CreateShuffleVector(matV, std::vector<int>(S, 2), "cr");
+    auto* dr = builder.CreateShuffleVector(matV, std::vector<int>(S, 3), "dr");
 
-    auto* ai = builder.CreateShuffleVector(matV, std::vector<int>(_S, 4), "ai");
-    auto* bi = builder.CreateShuffleVector(matV, std::vector<int>(_S, 5), "bi");
-    auto* ci = builder.CreateShuffleVector(matV, std::vector<int>(_S, 6), "ci");
-    auto* di = builder.CreateShuffleVector(matV, std::vector<int>(_S, 7), "di");
+    auto* ai = builder.CreateShuffleVector(matV, std::vector<int>(S, 4), "ai");
+    auto* bi = builder.CreateShuffleVector(matV, std::vector<int>(S, 5), "bi");
+    auto* ci = builder.CreateShuffleVector(matV, std::vector<int>(S, 6), "ci");
+    auto* di = builder.CreateShuffleVector(matV, std::vector<int>(S, 7), "di");
 
     builder.CreateBr(loopBB);
 
@@ -105,14 +105,14 @@ Function* IRGenerator::genU3_Sep(const ir::U3Gate& u3, std::string _funcName) {
     Value *pRe = nullptr, *pIm = nullptr;
     std::vector<int> shuffleMaskStore;
     Value *Ar = nullptr, *Ai = nullptr, *Br = nullptr, *Bi = nullptr;
-    if (_k >= _s) {
+    if (k >= s) {
         // idxA = ((idx & outer) << s_add_1) + ((idx & inner) << s)
-        auto* idx_and_outer = builder.CreateAnd(idx, outer, "idx_and_outer");
-        auto* shifted_outer = builder.CreateShl(idx_and_outer, s_add_1, "shl_outer");
-        auto* idx_and_inner = builder.CreateAnd(idx, inner, "idx_and_inner");
-        auto* shifted_inner = builder.CreateShl(idx_and_inner, s, "shl_inner");
-        auto* idxA = builder.CreateAdd(shifted_outer, shifted_inner, "idxA");
-        auto* idxB = builder.CreateAdd(idxA, K, "idxB");
+        auto* and_outer = builder.CreateAnd(idx, outerVal, "and_outer");
+        auto* shl_outer = builder.CreateShl(and_outer, s_add_1_Val, "shl_outer");
+        auto* and_inner = builder.CreateAnd(idx, innerVal, "and_inner");
+        auto* shl_inner = builder.CreateShl(and_inner, sVal, "shl_inner");
+        auto* idxA = builder.CreateAdd(shl_outer, shl_inner, "idxA");
+        auto* idxB = builder.CreateAdd(idxA, KVal, "idxB");
 
         // A = Ar + i*Ai and B = Br + i*Bi
         pAr = builder.CreateGEP(scalarTy, preal, idxA, "pAr");
@@ -131,13 +131,13 @@ Function* IRGenerator::genU3_Sep(const ir::U3Gate& u3, std::string _funcName) {
         auto* Im = builder.CreateLoad(vecTyx2, pIm, "Im");
 
         std::vector<int> shuffleMaskLo, shuffleMaskHi;
-        for (size_t i = 0; i < 2 * _S; i++) {
-            if ((i & _K) == 0) {
+        for (size_t i = 0; i < 2 * S; i++) {
+            if ((i & K) == 0) {
                 shuffleMaskStore.push_back(shuffleMaskLo.size());
                 shuffleMaskLo.push_back(i);
             }
             else {
-                shuffleMaskStore.push_back(shuffleMaskHi.size() + _S);
+                shuffleMaskStore.push_back(shuffleMaskHi.size() + S);
                 shuffleMaskHi.push_back(i);
             }
         }
@@ -177,7 +177,7 @@ Function* IRGenerator::genU3_Sep(const ir::U3Gate& u3, std::string _funcName) {
     newBi = genMulAdd(newBi, dr, Bi, mat.real[3], "drBi", "newBi");
 
     // store back 
-    if (_k >= _s) {
+    if (k >= s) {
         builder.CreateStore(newAr, pAr);
         builder.CreateStore(newAi, pAi);
         builder.CreateStore(newBr, pBr);
@@ -208,19 +208,19 @@ Function* IRGenerator::genU3_Alt(const ir::U3Gate& u3, std::string _funcName) {
     errs() << "Generating function " << funcName << "\n";
 
     uint8_t k = u3.k;
-    uint64_t _S = 1ULL << vecSizeInBits;
-    uint64_t _Kx2 = 1ULL << (k + 1);
-    uint64_t _inner = (1ULL << (k - vecSizeInBits + 1)) - 1;
-    uint64_t _outer = ~_inner;
-    auto* Kx2 = builder.getInt64(_Kx2);
-    auto* inner = builder.getInt64(_inner);
-    auto* outer = builder.getInt64(_outer);
-    auto* s = builder.getInt64(vecSizeInBits);
-    auto* s_add_1 = builder.getInt64(vecSizeInBits + 1);
+    uint64_t S = 1ULL << vecSizeInBits;
+    uint64_t Kx2 = 1ULL << (k + 1);
+    uint64_t inner = (1ULL << (k - vecSizeInBits + 1)) - 1;
+    uint64_t outer = ~inner;
+    auto* Kx2Val = builder.getInt64(Kx2);
+    auto* innerVal = builder.getInt64(inner);
+    auto* outerVal = builder.getInt64(outer);
+    auto* sVal = builder.getInt64(vecSizeInBits);
+    auto* s_add_1_Val = builder.getInt64(vecSizeInBits + 1);
 
     Type* scalarTy = (realTy == ir::RealTy::Float) ? builder.getFloatTy()
                                                    : builder.getDoubleTy();
-    Type* vectorTy = VectorType::get(scalarTy, _S, false);
+    Type* vectorTy = VectorType::get(scalarTy, S, false);
     Type* scalarTyx8 = VectorType::get(scalarTy, 8, false);
 
     // create function
@@ -257,25 +257,25 @@ Function* IRGenerator::genU3_Alt(const ir::U3Gate& u3, std::string _funcName) {
 
     auto* matV = builder.CreateLoad(scalarTyx8, pmat, 0ULL, "mat");
 
-    auto* ar = builder.CreateShuffleVector(matV, std::vector<int>(_S, 0), "ar");
-    auto* br = builder.CreateShuffleVector(matV, std::vector<int>(_S, 1), "br");
-    auto* cr = builder.CreateShuffleVector(matV, std::vector<int>(_S, 2), "cr");
-    auto* dr = builder.CreateShuffleVector(matV, std::vector<int>(_S, 3), "dr");
+    auto* ar = builder.CreateShuffleVector(matV, std::vector<int>(S, 0), "ar");
+    auto* br = builder.CreateShuffleVector(matV, std::vector<int>(S, 1), "br");
+    auto* cr = builder.CreateShuffleVector(matV, std::vector<int>(S, 2), "cr");
+    auto* dr = builder.CreateShuffleVector(matV, std::vector<int>(S, 3), "dr");
 
-    auto* ai = builder.CreateShuffleVector(matV, std::vector<int>(_S, 4), "ai");
-    auto* bi = builder.CreateShuffleVector(matV, std::vector<int>(_S, 5), "bi");
-    auto* ci = builder.CreateShuffleVector(matV, std::vector<int>(_S, 6), "ci");
-    auto* di = builder.CreateShuffleVector(matV, std::vector<int>(_S, 7), "di");
+    auto* ai = builder.CreateShuffleVector(matV, std::vector<int>(S, 4), "ai");
+    auto* bi = builder.CreateShuffleVector(matV, std::vector<int>(S, 5), "bi");
+    auto* ci = builder.CreateShuffleVector(matV, std::vector<int>(S, 6), "ci");
+    auto* di = builder.CreateShuffleVector(matV, std::vector<int>(S, 7), "di");
 
     Constant* negV;
     if (realTy == ir::RealTy::Double) {
         std::vector<double> _negV;
-        for (size_t i = 0; i < _S; i++)
+        for (size_t i = 0; i < S; i++)
             _negV.push_back((i % 2 == 0) ? 1 : -1);
         negV = ConstantDataVector::get(llvmContext, _negV);
     } else {
         std::vector<float> _negV;
-        for (size_t i = 0; i < _S; i++)
+        for (size_t i = 0; i < S; i++)
             _negV.push_back((i % 2 == 0) ? 1 : -1);
         negV = ConstantDataVector::get(llvmContext, _negV);
     }
@@ -286,7 +286,7 @@ Function* IRGenerator::genU3_Alt(const ir::U3Gate& u3, std::string _funcName) {
     auto* di_n = builder.CreateFMul(di, negV, "di_n");
 
     std::vector<int> _shuffleMask;
-    for (size_t i = 0; i < _S; i++)
+    for (size_t i = 0; i < S; i++)
         _shuffleMask.push_back(i ^ 1);
 
     builder.CreateBr(loopBB);
@@ -301,13 +301,13 @@ Function* IRGenerator::genU3_Alt(const ir::U3Gate& u3, std::string _funcName) {
     // loop body
     builder.SetInsertPoint(loopBodyBB);
 
-    // idxA = ((idx & outer) << s_add_2) + ((idx & inner) << s_add_1)
-    auto* idx_and_outer = builder.CreateAnd(idx, outer, "idx_and_outer");
-    auto* shifted_outer = builder.CreateShl(idx_and_outer, s_add_1, "shl_outer");
-    auto* idx_and_inner = builder.CreateAnd(idx, inner, "idx_and_inner");
-    auto* shifted_inner = builder.CreateShl(idx_and_inner, s, "shl_inner");
-    auto* idxA = builder.CreateAdd(shifted_outer, shifted_inner, "alpha");
-    auto* idxB = builder.CreateAdd(idxA, Kx2, "beta");
+    // idxA = ((idx & outer) << s_add_1) + ((idx & inner) << s_add_1)
+    auto* and_outer = builder.CreateAnd(idx, outerVal, "and_outer");
+    auto* shl_outer = builder.CreateShl(and_outer, s_add_1_Val, "shl_outer");
+    auto* and_inner = builder.CreateAnd(idx, innerVal, "and_inner");
+    auto* shl_inner = builder.CreateShl(and_inner, sVal, "shl_inner");
+    auto* idxA = builder.CreateAdd(shl_outer, shl_inner, "idxA");
+    auto* idxB = builder.CreateAdd(idxA, Kx2Val, "idxB");
 
 
     // Lo = sv[idxA], Hi = sv[idxB]
