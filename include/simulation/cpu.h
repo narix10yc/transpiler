@@ -1,22 +1,23 @@
 #ifndef SIMULATION_CPU_H_
 #define SIMULATION_CPU_H_
 
-#include <map>
 #include <iomanip>
 #include <fstream>
 #include <sstream>
+#include <unordered_map>
+
 #include "simulation/ir_generator.h"
 #include "qch/ast.h"
 
 namespace simulation {
 
 class CPUGenContext {
-    std::map<uint32_t, std::string> gateMap;
     simulation::IRGenerator irGenerator;
     std::string fileName;
     std::error_code EC;
 public:
     unsigned gateCount;
+    std::unordered_map<uint32_t, std::string> u3GateMap;
     std::stringstream shellStream;
     std::stringstream declStream;
     std::stringstream kernelStream;
@@ -62,14 +63,19 @@ public:
         auto irFile = llvm::raw_fd_ostream(irName, EC);
         std::cerr << "IR file will be written to: " << irName << "\n";
 
-        hFile << "#include <stdint.h>\n\n";
-        if (getRealTy() == ir::RealTy::Double) {
-            hFile << "typedef struct { double data[8]; } v8double;\n\n";
-            kernelStream << "void simulate_circuit(double* real, double* imag) {\n";
-        } else {
-            hFile << "typedef struct { float data[8]; } v8float;\n\n";
-            kernelStream << "void simulate_circuit(float* real, float* imag) {\n";
-        }
+        std::string typeStr =
+            (getRealTy() == ir::RealTy::Double) ? "double" : "float";
+
+        hFile << "#include <cstdint>\n"
+              << "#include <array>\n\n";
+
+        kernelStream << "void simulate_circuit(";
+        if (getAmpFormat() == ir::AmpFormat::Separate)
+            kernelStream << typeStr << " *real, " << typeStr << " *imag";
+        else
+            kernelStream << typeStr << " *data";
+        kernelStream << ", uint64_t, uint64_t, void*) {\n"
+                     << "  std::array<" << typeStr << ", 8> u3m;\n";
 
         declStream << "extern \"C\" {\n";
 
