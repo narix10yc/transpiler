@@ -87,72 +87,86 @@ void applySingleQubitTemplate(real_ty* real,
     } }
 }
 
+
+inline uint64_t flipBit(uint64_t number, int bitInd) {
+    return (number ^ (1LL << bitInd));
+}
+
+inline uint64_t insertZeroBit(uint64_t number, int index) {
+    uint64_t left, right;
+    left = (number >> index) << index;
+    right = number - left;
+    return (left << 1) ^ right;
+}
+
+inline uint64_t insertTwoZeroBits(uint64_t number, int bit1, int bit2) {
+    int small = (bit1 < bit2) ? bit1 : bit2;
+    int big = (bit1 < bit2) ? bit2 : bit1;
+    return insertZeroBit(insertZeroBit(number, small), big);
+}
+
 template<typename real_ty>
-void applyTwoQubit(real_ty* real,
+void applyTwoQubitQuEST(real_ty* real,
                    real_ty* imag,
                    const ComplexMatrix4<real_ty>& mat,
                    size_t nqubits,
                    size_t k, size_t l) {
-    size_t K = 1 << k;
-    size_t L = 1 << l;
-    size_t N = 1 << nqubits;
-    real_ty *amp_pt_r, *amp_pt_i;
-    real_ty amp_r[4], amp_i[4];
+    size_t nTasks = 1 << (nqubits - 2);
+    size_t idx00, idx01, idx10, idx11;
 
-    for (size_t t = 0; t < N; t += (K << 1)) {
-    for (size_t tt = 0; tt < K; tt += (L << 1)) {
-    for (size_t ttt = 0; ttt < L; ttt++) {
-        amp_pt_r = real + t + tt + ttt;
-        amp_pt_i = imag + t + tt + ttt;
-        amp_r[0] = (mat.real[0] * amp_pt_r[0]   - mat.imag[0] * amp_pt_i[0]) + 
-                   (mat.real[1] * amp_pt_r[L]   - mat.imag[1] * amp_pt_i[L]) +
-                   (mat.real[2] * amp_pt_r[K]   - mat.imag[2] * amp_pt_i[K]) +
-                   (mat.real[3] * amp_pt_r[L|K] - mat.imag[3] * amp_pt_i[L|K]);
+    real_ty re00, re01, re10, re11, im00, im01, im10, im11;
 
-        amp_r[1] = (mat.real[4] * amp_pt_r[0]   - mat.imag[4] * amp_pt_i[0]) + 
-                   (mat.real[5] * amp_pt_r[L]   - mat.imag[5] * amp_pt_i[L]) +
-                   (mat.real[6] * amp_pt_r[K]   - mat.imag[6] * amp_pt_i[K]) +
-                   (mat.real[7] * amp_pt_r[L|K] - mat.imag[7] * amp_pt_i[L|K]);
+    for (size_t t = 0; t < nTasks; t++) {
+        idx00 = insertTwoZeroBits(t, k, l);
+        idx01 = flipBit(idx00, l);
+        idx10 = flipBit(idx00, k);
+        idx11 = flipBit(idx01, k);
 
-        amp_r[2] = (mat.real[8] * amp_pt_r[0]   - mat.imag[8] * amp_pt_i[0]) + 
-                   (mat.real[9] * amp_pt_r[L]   - mat.imag[9] * amp_pt_i[L]) +
-                   (mat.real[10] * amp_pt_r[K]   - mat.imag[10] * amp_pt_i[K]) +
-                   (mat.real[11] * amp_pt_r[L|K] - mat.imag[11] * amp_pt_i[L|K]);
+        re00 = real[idx00]; re01 = real[idx01];
+        re10 = real[idx10]; re11 = real[idx11];
+        im00 = imag[idx00]; im01 = imag[idx01];
+        im10 = imag[idx10]; im11 = imag[idx11];
 
-        amp_r[3] = (mat.real[12] * amp_pt_r[0]   - mat.imag[12] * amp_pt_i[0]) + 
-                   (mat.real[13] * amp_pt_r[L]   - mat.imag[13] * amp_pt_i[L]) +
-                   (mat.real[14] * amp_pt_r[K]   - mat.imag[14] * amp_pt_i[K]) +
-                   (mat.real[15] * amp_pt_r[L|K] - mat.imag[15] * amp_pt_i[L|K]);
+        real[idx00] = (mat.real[0] * re00  - mat.imag[0] * im00) + 
+                      (mat.real[1] * re01 - mat.imag[1] * im01) +
+                      (mat.real[2] * re10 - mat.imag[2] * im10) +
+                      (mat.real[3] * re11 - mat.imag[3] * im11);
 
-        amp_i[0] = (mat.real[0] * amp_pt_i[0]   + mat.imag[0] * amp_pt_r[0]) + 
-                   (mat.real[1] * amp_pt_i[L]   + mat.imag[1] * amp_pt_r[L]) +
-                   (mat.real[2] * amp_pt_i[K]   + mat.imag[2] * amp_pt_r[K]) +
-                   (mat.real[3] * amp_pt_i[L|K] + mat.imag[3] * amp_pt_r[L|K]);
+        real[idx01] = (mat.real[4] * re00 - mat.imag[4] * im00) + 
+                      (mat.real[5] * re01 - mat.imag[5] * im01) +
+                      (mat.real[6] * re10 - mat.imag[6] * im10) +
+                      (mat.real[7] * re11 - mat.imag[7] * im11);
 
-        amp_i[1] = (mat.real[4] * amp_pt_i[0]   + mat.imag[4] * amp_pt_r[0]) + 
-                   (mat.real[5] * amp_pt_i[L]   + mat.imag[5] * amp_pt_r[L]) +
-                   (mat.real[6] * amp_pt_i[K]   + mat.imag[6] * amp_pt_r[K]) +
-                   (mat.real[7] * amp_pt_i[L|K] + mat.imag[7] * amp_pt_r[L|K]);
+        real[idx10] = (mat.real[8] * re00 - mat.imag[8] * im00) + 
+                      (mat.real[9] * re01 - mat.imag[9] * im01) +
+                      (mat.real[10] * re10 - mat.imag[10] * im10) +
+                      (mat.real[11] * re11 - mat.imag[11] * im11);
 
-        amp_i[2] = (mat.real[8] * amp_pt_i[0]   + mat.imag[8] * amp_pt_r[0]) + 
-                   (mat.real[9] * amp_pt_i[L]   + mat.imag[9] * amp_pt_r[L]) +
-                   (mat.real[10] * amp_pt_i[K]   + mat.imag[10] * amp_pt_r[K]) +
-                   (mat.real[11] * amp_pt_i[L|K] + mat.imag[11] * amp_pt_r[L|K]);
+        real[idx11] = (mat.real[12] * re00 - mat.imag[12] * im00) + 
+                      (mat.real[13] * re01 - mat.imag[13] * im01) +
+                      (mat.real[14] * re10 - mat.imag[14] * im10) +
+                      (mat.real[15] * re11 - mat.imag[15] * im11);
 
-        amp_i[3] = (mat.real[12] * amp_pt_i[0]   + mat.imag[12] * amp_pt_r[0]) + 
-                   (mat.real[13] * amp_pt_i[L]   + mat.imag[13] * amp_pt_r[L]) +
-                   (mat.real[14] * amp_pt_i[K]   + mat.imag[14] * amp_pt_r[K]) +
-                   (mat.real[15] * amp_pt_i[L|K] + mat.imag[15] * amp_pt_r[L|K]);
+        imag[idx00] = (mat.real[0] * im00 + mat.imag[0] * re00) + 
+                      (mat.real[1] * im01 + mat.imag[1] * re01) +
+                      (mat.real[2] * im10 + mat.imag[2] * re10) +
+                      (mat.real[3] * im11 + mat.imag[3] * re11);
 
-        amp_pt_r[0] = amp_r[0];
-        amp_pt_r[L] = amp_r[1];
-        amp_pt_r[K] = amp_r[2];
-        amp_pt_r[L|K] = amp_r[3];
-        amp_pt_i[0] = amp_i[0];
-        amp_pt_i[L] = amp_i[1];
-        amp_pt_i[K] = amp_i[2];
-        amp_pt_i[L|K] = amp_i[3];
-    } } }
+        imag[idx01] = (mat.real[4] * im00 + mat.imag[4] * re00) + 
+                      (mat.real[5] * im01 + mat.imag[5] * re01) +
+                      (mat.real[6] * im10 + mat.imag[6] * re10) +
+                      (mat.real[7] * im11 + mat.imag[7] * re11);
+
+        imag[idx10] = (mat.real[8] * im00 + mat.imag[8] * re00) + 
+                      (mat.real[9] * im01 + mat.imag[9] * re01) +
+                      (mat.real[10] * im10 + mat.imag[10] * re10) +
+                      (mat.real[11] * im11 + mat.imag[11] * re11);
+
+        imag[idx11] = (mat.real[12] * im00 + mat.imag[12] * re00) + 
+                      (mat.real[13] * im01 + mat.imag[13] * re01) +
+                      (mat.real[14] * im10 + mat.imag[14] * re10) +
+                      (mat.real[15] * im11 + mat.imag[15] * re11);
+    }
 }
 
 
