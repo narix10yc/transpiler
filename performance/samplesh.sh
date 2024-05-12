@@ -5,7 +5,7 @@ $llvm_root/bin/clang -Ofast -S ../performance/gen_file.ll -o ../performance/gen_
 $llvm_root/bin/clang++ -Ofast ../performance/test_irgen.cpp ../performance/gen_file.ll \
 -o irgen_perftest -I../include -Ltimeit -ltimeit \
 && \
-$llvm_root/bin/clang++ -Ofast ../performance/test_tplt.cpp \
+$llvm_root/bin/clang++ -Ofast -march=native ../performance/test_tplt.cpp \
 -o tplt_perftest -I../include -Ltimeit -ltimeit
 
 # clang++ -Ofast ../performance/test_irgen.cpp ../performance/gen_file.ll \

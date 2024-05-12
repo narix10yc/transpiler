@@ -100,8 +100,7 @@ public:
             return genU3_Alt(u3, funcName);
     }
     
-    llvm::Function* genU2q(const U2qGate& u2q,
-                           std::string funcName="");
+    llvm::Function* genU2q(const ir::U2qGate& u2q, std::string funcName="");
 };
 
 

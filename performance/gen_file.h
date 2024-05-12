@@ -2,7 +2,7 @@
 #include <array>
 
 extern "C" {
-void f64_s2_sep_u3_k0_33330333(double*, double*, uint64_t, uint64_t, void*);
+void f64_s2_sep_u3_k0_10010000(double*, double*, uint64_t, uint64_t, void*);
 void f64_s2_sep_u3_k1_33330333(double*, double*, uint64_t, uint64_t, void*);
 void f64_s2_sep_u3_k2_33330333(double*, double*, uint64_t, uint64_t, void*);
 void f64_s2_sep_u3_k3_33330333(double*, double*, uint64_t, uint64_t, void*);
@@ -10,8 +10,8 @@ void f64_s2_sep_u3_k3_33330333(double*, double*, uint64_t, uint64_t, void*);
 
 void simulate_circuit(double *real, double *imag, uint64_t, uint64_t, void*) {
   std::array<double, 8> u3m;
-  u3m = {0.7455743899704769,-0.6611393443073451,0.5681414468755827,0.6795542237022189,0,0.08374721744037222,0.3483304829644841,0.3067364145782554};
-  f64_s2_sep_u3_k0_33330333(real, imag, 0, 1, u3m.data());
+  u3m = {1,2.449293598294706e-16,-2.449293598294706e-16,1,0,-5.99903913064743e-32,-5.99903913064743e-32,0};
+  f64_s2_sep_u3_k0_10010000(real, imag, 0, 1, u3m.data());
   u3m = {0.7455743899704769,-0.6611393443073451,0.5681414468755827,0.6795542237022189,0,0.08374721744037222,0.3483304829644841,0.3067364145782554};
   f64_s2_sep_u3_k1_33330333(real, imag, 0, 1, u3m.data());
   u3m = {0.7455743899704769,-0.6611393443073451,0.5681414468755827,0.6795542237022189,0,0.08374721744037222,0.3483304829644841,0.3067364145782554};

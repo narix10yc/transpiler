@@ -105,6 +105,9 @@ inline uint64_t insertTwoZeroBits(uint64_t number, int bit1, int bit2) {
     return insertZeroBit(insertZeroBit(number, small), big);
 }
 
+/// @brief Apply a general two-qubit gate.
+/// @param l less significant qubit
+/// @param k more significant qubit
 template<typename real_ty>
 void applyTwoQubitQuEST(real_ty* real,
                    real_ty* imag,

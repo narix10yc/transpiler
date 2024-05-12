@@ -6,9 +6,6 @@
 
 #define INV_SQRT2 (0.7071067811865475727373109)
 
-typedef struct { double data[8]; } v8double;
-typedef struct { float data[8]; } v8float;
-
 extern "C" {
     void u3_f64_alt_0200ffff(double*, uint64_t, uint64_t, void*);
     void u3_f64_alt_0000ffff(double*, uint64_t, uint64_t, void*);
@@ -136,6 +133,30 @@ public:
     }
 };
 
+class TestU2qSwapQubits : public Test {
+    StatevectorSep<double> sv0, sv1;
+public:
+    TestU2qSwapQubits(unsigned nqubits=12)
+        : sv0(nqubits), sv1(nqubits) {
+        name = "test u2q swap target qubits";
+
+        addTestCase([&]() -> bool {
+            sv0.randomize();
+            sv1 = sv0;
+
+            U2qGate u2q { ComplexMatrix4<>::Random(), 0, 1 };
+            applyTwoQubitQuEST<double>(sv0.real, sv0.imag, u2q.mat, sv0.nqubits, u2q.k, u2q.l);
+            u2q.swapTargetQubits();
+            applyTwoQubitQuEST<double>(sv1.real, sv1.imag, u2q.mat, sv1.nqubits, u2q.k, u2q.l);
+
+            sv0.normalize();
+            sv1.normalize();
+
+            return is_close(fidelity(sv0, sv1), 1, 1e-8);
+        });
+    }
+};
+
 int main() {
     auto testSuite = TestSuite();
 
@@ -143,11 +164,13 @@ int main() {
     auto t1 = TestSepAlt { };
     auto t2 = TestSepShuffle { };
     auto t3 = TestSepShuffleF32 { 4 };
+    auto t4 = TestU2qSwapQubits { };
 
     testSuite.addTest(&t0);
     testSuite.addTest(&t1);
     testSuite.addTest(&t2);
     testSuite.addTest(&t3);
+    testSuite.addTest(&t4);
 
     testSuite.runAll();
 

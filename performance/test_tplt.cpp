@@ -26,7 +26,7 @@ using namespace simulation::tplt;
 
 
 using real_ty = double;
-size_t k = 1;
+constexpr size_t k = 2;
 
 int main() {
     Timer timer;
@@ -64,33 +64,52 @@ int main() {
 
     for (uint64_t nqubit = 4; nqubit < 28; nqubit += 2) {
         // QuEST
-        tr = timer.timeit(
-            [&](){ applySingleQubitQuEST(real, imag, mat, nqubit, k); },
-            setup(nqubit),
-            teardown
-        );
-        std::cerr << "QuEST: nqubits = " << nqubit << "\n";
-        tr.display();
-        f << "quest" // method
-          << "," << "clang-17" // compiler
-          << "," << "u3" // test_name
-          << "," << "f" << 8*sizeof(real_ty) // real_ty
-          << "," << 1 // num_threads
-          << "," << nqubit // nqubits
-          << "," << k // k
-          << "," << "N/A" // s
-          << ","
-          << tr.min << "," << tr.q1 << "," << tr.med << "," << tr.q3 << "\n";
+        // tr = timer.timeit(
+        //     [&](){ applySingleQubitQuEST(real, imag, mat, nqubit, k); },
+        //     setup(nqubit),
+        //     teardown
+        // );
+        // std::cerr << "QuEST: nqubits = " << nqubit << "\n";
+        // tr.display();
+        // f << "quest" // method
+        //   << "," << "clang-17" // compiler
+        //   << "," << "u3" // test_name
+        //   << "," << "f" << 8*sizeof(real_ty) // real_ty
+        //   << "," << 1 // num_threads
+        //   << "," << nqubit // nqubits
+        //   << "," << k // k
+        //   << "," << "N/A" // s
+        //   << ","
+        //   << tr.min << "," << tr.q1 << "," << tr.med << "," << tr.q3 << "\n";
 
-        // double loop
+        // // double loop
+        // tr = timer.timeit(
+        //     [&](){ applySingleQubit(real, imag, mat, nqubit, k); },
+        //     setup(nqubit),
+        //     teardown
+        // );
+        // std::cerr << "double loop: nqubits = " << nqubit << "\n";
+        // tr.display();
+        // f << "double-loop" // method
+        //   << "," << "clang-17" // compiler
+        //   << "," << "u3" // test_name
+        //   << "," << "f" << 8*sizeof(real_ty) // real_ty
+        //   << "," << 1 // num_threads
+        //   << "," << nqubit // nqubits
+        //   << "," << k // k
+        //   << "," << "N/A" // s
+        //   << ","
+        //   << tr.min << "," << tr.q1 << "," << tr.med << "," << tr.q3 << "\n";
+
+        // template
         tr = timer.timeit(
-            [&](){ applySingleQubit(real, imag, mat, nqubit, k); },
+            [&](){ applySingleQubitTemplate<real_ty, k>(real, imag, mat, nqubit); },
             setup(nqubit),
             teardown
         );
-        std::cerr << "double loop: nqubits = " << nqubit << "\n";
+        std::cerr << "template: nqubits = " << nqubit << "\n";
         tr.display();
-        f << "double-loop" // method
+        f << "template" // method
           << "," << "clang-17" // compiler
           << "," << "u3" // test_name
           << "," << "f" << 8*sizeof(real_ty) // real_ty

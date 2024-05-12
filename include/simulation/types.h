@@ -7,6 +7,7 @@
 #include <array>
 #include <iostream>
 #include <iomanip>
+#include <random>
 
 namespace simulation {
 
@@ -58,10 +59,17 @@ public:
         : k(k), mat(ComplexMatrix2::FromEulerAngles(theta, phi, lambd, thres)) {}
 
     static U3Gate FromID(uint32_t id);
-
     uint32_t getID() const;
-
     std::string getRepr() const;
+};
+
+class U2qGate {
+public:
+    ComplexMatrix4 mat;
+    uint8_t qLarge, qSmall;
+
+    U2qGate(ComplexMatrix4 mat, uint8_t qLarge, uint8_t qSmall)
+        : mat(mat), qLarge(qLarge), qSmall(qSmall) {}
 
 };
 
@@ -129,6 +137,18 @@ public:
     static ComplexMatrix2
     FromEulerAngles(std::optional<double> theta, std::optional<double> lambd,
                     std::optional<double> phi, double thres=1e-8);
+    
+    static ComplexMatrix2 Random() {
+        std::random_device rd;
+        std::mt19937 gen { rd() };
+        std::normal_distribution<real_ty> d { 0, 1 };
+        ComplexMatrix2 mat {};
+        for (size_t i = 0; i < 4; i++) {
+            mat.real[i] = d(gen);
+            mat.imag[i] = d(gen);
+        }
+        return mat;
+    }
 };
 
 template<typename real_ty=double>
@@ -207,6 +227,23 @@ public:
             }
         }
     }
+
+
+    static ComplexMatrix4 Random() {
+        std::random_device rd;
+        std::mt19937 gen { rd() };
+        std::normal_distribution<> d { 0, 1 };
+        ComplexMatrix4 mat {};
+        for (size_t i = 0; i < 16; i++) {
+            mat.real[i] = d(gen);
+            mat.imag[i] = d(gen);
+        }
+        return mat;
+    }
+
+    static ComplexMatrix4 Identity() {
+        return {{1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1}, {}};
+    }
         
 };
 
@@ -217,15 +254,48 @@ public:
     uint8_t k;
 public:
     U3Gate(ComplexMatrix2<> mat, uint8_t k) : mat(mat), k(k) {}
+
+    ir::U3Gate ToIRGate() const {
+        return ir::U3Gate { k, mat.ToIRMatrix() };
+    }
 };
 
 class U2qGate {
 public:
     ComplexMatrix4<> mat;
-    uint8_t q0, q1;
+    uint8_t k, l;
 public:
-    U2qGate(ComplexMatrix4<> mat, uint8_t q0, uint8_t q1)
-        : mat(mat), q0(q0), q1(q1) {}
+    U2qGate(ComplexMatrix4<> mat, uint8_t k, uint8_t l)
+        : mat(mat), k(k), l(l) {}
+
+    /// @brief Swap the target qubits 'in-place'. So k becomes l and l becomes 
+    /// k. The matrix will change correspondingly.
+    void swapTargetQubits() {
+        uint8_t tmp = k; k = l; l = tmp;
+        const auto& r = mat.real;
+        const auto& i = mat.imag;
+        mat = {
+            {r[ 0], r[ 2], r[ 1], r[ 3],
+             r[ 8], r[10], r[ 9], r[11],
+             r[ 4], r[ 6], r[ 5], r[ 7],
+             r[12], r[14], r[13], r[15]},
+            {i[ 0], i[ 2], i[ 1], i[ 3],
+             i[ 8], i[10], i[ 9], i[11],
+             i[ 4], i[ 6], i[ 5], i[ 7],
+             i[12], i[14], i[13], i[15]}
+        };
+    }
+
+    ir::U2qGate ToIRGate() const {
+        // convention: l is the less significant qubit
+        if (l < k)
+            return ir::U2qGate { mat.toIRMatrix(), k, l };
+        
+        auto u2q = *this;
+        u2q.swapTargetQubits();
+        return ir::U2qGate { u2q.mat.toIRMatrix(), u2q.k, u2q.l };
+    }
+    
 };
 
 

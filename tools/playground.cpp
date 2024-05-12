@@ -4,20 +4,6 @@
 
 using namespace simulation;
 
-
-int main(int argc, char *argv[]) {
-
-    ComplexMatrix4 mat {{
-        1.04, 0.22, 0.15, 0,
-    0,0,0,0,
-    0,0,0,0,
-    0,0,0,0},
-    {0,0,0,0,
-    0,0,0,0,
-    0,0,0,0,
-    0,0,0,0}};
-
-    mat.print(std::cerr);
-
+int main() {
     return 0;
 }
