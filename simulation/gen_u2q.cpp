@@ -25,15 +25,15 @@ Function* IRGenerator::genU2q(const ir::U2qGate& u2q, std::string _funcName) {
     errs() << "Generating function " << funcName << "\n";
 
     // convention: l is the less significant qubit
-    uint8_t l = u2q.qLarge;
-    uint8_t k = u2q.qSmall;
+    uint8_t l = u2q.qSmall;
+    uint8_t k = u2q.qLarge;
     uint8_t s = static_cast<uint8_t>(vecSizeInBits);
     uint64_t L = 1ULL << l;
     uint64_t S = 1ULL << s;
     uint64_t K = 1ULL << k;
     uint64_t leftMask = ~((1 << (k-s-1)) - 1);
     uint64_t middleMask = ((1 << (k-l-1)) - 1) << (l-s);
-    uint64_t rightMask = (1 << (k-s)) - 1;
+    uint64_t rightMask = (1 << (l-s)) - 1;
 
     auto* KVal = builder.getInt64(K);
     auto* LVal = builder.getInt64(L);

@@ -5,14 +5,14 @@ using namespace simulation;
 using namespace llvm;
 
 int main(int argc, char** argv) {
-    IRGenerator generator(1);
+    IRGenerator generator(2);
     generator.setRealTy(ir::RealTy::Double);
     generator.setAmpFormat(ir::AmpFormat::Separate);
 
     auto u2q = ir::U2qGate { ir::ComplexMatrix4{
         {2,2,2,2,2, 2,2,2,2,2, 2,2,2,2,2, 2},
         {2,2,2,2,2, 2,2,2,2,2, 2,2,2,2,2, 2}
-    }, 2, 1 };
+    }, 5, 3};
 
     generator.genU2q(u2q);
 

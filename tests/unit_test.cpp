@@ -14,7 +14,7 @@ extern "C" {
     void f64_sep_u3_k1_33330333(double*, double*, uint64_t, uint64_t, void*);
     void f32_s2_sep_u3_k0_33330333(float*, float*, uint64_t, uint64_t, void*);
     void f32_s2_sep_u3_k1_33330333(float*, float*, uint64_t, uint64_t, void*);
-    void f64_s2_sep_u2q_k4l3(double*, double*, uint64_t, uint64_t, void*);
+    void f64_s2_sep_u2q_k5l3(double*, double*, uint64_t, uint64_t, void*);
     void f64_s1_sep_u2q_k2l1(double*, double*, uint64_t, uint64_t, void*);
 }
 
@@ -160,14 +160,7 @@ public:
             sv0.randomize();
             sv1 = sv0;
 
-            sv0.print(std::cerr);
-            std::cerr << "\n";
-
-            // U2qGate u2q { ComplexMatrix4<>::Random(), 2, 1 };
-            U2qGate u2q {{
-                {0,0,0,0, 1,1,1,1, 0,0,0,0, 0,0,0,0},
-                {}
-            }, 2, 1};
+            U2qGate u2q { ComplexMatrix4<>::Random(), 2, 1 };
             double m[32];
             for (size_t i = 0; i < 16; i++) {
                 m[i] = u2q.mat.real[i];
@@ -177,15 +170,31 @@ public:
             applyTwoQubitQuEST<double>(sv0.real, sv0.imag, u2q.mat, sv0.nqubits, u2q.k, u2q.l);
             f64_s1_sep_u2q_k2l1(sv1.real, sv1.imag, 0, 1 << (sv1.nqubits-3), m);
 
-            sv0.print(std::cerr);
-            std::cerr << "\n";
-            sv1.print(std::cerr);
+            sv0.normalize();
+            sv1.normalize();
+
+            return is_close(fidelity(sv0, sv1), 1, 1e-8);
+        }, "quest and ir kernel result match, s=1, k=3, l=2");
+
+        addTestCase([&]() -> bool {
+            sv0.randomize();
+            sv1 = sv0;
+
+            U2qGate u2q { ComplexMatrix4<>::Random(), 5, 3 };
+            double m[32];
+            for (size_t i = 0; i < 16; i++) {
+                m[i] = u2q.mat.real[i];
+                m[i+16] = u2q.mat.imag[i];
+            }
+            
+            applyTwoQubitQuEST<double>(sv0.real, sv0.imag, u2q.mat, sv0.nqubits, u2q.k, u2q.l);
+            f64_s2_sep_u2q_k5l3(sv1.real, sv1.imag, 0, 1 << (sv1.nqubits-4), m);
 
             sv0.normalize();
             sv1.normalize();
 
             return is_close(fidelity(sv0, sv1), 1, 1e-8);
-        }, "quest and ir kernel result match");
+        }, "quest and ir kernel result match, s=2, k=5, l=3");
     }
 };
 
@@ -196,7 +205,7 @@ int main() {
     auto t1 = TestSepAlt { };
     auto t2 = TestSepShuffle { };
     auto t3 = TestSepShuffleF32 { 4 };
-    auto t4 = TestU2qSep { 3 };
+    auto t4 = TestU2qSep { };
 
     testSuite.addTest(&t0);
     testSuite.addTest(&t1);
