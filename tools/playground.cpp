@@ -12,7 +12,7 @@ int main(int argc, char** argv) {
     auto u2q = ir::U2qGate { ir::ComplexMatrix4{
         {2,2,2,2,2, 2,2,2,2,2, 2,2,2,2,2, 2},
         {2,2,2,2,2, 2,2,2,2,2, 2,2,2,2,2, 2}
-    }, 5, 3};
+    }, 1, 0};
 
     generator.genU2q(u2q);
 

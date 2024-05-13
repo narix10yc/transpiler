@@ -48,6 +48,8 @@ Function* IRGenerator::genU2q(const ir::U2qGate& u2q, std::string _funcName) {
     Type* scalarTy = (realTy == ir::RealTy::Float) ? builder.getFloatTy()
                                                    : builder.getDoubleTy();
     Type* vecSTy = VectorType::get(scalarTy, S, false);
+    Type* vec2STy = VectorType::get(scalarTy, 2 * S, false);
+    Type* vec4STy = VectorType::get(scalarTy, 4 * S, false);
     Type* vec32Ty = VectorType::get(scalarTy, 32, false);
 
     // create function
@@ -109,37 +111,58 @@ Function* IRGenerator::genU2q(const ir::U2qGate& u2q, std::string _funcName) {
     builder.SetInsertPoint(loopBodyBB);
 
     Value *pRe[4], *pIm[4], *Re[4], *Im[4];
+    Value *pReal = nullptr, *pImag = nullptr;
+    std::vector<int> shuffleMaskStore;
     if (l >= s) {
+        // k > l >= s
         auto* leftVal = builder.CreateAnd(idx, leftMaskVal, "left_tmp");
         leftVal = builder.CreateShl(leftVal, s_add_2_Val, "left");
         auto* middleVal = builder.CreateAnd(idx, middleMaskVal, "middle_tmp");
         middleVal = builder.CreateShl(middleVal, s_add_1_Val, "middle");
         auto rightVal = builder.CreateAnd(idx, rightMaskVal, "right_tmp");
         rightVal = builder.CreateShl(rightVal, sVal, "right");
-        auto* idx00 = builder.CreateOr(leftVal, middleVal, "idx00_tmp");
-        idx00 = builder.CreateOr(idx00, rightVal, "idx00");
-        auto* idx01 = builder.CreateOr(idx00, LVal, "idx01");
-        auto* idx10 = builder.CreateOr(idx00, KVal, "idx10");
-        auto* idx11 = builder.CreateOr(idx00, KorLVal, "idx11");
+        auto* idx0 = builder.CreateOr(leftVal, middleVal, "idx0_tmp");
+        idx0 = builder.CreateOr(idx0, rightVal, "idx0");
+        auto* idx1 = builder.CreateOr(idx0, LVal, "idx1");
+        auto* idx2 = builder.CreateOr(idx0, KVal, "idx2");
+        auto* idx3 = builder.CreateOr(idx0, KorLVal, "idx3");
 
-        pRe[0] = builder.CreateGEP(scalarTy, preal, idx00, "pRe00");
-        pRe[1] = builder.CreateGEP(scalarTy, preal, idx01, "pRe01");
-        pRe[2] = builder.CreateGEP(scalarTy, preal, idx10, "pRe10");
-        pRe[3] = builder.CreateGEP(scalarTy, preal, idx11, "pRe11");
-        pIm[0] = builder.CreateGEP(scalarTy, pimag, idx00, "pIm00");
-        pIm[1] = builder.CreateGEP(scalarTy, pimag, idx01, "pIm01");
-        pIm[2] = builder.CreateGEP(scalarTy, pimag, idx10, "pIm10");
-        pIm[3] = builder.CreateGEP(scalarTy, pimag, idx11, "pIm11");
+        pRe[0] = builder.CreateGEP(scalarTy, preal, idx0, "pRe0");
+        pRe[1] = builder.CreateGEP(scalarTy, preal, idx1, "pRe1");
+        pRe[2] = builder.CreateGEP(scalarTy, preal, idx2, "pRe2");
+        pRe[3] = builder.CreateGEP(scalarTy, preal, idx3, "pRe3");
+        pIm[0] = builder.CreateGEP(scalarTy, pimag, idx0, "pIm0");
+        pIm[1] = builder.CreateGEP(scalarTy, pimag, idx1, "pIm1");
+        pIm[2] = builder.CreateGEP(scalarTy, pimag, idx2, "pIm2");
+        pIm[3] = builder.CreateGEP(scalarTy, pimag, idx3, "pIm3");
 
-        Re[0] = builder.CreateLoad(vecSTy, pRe[0], "Re00");
-        Re[1] = builder.CreateLoad(vecSTy, pRe[1], "Re01");
-        Re[2] = builder.CreateLoad(vecSTy, pRe[2], "Re10");
-        Re[3] = builder.CreateLoad(vecSTy, pRe[3], "Re11");
-        Im[0] = builder.CreateLoad(vecSTy, pIm[0], "Im00");
-        Im[1] = builder.CreateLoad(vecSTy, pIm[1], "Im01");
-        Im[2] = builder.CreateLoad(vecSTy, pIm[2], "Im10");
-        Im[3] = builder.CreateLoad(vecSTy, pIm[3], "Im11");
+        Re[0] = builder.CreateLoad(vecSTy, pRe[0], "Re0");
+        Re[1] = builder.CreateLoad(vecSTy, pRe[1], "Re1");
+        Re[2] = builder.CreateLoad(vecSTy, pRe[2], "Re2");
+        Re[3] = builder.CreateLoad(vecSTy, pRe[3], "Re3");
+        Im[0] = builder.CreateLoad(vecSTy, pIm[0], "Im0");
+        Im[1] = builder.CreateLoad(vecSTy, pIm[1], "Im1");
+        Im[2] = builder.CreateLoad(vecSTy, pIm[2], "Im2");
+        Im[3] = builder.CreateLoad(vecSTy, pIm[3], "Im3");
+    } else if (s > k) {
+        // s > k > l
+        pReal = builder.CreateGEP(vec4STy, preal, idx, "pReal");
+        pImag = builder.CreateGEP(vec4STy, pimag, idx, "pImag");
+        auto* Real = builder.CreateLoad(vec4STy, pReal, "Real");
+        auto* Imag = builder.CreateLoad(vec4STy, pImag, "Imag");
+
+        std::vector<int> shuffleMasks[4];
+        for (size_t i = 0; i < 4 * S; i++) {
+            size_t position = ((i >> l) & 1U) + ((i >> (k-1)) & 2U);
+            shuffleMaskStore.push_back(shuffleMasks[position].size() + position * S);
+            shuffleMasks[position].push_back(i);
+        }
+        for (size_t i = 0; i < 4; i++)
+            Re[i] = builder.CreateShuffleVector(Real, shuffleMasks[i], "Re" + std::to_string(i));
+        for (size_t i = 0; i < 4; i++)
+            Im[i] = builder.CreateShuffleVector(Imag, shuffleMasks[i], "Im" + std::to_string(i));  
     } else {
+        // k >= s > l
         /* TODO */
     }
 
@@ -186,10 +209,29 @@ Function* IRGenerator::genU2q(const ir::U2qGate& u2q, std::string _funcName) {
     }
     
     // store back
-    for (size_t i = 0; i < 4; i++)
-        builder.CreateStore(newRe[i], pRe[i]);
-    for (size_t i = 0; i < 4; i++)
-        builder.CreateStore(newIm[i], pIm[i]);
+    if (l >= s) {
+        for (size_t i = 0; i < 4; i++)
+            builder.CreateStore(newRe[i], pRe[i]);
+        for (size_t i = 0; i < 4; i++)
+            builder.CreateStore(newIm[i], pIm[i]);
+    } else if (s > k) {
+        std::vector<int> shuffleMaskCombine;
+        for (size_t i = 0; i < 2 * S; i++)
+            shuffleMaskCombine.push_back(i);
+        
+        auto* vecRe0 = builder.CreateShuffleVector(newRe[0], newRe[1], shuffleMaskCombine, "vecRe0");
+        auto* vecRe1 = builder.CreateShuffleVector(newRe[2], newRe[3], shuffleMaskCombine, "vecRe1");
+        auto* newReal = builder.CreateShuffleVector(vecRe0, vecRe1, shuffleMaskStore, "newReal");
+        builder.CreateStore(newReal, pReal);
+
+        auto* vecIm0 = builder.CreateShuffleVector(newIm[0], newIm[1], shuffleMaskCombine, "vecIm0");
+        auto* vecIm1 = builder.CreateShuffleVector(newIm[2], newIm[3], shuffleMaskCombine, "vecIm1");
+        auto* newImag = builder.CreateShuffleVector(vecIm0, vecIm1, shuffleMaskStore, "newImag");
+        builder.CreateStore(newImag, pImag);
+    }
+    else {
+        /* TODO */
+    }
 
     auto* idx_next = builder.CreateAdd(idx, builder.getInt64(1), "idx_next");
     idx->addIncoming(idx_next, loopBodyBB);
