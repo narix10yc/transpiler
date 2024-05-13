@@ -165,3 +165,9 @@ ir::ComplexMatrix2::FromEulerAngles(std::optional<double> theta,
                                     double thres) {
     return OptionalComplexMatrix2::FromEulerAngles(theta, phi, lambd).ToIRMatrix(thres);
 }
+
+std::string ir::U2qGate::getRepr() const {
+    std::stringstream ss;
+    ss << "u2q_k" << static_cast<int>(qLarge) << "l" << static_cast<int>(qSmall);
+    return ss.str();
+}

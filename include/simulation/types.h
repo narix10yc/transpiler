@@ -70,7 +70,8 @@ public:
 
     U2qGate(ComplexMatrix4 mat, uint8_t qLarge, uint8_t qSmall)
         : mat(mat), qLarge(qLarge), qSmall(qSmall) {}
-
+    
+    std::string getRepr() const;
 };
 
 } // namespace ir

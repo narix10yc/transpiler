@@ -130,7 +130,7 @@ void applyTwoQubitQuEST(real_ty* real,
         im00 = imag[idx00]; im01 = imag[idx01];
         im10 = imag[idx10]; im11 = imag[idx11];
 
-        real[idx00] = (mat.real[0] * re00  - mat.imag[0] * im00) + 
+        real[idx00] = (mat.real[0] * re00 - mat.imag[0] * im00) + 
                       (mat.real[1] * re01 - mat.imag[1] * im01) +
                       (mat.real[2] * re10 - mat.imag[2] * im10) +
                       (mat.real[3] * re11 - mat.imag[3] * im11);
