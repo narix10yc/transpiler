@@ -110,16 +110,19 @@ Function* IRGenerator::genU2q(const ir::U2qGate& u2q, std::string _funcName) {
     // loop body
     builder.SetInsertPoint(loopBodyBB);
 
-    Value *pRe[4], *pIm[4], *Re[4], *Im[4];
-    Value *pReal = nullptr, *pImag = nullptr;
+    Value *Re[4], *Im[4]; // will be initialized in all cases
+    // Among these 4 pointers each, when k > l >= s, 4 will be used; when 
+    // k >= s > l, 2 will be used; when s > k > l, 1 will be used.
+    Value *pRe[4], *pIm[4];
     std::vector<int> shuffleMaskStore;
+
     if (l >= s) {
         // k > l >= s
         auto* leftVal = builder.CreateAnd(idx, leftMaskVal, "left_tmp");
         leftVal = builder.CreateShl(leftVal, s_add_2_Val, "left");
         auto* middleVal = builder.CreateAnd(idx, middleMaskVal, "middle_tmp");
         middleVal = builder.CreateShl(middleVal, s_add_1_Val, "middle");
-        auto rightVal = builder.CreateAnd(idx, rightMaskVal, "right_tmp");
+        auto* rightVal = builder.CreateAnd(idx, rightMaskVal, "right_tmp");
         rightVal = builder.CreateShl(rightVal, sVal, "right");
         auto* idx0 = builder.CreateOr(leftVal, middleVal, "idx0_tmp");
         idx0 = builder.CreateOr(idx0, rightVal, "idx0");
@@ -144,12 +147,12 @@ Function* IRGenerator::genU2q(const ir::U2qGate& u2q, std::string _funcName) {
         Im[1] = builder.CreateLoad(vecSTy, pIm[1], "Im1");
         Im[2] = builder.CreateLoad(vecSTy, pIm[2], "Im2");
         Im[3] = builder.CreateLoad(vecSTy, pIm[3], "Im3");
-    } else if (s > k) {
-        // s > k > l
-        pReal = builder.CreateGEP(vec4STy, preal, idx, "pReal");
-        pImag = builder.CreateGEP(vec4STy, pimag, idx, "pImag");
-        auto* Real = builder.CreateLoad(vec4STy, pReal, "Real");
-        auto* Imag = builder.CreateLoad(vec4STy, pImag, "Imag");
+    } else if (s >= k) {
+        // s >= k > l
+        pRe[0] = builder.CreateGEP(vec4STy, preal, idx, "pReal");
+        pIm[0] = builder.CreateGEP(vec4STy, pimag, idx, "pImag");
+        auto* Real = builder.CreateLoad(vec4STy, pRe[0], "Real");
+        auto* Imag = builder.CreateLoad(vec4STy, pIm[0], "Imag");
 
         std::vector<int> shuffleMasks[4];
         for (size_t i = 0; i < 4 * S; i++) {
@@ -162,8 +165,33 @@ Function* IRGenerator::genU2q(const ir::U2qGate& u2q, std::string _funcName) {
         for (size_t i = 0; i < 4; i++)
             Im[i] = builder.CreateShuffleVector(Imag, shuffleMasks[i], "Im" + std::to_string(i));  
     } else {
-        // k >= s > l
-        /* TODO */
+        // k > s > l
+        auto* idxHi = builder.CreateAdd(idx, KVal, "idxHi");
+        // shuffle mask is effectively l value; Lo/Hi is effectively k value.
+        pRe[0] = builder.CreateGEP(vec2STy, preal, idx, "pReLo");
+        pRe[1] = builder.CreateGEP(vec2STy, preal, idxHi, "pReHi");
+        pIm[0] = builder.CreateGEP(vec2STy, pimag, idx, "pImLo");
+        pIm[1] = builder.CreateGEP(vec2STy, pimag, idxHi, "pImHi");
+        auto* ReLo = builder.CreateLoad(vec2STy, pRe[0], "ReLo");
+        auto* ReHi = builder.CreateLoad(vec2STy, pRe[1], "ReHi");
+        auto* ImLo = builder.CreateLoad(vec2STy, pIm[0], "ImLo");
+        auto* ImHi = builder.CreateLoad(vec2STy, pIm[1], "ImHi");
+
+        std::vector<int> shuffleMasks[2];
+        for (size_t i = 0; i < 2 * S; i++) {
+            size_t position = (i >> l) & 1U;
+            shuffleMaskStore.push_back(shuffleMasks[position].size() + position * S);
+            shuffleMasks[position].push_back(i);
+        }
+        Re[0] = builder.CreateShuffleVector(ReLo, shuffleMasks[0], "Re0");
+        Re[1] = builder.CreateShuffleVector(ReLo, shuffleMasks[1], "Re1");
+        Re[2] = builder.CreateShuffleVector(ReHi, shuffleMasks[0], "Re2");
+        Re[3] = builder.CreateShuffleVector(ReHi, shuffleMasks[1], "Re3");
+
+        Im[0] = builder.CreateShuffleVector(ImLo, shuffleMasks[0], "Im0");
+        Im[1] = builder.CreateShuffleVector(ImLo, shuffleMasks[1], "Im1");
+        Im[2] = builder.CreateShuffleVector(ImHi, shuffleMasks[0], "Im2");
+        Im[3] = builder.CreateShuffleVector(ImHi, shuffleMasks[1], "Im3");
     }
 
     // mat-vec multiplication
@@ -214,7 +242,7 @@ Function* IRGenerator::genU2q(const ir::U2qGate& u2q, std::string _funcName) {
             builder.CreateStore(newRe[i], pRe[i]);
         for (size_t i = 0; i < 4; i++)
             builder.CreateStore(newIm[i], pIm[i]);
-    } else if (s > k) {
+    } else if (s >= k) {
         std::vector<int> shuffleMaskCombine;
         for (size_t i = 0; i < 2 * S; i++)
             shuffleMaskCombine.push_back(i);
@@ -222,15 +250,23 @@ Function* IRGenerator::genU2q(const ir::U2qGate& u2q, std::string _funcName) {
         auto* vecRe0 = builder.CreateShuffleVector(newRe[0], newRe[1], shuffleMaskCombine, "vecRe0");
         auto* vecRe1 = builder.CreateShuffleVector(newRe[2], newRe[3], shuffleMaskCombine, "vecRe1");
         auto* newReal = builder.CreateShuffleVector(vecRe0, vecRe1, shuffleMaskStore, "newReal");
-        builder.CreateStore(newReal, pReal);
+        builder.CreateStore(newReal, pRe[0]);
 
         auto* vecIm0 = builder.CreateShuffleVector(newIm[0], newIm[1], shuffleMaskCombine, "vecIm0");
         auto* vecIm1 = builder.CreateShuffleVector(newIm[2], newIm[3], shuffleMaskCombine, "vecIm1");
         auto* newImag = builder.CreateShuffleVector(vecIm0, vecIm1, shuffleMaskStore, "newImag");
-        builder.CreateStore(newImag, pImag);
+        builder.CreateStore(newImag, pIm[0]);
     }
     else {
-        /* TODO */
+        auto* newReLo = builder.CreateShuffleVector(newRe[0], newRe[1], shuffleMaskStore, "newReLo");
+        auto* newReHi = builder.CreateShuffleVector(newRe[2], newRe[3], shuffleMaskStore, "newReHi");
+        builder.CreateStore(newReLo, pRe[0]);
+        builder.CreateStore(newReHi, pRe[1]);
+
+        auto* newImLo = builder.CreateShuffleVector(newIm[0], newIm[1], shuffleMaskStore, "newImLo");
+        auto* newImHi = builder.CreateShuffleVector(newIm[2], newIm[3], shuffleMaskStore, "newImHi");
+        builder.CreateStore(newImLo, pIm[0]);
+        builder.CreateStore(newImHi, pIm[1]);
     }
 
     auto* idx_next = builder.CreateAdd(idx, builder.getInt64(1), "idx_next");

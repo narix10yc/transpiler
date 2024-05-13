@@ -17,6 +17,7 @@ extern "C" {
     void f64_s2_sep_u2q_k5l3(double*, double*, uint64_t, uint64_t, void*);
     void f64_s1_sep_u2q_k2l1(double*, double*, uint64_t, uint64_t, void*);
     void f64_s2_sep_u2q_k1l0(double*, double*, uint64_t, uint64_t, void*);
+    void f64_s1_sep_u2q_k2l0(double*, double*, uint64_t, uint64_t, void*);
 }
 
 using namespace simulation;
@@ -216,6 +217,26 @@ public:
 
             return is_close(fidelity(sv0, sv1), 1, 1e-8);
         }, "quest and ir kernel result match, s=2, k=1, l=0 (shuffle needed)");
+
+        addTestCase([&]() -> bool {
+            sv0.randomize();
+            sv1 = sv0;
+
+            U2qGate u2q { ComplexMatrix4<>::Identity(), 2, 0 };
+            double m[32];
+            for (size_t i = 0; i < 16; i++) {
+                m[i] = u2q.mat.real[i];
+                m[i+16] = u2q.mat.imag[i];
+            }
+            
+            applyTwoQubitQuEST<double>(sv0.real, sv0.imag, u2q.mat, sv0.nqubits, u2q.k, u2q.l);
+            f64_s1_sep_u2q_k2l0(sv1.real, sv1.imag, 0, 1 << (sv1.nqubits-3), m);
+
+            sv0.normalize();
+            sv1.normalize();
+            
+            return is_close(fidelity(sv0, sv1), 1, 1e-8);
+        }, "quest and ir kernel result match, s=1, k=2, l=0 (shuffle needed)");
     }
 };
 
