@@ -18,6 +18,7 @@ extern "C" {
     void f64_s1_sep_u2q_k2l1(double*, double*, uint64_t, uint64_t, void*);
     void f64_s2_sep_u2q_k1l0(double*, double*, uint64_t, uint64_t, void*);
     void f64_s1_sep_u2q_k2l0(double*, double*, uint64_t, uint64_t, void*);
+    void f64_s1_sep_u2q_k2l1_batched(double*, double*, double*, double*, uint64_t, uint64_t, void*);
 }
 
 using namespace simulation;
@@ -176,7 +177,7 @@ public:
             sv1.normalize();
 
             return is_close(fidelity(sv0, sv1), 1, 1e-8);
-        }, "quest and ir kernel result match, s=1, k=3, l=2");
+        }, "quest and ir kernel result match, s=1, k=2, l=1");
 
         addTestCase([&]() -> bool {
             sv0.randomize();
@@ -240,6 +241,38 @@ public:
     }
 };
 
+
+class TestU2qSepBatched : public Test {
+    StatevectorSep<double> sv0, sv1, sv2;
+public:
+    TestU2qSepBatched(unsigned nqubits=12)
+        : sv0(nqubits), sv1(nqubits), sv2(nqubits) {
+        name = "u2q gate sep format";
+
+        addTestCase([&]() -> bool {
+            sv0.randomize();
+            sv1 = sv0;
+
+            U2qGate u2q { ComplexMatrix4<>::Random(), 2, 1 };
+            double m[32];
+            for (size_t i = 0; i < 16; i++) {
+                m[i] = u2q.mat.real[i];
+                m[i+16] = u2q.mat.imag[i];
+            }
+            applyTwoQubitQuEST<double>(sv0.real, sv0.imag, u2q.mat, sv0.nqubits, u2q.k, u2q.l);
+
+            f64_s1_sep_u2q_k2l1_batched(sv1.real, sv1.imag, 
+                        sv2.real, sv2.imag, 0, 1 << (sv1.nqubits - 3), m);
+
+            sv0.normalize();
+            sv2.normalize();
+
+            return is_close(fidelity(sv0, sv2), 1, 1e-8);
+        }, "swap qubits");
+    
+    }
+};
+
 int main() {
     auto testSuite = TestSuite();
 
@@ -248,12 +281,14 @@ int main() {
     auto t2 = TestSepShuffle { };
     auto t3 = TestSepShuffleF32 { 4 };
     auto t4 = TestU2qSep { };
+    auto t5 = TestU2qSepBatched { };
 
     testSuite.addTest(&t0);
     testSuite.addTest(&t1);
     testSuite.addTest(&t2);
     testSuite.addTest(&t3);
     testSuite.addTest(&t4);
+    testSuite.addTest(&t5);
 
     testSuite.runAll();
 
