@@ -8,7 +8,6 @@ using namespace simulation;
 int main(int argc, char *argv[]) {
 
     std::string inputFilename = argv[1];
-
     std::string outputFilename = argv[2];
 
     std::cerr << "-- Input file: " << inputFilename << "\n";

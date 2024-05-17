@@ -361,6 +361,8 @@ Function* IRGenerator::genU2qBatched(const ir::U2qGate& u2q, std::string _funcNa
     BasicBlock* retBB = BasicBlock::Create(llvmContext, "ret", func);
     
     builder.SetInsertPoint(globalEntryBB);
+    auto* matVal = builder.CreateLoad(vec32Ty, pmat, 0ULL, "mat");
+    
     builder.CreateBr(entryBBs[0]);
 
     // load matrix
@@ -378,16 +380,15 @@ Function* IRGenerator::genU2qBatched(const ir::U2qGate& u2q, std::string _funcNa
         std::vector<int> shuffleMaskStore;
 
         builder.SetInsertPoint(entryBB);
-        auto* matV = builder.CreateLoad(vec32Ty, pmat, 0ULL, "mat");
         for (size_t i = 0; i < 4; i++) {
             int j = 4 * batchIndex + i;
             std::string name = "mRe" + std::to_string(j);
-            mRe[i] = builder.CreateShuffleVector(matV, std::vector<int>(S, j), name);
+            mRe[i] = builder.CreateShuffleVector(matVal, std::vector<int>(S, j), name);
         }
         for (size_t i = 0; i < 4; i++) {
             int j = 4 * batchIndex + i + 16;
             std::string name = "mRe" + std::to_string(j);
-            mIm[i] = builder.CreateShuffleVector(matV, std::vector<int>(S, j), name);
+            mIm[i] = builder.CreateShuffleVector(matVal, std::vector<int>(S, j), name);
         }
 
         builder.CreateBr(loopBB);

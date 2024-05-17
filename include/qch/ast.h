@@ -42,6 +42,10 @@ public:
         return *stmts[index];
     }
 
+    Statement* getStmtPtr(size_t index) const {
+        return stmts[index].get();
+    }
+
     void print(std::ostream& os) const override {
         std::cerr << "RootNode print\n";
         for (auto& s : stmts) {
@@ -69,6 +73,10 @@ public:
     
     void addParameter(double p) { parameters.push_back(p); }
     void addTargetQubit(unsigned q) { qubits.push_back(q); }
+
+    std::string getName() const { return name; }
+    std::vector<double> getParameters() const { return parameters; }
+    std::vector<unsigned> getQubits() const { return qubits; }
 
     unsigned getLargestQubit() const override {
         unsigned m = 0;
@@ -104,6 +112,10 @@ public:
         }
         stmts.push_back(std::move(stmt));
     }
+
+    size_t countStmts() const { return stmts.size(); }
+
+    Statement* getStmtPtr(size_t index) const { return stmts[index].get(); }
 
     unsigned getNumQubits() const { return nqubits; }
     void setNumQubits(unsigned n) { nqubits = n; }

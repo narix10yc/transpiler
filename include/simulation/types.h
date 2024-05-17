@@ -107,9 +107,6 @@ public:
     ComplexMatrix2(std::array<real_ty, 4> real, std::array<real_ty, 4> imag)
         : real(real), imag(imag) {}
 
-    static ComplexMatrix2 GetIdentity() {
-        return {{1,0,0,1}, {}};
-    }
 
     ir::ComplexMatrix2 ToIRMatrix(real_ty threshold=1e-8) const {
         std::array<int, 4> realArr, imagArr;
@@ -136,9 +133,23 @@ public:
     }
 
     static ComplexMatrix2
-    FromEulerAngles(std::optional<double> theta, std::optional<double> lambd,
-                    std::optional<double> phi, double thres=1e-8);
-    
+    FromEulerAngles(double theta, double lambd, double phi) {
+        return {
+            {
+                cos(theta/2), -cos(lambd) * sin(theta/2),
+                cos(phi) * sin(theta/2), cos(phi + lambd) * cos(theta/2)
+            },
+            {
+                0, -sin(lambd) * sin(theta/2),
+                sin(phi) * sin(theta/2), sin(phi + lambd) * cos(theta/2)
+            }
+        };
+    }
+
+    static ComplexMatrix2 Identity() {
+        return {{1,0,0,1}, {}};
+    }
+
     static ComplexMatrix2 Random() {
         std::random_device rd;
         std::mt19937 gen { rd() };
@@ -161,10 +172,6 @@ public:
 
     ComplexMatrix4(std::array<real_ty, 16> real, std::array<real_ty, 16> imag)
         : real(real), imag(imag) {}
-
-    static ComplexMatrix4 GetIdentity() {
-        return {{1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1}, {}};
-    }
 
     ir::ComplexMatrix4 toIRMatrix(real_ty threshold=1e-8) const {
         std::array<int, 16> realArr, imagArr;
@@ -228,7 +235,10 @@ public:
             }
         }
     }
-
+    
+    static ComplexMatrix4 Identity() {
+        return {{1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1}, {}};
+    }
 
     static ComplexMatrix4 Random() {
         std::random_device rd;
@@ -241,12 +251,7 @@ public:
         }
         return mat;
     }
-
-    static ComplexMatrix4 Identity() {
-        return {{1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1}, {}};
-    }
-        
-};
+}; // ComplexMatrix4
 
 
 class U3Gate {

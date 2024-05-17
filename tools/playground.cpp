@@ -1,32 +1,38 @@
-#include "simulation/ir_generator.h"
-#include "llvm/Support/CommandLine.h"
+#include "openqasm/parser.h"
+#include "simulation/cpu.h"
+#include "simulation/transpiler.h"
 
 using namespace simulation;
-using namespace llvm;
+using namespace simulation::transpile;
 
-int main(int argc, char** argv) {
-    IRGenerator generator(1);
-    generator.setRealTy(ir::RealTy::Double);
-    generator.setAmpFormat(ir::AmpFormat::Separate);
 
-    auto u2q = ir::U2qGate { ir::ComplexMatrix4{
-        {2,2,2,2,2, 2,2,2,2,2, 2,2,2,2,2, 2},
-        {2,2,2,2,2, 2,2,2,2,2, 2,2,2,2,2, 2}
-    }, 2, 1};
+int main(int argc, char *argv[]) {
 
-    generator.genU2q(u2q);
+    std::string inputFilename = argv[1];
+    // std::string outputFilename = argv[2];
 
-    if (argc > 1) {
-        std::error_code ec;
-        raw_fd_ostream fIR(argv[1], ec);
-        if (ec) {
-            errs() << "Error opening file: " << ec.message() << "\n";
-            return 1;
-        }
-        generator.getModule().print(fIR, nullptr);
-    } else {
-        generator.getModule().print(errs(), nullptr);
-    }
+    std::cerr << "-- Input file: " << inputFilename << "\n";
+    // std::cerr << "-- Output file: " << outputFilename << "\n";
+
+    openqasm::Parser parser(inputFilename, 0);
+
+    std::string qchFileName = inputFilename + ".qch";
+
+    // parse and write ast
+    auto qasmRoot = parser.parse();
+    std::cerr << "-- qasm AST built\n";
+
+    auto qchRoot = qasmRoot->toQch();
+    std::cerr << "-- converted to qch AST\n";
+    
+    auto graph = CircuitGraph::FromQch(*qchRoot);
+    
+    std::cerr << "-- converted to CircuitGraph\n";
+
+    graph.transpileForCPU();
+
+    std::cerr << "-- transpiled for CPU\n";
+
 
     return 0;
 }

@@ -34,6 +34,7 @@ int approximate(std::optional<double> a, double thres=1e-8) {
 }
 } // anonymous namespace
 
+
 OptionalComplexMatrix2
 OptionalComplexMatrix2::FromEulerAngles(std::optional<double> theta,
                                         std::optional<double> phi, 
