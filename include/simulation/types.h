@@ -8,8 +8,118 @@
 #include <iostream>
 #include <iomanip>
 #include <random>
+#include <stdexcept>
 
 namespace simulation {
+
+template<typename real_ty=double>
+class Complex {
+public:
+    real_ty real, imag;
+    Complex() : real(0), imag(0) {}
+    Complex(real_ty real, real_ty imag) : real(real), imag(imag) {}
+
+    Complex operator+(const Complex& other) const {
+        return Complex(real + other.real, imag + other.imzg);
+    }
+
+    Complex operator-(const Complex& other) const {
+        return Complex(real - other.real, imag - other.imag);
+    }
+
+    Complex operator*(const Complex& other) const {
+        return Complex(real * other.real - imag * other.imag,
+                       real * other.imag + imag * other.real);
+    }
+
+    Complex& operator+=(const Complex& other) {
+        real += other.real;
+        imag += other.imag;
+        return *this;
+    }
+
+    Complex& operator-=(const Complex& other) {
+        real -= other.real;
+        imag -= other.imag;
+        return *this;
+    }
+
+    Complex& operator*=(const Complex& other) {
+        real_ty r = real * other.real - imag * other.imag;
+        imag = real * other.imag + imag * other.real;
+        real = r;
+        return *this;
+    }
+};
+
+
+template<typename real_ty=double>
+class SquareComplexMatrix {
+public:
+    size_t size;
+    std::vector<Complex<real_ty>> data;
+
+    SquareComplexMatrix(size_t size) : size(size), data(size * size) {}
+
+    static SquareComplexMatrix Identity(size_t size) {
+        SquareComplexMatrix m;
+        for (size_t r = 0; r < size; r++)
+            m.data[r*size + r].real = 1;
+        return m;
+    }
+
+    SquareComplexMatrix matmul(const SquareComplexMatrix& other) {
+        if (size != other.size)
+            throw std::runtime_error("matrix size mismatch!");
+
+        SquareComplexMatrix m(size);
+        for (size_t i = 0; i < size; i++) {
+        for (size_t j = 0; j < size; j++) {
+        for (size_t k = 0; k < size; k++) {
+            // C_{ij} = A_{ik} B_{kj}
+            m.data[i*size + j] += data[i*size + k] * other.data[k*size + j];
+        } } }
+        return m;
+    }
+
+    SquareComplexMatrix kron(const SquareComplexMatrix& other) const {
+        size_t lsize = size;
+        size_t rsize = other.size;
+        size_t msize = lsize * rsize;
+        SquareComplexMatrix m(msize);
+        for (size_t lr = 0; lr < lsize; lr++) {
+        for (size_t lc = 0; lc < lsize; lc++) {
+        for (size_t rr = 0; rr < rsize; rr++) {
+        for (size_t rc = 0; rc < rsize; rc++) {
+            size_t r = lr * rsize + rr;
+            size_t c = lc * rsize + rc;
+            m.data[r*msize + c] = data[lr*lsize + lc] * other.data[rr*rsize + rc];
+        } } } }
+        return m;
+    }
+
+    SquareComplexMatrix leftKronI() const {
+        SquareComplexMatrix m(size * size);
+        for (size_t i = 0; i < size; i++) {
+        for (size_t r = 0; r < size; r++) {
+        for (size_t c = 0; c < size; c++) {
+            m.data[(i*size + r) * size + (i*size + c)] = data[r*size + c];
+        } } }
+        return m;
+    }
+
+    SquareComplexMatrix rightKronI() const {
+        SquareComplexMatrix m(size * size);
+        for (size_t i = 0; i < size; i++) {
+        for (size_t r = 0; r < size; r++) {
+        for (size_t c = 0; c < size; c++) {
+            m.data[(r*size + i) * size + (c*size + i)] = data[r*size + c];
+        } } }
+        return m;
+    }
+};
+
+
 
 namespace ir {
     enum class RealTy {
@@ -98,6 +208,13 @@ public:
 }; // OptionalComplexMatrix2
 
 template<typename real_ty=double>
+class ComplexMatrix2;
+
+template<typename real_ty=double>
+class ComplexMatrix4;
+
+
+template<typename real_ty>
 class ComplexMatrix2 {
 public:
     std::array<real_ty, 4> real, imag;
@@ -161,9 +278,45 @@ public:
         }
         return mat;
     }
+
+    /// @brief I otimes U
+    ComplexMatrix4<real_ty> leftKronI() const {
+        return {
+            {
+                real[0], real[1], 0, 0,
+                real[2], real[3], 0, 0,
+                0, 0, real[0], real[1],
+                0, 0, real[2], real[3]
+            },
+            {
+                imag[0], imag[1], 0, 0,
+                imag[2], imag[3], 0, 0,
+                0, 0, imag[0], imag[1],
+                0, 0, imag[2], imag[3]
+            }
+        };
+    }
+
+    /// @brief U otimes I 
+    ComplexMatrix4<real_ty> rightKronI() const {
+        return {
+            {
+                real[0],      0, real[1],      0,
+                      0, real[0],      0, real[1],
+                real[2],      0, real[3],      0,
+                      0, real[2],      0, real[3],
+            },
+            {
+                imag[0],      0, imag[1],      0,
+                      0, imag[0],      0, imag[1],
+                imag[2],      0, imag[3],      0,
+                      0, imag[2],      0, imag[3],
+            }
+        };
+    }
 };
 
-template<typename real_ty=double>
+template<typename real_ty>
 class ComplexMatrix4 {
 public:
     std::array<real_ty, 16> real, imag;
@@ -197,8 +350,8 @@ public:
         return ir::ComplexMatrix4 { realArr, imagArr };
     }
 
-    ComplexMatrix4 matmul(ComplexMatrix4 other) {
-        ComplexMatrix4 newMat {};
+    ComplexMatrix4 matmul(const ComplexMatrix4& other) {
+        ComplexMatrix4 newMat;
         for (size_t i = 0; i < 4; i++) {
         for (size_t j = 0; j < 4; j++) {
         for (size_t k = 0; k < 4; k++) {
@@ -250,6 +403,23 @@ public:
             mat.imag[i] = d(gen);
         }
         return mat;
+    }
+    
+    ComplexMatrix4 swapTargetQubits() const {
+        return {
+            {
+                real[ 0], real[ 2], real[ 1], real[ 3],
+                real[ 8], real[10], real[ 9], real[11],
+                real[ 4], real[ 6], real[ 5], real[ 7],
+                real[12], real[14], real[13], real[15]
+            },
+            {
+                imag[ 0], imag[ 2], imag[ 1], imag[ 3],
+                imag[ 8], imag[10], imag[ 9], imag[11],
+                imag[ 4], imag[ 6], imag[ 5], imag[ 7],
+                imag[12], imag[14], imag[13], imag[15]
+            }
+        };
     }
 }; // ComplexMatrix4
 

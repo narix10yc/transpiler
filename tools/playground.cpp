@@ -27,7 +27,8 @@ int main(int argc, char *argv[]) {
     
     auto graph = CircuitGraph::FromQch(*qchRoot);
     
-    std::cerr << "-- converted to CircuitGraph\n";
+    std::cerr << "-- converted to CircuitGraph with "
+              << graph.allNodes.size() << " nodes\n";
 
     graph.transpileForCPU();
 

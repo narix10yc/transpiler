@@ -5,40 +5,62 @@
 #include "simulation/types.h"
 
 #include <vector>
-#include <stdexcept>
+#include <set>
+#include <unordered_set>
 
 namespace simulation::transpile {
+class GateNode {
+public:
+    unsigned nqubits;
+    SquareComplexMatrix<double> matrix;
+    std::vector<unsigned> qubits;
+    std::vector<GateNode*> leftNodes, rightNodes;
+
+    GateNode(unsigned nqubits) : nqubits(nqubits),
+                                 matrix(1<<nqubits),
+                                 qubits(nqubits),
+                                 leftNodes(nqubits, nullptr),
+                                 rightNodes(nqubits, nullptr) {}
+
+    bool actOnSameQubits(const GateNode& other) {
+        if (nqubits != other.nqubits)
+            return false;
+        
+        std::multiset<unsigned> set1(qubits.begin(), qubits.end());
+        std::multiset<unsigned> set2(other.qubits.begin(), other.qubits.end());
+
+        return set1 == set2;
+    }
+
+}; // class GateNode
 
 class CircuitGraph {
-    class GateNode {
-    public:
-        unsigned nqubits;
-        std::vector<double> matrixReal, matrixImag;
-        std::vector<unsigned> qubits;
-        std::vector<GateNode*> leftNodes, rightNodes;
-
-        GateNode(unsigned nqubits) : nqubits(nqubits) {
-            if (nqubits >= 3)
-                throw std::runtime_error("number of qubit cannnot exceed 2");
-
-            matrixReal.resize(1<<(2 * nqubits));
-            matrixImag.resize(1<<(2 * nqubits));
-            qubits.resize(nqubits);
-            leftNodes = std::vector<GateNode*>(nqubits, nullptr);
-            rightNodes = std::vector<GateNode*>(nqubits, nullptr);;
-        }
-    }; // class CircuitGraph::GateNode
-
+public:
     std::vector<GateNode*> leftEntry;
     std::vector<GateNode*> rightEntry;
 
+    std::unordered_set<GateNode*> allNodes;
+
+private:
     /// @brief Connect two nodes along qubit q.
     /// @return true if both left and right have qubit q.
     bool connectTwoNodes(GateNode* left, GateNode* right, unsigned q);
 
-    void fuseTwoNodes(GateNode* left, GateNode* right);
+    void tryFuseTwoNodes(GateNode* left, GateNode* right);
+
+    /// @brief Setup number of qubits and connections of the fused node. Notice
+    /// that the order of qubits will be prioritized to the right node.
+    /// Matrix of the fused node is NOT set by this method
+    void replaceTwoNodesWithFused(GateNode* left, GateNode* right, GateNode* fused);
+
+    unsigned absorbNeighbouringSingleQubitGates(GateNode* node);
+
 public:
-    CircuitGraph() : leftEntry(32, nullptr), rightEntry(32, nullptr) {}
+    CircuitGraph() : leftEntry(32, nullptr), rightEntry(32, nullptr), allNodes() {}
+
+    GateNode* addGateNode(unsigned nqubits);
+
+    void removeGateNode(GateNode* node);
 
     void addSingleQubitGate(const U3Gate& u3);
 
