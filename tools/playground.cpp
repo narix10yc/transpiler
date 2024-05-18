@@ -34,6 +34,11 @@ int main(int argc, char *argv[]) {
 
     std::cerr << "-- transpiled for CPU\n";
 
+    auto transpiledRoot = graph.toQch();
+
+    std::cerr << "-- converted back to qch AST\n";
+
+    transpiledRoot.print(std::cerr);
 
     return 0;
 }

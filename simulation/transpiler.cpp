@@ -108,30 +108,6 @@ void CircuitGraph::addTwoQubitGate(const U2qGate& u2q) {
     }
 }
 
-void CircuitGraph::replaceTwoNodesWithFused(
-        GateNode* left, GateNode* right, GateNode* fused) {
-    // nqubits and qubits
-    if (left->nqubits > right->nqubits) {
-        fused->nqubits = left->nqubits;
-        for (size_t i = 0; i < left->nqubits; i++)
-            fused->qubits[i] = left->qubits[i];
-    } else {
-        fused->nqubits = right->nqubits;
-        for (size_t i = 0; i < right->nqubits; i++)
-            fused->qubits[i] = right->qubits[i];
-    }
-
-    // connect nodes
-    for (size_t i = 0; i < left->nqubits; i++)
-        connectTwoNodes(left->leftNodes[i], fused, left->qubits[i]);
-    for (size_t i = 0; i < right->nqubits; i++)
-        connectTwoNodes(right->rightNodes[i], fused, right->qubits[i]);
-    
-    // remove nodes
-    removeGateNode(left);
-    removeGateNode(right);
-}
-
 CircuitGraph CircuitGraph::FromQch(const RootNode& root) {
     CircuitGraph graph;
 
@@ -140,16 +116,16 @@ CircuitGraph CircuitGraph::FromQch(const RootNode& root) {
         auto gateApply = dynamic_cast<GateApplyStmt*>(circuit->getStmtPtr(i));
         if (gateApply == nullptr)
             continue;
-        if (gateApply->getName() == "u3") {
+        if (gateApply->name == "u3") {
             auto u3 = U3Gate(ComplexMatrix2<>::FromEulerAngles(
-                                gateApply->getParameters()[0], 
-                                gateApply->getParameters()[1],
-                                gateApply->getParameters()[2]),
-                            gateApply->getQubits()[0]);
+                                gateApply->parameters[0], 
+                                gateApply->parameters[1],
+                                gateApply->parameters[2]),
+                            gateApply->qubits[0]);
             graph.addSingleQubitGate(u3);
-        } else if (gateApply->getName() == "cx") {
+        } else if (gateApply->name == "cx") {
             auto u2q = U2qGate({{1,0,0,0, 0,0,0,1, 0,0,1,0, 0,1,0,0}, {}},
-                gateApply->getQubits()[0], gateApply->getQubits()[1]);
+                gateApply->qubits[0], gateApply->qubits[1]);
             graph.addTwoQubitGate(u2q);
         }
     }
@@ -233,4 +209,37 @@ void CircuitGraph::transpileForCPU() {
 
 
     // step 2: fuse two-qubit gates
+}
+
+namespace {
+    double approximate(double x, double thres=1e-8) {
+        if (abs(x) < thres)
+            return 0;
+        if (abs(x - 1) < thres)
+            return 1;
+        if (abs(x + 1) < thres)
+            return -1;
+        return x;
+    }
+}
+
+RootNode CircuitGraph::toQch() const {
+    RootNode root;
+    auto circuit = std::make_unique<CircuitStmt>("transpiled");
+
+    for (GateNode* node : allNodes) {
+        std::string name = (node->nqubits == 1) ? "u3" : "u2q";
+        auto gateApply = std::make_unique<GateApplyStmt>(name);
+        for (auto p : node->matrix.data) {
+            gateApply->addParameter(approximate(p.real));
+            gateApply->addParameter(approximate(p.imag));
+        }
+        for (auto q : node->qubits) {
+            gateApply->addTargetQubit(q);
+        }
+
+        circuit->addStmt(std::move(gateApply));
+    }
+    root.addStmt(std::move(circuit));
+    return root;
 }

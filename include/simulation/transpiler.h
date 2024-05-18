@@ -46,17 +46,16 @@ private:
     /// @return true if both left and right have qubit q.
     bool connectTwoNodes(GateNode* left, GateNode* right, unsigned q);
 
-    void tryFuseTwoNodes(GateNode* left, GateNode* right);
-
-    /// @brief Setup number of qubits and connections of the fused node. Notice
-    /// that the order of qubits will be prioritized to the right node.
-    /// Matrix of the fused node is NOT set by this method
-    void replaceTwoNodesWithFused(GateNode* left, GateNode* right, GateNode* fused);
-
+    /// @brief Try absorb all directly connected single-qubit gates.
+    /// @param node can either be single-qubit or two-qubit.
+    /// @return Number of gates absorbed. 
     unsigned absorbNeighbouringSingleQubitGates(GateNode* node);
-
 public:
     CircuitGraph() : leftEntry(32, nullptr), rightEntry(32, nullptr), allNodes() {}
+
+    static CircuitGraph FromQch(const qch::ast::RootNode& root);
+
+    qch::ast::RootNode toQch() const;
 
     GateNode* addGateNode(unsigned nqubits);
 
@@ -65,8 +64,6 @@ public:
     void addSingleQubitGate(const U3Gate& u3);
 
     void addTwoQubitGate(const U2qGate& u2q);
-
-    static CircuitGraph FromQch(const qch::ast::RootNode& root);
 
     void transpileForCPU();
 

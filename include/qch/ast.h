@@ -60,6 +60,7 @@ public:
 };
 
 class GateApplyStmt : public Statement {
+public:
     std::string name;
     std::vector<double> parameters;
     std::vector<unsigned> qubits;
@@ -73,10 +74,6 @@ public:
     
     void addParameter(double p) { parameters.push_back(p); }
     void addTargetQubit(unsigned q) { qubits.push_back(q); }
-
-    std::string getName() const { return name; }
-    std::vector<double> getParameters() const { return parameters; }
-    std::vector<unsigned> getQubits() const { return qubits; }
 
     unsigned getLargestQubit() const override {
         unsigned m = 0;
@@ -106,7 +103,6 @@ public:
     void addStmt(std::unique_ptr<Statement> stmt) {
         // update number of qubits
         unsigned m = stmt->getLargestQubit();
-
         if (nqubits <= m) {
             nqubits = m + 1;
         }
@@ -118,6 +114,7 @@ public:
     Statement* getStmtPtr(size_t index) const { return stmts[index].get(); }
 
     unsigned getNumQubits() const { return nqubits; }
+
     void setNumQubits(unsigned n) { nqubits = n; }
 
     void print(std::ostream&) const override;
