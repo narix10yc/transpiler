@@ -151,37 +151,37 @@ unsigned CircuitGraph::absorbNeighbouringSingleQubitGates(GateNode* node) {
             nFused += 1;
         }
     } else if (node->nqubits == 2) {
-        GateNode* left0 = node->leftNodes[0];
-        if (left0 != nullptr && left0->nqubits == 1) {
-            // R @ (I otimes L)
-            node->matrix = node->matrix.matmul(left0->matrix.leftKronI());
-            connectTwoNodes(left0->leftNodes[0], node, node->qubits[0]);
-            removeGateNode(left0);
+        GateNode* leftK = node->leftNodes[0];
+        if (leftK != nullptr && leftK->nqubits == 1) {
+            // R @ (L otimes I)
+            node->matrix = (node->matrix).matmul(leftK->matrix.rightKronI());
+            connectTwoNodes(leftK->leftNodes[0], node, node->qubits[0]);
+            removeGateNode(leftK);
             nFused += 1;
         }
-        GateNode* left1 = node->leftNodes[1];
-        if (left1 != nullptr && left1->nqubits == 1) {
-            // R @ (L otimes I)
-            node->matrix = node->matrix.matmul(left1->matrix.rightKronI());
-            connectTwoNodes(left1->leftNodes[0], node, node->qubits[1]);
-            removeGateNode(left1);
+        GateNode* leftL = node->leftNodes[1];
+        if (leftL != nullptr && leftL->nqubits == 1) {
+            // R @ (I otimes L)
+            node->matrix = node->matrix.matmul(leftL->matrix.leftKronI());
+            connectTwoNodes(leftL->leftNodes[0], node, node->qubits[1]);
+            removeGateNode(leftL);
             nFused += 1;
         }
 
-        GateNode* right0 = node->rightNodes[0];
-        if (right0 != nullptr && right0->nqubits == 1) {
-            // (I otimes R) @ L
-            node->matrix = right0->matrix.leftKronI().matmul(node->matrix);
-            connectTwoNodes(node, right0->rightNodes[0], node->qubits[0]);
-            removeGateNode(right0);
+        GateNode* rightK = node->rightNodes[0];
+        if (rightK != nullptr && rightK->nqubits == 1) {
+            // (R otimes I) @ L
+            node->matrix = rightK->matrix.rightKronI().matmul(node->matrix);
+            connectTwoNodes(node, rightK->rightNodes[0], node->qubits[0]);
+            removeGateNode(rightK);
             nFused += 1;
         }
-        GateNode* right1 = node->rightNodes[1];
-        if (right1 != nullptr && right1->nqubits == 1) {
-            // (R otimes I) @ L
-            node->matrix = right1->matrix.rightKronI().matmul(node->matrix);
-            connectTwoNodes(node, right1->rightNodes[0], node->qubits[1]);
-            removeGateNode(right1);
+        GateNode* rightL = node->rightNodes[1];
+        if (rightL != nullptr && rightL->nqubits == 1) {
+            // (I otimes R) @ L
+            node->matrix = rightL->matrix.leftKronI().matmul(node->matrix);
+            connectTwoNodes(node, rightL->rightNodes[0], node->qubits[1]);
+            removeGateNode(rightL);
             nFused += 1;
         }
     }

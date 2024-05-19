@@ -23,7 +23,13 @@ Function* IRGenerator::genU2q(const ir::U2qGate& u2q, std::string _funcName) {
                          : getDefaultU2qFuncName(u2q, *this);
 
     errs() << "Generating function " << funcName << "\n";
-
+    for (size_t i = 0; i < 16; i++)
+        errs() << mat.real[i];
+    errs() << " ";
+    for (size_t i = 0; i < 16; i++)
+        errs() << mat.imag[i];
+    errs() << "\n";
+    
     // convention: l is the less significant qubit
     uint8_t l = u2q.qSmall;
     uint8_t k = u2q.qLarge;
@@ -196,8 +202,8 @@ Function* IRGenerator::genU2q(const ir::U2qGate& u2q, std::string _funcName) {
 
     // mat-vec multiplication
     Value *newRe[4] = {nullptr}, *newIm[4] = {nullptr};
+    Value *newRe0 = nullptr, *newRe1 = nullptr;
     for (size_t i = 0; i < 4; i++) {
-        Value *newRe0 = nullptr, *newRe1 = nullptr;
         size_t i0 = 4*i + 0, i1 = 4*i + 1, i2 = 4*i + 2, i3 = 4*i + 3;
         std::string newReName = "newRe" + std::to_string(i) + "_";
 
@@ -210,7 +216,7 @@ Function* IRGenerator::genU2q(const ir::U2qGate& u2q, std::string _funcName) {
         newRe1 = genMulAdd(newRe1, mIm[i1], Im[1], mat.imag[i1], "", newReName);
         newRe1 = genMulAdd(newRe1, mIm[i2], Im[2], mat.imag[i2], "", newReName);
         newRe1 = genMulAdd(newRe1, mIm[i3], Im[3], mat.imag[i3], "", newReName);
-        
+
         if (newRe0 != nullptr && newRe1 != nullptr)
             newRe[i] = builder.CreateFSub(newRe0, newRe1, "newRe" + std::to_string(i));
         else if (newRe0 == nullptr)
@@ -236,6 +242,14 @@ Function* IRGenerator::genU2q(const ir::U2qGate& u2q, std::string _funcName) {
         newIm[i] = genMulAdd(newIm[i], mIm[i3], Re[3], mat.imag[i3], "", newImName);
     }
     
+    for (size_t i = 0; i < 4; i++) {
+        if (newRe[i] == nullptr)
+            std::cerr << "newRe" << i << " is null?\n";
+        if (newIm[i] == nullptr)
+            std::cerr << "newIm" << i << " is null?\n";
+    }
+    
+
     // store back
     if (l >= s) {
         for (size_t i = 0; i < 4; i++)

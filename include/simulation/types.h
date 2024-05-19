@@ -103,7 +103,7 @@ public:
         for (size_t i = 0; i < size; i++) {
         for (size_t r = 0; r < size; r++) {
         for (size_t c = 0; c < size; c++) {
-            m.data[(i*size + r) * size + (i*size + c)] = data[r*size + c];
+            m.data[(i*size + r) * size * size + (i*size + c)] = data[r*size + c];
         } } }
         return m;
     }
@@ -113,9 +113,25 @@ public:
         for (size_t i = 0; i < size; i++) {
         for (size_t r = 0; r < size; r++) {
         for (size_t c = 0; c < size; c++) {
-            m.data[(r*size + i) * size + (c*size + i)] = data[r*size + c];
+            m.data[(r*size + i) * size * size + (c*size + i)] = data[r*size + c];
         } } }
         return m;
+    }
+
+    void print(std::ostream& os) const {
+        for (size_t r = 0; r < size; r++) {
+            for (size_t c = 0; c < size; c++) {
+                auto re = data[r*size + c].real;
+                auto im = data[r*size + c].imag;
+                if (re >= 0)
+                    os << " ";
+                os << re;
+                if (im >= 0)
+                    os << "+";
+                os << im << "i, ";
+            }
+            os << "\n";
+        }
     }
 };
 
@@ -250,7 +266,7 @@ public:
     }
 
     static ComplexMatrix2
-    FromEulerAngles(double theta, double lambd, double phi) {
+    FromEulerAngles(double theta, double phi, double lambd) {
         return {
             {
                 cos(theta/2), -cos(lambd) * sin(theta/2),

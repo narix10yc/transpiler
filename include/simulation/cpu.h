@@ -75,7 +75,8 @@ public:
         else
             kernelStream << typeStr << " *data";
         kernelStream << ", uint64_t, uint64_t, void*) {\n"
-                     << "  std::array<" << typeStr << ", 8> u3m;\n";
+                     << "  std::array<" << typeStr << ", 8> u3m;\n"
+                     << "  std::array<" << typeStr << ", 32> u2qm;\n";
 
         declStream << "extern \"C\" {\n";
 

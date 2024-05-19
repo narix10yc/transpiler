@@ -7,12 +7,11 @@ using namespace simulation::transpile;
 
 
 int main(int argc, char *argv[]) {
-
     std::string inputFilename = argv[1];
-    // std::string outputFilename = argv[2];
+    std::string outputFilename = argv[2];
 
     std::cerr << "-- Input file: " << inputFilename << "\n";
-    // std::cerr << "-- Output file: " << outputFilename << "\n";
+    std::cerr << "-- Output file: " << outputFilename << "\n";
 
     openqasm::Parser parser(inputFilename, 0);
 
@@ -39,6 +38,11 @@ int main(int argc, char *argv[]) {
     std::cerr << "-- converted back to qch AST\n";
 
     transpiledRoot.print(std::cerr);
+
+    CPUGenContext ctx {3, outputFilename};
+
+    ctx.generate(transpiledRoot);
+
 
     return 0;
 }
