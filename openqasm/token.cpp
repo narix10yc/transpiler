@@ -6,6 +6,10 @@ namespace openqasm {
 std::string tokenTypetoString(TokenTy ty) {
     switch (ty) {
     case TokenTy::Eof: return "EOF";
+    case TokenTy::Openqasm: return "OPENQASM";
+    case TokenTy::Include: return "Include";
+    case TokenTy::Qreg: return "qreg";
+    case TokenTy::Creg: return "creg";
     case TokenTy::Identifier: return "identifier";
     case TokenTy::Numeric: return "numeric";
     case TokenTy::If: return "if";

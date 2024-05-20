@@ -19,9 +19,10 @@ enum class TokenTy : int {
     Then = -11,
     Else = -12,
     Openqasm = -13,
-    Qreg = -14,
-    Creg = -15,
-    Gate = -16,
+    Include = -14,
+    Qreg = -15,
+    Creg = -16,
+    Gate = -17,
 
     // operators
     Add = -30,
@@ -33,16 +34,18 @@ enum class TokenTy : int {
     GreaterEqual = -36,
     LessEqual = -37,
 
-    Comma = -104,
-    Semicolon = -105,
-    L_RoundBraket = -106,
-    R_RoundBraket = -107,
-    L_SquareBraket = -108,
-    R_SquareBraket = -109,
-    L_AngleBraket = -110,
-    R_AngleBraket = -111,
-    L_CurlyBraket = -112,
-    R_CurlyBraket = -113,
+    Comma = -104,               // ,
+    Semicolon = -105,           // ;
+    L_RoundBraket = -106,       // (
+    R_RoundBraket = -107,       // )
+    L_SquareBraket = -108,      // [
+    R_SquareBraket = -109,      // ]
+    L_AngleBraket = -110,       // <
+    R_AngleBraket = -111,       // >
+    L_CurlyBraket = -112,       // {
+    R_CurlyBraket = -113,       // }
+    SingleQuote = -114,         // '
+    DoubleQuote = -115,         // "
 
     LineFeed = 10, // '\n'
     CarriageReturn = 13, // '\r'

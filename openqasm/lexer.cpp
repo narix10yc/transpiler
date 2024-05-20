@@ -71,6 +71,8 @@ Token Lexer::getToken() {
     case '}': return TokenTy::R_CurlyBraket;
     case '<': return TokenTy::L_AngleBraket;
     case '>': return TokenTy::R_AngleBraket;
+    case '\'': return TokenTy::SingleQuote;
+    case '\"': return TokenTy::DoubleQuote; 
 
     case '\n': return TokenTy::LineFeed;
     case '\r': return TokenTy::CarriageReturn;
@@ -115,6 +117,7 @@ Token Lexer::tokenizeIdentifier() {
     if (identifier == "if") return TokenTy::If;
     if (identifier == "else") return TokenTy::Else;
     if (identifier == "OPENQASM") return TokenTy::Openqasm;
+    if (identifier == "include") return TokenTy::Include;
     if (identifier == "qreg") return TokenTy::Qreg;
     if (identifier == "creg") return TokenTy::Creg;
     if (identifier == "gate") return TokenTy::Gate;

@@ -3,7 +3,7 @@
 using namespace openqasm;
 
 std::unique_ptr<ast::RootNode> Parser::parse() {
-    auto root = std::make_unique<ast::RootNode>();
+    std::unique_ptr<ast::RootNode> root;
 
     if (!lexer->openFile()) {
         logError("Unable to open file");
@@ -37,6 +37,10 @@ std::unique_ptr<ast::Statement> Parser::parseStmt() {
         logDebug(1, "ready to parse openqasm");
         stmt = parseVersionStmt();
     }
+    else if (curToken.type == TokenTy::Include) {
+        logError("include stmt not implemented!");
+        return nullptr;
+    }
     else if (curToken.type == TokenTy::Qreg) {
         logDebug(1, "ready to parse qreg");
         stmt = parseQRegStmt();
@@ -54,7 +58,6 @@ std::unique_ptr<ast::Statement> Parser::parseStmt() {
     }
 
     skipSeparators();
-
     return stmt;
 }
 
@@ -119,7 +122,7 @@ std::unique_ptr<ast::GateApplyStmt> Parser::parseGateApplyStmt() {
             if (curToken.type == TokenTy::R_RoundBraket)
                 { nextToken(); break; }
             if (curToken.type == TokenTy::LineFeed ||
-            curToken.type == TokenTy::CarriageReturn) {
+                curToken.type == TokenTy::CarriageReturn) {
                 logError("Expect ')'");
                 return nullptr;
             }

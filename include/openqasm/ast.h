@@ -159,6 +159,20 @@ public:
         : op(op), expr(std::move(expr)) {}
     std::string toString() const override { return "UnaryExpr"; }
     void prettyPrint(std::ofstream& f, int depth) const override;
+
+    UnaryOp getOp() const { return op; }
+    const Expression& getExpr() const { return *expr; }
+
+    ExpressionValue getExprValue() const override {
+        auto exprValue = expr->getExprValue();
+        if (!exprValue.isConstant)
+            return false;
+        switch (op) {
+            case UnaryOp::Positive: return exprValue.value;
+            case UnaryOp::Negative: return -exprValue.value;
+            default: return false;
+        }
+    }
 };
 
 
@@ -174,8 +188,8 @@ public:
     std::string toString() const override { return "BinaryExpr"; }
     void prettyPrint(std::ofstream& f, int depth) const override;
 
-    const Expression getLHS() const { return *lhs; }
-    const Expression getRHS() const { return *rhs; }
+    const Expression& getLHS() const { return *lhs; }
+    const Expression& getRHS() const { return *rhs; }
     BinaryOp getOp() const { return op; }
     ExpressionValue getExprValue() const override {
         auto lhsValue = lhs->getExprValue();
@@ -226,6 +240,19 @@ public:
     { return "Version(" + version + ")"; }
 
     void prettyPrint(std::ofstream& f, int depth) const override;
+};
+
+class IncludeStmt : public Statement {
+    std::string fileName;
+public:
+    IncludeStmt(const std::string& fileName) : fileName(fileName) {}
+    std::string getFileName() const { return fileName; }
+
+    std::string toString() const override {
+        return "Include(" + fileName + ")";
+    }
+
+    void prettyPrint(std::ofstream& f, int depth) const override {}
 };
 
 

@@ -55,32 +55,39 @@ Parser::parseExprRHS(BinaryOp lhsBinop, std::unique_ptr<ast::Expression> &&lhs) 
 }
 
 std::unique_ptr<ast::Expression> Parser::parsePrimaryExpr() {
-    if (curToken.type == TokenTy::Numeric || curToken.type == TokenTy::Sub) {
-        return parseNumericExpr();
+    UnaryOp unaryOp = UnaryOp::None;
+    if (curToken.type == TokenTy::Add) {
+        unaryOp = UnaryOp::Positive;
+        nextToken();
     }
-    else if (curToken.type == TokenTy::Identifier) {
-        return parseVariableExpr();
+    else if (curToken.type == TokenTy::Sub) {
+        unaryOp = UnaryOp::Negative;
+        nextToken();
     }
-    else if (curToken.type == TokenTy::L_RoundBraket) {
-        return parseParenExpr();
+
+    std::unique_ptr<ast::Expression> expr;
+    if (curToken.type == TokenTy::Numeric)
+        expr = parseNumericExpr();
+    else if (curToken.type == TokenTy::Identifier)
+        expr = parseVariableExpr();
+    else if (curToken.type == TokenTy::L_RoundBraket)
+        expr = parseParenExpr();
+    else {
+        logError("Unknown token when expecting a primary expression");
+        return nullptr;
     }
-    // else
-    logError("Unknown token when expecting a primary expression");
-    return nullptr;   
+
+    if (unaryOp == UnaryOp::None)
+        return expr;
+    return std::make_unique<ast::UnaryExpr>(unaryOp, std::move(expr));
 }
 
 std::unique_ptr<ast::NumericExpr> Parser::parseNumericExpr() {
-    bool negFlag = false;
-    if (curToken.type == TokenTy::Sub) {
-        negFlag = true;
-        nextToken();
-    }
     if (curToken.type != TokenTy::Numeric) {
         logError("Expect numerics when parsing Numerics Expression");
         return nullptr;
     }
-    double numeric = std::stod(curToken.str);
-    auto expr = std::make_unique<ast::NumericExpr>(negFlag ? -numeric : numeric);
+    auto expr = std::make_unique<ast::NumericExpr>(std::stod(curToken.str));
     nextToken();
     return expr;
 }
@@ -90,7 +97,7 @@ std::unique_ptr<ast::Expression> Parser::parseVariableExpr() {
 
     if (next.type == TokenTy::L_RoundBraket) {
         // funcCall
-        logError("NOT IMPLEMENTED");
+        logError("funcCall not implemented yet");
         return nullptr;
     }
     else if (next.type == TokenTy::L_SquareBraket) {

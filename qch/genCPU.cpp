@@ -60,7 +60,7 @@ void GateApplyStmt::genCPU(CPUGenContext& ctx) const {
             mat.imag[i] = parameters[2*i + 1];
         }
 
-        U2qGate u2q(mat, qubits[1], qubits[0]);
+        U2qGate u2q(mat, qubits[0], qubits[1]);
         
         std::string funcName;
         auto func = ctx.getGenerator().genU2q(u2q.ToIRGate());

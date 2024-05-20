@@ -23,13 +23,7 @@ Function* IRGenerator::genU2q(const ir::U2qGate& u2q, std::string _funcName) {
                          : getDefaultU2qFuncName(u2q, *this);
 
     errs() << "Generating function " << funcName << "\n";
-    for (size_t i = 0; i < 16; i++)
-        errs() << mat.real[i];
-    errs() << " ";
-    for (size_t i = 0; i < 16; i++)
-        errs() << mat.imag[i];
-    errs() << "\n";
-    
+
     // convention: l is the less significant qubit
     uint8_t l = u2q.qSmall;
     uint8_t k = u2q.qLarge;
@@ -37,19 +31,10 @@ Function* IRGenerator::genU2q(const ir::U2qGate& u2q, std::string _funcName) {
     uint64_t L = 1ULL << l;
     uint64_t S = 1ULL << s;
     uint64_t K = 1ULL << k;
-    uint64_t leftMask = ~((1 << (k-s-1)) - 1);
-    uint64_t middleMask = ((1 << (k-l-1)) - 1) << (l-s);
-    uint64_t rightMask = (1 << (l-s)) - 1;
+
 
     auto* KVal = builder.getInt64(K);
-    auto* LVal = builder.getInt64(L);
-    auto* KorLVal = builder.getInt64(K | L);
-    auto* leftMaskVal = builder.getInt64(leftMask);
-    auto* middleMaskVal = builder.getInt64(middleMask);
-    auto* rightMaskVal = builder.getInt64(rightMask);
-    auto* sVal = builder.getInt64(s);
-    auto* s_add_1_Val = builder.getInt64(s + 1);
-    auto* s_add_2_Val = builder.getInt64(s + 2);
+
 
     Type* scalarTy = (realTy == ir::RealTy::Float) ? builder.getFloatTy()
                                                    : builder.getDoubleTy();
@@ -124,6 +109,18 @@ Function* IRGenerator::genU2q(const ir::U2qGate& u2q, std::string _funcName) {
 
     if (l >= s) {
         // k > l >= s
+        uint64_t leftMask = ~((1ULL << (k-s-1)) - 1);
+        uint64_t middleMask = ((1ULL << (k-l-1)) - 1) << (l-s);
+        uint64_t rightMask = (1ULL << (l-s)) - 1;
+        auto* LVal = builder.getInt64(L);
+        auto* KorLVal = builder.getInt64(K | L);
+        auto* leftMaskVal = builder.getInt64(leftMask);
+        auto* middleMaskVal = builder.getInt64(middleMask);
+        auto* rightMaskVal = builder.getInt64(rightMask);
+        auto* sVal = builder.getInt64(s);
+        auto* s_add_1_Val = builder.getInt64(s + 1);
+        auto* s_add_2_Val = builder.getInt64(s + 2);
+
         auto* leftVal = builder.CreateAnd(idx, leftMaskVal, "left_tmp");
         leftVal = builder.CreateShl(leftVal, s_add_2_Val, "left");
         auto* middleVal = builder.CreateAnd(idx, middleMaskVal, "middle_tmp");
