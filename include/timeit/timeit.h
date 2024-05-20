@@ -38,10 +38,10 @@ private:
 class Timer {
 double warmupTime = 0.05;
 double runTime = 0.1;
-size_t replication;
-int verbose;
+unsigned replication;
+unsigned verbose;
 public:
-    Timer(size_t replication=15, int verbose=0) : replication(replication), verbose(verbose) {
+    Timer(unsigned replication=15, unsigned verbose=0) : replication(replication), verbose(verbose) {
         if (replication > 99) {
             std::cerr << "Timer: replication cannot be lager than 99. Set to 99\n";
             replication = 99;
@@ -50,6 +50,7 @@ public:
 
     void setWarmupTime(double t) { warmupTime = t; }
     void setRunTime(double t) { runTime = t; }
+    void setReplication(unsigned r) { replication = r; }
 
     TimingResult 
     timeit(std::function<void()> method, 

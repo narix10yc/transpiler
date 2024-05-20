@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
 
     std::cerr << "-- converted back to qch AST\n";
 
-    CPUGenContext ctx {3, outputFilename};
+    CPUGenContext ctx {1, outputFilename};
 
     ctx.generate(transpiledRoot);
 

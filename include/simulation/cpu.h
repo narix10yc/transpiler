@@ -28,7 +28,8 @@ public:
     unsigned nqubits;
 
     CPUGenContext(unsigned vecSizeInBits, std::string fileName)
-        : fileName(fileName),
+        : irGenerator(vecSizeInBits),
+          fileName(fileName),
           vecSizeInBits(vecSizeInBits) {}
     
     void setRealTy(ir::RealTy ty) { irGenerator.setRealTy(ty); }

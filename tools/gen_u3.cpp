@@ -16,7 +16,7 @@ int main(int argc, char **argv) {
     Qubit("K", cl::Prefix, cl::desc("act on which qubit"), cl::Required);
 
     cl::opt<std::string>
-    Ty("type", cl::desc("float or double"), cl::init("double"));
+    Ty("type", cl::desc("float (f32) or double (f64)"), cl::init("f64"));
 
     cl::opt<std::string>
     Theta("theta", cl::desc("theta value"), cl::init("none"));
@@ -45,9 +45,9 @@ int main(int argc, char **argv) {
     IRGenerator generator(VecSize);
 
     RealTy ty = RealTy::Double;
-    if (Ty == "double")
+    if (Ty == "double" || Ty == "f64")
         ty = RealTy::Double;
-    else if (Ty == "float")
+    else if (Ty == "float" || Ty == "f32")
         ty = RealTy::Float;
     else {
         errs() << "Unrecognized type " << Ty << "\n";

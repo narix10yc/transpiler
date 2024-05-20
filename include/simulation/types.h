@@ -284,6 +284,7 @@ public:
             mat.real[i] = d(gen);
             mat.imag[i] = d(gen);
         }
+        mat.imag[0] = 0.0;
         return mat;
     }
 

@@ -21,13 +21,17 @@ public:
     real_ty* real;
     real_ty* imag;
 
-    StatevectorSep(uint8_t nqubits, bool rand=false) : nqubits(nqubits), N(1 << nqubits) {
+    StatevectorSep(uint8_t nqubits, bool initialize=false)
+            : nqubits(nqubits), N(1 << nqubits) {
         real = (real_ty*) aligned_alloc(64, N * sizeof(real_ty));
         imag = (real_ty*) aligned_alloc(64, N * sizeof(real_ty));
-        if (rand)
-            randomize();
-        else
-            real[0] = 1; // init to |0...0>     
+        if (initialize) {
+            for (size_t i = 0; i < (1 << nqubits); i++) {
+                real[i] = 0;
+                imag[i] = 0;
+            }
+            real[0] = 1.0;
+        }
     }
 
     StatevectorSep(const StatevectorSep& that) : nqubits(that.nqubits), N(that.N) {
@@ -96,10 +100,10 @@ public:
         const auto print_number = [&](size_t idx) {
             if (real[idx] >= 0)
                 os << " ";
-            os << real[idx] << "+";
+            os << real[idx];
             if (imag[idx] >= 0)
-                os << " ";
-            os << "i" << imag[idx];
+                os << "+";
+            os << imag[idx] << "i";
         };
 
         if (N > 32) {
@@ -122,12 +126,14 @@ public:
     uint64_t N;
     real_ty* data;
 
-    StatevectorAlt(uint8_t nqubits, bool rand=false) : nqubits(nqubits), N(1 << nqubits) {
+    StatevectorAlt(uint8_t nqubits, bool initialize=false) 
+            : nqubits(nqubits), N(1 << nqubits) {
         data = (real_ty*) aligned_alloc(64, 2 * N * sizeof(real_ty));
-        if (rand)
-            randomize();
-        else
-            data[0] = 1; // init to |0...0>     
+        if (initialize) {
+            for (size_t i = 0; i < (1 << (nqubits+1)); i++)
+                data[i] = 0;
+            data[0] = 1;   
+        }
     }
 
     StatevectorAlt(const StatevectorAlt& that) : nqubits(that.nqubits), N(that.N) {

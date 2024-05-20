@@ -12,7 +12,6 @@ void CircuitStmt::genCPU(CPUGenContext& ctx) const {
 }
 
 void GateApplyStmt::genCPU(CPUGenContext& ctx) const {
-    uint64_t idxMax = 1ULL << (ctx.nqubits - ctx.vecSizeInBits - 1);
     // type string
     std::string typeStr =
         (ctx.getRealTy() == ir::RealTy::Double) ? "double*" : "float*";
@@ -52,6 +51,8 @@ void GateApplyStmt::genCPU(CPUGenContext& ctx) const {
             ctx.kernelStream << "real, imag";
         else
             ctx.kernelStream << "data";
+
+        uint64_t idxMax = 1ULL << (ctx.nqubits - ctx.vecSizeInBits - 1);
         ctx.kernelStream << ", " << 0 << ", " << idxMax << ", u3m.data());\n";
     } else if (name == "u2q") {
         ComplexMatrix4 mat;
@@ -94,8 +95,9 @@ void GateApplyStmt::genCPU(CPUGenContext& ctx) const {
             ctx.kernelStream << "real, imag";
         else
             ctx.kernelStream << "data";
-        ctx.kernelStream << ", " << 0 << ", " << idxMax << ", u3m.data());\n";
 
+        uint64_t idxMax = 1ULL << (ctx.nqubits - ctx.vecSizeInBits - 2);
+        ctx.kernelStream << ", " << 0 << ", " << idxMax << ", u3m.data());\n";
     } else {
         std::cerr << "unrecognized gate " << name << " to CPU gen\n";
         return;

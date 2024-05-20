@@ -26,3 +26,6 @@ $llvm_root/bin/clang++ -Ofast ../performance/bm_irgen_u2q.cpp ../performance/gen
 && \
 $llvm_root/bin/clang++ -Ofast -march=native ../performance/bm_tplt_u2q.cpp \
 -o tplt_perftest -I../include -Ltimeit -ltimeit
+
+$llvm_root/bin/clang++ -O3 ../performance/bm_irgen_circuit.cpp \
+../performance/gen_file.ll -I../include -Ltimeit -ltimeit -o circuit

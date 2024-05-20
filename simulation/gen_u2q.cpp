@@ -213,10 +213,10 @@ Function* IRGenerator::genU2q(const ir::U2qGate& u2q, std::string _funcName) {
 
     // mat-vec multiplication
     Value *newRe[4] = {nullptr}, *newIm[4] = {nullptr};
-    Value *newRe0 = nullptr, *newRe1 = nullptr;
     for (size_t i = 0; i < 4; i++) {
         size_t i0 = 4*i + 0, i1 = 4*i + 1, i2 = 4*i + 2, i3 = 4*i + 3;
         std::string newReName = "newRe" + std::to_string(i) + "_";
+        Value *newRe0 = nullptr, *newRe1 = nullptr;
 
         newRe0 = genMulAdd(newRe0, mRe[i0], Re[0], getRealFlag(i0), "", newReName);
         newRe0 = genMulAdd(newRe0, mRe[i1], Re[1], getRealFlag(i1), "", newReName);
