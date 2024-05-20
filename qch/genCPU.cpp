@@ -95,9 +95,10 @@ void GateApplyStmt::genCPU(CPUGenContext& ctx) const {
             ctx.kernelStream << "real, imag";
         else
             ctx.kernelStream << "data";
-
         uint64_t idxMax = 1ULL << (ctx.nqubits - ctx.vecSizeInBits - 2);
         ctx.kernelStream << ", " << 0 << ", " << idxMax << ", u3m.data());\n";
+
+        // ctx.kernelStream << "std::cerr << \"" << funcName << " success\\n\";\n";
     } else {
         std::cerr << "unrecognized gate " << name << " to CPU gen\n";
         return;

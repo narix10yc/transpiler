@@ -22,7 +22,7 @@ Function* IRGenerator::genU3_Sep(const ir::U3Gate& u3, std::string _funcName) {
     std::string funcName = (_funcName != "") ? _funcName
                          : getDefaultU3FuncName(u3, *this);
 
-    errs() << "Generating function " << funcName << "\n";
+    // errs() << "Generating function " << funcName << "\n";
 
     uint8_t k = u3.k;
     uint8_t s = static_cast<uint8_t>(vecSizeInBits);

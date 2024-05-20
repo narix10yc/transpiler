@@ -21,7 +21,7 @@ Function* IRGenerator::genU2q(const ir::U2qGate& u2q, std::string _funcName) {
     std::string funcName = (_funcName != "") ? _funcName
                          : getDefaultU2qFuncName(u2q, *this);
 
-    errs() << "Generating function " << funcName << "\n";
+    // errs() << "Generating function " << funcName << "\n";
 
     auto getRealFlag = [mat=u2q.mat](unsigned idx) -> int {
         switch ((mat >> (2 * idx)) & 3) {
@@ -102,7 +102,6 @@ Function* IRGenerator::genU2q(const ir::U2qGate& u2q, std::string _funcName) {
         mIm[i] = builder.CreateShuffleVector(
             matV, std::vector<int>(S, i+16), "mIm" + std::to_string(i));
     }
-
     builder.CreateBr(loopBB);
 
     // loop
@@ -183,11 +182,21 @@ Function* IRGenerator::genU2q(const ir::U2qGate& u2q, std::string _funcName) {
             Im[i] = builder.CreateShuffleVector(Imag, shuffleMasks[i], "Im" + std::to_string(i));  
     } else {
         // k > s > l
-        auto* idxHi = builder.CreateAdd(idx, KVal, "idxHi");
+        uint64_t inner = (1ULL << (k-s-1)) - 1;
+        uint64_t outer = ~inner;
+
+        auto* oneVal = builder.getInt64(1ULL);
+
+        auto* leftVal = builder.CreateAnd(idx, outer, "left_tmp");
+        leftVal = builder.CreateShl(leftVal, oneVal, "left");
+        auto* rightVal = builder.CreateAnd(idx, inner, "right");
+
+        auto* idxLo = builder.CreateAdd(leftVal, rightVal, "idxLo");
+        auto* idxHi = builder.CreateAdd(idxLo, oneVal, "idxHi");
         // shuffle mask is effectively l value; Lo/Hi is effectively k value.
-        pRe[0] = builder.CreateGEP(vec2STy, preal, idx, "pReLo");
+        pRe[0] = builder.CreateGEP(vec2STy, preal, idxLo, "pReLo");
         pRe[1] = builder.CreateGEP(vec2STy, preal, idxHi, "pReHi");
-        pIm[0] = builder.CreateGEP(vec2STy, pimag, idx, "pImLo");
+        pIm[0] = builder.CreateGEP(vec2STy, pimag, idxLo, "pImLo");
         pIm[1] = builder.CreateGEP(vec2STy, pimag, idxHi, "pImHi");
         auto* ReLo = builder.CreateLoad(vec2STy, pRe[0], "ReLo");
         auto* ReHi = builder.CreateLoad(vec2STy, pRe[1], "ReHi");
@@ -251,13 +260,6 @@ Function* IRGenerator::genU2q(const ir::U2qGate& u2q, std::string _funcName) {
         newIm[i] = genMulAdd(newIm[i], mIm[i1], Re[1], getImagFlag(i1), "", newImName);
         newIm[i] = genMulAdd(newIm[i], mIm[i2], Re[2], getImagFlag(i2), "", newImName);
         newIm[i] = genMulAdd(newIm[i], mIm[i3], Re[3], getImagFlag(i3), "", newImName);
-    }
-    
-    for (size_t i = 0; i < 4; i++) {
-        if (newRe[i] == nullptr)
-            std::cerr << "newRe" << i << " is null?\n";
-        if (newIm[i] == nullptr)
-            std::cerr << "newIm" << i << " is null?\n";
     }
     
     // store back

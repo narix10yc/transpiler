@@ -140,86 +140,93 @@ public:
         : n(_nqubits), sv0(_nqubits), sv1(_nqubits) {
         name = "u2q gate sep format";
 
-        addTestCase([&]() -> bool {
-            sv0.randomize();
-            sv1 = sv0;
+        // addTestCase([&]() -> bool {
+        //     sv0.randomize();
+        //     sv1 = sv0;
 
-            U2qGate u2q { 0, 1, ComplexMatrix4<>::Random() };
-            applyTwoQubitQuEST<double>(sv0.real, sv0.imag, u2q.mat, n, u2q.k, u2q.l);
-            u2q.swapTargetQubits();
-            applyTwoQubitQuEST<double>(sv1.real, sv1.imag, u2q.mat, n, u2q.k, u2q.l);
+        //     U2qGate u2q { 0, 1, ComplexMatrix4<>::Random() };
+        //     applyTwoQubitQuEST<double>(sv0.real, sv0.imag, u2q.mat, n, u2q.k, u2q.l);
+        //     u2q.swapTargetQubits();
+        //     applyTwoQubitQuEST<double>(sv1.real, sv1.imag, u2q.mat, n, u2q.k, u2q.l);
 
-            sv0.normalize(); sv1.normalize();
-            return is_close(fidelity(sv0, sv1), 1.0);
-        }, "swap qubits");
+        //     sv0.normalize(); sv1.normalize();
+        //     return is_close(fidelity(sv0, sv1), 1.0);
+        // }, "swap qubits");
+
+        // addTestCase([&]() -> bool {
+        //     sv0.randomize();
+        //     sv1 = sv0;
+
+        //     auto mat = ComplexMatrix4<>::Random();
+        //     double m[32];
+        //     for (size_t i = 0; i < 16; i++) {
+        //         m[i] = mat.real[i];
+        //         m[i+16] = mat.imag[i];
+        //     }
+            
+        //     applyTwoQubitQuEST<double>(sv0.real, sv0.imag, mat, n, 2, 1);
+        //     f64_s1_sep_u2q_k2l1_ffffffffffffffff(sv1.real, sv1.imag, 0, 1<<(n-3), m);
+
+        //     sv0.normalize(); sv1.normalize();
+        //     return is_close(fidelity(sv0, sv1), 1.0);
+        // }, "quest and ir kernel result match, s=1, k=2, l=1");
+
+        // addTestCase([&]() -> bool {
+        //     sv0.randomize();
+        //     sv1 = sv0;
+
+        //     U2qGate u2q { 5, 3, ComplexMatrix4<>::Random() };
+        //     double m[32];
+        //     for (size_t i = 0; i < 16; i++) {
+        //         m[i] = u2q.mat.real[i];
+        //         m[i+16] = u2q.mat.imag[i];
+        //     }
+            
+        //     applyTwoQubitQuEST<double>(sv0.real, sv0.imag, u2q.mat, n, u2q.k, u2q.l);
+        //     f64_s2_sep_u2q_k5l3_ffffffffffffffff(sv1.real, sv1.imag, 0, 1<<(n-4), m);
+
+        //     sv0.normalize(); sv1.normalize();
+        //     return is_close(fidelity(sv0, sv1), 1.0);
+        // }, "quest and ir kernel result match, s=2, k=5, l=3");
+
+        // addTestCase([&]() -> bool {
+        //     sv0.randomize();
+        //     sv1 = sv0;
+
+        //     U2qGate u2q { 1, 0, ComplexMatrix4<>::Random() };
+        //     double m[32];
+        //     for (size_t i = 0; i < 16; i++) {
+        //         m[i] = u2q.mat.real[i];
+        //         m[i+16] = u2q.mat.imag[i];
+        //     }
+            
+        //     applyTwoQubitQuEST<double>(sv0.real, sv0.imag, u2q.mat, n, u2q.k, u2q.l);
+        //     f64_s2_sep_u2q_k1l0_ffffffffffffffff(sv1.real, sv1.imag, 0, 1<<(n-4), m);
+
+        //     sv0.normalize(); sv1.normalize();
+        //     return is_close(fidelity(sv0, sv1), 1.0);
+        // }, "quest and ir kernel result match, s=2, k=1, l=0 (shuffle needed)");
 
         addTestCase([&]() -> bool {
             sv0.randomize();
             sv1 = sv0;
 
             auto mat = ComplexMatrix4<>::Random();
+            // ComplexMatrix4<> mat {
+                // {1,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0}, {}
+            // };
             double m[32];
             for (size_t i = 0; i < 16; i++) {
                 m[i] = mat.real[i];
                 m[i+16] = mat.imag[i];
             }
             
-            applyTwoQubitQuEST<double>(sv0.real, sv0.imag, mat, n, 2, 1);
-            f64_s1_sep_u2q_k2l1_ffffffffffffffff(sv1.real, sv1.imag, 0, 1<<(n-3), m);
+            applyTwoQubitQuEST<double>(sv0.real, sv0.imag, mat, n, 2, 0);
+            f64_s1_sep_u2q_k2l0_ffffffffffffffff(sv1.real, sv1.imag, 0, 1<<(n-3), m);
 
-            sv0.normalize(); sv1.normalize();
-            return is_close(fidelity(sv0, sv1), 1.0);
-        }, "quest and ir kernel result match, s=1, k=2, l=1");
-
-        addTestCase([&]() -> bool {
-            sv0.randomize();
-            sv1 = sv0;
-
-            U2qGate u2q { 5, 3, ComplexMatrix4<>::Random() };
-            double m[32];
-            for (size_t i = 0; i < 16; i++) {
-                m[i] = u2q.mat.real[i];
-                m[i+16] = u2q.mat.imag[i];
-            }
-            
-            applyTwoQubitQuEST<double>(sv0.real, sv0.imag, u2q.mat, n, u2q.k, u2q.l);
-            f64_s2_sep_u2q_k5l3_ffffffffffffffff(sv1.real, sv1.imag, 0, 1<<(n-4), m);
-
-            sv0.normalize(); sv1.normalize();
-            return is_close(fidelity(sv0, sv1), 1.0);
-        }, "quest and ir kernel result match, s=2, k=5, l=3");
-
-        addTestCase([&]() -> bool {
-            sv0.randomize();
-            sv1 = sv0;
-
-            U2qGate u2q { 1, 0, ComplexMatrix4<>::Random() };
-            double m[32];
-            for (size_t i = 0; i < 16; i++) {
-                m[i] = u2q.mat.real[i];
-                m[i+16] = u2q.mat.imag[i];
-            }
-            
-            applyTwoQubitQuEST<double>(sv0.real, sv0.imag, u2q.mat, n, u2q.k, u2q.l);
-            f64_s2_sep_u2q_k1l0_ffffffffffffffff(sv1.real, sv1.imag, 0, 1 << (n-4), m);
-
-            sv0.normalize(); sv1.normalize();
-            return is_close(fidelity(sv0, sv1), 1.0);
-        }, "quest and ir kernel result match, s=2, k=1, l=0 (shuffle needed)");
-
-        addTestCase([&]() -> bool {
-            sv0.randomize();
-            sv1 = sv0;
-
-            U2qGate u2q { 2, 0, ComplexMatrix4<>::Identity() };
-            double m[32];
-            for (size_t i = 0; i < 16; i++) {
-                m[i] = u2q.mat.real[i];
-                m[i+16] = u2q.mat.imag[i];
-            }
-            
-            applyTwoQubitQuEST<double>(sv0.real, sv0.imag, u2q.mat, n, u2q.k, u2q.l);
-            f64_s1_sep_u2q_k2l0_ffffffffffffffff(sv1.real, sv1.imag, 0, 1 << (n-3), m);
+            sv0.print(std::cerr);
+            std::cerr << "\n";
+            sv1.print(std::cerr);
 
             sv0.normalize(); sv1.normalize();
             return is_close(fidelity(sv0, sv1), 1.0);

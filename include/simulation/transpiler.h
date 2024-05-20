@@ -50,6 +50,8 @@ private:
     /// @param node can either be single-qubit or two-qubit.
     /// @return Number of gates absorbed. 
     unsigned absorbNeighbouringSingleQubitGates(GateNode* node);
+    unsigned absorbNeighbouringTwoQubitGates(GateNode* node);
+
 public:
     CircuitGraph() : leftEntry(32, nullptr), rightEntry(32, nullptr), allNodes() {}
 

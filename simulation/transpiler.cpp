@@ -126,6 +126,8 @@ CircuitGraph CircuitGraph::FromQch(const RootNode& root) {
         } else if (gateApply->name == "cx") {
             auto u2q = U2qGate(gateApply->qubits[0], gateApply->qubits[1],
                         {{1,0,0,0, 0,0,0,1, 0,0,1,0, 0,1,0,0}, {}});
+            if (u2q.k < u2q.l)
+                u2q.swapTargetQubits();
             graph.addTwoQubitGate(u2q);
         }
     }
@@ -189,7 +191,31 @@ unsigned CircuitGraph::absorbNeighbouringSingleQubitGates(GateNode* node) {
     return nFused;
 }
 
- 
+unsigned CircuitGraph::absorbNeighbouringTwoQubitGates(GateNode* node) {
+    if (node->nqubits == 1)
+        return 0;
+    
+    unsigned nFused = 0;
+    if (node->leftNodes[0] != nullptr && node->leftNodes[0] == node->leftNodes[1]) {
+        GateNode* leftNode = node->leftNodes[0]; 
+        node->matrix = node->matrix.matmul(leftNode->matrix);
+        connectTwoNodes(leftNode->leftNodes[0], node, node->qubits[0]);
+        connectTwoNodes(leftNode->leftNodes[1], node, node->qubits[1]);
+        removeGateNode(leftNode);
+        nFused += 1;
+    }
+    if (node->rightNodes[0] != nullptr && node->rightNodes[0] == node->rightNodes[1]) {
+        GateNode* rightNode = node->rightNodes[0]; 
+        node->matrix = rightNode->matrix.matmul(node->matrix);
+        connectTwoNodes(node, rightNode->rightNodes[0], node->qubits[0]);
+        connectTwoNodes(node, rightNode->rightNodes[1], node->qubits[1]);
+        removeGateNode(rightNode);
+        nFused += 1;
+    }
+    return nFused;
+}
+
+
 void CircuitGraph::transpileForCPU() {
     // step 1: absorb single-qubit gates
     bool updates = false;
@@ -198,17 +224,26 @@ void CircuitGraph::transpileForCPU() {
         for (GateNode* node : allNodes) {
             auto nFused = absorbNeighbouringSingleQubitGates(node);
             if (nFused > 0) {
-                std::cerr << nFused << " gates fused\n";
                 updates = true;
                 break;
             }
         }
     } while (updates);
-
-    std::cerr << "fusion step 1 finished! " << allNodes.size() << " nodes remaining\n";
-
+    std::cerr << "-- Fusion step 1 finished! " << allNodes.size() << " nodes remaining\n";
 
     // step 2: fuse two-qubit gates
+    do {
+        updates = false;
+        for (GateNode* node : allNodes) {
+            auto nFused = absorbNeighbouringTwoQubitGates(node);
+            if (nFused > 0) {
+                updates = true;
+                break;
+            }
+        }
+    } while (updates);
+    std::cerr << "-- Fusion step 2 finished! " << allNodes.size() << " nodes remaining\n";
+
 }
 
 namespace {

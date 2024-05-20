@@ -83,7 +83,7 @@ public:
                 std::cerr << "cannot convert " << s->toString() << " to qch Stmt\n";
                 continue;
             }
-            std::cerr << "converted " << s->toString() << " to qch Stmt\n";
+            // std::cerr << "converted " << s->toString() << " to qch Stmt\n";
             qchCircuit->addStmt(std::move(qchStmt));
         }
         auto qchRoot = std::make_unique<qch::ast::RootNode>();

@@ -44,10 +44,14 @@ loop:                                             ; preds = %loopBody, %entry
   br i1 %cond, label %loopBody, label %ret
 
 loopBody:                                         ; preds = %loop
-  %idxHi = add i64 %idx, 4
-  %pReLo = getelementptr <4 x double>, ptr %preal, i64 %idx
+  %left_tmp = and i64 %idx, -1
+  %left = shl i64 %left_tmp, 1
+  %right = and i64 %idx, 0
+  %idxLo = add i64 %left, %right
+  %idxHi = add i64 %idxLo, 1
+  %pReLo = getelementptr <4 x double>, ptr %preal, i64 %idxLo
   %pReHi = getelementptr <4 x double>, ptr %preal, i64 %idxHi
-  %pImLo = getelementptr <4 x double>, ptr %pimag, i64 %idx
+  %pImLo = getelementptr <4 x double>, ptr %pimag, i64 %idxLo
   %pImHi = getelementptr <4 x double>, ptr %pimag, i64 %idxHi
   %ReLo = load <4 x double>, ptr %pReLo, align 32
   %ReHi = load <4 x double>, ptr %pReHi, align 32
