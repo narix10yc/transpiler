@@ -169,6 +169,7 @@ ir::ComplexMatrix2::FromEulerAngles(std::optional<double> theta,
 
 std::string ir::U2qGate::getRepr() const {
     std::stringstream ss;
-    ss << "u2q_k" << static_cast<int>(qLarge) << "l" << static_cast<int>(qSmall);
+    ss << "u2q_k" << static_cast<int>(qLarge) << "l" << static_cast<int>(qSmall)
+       << "_" << std::hex << std::setfill('0') << std::setw(16) << mat;
     return ss.str();
 }

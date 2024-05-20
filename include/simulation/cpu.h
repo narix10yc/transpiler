@@ -4,7 +4,7 @@
 #include <iomanip>
 #include <fstream>
 #include <sstream>
-#include <unordered_map>
+#include <map>
 
 #include "simulation/ir_generator.h"
 #include "qch/ast.h"
@@ -15,9 +15,11 @@ class CPUGenContext {
     simulation::IRGenerator irGenerator;
     std::string fileName;
     std::error_code EC;
+
 public:
     unsigned gateCount;
-    std::unordered_map<uint32_t, std::string> u3GateMap;
+    std::map<uint32_t, std::string> u3GateMap;
+    std::map<std::string, std::string> u2qGateMap;
     std::stringstream shellStream;
     std::stringstream declStream;
     std::stringstream kernelStream;

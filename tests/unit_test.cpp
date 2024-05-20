@@ -148,7 +148,7 @@ public:
             sv0.randomize();
             sv1 = sv0;
 
-            U2qGate u2q { ComplexMatrix4<>::Random(), 0, 1 };
+            U2qGate u2q { 0, 1, ComplexMatrix4<>::Random() };
             applyTwoQubitQuEST<double>(sv0.real, sv0.imag, u2q.mat, sv0.nqubits, u2q.k, u2q.l);
             u2q.swapTargetQubits();
             applyTwoQubitQuEST<double>(sv1.real, sv1.imag, u2q.mat, sv1.nqubits, u2q.k, u2q.l);
@@ -163,7 +163,7 @@ public:
             sv0.randomize();
             sv1 = sv0;
 
-            U2qGate u2q { ComplexMatrix4<>::Random(), 2, 1 };
+            U2qGate u2q { 2, 1, ComplexMatrix4<>::Random() };
             double m[32];
             for (size_t i = 0; i < 16; i++) {
                 m[i] = u2q.mat.real[i];
@@ -183,7 +183,7 @@ public:
             sv0.randomize();
             sv1 = sv0;
 
-            U2qGate u2q { ComplexMatrix4<>::Random(), 5, 3 };
+            U2qGate u2q { 5, 3, ComplexMatrix4<>::Random() };
             double m[32];
             for (size_t i = 0; i < 16; i++) {
                 m[i] = u2q.mat.real[i];
@@ -203,7 +203,7 @@ public:
             sv0.randomize();
             sv1 = sv0;
 
-            U2qGate u2q { ComplexMatrix4<>::Random(), 1, 0 };
+            U2qGate u2q { 1, 0, ComplexMatrix4<>::Random() };
             double m[32];
             for (size_t i = 0; i < 16; i++) {
                 m[i] = u2q.mat.real[i];
@@ -223,7 +223,7 @@ public:
             sv0.randomize();
             sv1 = sv0;
 
-            U2qGate u2q { ComplexMatrix4<>::Identity(), 2, 0 };
+            U2qGate u2q { 2, 0, ComplexMatrix4<>::Identity() };
             double m[32];
             for (size_t i = 0; i < 16; i++) {
                 m[i] = u2q.mat.real[i];
@@ -253,7 +253,7 @@ public:
             sv0.randomize();
             sv1 = sv0;
 
-            U2qGate u2q { ComplexMatrix4<>::Random(), 2, 1 };
+            U2qGate u2q { 2, 1, ComplexMatrix4<>::Random() };
             double m[32];
             for (size_t i = 0; i < 16; i++) {
                 m[i] = u2q.mat.real[i];

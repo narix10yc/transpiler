@@ -60,19 +60,25 @@ void GateApplyStmt::genCPU(CPUGenContext& ctx) const {
             mat.imag[i] = parameters[2*i + 1];
         }
 
-        U2qGate u2q(mat, qubits[0], qubits[1]);
+        U2qGate u2q { static_cast<uint8_t>(qubits[0]),
+                      static_cast<uint8_t>(qubits[1]), mat };
+
+        ir::U2qGate u2qIR = u2q.ToIRGate();
         
+        auto u2qRepr = u2qIR.getRepr();
         std::string funcName;
-        auto func = ctx.getGenerator().genU2q(u2q.ToIRGate());
-        funcName = func->getName();
-
-        std::cerr << "generated function " << funcName << "\n";
-
-        // func decl
-        ctx.declStream << "void " << funcName << "(" << typeStr << ", ";
-        if (ctx.getAmpFormat() == ir::AmpFormat::Separate)
-            ctx.declStream << typeStr << ", ";
-        ctx.declStream << "uint64_t, uint64_t, void*);\n";  
+        if (auto it = ctx.u2qGateMap.find(u2qRepr); it != ctx.u2qGateMap.end()) {
+            funcName = it->second;
+        } else {
+            auto func = ctx.getGenerator().genU2q(u2qIR);
+            funcName = func->getName().str();
+            ctx.u2qGateMap[u2qRepr] = funcName;
+            // generate func decl
+            ctx.declStream << "void " << funcName << "(" << typeStr << ", ";
+            if (ctx.getAmpFormat() == ir::AmpFormat::Separate)
+                ctx.declStream << typeStr << ", ";
+            ctx.declStream << "uint64_t, uint64_t, void*);\n";
+        }
 
         // load u2q matrix
         ctx.kernelStream << std::setprecision(16) << "  u2qm = {";

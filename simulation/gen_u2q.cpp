@@ -18,11 +18,27 @@ std::string getDefaultU2qFuncName(const ir::U2qGate& u2q, const IRGenerator& gen
 }
 
 Function* IRGenerator::genU2q(const ir::U2qGate& u2q, std::string _funcName) {
-    const ir::ComplexMatrix4& mat = u2q.mat;
     std::string funcName = (_funcName != "") ? _funcName
                          : getDefaultU2qFuncName(u2q, *this);
 
     errs() << "Generating function " << funcName << "\n";
+
+    auto getRealFlag = [mat=u2q.mat](unsigned idx) -> int {
+        switch ((mat >> (2 * idx)) & 3) {
+            case 0: return 0;
+            case 1: return 1;
+            case 2: return -1;
+            default: return 2;
+        }
+    };
+    auto getImagFlag = [mat=u2q.mat](unsigned idx) -> int {
+        switch ((mat >> (2 * idx + 32)) & 3) {
+            case 0: return 0;
+            case 1: return 1;
+            case 2: return -1;
+            default: return 2;
+        }
+    };
 
     // convention: l is the less significant qubit
     uint8_t l = u2q.qSmall;
@@ -32,9 +48,7 @@ Function* IRGenerator::genU2q(const ir::U2qGate& u2q, std::string _funcName) {
     uint64_t S = 1ULL << s;
     uint64_t K = 1ULL << k;
 
-
     auto* KVal = builder.getInt64(K);
-
 
     Type* scalarTy = (realTy == ir::RealTy::Float) ? builder.getFloatTy()
                                                    : builder.getDoubleTy();
@@ -204,15 +218,15 @@ Function* IRGenerator::genU2q(const ir::U2qGate& u2q, std::string _funcName) {
         size_t i0 = 4*i + 0, i1 = 4*i + 1, i2 = 4*i + 2, i3 = 4*i + 3;
         std::string newReName = "newRe" + std::to_string(i) + "_";
 
-        newRe0 = genMulAdd(newRe0, mRe[i0], Re[0], mat.real[i0], "", newReName);
-        newRe0 = genMulAdd(newRe0, mRe[i1], Re[1], mat.real[i1], "", newReName);
-        newRe0 = genMulAdd(newRe0, mRe[i2], Re[2], mat.real[i2], "", newReName);
-        newRe0 = genMulAdd(newRe0, mRe[i3], Re[3], mat.real[i3], "", newReName);
+        newRe0 = genMulAdd(newRe0, mRe[i0], Re[0], getRealFlag(i0), "", newReName);
+        newRe0 = genMulAdd(newRe0, mRe[i1], Re[1], getRealFlag(i1), "", newReName);
+        newRe0 = genMulAdd(newRe0, mRe[i2], Re[2], getRealFlag(i2), "", newReName);
+        newRe0 = genMulAdd(newRe0, mRe[i3], Re[3], getRealFlag(i3), "", newReName);
 
-        newRe1 = genMulAdd(newRe1, mIm[i0], Im[0], mat.imag[i0], "", newReName);
-        newRe1 = genMulAdd(newRe1, mIm[i1], Im[1], mat.imag[i1], "", newReName);
-        newRe1 = genMulAdd(newRe1, mIm[i2], Im[2], mat.imag[i2], "", newReName);
-        newRe1 = genMulAdd(newRe1, mIm[i3], Im[3], mat.imag[i3], "", newReName);
+        newRe1 = genMulAdd(newRe1, mIm[i0], Im[0], getImagFlag(i0), "", newReName);
+        newRe1 = genMulAdd(newRe1, mIm[i1], Im[1], getImagFlag(i1), "", newReName);
+        newRe1 = genMulAdd(newRe1, mIm[i2], Im[2], getImagFlag(i2), "", newReName);
+        newRe1 = genMulAdd(newRe1, mIm[i3], Im[3], getImagFlag(i3), "", newReName);
 
         if (newRe0 != nullptr && newRe1 != nullptr)
             newRe[i] = builder.CreateFSub(newRe0, newRe1, "newRe" + std::to_string(i));
@@ -228,15 +242,15 @@ Function* IRGenerator::genU2q(const ir::U2qGate& u2q, std::string _funcName) {
         size_t i0 = 4*i + 0, i1 = 4*i + 1, i2 = 4*i + 2, i3 = 4*i + 3;
         std::string newImName = "newIm" + std::to_string(i) + "_";
 
-        newIm[i] = genMulAdd(newIm[i], mRe[i0], Im[0], mat.real[i0], "", newImName);
-        newIm[i] = genMulAdd(newIm[i], mRe[i1], Im[1], mat.real[i1], "", newImName);
-        newIm[i] = genMulAdd(newIm[i], mRe[i2], Im[2], mat.real[i2], "", newImName);
-        newIm[i] = genMulAdd(newIm[i], mRe[i3], Im[3], mat.real[i3], "", newImName);
+        newIm[i] = genMulAdd(newIm[i], mRe[i0], Im[0], getRealFlag(i0), "", newImName);
+        newIm[i] = genMulAdd(newIm[i], mRe[i1], Im[1], getRealFlag(i1), "", newImName);
+        newIm[i] = genMulAdd(newIm[i], mRe[i2], Im[2], getRealFlag(i2), "", newImName);
+        newIm[i] = genMulAdd(newIm[i], mRe[i3], Im[3], getRealFlag(i3), "", newImName);
 
-        newIm[i] = genMulAdd(newIm[i], mIm[i0], Re[0], mat.imag[i0], "", newImName);
-        newIm[i] = genMulAdd(newIm[i], mIm[i1], Re[1], mat.imag[i1], "", newImName);
-        newIm[i] = genMulAdd(newIm[i], mIm[i2], Re[2], mat.imag[i2], "", newImName);
-        newIm[i] = genMulAdd(newIm[i], mIm[i3], Re[3], mat.imag[i3], "", newImName);
+        newIm[i] = genMulAdd(newIm[i], mIm[i0], Re[0], getImagFlag(i0), "", newImName);
+        newIm[i] = genMulAdd(newIm[i], mIm[i1], Re[1], getImagFlag(i1), "", newImName);
+        newIm[i] = genMulAdd(newIm[i], mIm[i2], Re[2], getImagFlag(i2), "", newImName);
+        newIm[i] = genMulAdd(newIm[i], mIm[i3], Re[3], getImagFlag(i3), "", newImName);
     }
     
     for (size_t i = 0; i < 4; i++) {
@@ -246,7 +260,6 @@ Function* IRGenerator::genU2q(const ir::U2qGate& u2q, std::string _funcName) {
             std::cerr << "newIm" << i << " is null?\n";
     }
     
-
     // store back
     if (l >= s) {
         for (size_t i = 0; i < 4; i++)
@@ -291,13 +304,28 @@ Function* IRGenerator::genU2q(const ir::U2qGate& u2q, std::string _funcName) {
     return func;
 }
 
-
 Function* IRGenerator::genU2qBatched(const ir::U2qGate& u2q, std::string _funcName) {
-    const ir::ComplexMatrix4& mat = u2q.mat;
     std::string funcName = (_funcName != "") ? _funcName
                          : getDefaultU2qFuncName(u2q, *this) + "_batched";
 
     errs() << "Generating function " << funcName << "\n";
+
+    auto getRealFlag = [mat=u2q.mat](unsigned idx) -> int {
+        switch ((mat >> (2 * idx)) & 3) {
+            case 0: return 0;
+            case 1: return 1;
+            case 2: return -1;
+            default: return 2;
+        }
+    };
+    auto getImagFlag = [mat=u2q.mat](unsigned idx) -> int {
+        switch ((mat >> (2 * idx + 32)) & 3) {
+            case 0: return 0;
+            case 1: return 1;
+            case 2: return -1;
+            default: return 2;
+        }
+    };
 
     // convention: l is the less significant qubit
     uint8_t l = u2q.qSmall;
@@ -457,19 +485,21 @@ Function* IRGenerator::genU2qBatched(const ir::U2qGate& u2q, std::string _funcNa
         // mat-vec multiplication
         Value *newRe = nullptr, *newIm = nullptr;
         Value *newRe0 = nullptr, *newRe1 = nullptr;
-        auto mRealFlags = mat.real.data() + batchIndex * 4;
-        auto mImagFlags = mat.imag.data() + batchIndex * 4;
+        unsigned i0 = 4*batchIndex + 0;
+        unsigned i1 = 4*batchIndex + 1;
+        unsigned i2 = 4*batchIndex + 2;
+        unsigned i3 = 4*batchIndex + 3;
 
         std::string newReName = "newRe" + std::to_string(batchIndex) + "_";
-        newRe0 = genMulAdd(newRe0, mRe[0], Re[0], mRealFlags[0], "", newReName);
-        newRe0 = genMulAdd(newRe0, mRe[1], Re[1], mRealFlags[1], "", newReName);
-        newRe0 = genMulAdd(newRe0, mRe[2], Re[2], mRealFlags[2], "", newReName);
-        newRe0 = genMulAdd(newRe0, mRe[3], Re[3], mRealFlags[3], "", newReName);
+        newRe0 = genMulAdd(newRe0, mRe[0], Re[0], getRealFlag(i0), "", newReName);
+        newRe0 = genMulAdd(newRe0, mRe[1], Re[1], getRealFlag(i1), "", newReName);
+        newRe0 = genMulAdd(newRe0, mRe[2], Re[2], getRealFlag(i2), "", newReName);
+        newRe0 = genMulAdd(newRe0, mRe[3], Re[3], getRealFlag(i3), "", newReName);
 
-        newRe1 = genMulAdd(newRe1, mIm[0], Im[0], mImagFlags[0], "", newReName);
-        newRe1 = genMulAdd(newRe1, mIm[1], Im[1], mImagFlags[1], "", newReName);
-        newRe1 = genMulAdd(newRe1, mIm[2], Im[2], mImagFlags[2], "", newReName);
-        newRe1 = genMulAdd(newRe1, mIm[3], Im[3], mImagFlags[3], "", newReName);
+        newRe1 = genMulAdd(newRe1, mIm[0], Im[0], getImagFlag(i0), "", newReName);
+        newRe1 = genMulAdd(newRe1, mIm[1], Im[1], getImagFlag(i1), "", newReName);
+        newRe1 = genMulAdd(newRe1, mIm[2], Im[2], getImagFlag(i2), "", newReName);
+        newRe1 = genMulAdd(newRe1, mIm[3], Im[3], getImagFlag(i3), "", newReName);
         
         if (newRe0 != nullptr && newRe1 != nullptr)
             newRe = builder.CreateFSub(newRe0, newRe1, "newRe" + std::to_string(batchIndex));
@@ -481,15 +511,15 @@ Function* IRGenerator::genU2qBatched(const ir::U2qGate& u2q, std::string _funcNa
             newRe = nullptr;
 
         std::string newImName = "newIm" + std::to_string(batchIndex) + "_";
-        newIm = genMulAdd(newIm, mRe[0], Im[0], mRealFlags[0], "", newImName);
-        newIm = genMulAdd(newIm, mRe[1], Im[1], mRealFlags[1], "", newImName);
-        newIm = genMulAdd(newIm, mRe[2], Im[2], mRealFlags[2], "", newImName);
-        newIm = genMulAdd(newIm, mRe[3], Im[3], mRealFlags[3], "", newImName);
+        newIm = genMulAdd(newIm, mRe[0], Im[0], getRealFlag(i0), "", newImName);
+        newIm = genMulAdd(newIm, mRe[1], Im[1], getRealFlag(i1), "", newImName);
+        newIm = genMulAdd(newIm, mRe[2], Im[2], getRealFlag(i2), "", newImName);
+        newIm = genMulAdd(newIm, mRe[3], Im[3], getRealFlag(i3), "", newImName);
 
-        newIm = genMulAdd(newIm, mIm[0], Re[0], mImagFlags[0], "", newImName);
-        newIm = genMulAdd(newIm, mIm[1], Re[1], mImagFlags[1], "", newImName);
-        newIm = genMulAdd(newIm, mIm[2], Re[2], mImagFlags[2], "", newImName);
-        newIm = genMulAdd(newIm, mIm[3], Re[3], mImagFlags[3], "", newImName);
+        newIm = genMulAdd(newIm, mIm[0], Re[0], getImagFlag(i0), "", newImName);
+        newIm = genMulAdd(newIm, mIm[1], Re[1], getImagFlag(i1), "", newImName);
+        newIm = genMulAdd(newIm, mIm[2], Re[2], getImagFlag(i2), "", newImName);
+        newIm = genMulAdd(newIm, mIm[3], Re[3], getImagFlag(i3), "", newImName);
         
         // store back
         builder.CreateStore(newRe, pReAnother[batchIndex]);

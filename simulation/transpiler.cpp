@@ -124,8 +124,8 @@ CircuitGraph CircuitGraph::FromQch(const RootNode& root) {
                             gateApply->qubits[0]);
             graph.addSingleQubitGate(u3);
         } else if (gateApply->name == "cx") {
-            auto u2q = U2qGate({{1,0,0,0, 0,0,0,1, 0,0,1,0, 0,1,0,0}, {}},
-                gateApply->qubits[0], gateApply->qubits[1]);
+            auto u2q = U2qGate(gateApply->qubits[0], gateApply->qubits[1],
+                        {{1,0,0,0, 0,0,0,1, 0,0,1,0, 0,1,0,0}, {}});
             graph.addTwoQubitGate(u2q);
         }
     }

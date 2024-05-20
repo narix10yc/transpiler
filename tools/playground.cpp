@@ -13,9 +13,7 @@ int main(int argc, char *argv[]) {
     std::cerr << "-- Input file: " << inputFilename << "\n";
     std::cerr << "-- Output file: " << outputFilename << "\n";
 
-    openqasm::Parser parser(inputFilename, 0);
-
-    std::string qchFileName = inputFilename + ".qch";
+    openqasm::Parser parser(inputFilename, 1);
 
     // parse and write ast
     auto qasmRoot = parser.parse();
@@ -37,12 +35,9 @@ int main(int argc, char *argv[]) {
 
     std::cerr << "-- converted back to qch AST\n";
 
-    transpiledRoot.print(std::cerr);
-
     CPUGenContext ctx {3, outputFilename};
 
     ctx.generate(transpiledRoot);
-
 
     return 0;
 }

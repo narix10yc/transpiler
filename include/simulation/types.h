@@ -9,6 +9,7 @@
 #include <iomanip>
 #include <random>
 #include <stdexcept>
+#include <cassert>
 
 namespace simulation {
 
@@ -55,11 +56,13 @@ public:
 
 template<typename real_ty=double>
 class SquareComplexMatrix {
-public:
     size_t size;
+public:
     std::vector<Complex<real_ty>> data;
 
     SquareComplexMatrix(size_t size) : size(size), data(size * size) {}
+
+    size_t getSize() const { return size; }
 
     static SquareComplexMatrix Identity(size_t size) {
         SquareComplexMatrix m;
@@ -136,7 +139,6 @@ public:
 };
 
 
-
 namespace ir {
     enum class RealTy {
     Double, Float
@@ -146,7 +148,7 @@ enum class AmpFormat {
     Separate, Alternating
 };
 
-/// @brief Sperial complex matrix representation used in IR generation.
+/// @brief Special complex matrix representation used in IR generation.
 /// Its entries are ints, only with special meanings when equal to +1, -1, or 0.
 /// All other cases are treated equal.
 class ComplexMatrix2 {
@@ -160,18 +162,6 @@ public:
     FromEulerAngles(std::optional<double> theta, std::optional<double> phi, 
                     std::optional<double> lambd, double thres=1e-8);
 };
-
-/// @brief Sperial complex matrix representation used in IR generation.
-/// Its entries are ints, only with special meanings when equal to +1, -1, or 0.
-/// All other cases are treated equal.
-class ComplexMatrix4 {
-public:
-    std::array<int, 16> real, imag;
-    ComplexMatrix4() = delete;
-    explicit ComplexMatrix4(std::array<int, 16> real, std::array<int, 16> imag)
-        : real(real), imag(imag) {}
-};
-
 
 class U3Gate {
 public:
@@ -191,11 +181,13 @@ public:
 
 class U2qGate {
 public:
-    ComplexMatrix4 mat;
     uint8_t qLarge, qSmall;
+    uint64_t mat;
 
-    U2qGate(ComplexMatrix4 mat, uint8_t qLarge, uint8_t qSmall)
-        : mat(mat), qLarge(qLarge), qSmall(qSmall) {}
+    explicit U2qGate(uint8_t qLarge, uint8_t qSmall, uint64_t mat)
+            : qLarge(qLarge), qSmall(qSmall), mat(mat) { 
+        assert(qLarge > qSmall);
+    }
     
     std::string getRepr() const;
 };
@@ -244,20 +236,20 @@ public:
     ir::ComplexMatrix2 ToIRMatrix(real_ty threshold=1e-8) const {
         std::array<int, 4> realArr, imagArr;
         for (size_t i = 0; i < 4; i++) {
-            if (std::abs(real[i] - 1) < threshold)
+            if (abs(real[i] - 1) < threshold)
                 realArr[i] = 1;
-            else if (std::abs(real[i] + 1) < threshold)
+            else if (abs(real[i] + 1) < threshold)
                 realArr[i] = -1;
-            else if (std::abs(real[i]) < threshold)
+            else if (abs(real[i]) < threshold)
                 realArr[i] = 0;
             else
                 realArr[i] = 2;
 
-            if (std::abs(imag[i] - 1) < threshold)
+            if (abs(imag[i] - 1) < threshold)
                 imagArr[i] = 1;
-            else if (std::abs(imag[i] + 1) < threshold)
+            else if (abs(imag[i] + 1) < threshold)
                 imagArr[i] = -1;
-            else if (std::abs(imag[i]) < threshold)
+            else if (abs(imag[i]) < threshold)
                 imagArr[i] = 0;
             else
                 imagArr[i] = 2;    
@@ -342,28 +334,26 @@ public:
     ComplexMatrix4(std::array<real_ty, 16> real, std::array<real_ty, 16> imag)
         : real(real), imag(imag) {}
 
-    ir::ComplexMatrix4 toIRMatrix(real_ty threshold=1e-8) const {
-        std::array<int, 16> realArr, imagArr;
+    uint64_t toIRMatrix(real_ty threshold=1e-8) const {
+        uint64_t id = 0ULL;
         for (size_t i = 0; i < 16; i++) {
-            if (std::abs(real[i] - 1) < threshold)
-                realArr[i] = 1;
-            else if (std::abs(real[i] + 1) < threshold)
-                realArr[i] = -1;
-            else if (std::abs(real[i]) < threshold)
-                realArr[i] = 0;
+            if (abs(real[i]) < threshold) {} // add 0
+            else if (abs(real[i] - 1) < threshold)
+                id += 1ULL << (2*i);
+            else if (abs(real[i] + 1) < threshold)
+                id += 2ULL << (2*i);
             else
-                realArr[i] = 2;
-
-            if (std::abs(imag[i] - 1) < threshold)
-                imagArr[i] = 1;
-            else if (std::abs(imag[i] + 1) < threshold)
-                imagArr[i] = -1;
-            else if (std::abs(imag[i]) < threshold)
-                imagArr[i] = 0;
+                id += 3ULL << (2*i);
+            
+            if (abs(imag[i]) < threshold) {} // add 0
+            else if (abs(imag[i] - 1) < threshold)
+                id += 1ULL << (2*i + 32);
+            else if (abs(imag[i] + 1) < threshold)
+                id += 2ULL << (2*i + 32);
             else
-                imagArr[i] = 2;
+                id += 3ULL << (2*i + 32);
         }
-        return ir::ComplexMatrix4 { realArr, imagArr };
+        return id;
     }
 
     ComplexMatrix4 matmul(const ComplexMatrix4& other) {
@@ -454,11 +444,11 @@ public:
 
 class U2qGate {
 public:
-    ComplexMatrix4<> mat;
     uint8_t k, l;
+    ComplexMatrix4<> mat;
 public:
-    U2qGate(ComplexMatrix4<> mat, uint8_t k, uint8_t l)
-        : mat(mat), k(k), l(l) {}
+    U2qGate(uint8_t k, uint8_t l, const ComplexMatrix4<>& mat)
+        : k(k), l(l), mat(mat) {}
 
     /// @brief Swap the target qubits 'in-place'. So k becomes l and l becomes 
     /// k. The matrix will change correspondingly.
@@ -481,11 +471,11 @@ public:
     ir::U2qGate ToIRGate() const {
         // convention: l is the less significant qubit
         if (l < k)
-            return ir::U2qGate { mat.toIRMatrix(), k, l };
+            return ir::U2qGate { k, l, mat.toIRMatrix() };
         
         auto u2q = *this;
         u2q.swapTargetQubits();
-        return ir::U2qGate { u2q.mat.toIRMatrix(), u2q.k, u2q.l };
+        return ir::U2qGate { u2q.k, u2q.l, u2q.mat.toIRMatrix() };
     }
     
 };
