@@ -6,7 +6,6 @@ using namespace qch::ast;
 using namespace simulation;
 
 void CircuitStmt::genCPU(CPUGenContext& ctx) const {
-    ctx.nqubits = nqubits;
     for (auto& s : stmts)
         s->genCPU(ctx);
 }
@@ -31,29 +30,10 @@ void GateApplyStmt::genCPU(CPUGenContext& ctx) const {
             auto func = ctx.getGenerator().genU3(u3);
             funcName = func->getName().str();
             ctx.u3GateMap[u3ID] = funcName;
-            // generate func decl
-            ctx.declStream << "void " << funcName << "(" << typeStr << ", ";
-            if (ctx.getAmpFormat() == ir::AmpFormat::Separate)
-                ctx.declStream << typeStr << ", ";
-            ctx.declStream << "uint64_t, uint64_t, const " << typeStr << ");\n";
         }
         
-        // u3 matrix
-        ctx.u3ParamStream << std::setprecision(16) << " "
-            << mat.ar.value_or(0) << "," << mat.br.value_or(0) << ","
-            << mat.cr.value_or(0) << "," << mat.dr.value_or(0) << ","
-            << mat.ai.value_or(0) << "," << mat.bi.value_or(0) << ","
-            << mat.ci.value_or(0) << "," << mat.di.value_or(0) << ",\n";
-        
-        // func call
-        ctx.kernelStream << "  " << funcName << "(";
-        if (ctx.getAmpFormat() == ir::AmpFormat::Separate)
-            ctx.kernelStream << "real, imag";
-        else
-            ctx.kernelStream << "data";
-
-        uint64_t idxMax = 1ULL << (ctx.nqubits - ctx.vecSizeInBits - 1);
-        ctx.kernelStream << ", " << 0 << ", " << idxMax << ", _u3Param + 0);\n";
+        ctx.u3Params.push_back(mat.toArray());
+        ctx.kernels.push_back({funcName, 1});
     } else if (name == "u2q") {
         ComplexMatrix4 mat;
         for (size_t i = 0; i < 16; i++) {
@@ -74,31 +54,16 @@ void GateApplyStmt::genCPU(CPUGenContext& ctx) const {
             auto func = ctx.getGenerator().genU2q(u2qIR);
             funcName = func->getName().str();
             ctx.u2qGateMap[u2qRepr] = funcName;
-            // generate func decl
-            ctx.declStream << "void " << funcName << "(" << typeStr << ", ";
-            if (ctx.getAmpFormat() == ir::AmpFormat::Separate)
-                ctx.declStream << typeStr << ", ";
-            ctx.declStream << "uint64_t, uint64_t, const " << typeStr << ");\n";
         }
 
-        // u2q matrix
-        ctx.u2qParamStream << std::setprecision(16) << " ";
-        for (size_t i = 0; i < 16; i++)
-            ctx.u2qParamStream << mat.real[i] << ",";
-        for (size_t i = 0; i < 16; i++) 
-            ctx.u2qParamStream << mat.imag[i] << ",";
-        ctx.u2qParamStream << "\n";
+        std::array<double, 32> arr;
+        for (size_t i = 0; i < 16; i++) {
+            arr[i] = mat.real[i];
+            arr[i+16] = mat.imag[i];
+        }
 
-        // func call
-        ctx.kernelStream << "  " << funcName << "(";
-        if (ctx.getAmpFormat() == ir::AmpFormat::Separate)
-            ctx.kernelStream << "real, imag";
-        else
-            ctx.kernelStream << "data";
-        uint64_t idxMax = 1ULL << (ctx.nqubits - ctx.vecSizeInBits - 2);
-        ctx.kernelStream << ", " << 0 << ", " << idxMax << ", _u2qParam + 0);\n";
-
-        // ctx.kernelStream << "std::cerr << \"" << funcName << " success\\n\";\n";
+        ctx.u2qParams.push_back(arr);
+        ctx.kernels.push_back({funcName, 2});
     } else {
         std::cerr << "unrecognized gate " << name << " to CPU gen\n";
         return;

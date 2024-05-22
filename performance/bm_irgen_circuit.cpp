@@ -26,7 +26,7 @@ int main() {
     };
 
     tr = timer.timeit(
-        [&](){ simulate_circuit(real, imag, 0, 0, nullptr); },
+        [&](){ simulate_circuit(real, imag, nqubits); },
         setup, teardown
     );
 

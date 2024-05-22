@@ -1,9 +1,10 @@
 #ifndef SIMULATION_CPU_H_
 #define SIMULATION_CPU_H_
 
-#include <iomanip>
-#include <fstream>
+#include <iostream>
 #include <sstream>
+#include <fstream>
+#include <iomanip>
 #include <map>
 
 #include "simulation/ir_generator.h"
@@ -14,28 +15,25 @@ namespace simulation {
 class CPUGenContext {
     simulation::IRGenerator irGenerator;
     std::string fileName;
-    std::error_code EC;
-
 public:
-    unsigned gateCount;
+    struct kernel {
+        std::string name;
+        unsigned nqubits;
+    };
     std::map<uint32_t, std::string> u3GateMap;
     std::map<std::string, std::string> u2qGateMap;
-    std::stringstream shellStream;
-    std::stringstream declStream;
-    std::stringstream u3ParamStream;
-    std::stringstream u2qParamStream;
-    std::stringstream kernelStream;
-    std::stringstream irStream;
-    unsigned vecSizeInBits;
-    unsigned nqubits;
+    std::vector<std::array<double, 8>> u3Params;
+    std::vector<std::array<double, 32>> u2qParams;
+    std::vector<kernel> kernels;
 
     CPUGenContext(unsigned vecSizeInBits, std::string fileName)
         : irGenerator(vecSizeInBits),
-          fileName(fileName),
-          vecSizeInBits(vecSizeInBits) {}
+          fileName(fileName) {}
     
     void setRealTy(ir::RealTy ty) { irGenerator.setRealTy(ty); }
     void setAmpFormat(ir::AmpFormat format) { irGenerator.setAmpFormat(format); }
+
+    simulation::IRGenerator& getGenerator() { return irGenerator; }
 
     ir::RealTy getRealTy() const { return irGenerator.realTy; }
     ir::AmpFormat getAmpFormat() const { return irGenerator.ampFormat; }
@@ -50,57 +48,95 @@ public:
         irGenerator.setAmpFormat(ir::AmpFormat::Separate);
     }
 
-    void logError(std::string msg) {}
-
-    simulation::IRGenerator& getGenerator() { return irGenerator; }
-
     void generate(qch::ast::RootNode& root) {
-        std::error_code EC;
-        auto shellName = fileName + ".sh";
-        auto shellFile = llvm::raw_fd_ostream(shellName, EC);
-        std::cerr << "shell script will be written to: " << shellName << "\n";
+        root.genCPU(*this);
 
-        auto hName = fileName + ".h";
-        auto hFile = llvm::raw_fd_ostream(hName, EC);
-        std::cerr << "header file will be written to: " << hName << "\n";
+        // shell File
+        auto shellFileName = fileName + ".sh";
+        std::ofstream shellFile {shellFileName};
+        if (!shellFile.is_open()) {
+            std::cerr << "Failed to open " << shellFileName << "\n";
+            return;
+        }
+        std::cerr << "shell script will be written to: " << shellFileName << "\n";
+        shellFile.close();
 
-        auto irName = fileName + ".ll";
-        auto irFile = llvm::raw_fd_ostream(irName, EC);
-        std::cerr << "IR file will be written to: " << irName << "\n";
+        // header file
+        auto hFileName = fileName + ".h";
+        std::ofstream hFile {hFileName};
+        if (!hFile.is_open()) {
+            std::cerr << "Failed to open " << hFileName << "\n";
+            return;
+        }
+        std::cerr << "header file will be written to: " << hFileName << "\n";
 
         std::string typeStr =
             (getRealTy() == ir::RealTy::Double) ? "double" : "float";
 
         hFile << "#include <cstdint>\n\n";
-        
-        u3ParamStream << "static const " << typeStr << " _u3Param[] = {\n";
-        u2qParamStream << "static const " << typeStr << " _u2qParam[] = {\n";
 
-        kernelStream << "void simulate_circuit(";
-        if (getAmpFormat() == ir::AmpFormat::Separate)
-            kernelStream << typeStr << " *real, " << typeStr << " *imag";
-        else
-            kernelStream << typeStr << " *data";
-        kernelStream << ", uint64_t, uint64_t, const " << typeStr << "*) {\n";
+        // declaration
+        hFile << "extern \"C\" {\n";
+        for (auto k : kernels) {
+            hFile << "void " << k.name << "("
+                  << typeStr << "*, " << typeStr << "*, int64_t, int64_t, "
+                  << "const " << typeStr << "*);\n";
+        }
+        hFile << "}\n\n";
 
-        declStream << "extern \"C\" {\n";
+        // u3 param
+        hFile << std::setprecision(16);
+        hFile << "static const " << typeStr << " _u3Params[] = {\n";
+        for (auto arr : u3Params) {
+            for (auto p : arr) {
+                hFile << p << ",";
+            }
+            hFile << "\n";
+        }
+        hFile << "};\n\n";
 
-        root.genCPU(*this);
+        // u2q param
+        hFile << "static const " << typeStr << " _u2qParams[] = {\n";
+        for (auto arr : u2qParams) {
+            for (auto p : arr) {
+                hFile << p << ",";
+            }
+            hFile << "\n";
+        }
+        hFile << "};\n\n";
 
-        u3ParamStream << "};\n";
-        u2qParamStream << "};\n";
-        declStream << "}";
-        kernelStream << "}";
+        // simulate_ciruit
+        hFile << "void simulate_circuit("
+              << typeStr << "* real, " << typeStr << "* imag, "
+              << "unsigned nqubits) {\n";
 
-        shellFile << shellStream.str();
-        hFile << declStream.str() << "\n\n" 
-              << u3ParamStream.str()  << "\n"
-              << u2qParamStream.str() << "\n"
-              << kernelStream.str();
+        unsigned u3Idx = 0, u2qIdx = 0;
+        for (auto k : kernels) {
+            if (k.nqubits == 1) {
+                hFile << k.name << "(real, imag, 0, "
+                      << "1ULL<<(nqubits-" << irGenerator.vecSizeInBits << "-1)"
+                      << ", _u3Params+" << 8*u3Idx << ");\n";
+                u3Idx++; 
+            } else {
+                hFile << k.name << "(real, imag, 0, "
+                      << "1ULL<<(nqubits-" << irGenerator.vecSizeInBits << "-2)"
+                      << ", _u2qParams+" << 36*u2qIdx << ");\n";
+                u2qIdx++; 
+            }
+        }
+        hFile << "}\n\n";
+
+        hFile.close();
+
+        // IR file
+        std::error_code EC;
+        auto irName = fileName + ".ll";
+        auto irFile = llvm::raw_fd_ostream(irName, EC);
+        std::cerr << "IR file will be written to: " << irName << "\n";
+
         irGenerator.getModule().print(irFile, nullptr);
 
-        shellFile.close();
-        hFile.close();
+
         irFile.close();
     }
 };

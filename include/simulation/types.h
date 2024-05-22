@@ -212,6 +212,11 @@ public:
                     std::optional<double> phi, 
                     std::optional<double> lambd);
 
+    std::array<double, 8> toArray() const {
+        return {
+         ar.value_or(0.0), br.value_or(0.0), cr.value_or(0.0), dr.value_or(0.0), 
+         ai.value_or(0.0), bi.value_or(0.0), ci.value_or(0.0), di.value_or(0.0)}; 
+    }
     
 }; // OptionalComplexMatrix2
 
