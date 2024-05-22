@@ -10,7 +10,9 @@ using AmpFormat = ir::AmpFormat;
 
 int main(int argc, char **argv) {
     cl::opt<std::string> 
-    FileName("F", cl::Prefix, cl::desc("file name"), cl::init(""));
+    FileName("F", cl::Prefix, 
+             cl::desc("file name to write to. If left empty, use std::cerr"),
+             cl::init(""));
 
     cl::opt<unsigned>
     Qubit("K", cl::Prefix, cl::desc("act on which qubit"), cl::Required);
@@ -19,26 +21,26 @@ int main(int argc, char **argv) {
     Ty("type", cl::desc("float (f32) or double (f64)"), cl::init("f64"));
 
     cl::opt<std::string>
-    Theta("theta", cl::desc("theta value"), cl::init("none"));
+    Theta("theta", cl::desc("theta value, default 'none'"), cl::init("none"));
 
     cl::opt<std::string>
-    Phi("phi", cl::desc("phi value"), cl::init("none"));
+    Phi("phi", cl::desc("phi value, default 'none'"), cl::init("none"));
 
     cl::opt<std::string>
-    Lambda("lambda", cl::desc("lambda value"), cl::init("none"));
+    Lambda("lambda", cl::desc("lambda value, default 'none'"), cl::init("none"));
 
     cl::opt<double>
-    Thres("thres", cl::desc("threshold"), cl::init(1e-8));
+    Thres("thres", cl::desc("threshold, default 1e-8"), cl::init(1e-8));
 
     cl::opt<unsigned>
-    VecSize("S", cl::Prefix, cl::desc("vector size"), cl::init(2));
+    VecSize("S", cl::Prefix, cl::desc("vector size, default 2"), cl::init(2));
 
     cl::opt<bool>
     InUnitsOfPI("in-units-of-pi", cl::desc("is the input angles in the unit of pi"),
         cl::init("False"));
     
     cl::opt<bool>
-    AlternatingFormat("alt", cl::desc("use alternating format"), cl::init("False"));
+    AlternatingFormat("alt", cl::desc("use alternating format"), cl::init("false"));
 
     cl::ParseCommandLineOptions(argc, argv, "");
 

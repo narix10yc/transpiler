@@ -9,6 +9,8 @@ message("########### Custom Setups ###########")
 message(STATUS "PROJECT SOURCE DIR: ${PROJECT_SOURCE_DIR}")
 
 if(APPLE)
+    # Apple has a system LLVM. We need to use a specific version
+    # stored in enviroment variable 'LLVM_ROOT' or 'llvm_root'
     if(NOT DEFINED ENV{LLVM_ROOT} AND NOT DEFINED ENV{llvm_root})
     endif()
     if(DEFINED ENV{llvm_root})
@@ -24,27 +26,25 @@ if(APPLE)
 
     set(LLVM_DIR "${LLVM_ROOT}/lib/cmake/llvm")
 else()
-
 endif()
-
-find_package(LLVM REQUIRED CONFIG)
 
 message("STATUS C Compiler: ${CMAKE_C_COMPILER}")
 message("STATUS C++ Compiler: ${CMAKE_CXX_COMPILER}")
 
+find_package(LLVM REQUIRED CONFIG)
+message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
-include(AddLLVM)
-include(HandleLLVMOptions)
+# include(AddLLVM)
+# include(HandleLLVMOptions)
 
 include_directories(include)
 include_directories(${LLVM_INCLUDE_DIRS})
-add_definitions(${LLVM_DEFINITIONS})
+separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
+add_definitions(${LLVM_DEFINITIONS_LIST})
 
-option(SIMULATION_USE_OPENMP "Use OpenMP" OFF)
-if(SIMULATION_USE_OPENMP)
-    add_compile_definitions(SIMULATION_USE_OPENMP)
-endif()
 
 add_subdirectory(openqasm)
 add_subdirectory(timeit)

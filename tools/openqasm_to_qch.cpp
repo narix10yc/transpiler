@@ -2,13 +2,24 @@
 #include "simulation/cpu.h"
 #include "simulation/transpiler.h"
 
+#include "llvm/Support/CommandLine.h"
+
 #include <chrono>
 #include <sstream>
 
 using namespace simulation;
 using namespace simulation::transpile;
+using namespace llvm;
 
-int main(int argc, char *argv[]) {
+int main(int argc, char** argv) {
+    cl::opt<std::string>
+    inputFilename(cl::desc("input file name"), cl::Positional, cl::Required);
+    
+    cl::opt<std::string>
+    outputFilename("o", cl::desc("output file name"), cl::Required);
+
+    cl::ParseCommandLineOptions(argc, argv);
+
     using clock = std::chrono::high_resolution_clock;
     auto tic = clock::now();
     auto tok = clock::now();
@@ -20,9 +31,6 @@ int main(int argc, char *argv[]) {
 
         return ss.str();
     };
-
-    std::string inputFilename = argv[1];
-    std::string outputFilename = argv[2];
 
     std::cerr << "-- Input file: " << inputFilename << "\n";
     std::cerr << "-- Output file: " << outputFilename << "\n";

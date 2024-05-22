@@ -22,6 +22,8 @@ public:
     std::map<std::string, std::string> u2qGateMap;
     std::stringstream shellStream;
     std::stringstream declStream;
+    std::stringstream u3ParamStream;
+    std::stringstream u2qParamStream;
     std::stringstream kernelStream;
     std::stringstream irStream;
     unsigned vecSizeInBits;
@@ -69,27 +71,32 @@ public:
         std::string typeStr =
             (getRealTy() == ir::RealTy::Double) ? "double" : "float";
 
-        hFile << "#include <cstdint>\n"
-              << "#include <array>\n\n";
+        hFile << "#include <cstdint>\n\n";
+        
+        u3ParamStream << "static const " << typeStr << " _u3Param[] = {\n";
+        u2qParamStream << "static const " << typeStr << " _u2qParam[] = {\n";
 
         kernelStream << "void simulate_circuit(";
         if (getAmpFormat() == ir::AmpFormat::Separate)
             kernelStream << typeStr << " *real, " << typeStr << " *imag";
         else
             kernelStream << typeStr << " *data";
-        kernelStream << ", uint64_t, uint64_t, void*) {\n"
-                     << "  std::array<" << typeStr << ", 8> u3m;\n"
-                     << "  std::array<" << typeStr << ", 32> u2qm;\n";
+        kernelStream << ", uint64_t, uint64_t, const " << typeStr << "*) {\n";
 
         declStream << "extern \"C\" {\n";
 
         root.genCPU(*this);
 
+        u3ParamStream << "};\n";
+        u2qParamStream << "};\n";
         declStream << "}";
         kernelStream << "}";
 
         shellFile << shellStream.str();
-        hFile << declStream.str() << "\n\n" << kernelStream.str();
+        hFile << declStream.str() << "\n\n" 
+              << u3ParamStream.str()  << "\n"
+              << u2qParamStream.str() << "\n"
+              << kernelStream.str();
         irGenerator.getModule().print(irFile, nullptr);
 
         shellFile.close();

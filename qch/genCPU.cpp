@@ -35,15 +35,15 @@ void GateApplyStmt::genCPU(CPUGenContext& ctx) const {
             ctx.declStream << "void " << funcName << "(" << typeStr << ", ";
             if (ctx.getAmpFormat() == ir::AmpFormat::Separate)
                 ctx.declStream << typeStr << ", ";
-            ctx.declStream << "uint64_t, uint64_t, void*);\n";
+            ctx.declStream << "uint64_t, uint64_t, const " << typeStr << ");\n";
         }
         
-        // load u3 matrix
-        ctx.kernelStream << std::setprecision(16) << "  u3m = {" 
+        // u3 matrix
+        ctx.u3ParamStream << std::setprecision(16) << " "
             << mat.ar.value_or(0) << "," << mat.br.value_or(0) << ","
             << mat.cr.value_or(0) << "," << mat.dr.value_or(0) << ","
             << mat.ai.value_or(0) << "," << mat.bi.value_or(0) << ","
-            << mat.ci.value_or(0) << "," << mat.di.value_or(0) << "};\n";
+            << mat.ci.value_or(0) << "," << mat.di.value_or(0) << ",\n";
         
         // func call
         ctx.kernelStream << "  " << funcName << "(";
@@ -53,7 +53,7 @@ void GateApplyStmt::genCPU(CPUGenContext& ctx) const {
             ctx.kernelStream << "data";
 
         uint64_t idxMax = 1ULL << (ctx.nqubits - ctx.vecSizeInBits - 1);
-        ctx.kernelStream << ", " << 0 << ", " << idxMax << ", u3m.data());\n";
+        ctx.kernelStream << ", " << 0 << ", " << idxMax << ", _u3Param + 0);\n";
     } else if (name == "u2q") {
         ComplexMatrix4 mat;
         for (size_t i = 0; i < 16; i++) {
@@ -78,16 +78,16 @@ void GateApplyStmt::genCPU(CPUGenContext& ctx) const {
             ctx.declStream << "void " << funcName << "(" << typeStr << ", ";
             if (ctx.getAmpFormat() == ir::AmpFormat::Separate)
                 ctx.declStream << typeStr << ", ";
-            ctx.declStream << "uint64_t, uint64_t, void*);\n";
+            ctx.declStream << "uint64_t, uint64_t, const " << typeStr << ");\n";
         }
 
-        // load u2q matrix
-        ctx.kernelStream << std::setprecision(16) << "  u2qm = {";
+        // u2q matrix
+        ctx.u2qParamStream << std::setprecision(16) << " ";
         for (size_t i = 0; i < 16; i++)
-            ctx.kernelStream << mat.real[i] << ",";
-        for (size_t i = 0; i < 15; i++) 
-            ctx.kernelStream << mat.imag[i] << ",";
-        ctx.kernelStream << mat.imag[15] << "};\n";
+            ctx.u2qParamStream << mat.real[i] << ",";
+        for (size_t i = 0; i < 16; i++) 
+            ctx.u2qParamStream << mat.imag[i] << ",";
+        ctx.u2qParamStream << "\n";
 
         // func call
         ctx.kernelStream << "  " << funcName << "(";
@@ -96,7 +96,7 @@ void GateApplyStmt::genCPU(CPUGenContext& ctx) const {
         else
             ctx.kernelStream << "data";
         uint64_t idxMax = 1ULL << (ctx.nqubits - ctx.vecSizeInBits - 2);
-        ctx.kernelStream << ", " << 0 << ", " << idxMax << ", u3m.data());\n";
+        ctx.kernelStream << ", " << 0 << ", " << idxMax << ", _u2qParam + 0);\n";
 
         // ctx.kernelStream << "std::cerr << \"" << funcName << " success\\n\";\n";
     } else {
