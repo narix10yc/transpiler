@@ -10,9 +10,7 @@ message(STATUS "PROJECT SOURCE DIR: ${PROJECT_SOURCE_DIR}")
 
 if(APPLE)
     # Apple has a system LLVM. We need to use a specific version
-    # stored in enviroment variable 'LLVM_ROOT' or 'llvm_root'
-    if(NOT DEFINED ENV{LLVM_ROOT} AND NOT DEFINED ENV{llvm_root})
-    endif()
+    # specified by enviroment variable 'LLVM_ROOT' or 'llvm_root'
     if(DEFINED ENV{llvm_root})
         set(LLVM_ROOT "$ENV{llvm_root}")
     elseif(DEFINED ENV{LLVM_ROOT})
@@ -35,16 +33,12 @@ find_package(LLVM REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-
-# include(AddLLVM)
-# include(HandleLLVMOptions)
-
-include_directories(include)
 include_directories(${LLVM_INCLUDE_DIRS})
 separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
 add_definitions(${LLVM_DEFINITIONS_LIST})
 
+include_directories(include)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 add_subdirectory(openqasm)
 add_subdirectory(timeit)

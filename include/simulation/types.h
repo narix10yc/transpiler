@@ -72,8 +72,7 @@ public:
     }
 
     SquareComplexMatrix matmul(const SquareComplexMatrix& other) {
-        if (size != other.size)
-            throw std::runtime_error("matrix size mismatch!");
+        assert(size == other.size);
 
         SquareComplexMatrix m(size);
         for (size_t i = 0; i < size; i++) {

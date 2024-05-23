@@ -120,7 +120,7 @@ public:
             } else {
                 hFile << k.name << "(real, imag, 0, "
                       << "1ULL<<(nqubits-" << irGenerator.vecSizeInBits << "-2)"
-                      << ", _u2qParams+" << 36*u2qIdx << ");\n";
+                      << ", _u2qParams+" << 32*u2qIdx << ");\n";
                 u2qIdx++; 
             }
         }

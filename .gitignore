@@ -3,3 +3,4 @@
 *.exe
 examples/*
 build/*
+*/gen_file*

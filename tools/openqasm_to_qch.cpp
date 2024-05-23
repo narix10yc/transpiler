@@ -18,7 +18,23 @@ int main(int argc, char** argv) {
     cl::opt<std::string>
     outputFilename("o", cl::desc("output file name"), cl::Required);
 
+    cl::opt<std::string>
+    Precision("p", cl::desc("precision (f64 or f32)"), cl::init("f64"));
+
+    cl::opt<unsigned>
+    VecSizeInBits("S", cl::desc("vector size in bits"), cl::Prefix, cl::init(1));
+
     cl::ParseCommandLineOptions(argc, argv);
+
+    ir::RealTy realTy = ir::RealTy::Double;
+    if (Precision == "f64" || Precision == "double" || Precision == "64")
+        realTy = ir::RealTy::Double;
+    else if (Precision == "f32" || Precision == "float" || Precision == "32")
+        realTy = ir::RealTy::Float;
+    else {
+        std::cerr << "Unrecognized precision (-p). Use either 'f64' or 'f32'\n";
+        return 1;
+    }
 
     using clock = std::chrono::high_resolution_clock;
     auto tic = clock::now();
@@ -62,7 +78,8 @@ int main(int argc, char** argv) {
     std::cerr << get_msg_start() << "converted back to qch AST\n";
 
     tic = clock::now();
-    CPUGenContext ctx {1, outputFilename};
+    CPUGenContext ctx {VecSizeInBits, outputFilename};
+    ctx.setRealTy(realTy);
     ctx.generate(transpiledRoot);
     tok = clock::now();
 

@@ -6,7 +6,7 @@
 
 using namespace timeit;
 
-using real_ty = double;
+using real_ty = float;
 const unsigned nqubits = 24;
 
 int main() {
