@@ -16,12 +16,12 @@ class StatevectorAlt;
 template<typename real_ty>
 class StatevectorSep {
 public:
-    uint8_t nqubits;
+    unsigned nqubits;
     uint64_t N;
     real_ty* real;
     real_ty* imag;
 
-    StatevectorSep(uint8_t nqubits, bool initialize=false)
+    StatevectorSep(unsigned nqubits, bool initialize=false)
             : nqubits(nqubits), N(1 << nqubits) {
         real = (real_ty*) aligned_alloc(64, N * sizeof(real_ty));
         imag = (real_ty*) aligned_alloc(64, N * sizeof(real_ty));
@@ -122,11 +122,11 @@ public:
 template<typename real_ty>
 class StatevectorAlt {
 public:
-    uint8_t nqubits;
+    unsigned nqubits;
     uint64_t N;
     real_ty* data;
 
-    StatevectorAlt(uint8_t nqubits, bool initialize=false) 
+    StatevectorAlt(unsigned nqubits, bool initialize=false) 
             : nqubits(nqubits), N(1 << nqubits) {
         data = (real_ty*) aligned_alloc(64, 2 * N * sizeof(real_ty));
         if (initialize) {
@@ -211,8 +211,7 @@ public:
 
 template<typename real_ty>
 double fidelity(const StatevectorSep<real_ty>& sv1, const StatevectorSep<real_ty>& sv2) {
-    if (sv1.nqubits != sv2.nqubits)
-        return 0.0;
+    assert(sv1.nqubits == sv2.nqubits);
 
     double re = 0.0, im = 0.0;
     for (size_t i = 0; i < sv1.N; i++) {
@@ -224,8 +223,7 @@ double fidelity(const StatevectorSep<real_ty>& sv1, const StatevectorSep<real_ty
 
 template<typename real_ty>
 double fidelity(const StatevectorSep<real_ty>& sep, const StatevectorAlt<real_ty>& alt) {
-    if (sep.nqubits != alt.nqubits)
-        return 0.0;
+    assert(sep.nqubits == alt.nqubits);
 
     double re = 0.0, im = 0.0;
     for (size_t i = 0; i < sep.N; i++) {
@@ -243,9 +241,8 @@ double fidelity(const StatevectorAlt<real_ty>& alt, const StatevectorSep<real_ty
 
 template<typename real_ty>
 void StatevectorSep<real_ty>::copyValueFrom(const StatevectorAlt<real_ty>& alt) {
-    if (nqubits != alt.nqubits)
-        return; // TODO: throw?
-    
+    assert(nqubits == alt.nqubits);
+
     for (size_t i = 0; i < N; i++) {
         real[i] = alt.data[2*i];
         imag[i] = alt.data[2*i+1];
@@ -254,8 +251,7 @@ void StatevectorSep<real_ty>::copyValueFrom(const StatevectorAlt<real_ty>& alt) 
 
 template<typename real_ty>
 void StatevectorAlt<real_ty>::copyValueFrom(const StatevectorSep<real_ty>& sep) {
-    if (nqubits != sep.nqubits)
-        return; // TODO: throw?
+    assert(nqubits == sep.nqubits);
     
     for (size_t i = 0; i < N; i++) {
         data[2*i] = sep.real[i];

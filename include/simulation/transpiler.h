@@ -7,44 +7,91 @@
 #include <vector>
 #include <set>
 #include <unordered_set>
+#include <iostream>
 
 namespace simulation::transpile {
 class GateNode {
 public:
+    struct node_data {
+        unsigned qubit;
+        GateNode* leftNode = nullptr;
+        GateNode* rightNode = nullptr;
+    };
     unsigned nqubits;
     SquareComplexMatrix<double> matrix;
-    std::vector<unsigned> qubits;
-    std::vector<GateNode*> leftNodes, rightNodes;
-
-    GateNode(unsigned nqubits) : nqubits(nqubits),
-                                 matrix(1<<nqubits),
-                                 qubits(nqubits),
-                                 leftNodes(nqubits, nullptr),
-                                 rightNodes(nqubits, nullptr) {}
+    std::vector<node_data> dataVector;
+    unsigned id;
+    GateNode(unsigned nqubits, unsigned id)
+        : nqubits(nqubits), matrix(1<<nqubits),
+          dataVector(nqubits), id(id) {}
 
     bool actOnSameQubits(const GateNode& other) {
         if (nqubits != other.nqubits)
             return false;
         
-        std::multiset<unsigned> set1(qubits.begin(), qubits.end());
-        std::multiset<unsigned> set2(other.qubits.begin(), other.qubits.end());
+        for (auto& data : dataVector) {
+            auto q = data.qubit;
+            bool flag = false;
+            for (auto& otherData : other.dataVector) {
+                if (q == otherData.qubit) {
+                    flag = true;
+                    break;
+                }
+            }
+            if (flag)
+                continue;
+            return false;
+        }
+        return true;
+    }
 
-        return set1 == set2;
+    node_data& operator[](size_t idx) {
+        assert(idx < dataVector.size());
+        return dataVector[idx];
+    }
+
+    const node_data& operator[](size_t idx) const {
+        assert(idx < dataVector.size());
+        return dataVector[idx];
+    }
+
+    bool actsOnQubit(unsigned q) const {
+        for (auto& data : dataVector) {
+            if (data.qubit == q)
+                return true;
+        }
+        return false;
+    }
+
+    std::vector<unsigned> qubits() const {
+        std::vector<unsigned> arr(nqubits);
+        for (unsigned i = 0; i < nqubits; i++)
+            arr[i] = dataVector[i].qubit;
+        return arr;
     }
 
 }; // class GateNode
 
 class CircuitGraph {
+    unsigned count;
+    struct CompareGateNodePointers {
+        bool operator()(const GateNode* lhs, const GateNode* rhs) const {
+            return lhs->id < rhs->id;
+        }
+    };
 public:
     std::vector<GateNode*> leftEntry;
     std::vector<GateNode*> rightEntry;
 
-    std::unordered_set<GateNode*> allNodes;
-
+    /// @brief The collection of allNodes will be sorted by their id. Their id
+    /// also tells the order of gates
+    std::set<GateNode*, CompareGateNodePointers> allNodes;
 private:
-    /// @brief Connect two nodes along qubit q.
-    /// @return true if both left and right have qubit q.
-    bool connectTwoNodes(GateNode* left, GateNode* right, unsigned q);
+    /// @brief Try connect two nodes
+    /// @param q: Optional. Specify which qubit to connect on. When set to <0,
+    ///     connect along all possible qubits
+    /// @return Number of connections
+    unsigned connectTwoNodes(GateNode* left, GateNode* right, int q=-1);
 
     /// @brief Try absorb all directly connected single-qubit gates.
     /// @param node can either be single-qubit or two-qubit.
@@ -53,21 +100,30 @@ private:
     unsigned absorbNeighbouringTwoQubitGates(GateNode* node);
 
 public:
-    CircuitGraph() : leftEntry(32, nullptr), rightEntry(32, nullptr), allNodes() {}
+    CircuitGraph() : count(0), leftEntry(32, nullptr),
+                     rightEntry(32, nullptr), allNodes() {}
 
     static CircuitGraph FromQch(const qch::ast::RootNode& root);
 
     qch::ast::RootNode toQch() const;
 
-    GateNode* addGateNode(unsigned nqubits);
-
     void removeGateNode(GateNode* node);
 
-    void addSingleQubitGate(const U3Gate& u3);
+    /// @brief Add a single-qubit gate into the right-most of the graph.
+    /// Connections will be adjusted accordingly.
+    /// @param u3 A U3Gate
+    /// @return The node
+    GateNode* addSingleQubitGate(const U3Gate& u3);
 
-    void addTwoQubitGate(const U2qGate& u2q);
+    GateNode* addTwoQubitGate(const U2qGate& u2q);
 
     void transpileForCPU();
+
+    std::vector<GateNode> getNodesInOrder() const;
+
+    bool sanityCheck(std::ostream& os) const;
+
+    void draw(std::ostream& os) const;
 
 }; // class CircuitGraph
 

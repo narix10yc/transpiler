@@ -61,6 +61,8 @@ public:
     std::vector<Complex<real_ty>> data;
 
     SquareComplexMatrix(size_t size) : size(size), data(size * size) {}
+    SquareComplexMatrix(size_t size, std::initializer_list<Complex<real_ty>> data)
+        : size(size), data(data) {}
 
     size_t getSize() const { return size; }
 
@@ -118,6 +120,15 @@ public:
             m.data[(r*size + i) * size * size + (c*size + i)] = data[r*size + c];
         } } }
         return m;
+    }
+
+    SquareComplexMatrix swapTargetQubits() const {
+        assert(size == 4);
+
+        return {4, {data[ 0], data[ 2], data[ 1], data[ 3],
+                    data[ 8], data[10], data[ 9], data[11],
+                    data[ 4], data[ 6], data[ 5], data[ 7],
+                    data[12], data[14], data[13], data[15]}};
     }
 
     void print(std::ostream& os) const {

@@ -1,74 +1,115 @@
 #include "simulation/transpiler.h"
+#include <queue>
 
 using namespace simulation;
 using namespace simulation::transpile;
 using namespace qch::ast;
 
-/// @brief C = A @ B
-void matmul_complex(double* Are, double* Aim, double* Bre, double* Bim, double* Cre, double* Cim, size_t n) {
-    for (size_t i = 0; i < n; i++) {
-    for (size_t j = 0; j < n; j++) {
-    for (size_t k = 0; k < n; k++) {
-        // C_ij = A_ik B_kj
-        Cre[n*i + j] = Are[n*i + k] * Bre[n*k + j]
-                      -Aim[n*i + k] * Bim[n*k + j];
-        Cim[n*i + j] = Are[n*i + k] * Bim[n*k + j]
-                      +Aim[n*i + k] * Bre[n*k + j];
-    } } }
-    
-}
-
-GateNode* CircuitGraph::addGateNode(unsigned nqubits) {
-    auto node = new GateNode(nqubits);
-    allNodes.insert(node);
-    return node;
-}
-
 void CircuitGraph::removeGateNode(GateNode* node) {
+    assert(node != nullptr);
+
+    for (auto& data : node->dataVector) {
+        auto q = data.qubit;
+        auto* left = data.leftNode;
+        auto* right = data.rightNode;
+        connectTwoNodes(left, right, q);
+        // update left and right entries
+        if (leftEntry[q] == node)
+            leftEntry[q] = right;
+        if (rightEntry[q] == node)
+            rightEntry[q] = left;
+    }
+
+    // std::cerr << "removing node with id " << node->id << "\n";
     allNodes.erase(node);
     delete(node);
 }
 
-bool CircuitGraph::connectTwoNodes(GateNode* left, GateNode* right, unsigned q) {
-    bool leftFlag = (left == nullptr), rightFlag = (right == nullptr);
-    if (left != nullptr) {
+unsigned CircuitGraph::connectTwoNodes(GateNode* left, GateNode* right, int q) {
+    if (left == nullptr && right == nullptr)
+        return 0;
+    
+    if (left == nullptr) {
+        if (q < 0) {
+            for (auto& dataR : right->dataVector)
+                dataR.leftNode = nullptr;
+            return right->nqubits;
+        }
+        for (auto& dataR : right->dataVector) {
+            if (dataR.qubit == q) {
+                dataR.leftNode = nullptr;
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    if (right == nullptr) {
+        if (q < 0) {
+            for (auto& dataL : left->dataVector)
+                dataL.rightNode = nullptr;
+            return left->nqubits;
+        }
+        for (auto& dataL : left->dataVector) {
+            if (dataL.qubit == q) {
+                dataL.rightNode = nullptr;
+                return 1;
+            }
+        }
+        return 0;
+    }
+
+    // both left and right are non-null
+    // connect along specific qubit
+    if (q >= 0) {
+        int idxL = -1, idxR = -1;
         for (size_t i = 0; i < left->nqubits; i++) {
-            if (left->qubits[i] == q) {
-                left->rightNodes[i] = right;
-                leftFlag = true;
+            if (left->dataVector[i].qubit == q) {
+                idxL = i;
                 break;
             }
         }
-    }
-
-    if (right != nullptr) {
+        if (idxL < 0) { return 0; }
         for (size_t i = 0; i < right->nqubits; i++) {
-            if (right->qubits[i] == q) {
-                right->leftNodes[i] = left;
-                rightFlag = true;
+            if (right->dataVector[i].qubit == q) {
+                idxR = i;
+                break;
+            }
+        }
+        if (idxR < 0) { return 0; }
+        left->dataVector[idxL].rightNode = right;
+        right->dataVector[idxR].leftNode = left;
+        return 1;
+    }
+
+    // connect along all qubits
+    unsigned nConnected = 0;
+    for (auto& dataL : left->dataVector) {
+        for (auto& dataR : right->dataVector) {
+            if (dataL.qubit == dataR.qubit) {
+                dataL.rightNode = right;
+                dataR.leftNode = left;
+                nConnected++;
                 break;
             }
         }
     }
-
-    if (leftFlag && rightFlag)
-        return true;
-    else {
-        std::cerr << "Failed to connect two nodes!\n";
-        return false;
-    }
+    return nConnected;
 }
 
-void CircuitGraph::addSingleQubitGate(const U3Gate& u3) {
+GateNode* CircuitGraph::addSingleQubitGate(const U3Gate& u3) {
     unsigned k = u3.k;
     if (k >= leftEntry.size()) {
-        leftEntry.resize(k, nullptr);
-        rightEntry.resize(k, nullptr);
+        leftEntry.resize(k + 1, nullptr);
+        rightEntry.resize(k + 1, nullptr);
     }
 
     // create node
-    auto node = addGateNode(1);
-    node->qubits[0] = k;
+    auto* node = new GateNode(1, count);
+    count++;
+    allNodes.insert(node);
+
+    node->dataVector[0].qubit = k;
     for (size_t i = 0; i < 4; i++)
         node->matrix.data[i] = Complex<>(u3.mat.real[i], u3.mat.imag[i]);
 
@@ -76,36 +117,43 @@ void CircuitGraph::addSingleQubitGate(const U3Gate& u3) {
     if (leftEntry[k] == nullptr) {
         leftEntry[k] = node;
     } else {
-        connectTwoNodes(rightEntry[k], node, k);
+        connectTwoNodes(rightEntry[k], node);
     }
     rightEntry[k] = node;
+    return node;
 }
 
-void CircuitGraph::addTwoQubitGate(const U2qGate& u2q) {
+GateNode* CircuitGraph::addTwoQubitGate(const U2qGate& u2q) {
     unsigned k = u2q.k;
     unsigned l = u2q.l;
     unsigned tmp = (k > l) ? u2q.k : u2q.l;
-    if (tmp) {
-        leftEntry.resize(tmp, nullptr);
-        rightEntry.resize(tmp, nullptr);
+    if (tmp >= leftEntry.size()) {
+        leftEntry.resize(tmp + 1, nullptr);
+        rightEntry.resize(tmp + 1, nullptr);
     }
 
     // create node
-    auto node = addGateNode(2);
-    node->qubits[0] = k;
-    node->qubits[1] = l;
+    auto* node = new GateNode(2, count);
+    count++;
+    allNodes.insert(node);
+
+    node->dataVector[0].qubit = k;
+    node->dataVector[1].qubit = l;
     for (size_t i = 0; i < 16; i++)
         node->matrix.data[i] = Complex<>(u2q.mat.real[i], u2q.mat.imag[i]);
     
     // update graph 
-    for (auto q : node->qubits) {
+    for (auto& data : node->dataVector) {
+        unsigned q = data.qubit;
         if (leftEntry[q] == nullptr) {
             leftEntry[q] = node;
         } else {
-            connectTwoNodes(rightEntry[q], node, q);
+            connectTwoNodes(rightEntry[q], node);
         }
         rightEntry[q] = node;
     }
+
+    return node;
 }
 
 CircuitGraph CircuitGraph::FromQch(const RootNode& root) {
@@ -136,114 +184,102 @@ CircuitGraph CircuitGraph::FromQch(const RootNode& root) {
 }
 
 unsigned CircuitGraph::absorbNeighbouringSingleQubitGates(GateNode* node) {
+    assert(node != nullptr && node->nqubits < 3);
+
     unsigned nFused = 0;
     if (node->nqubits == 1) {
-        GateNode* left = node->leftNodes[0];
+        GateNode* left = node->dataVector[0].leftNode;
         if (left != nullptr && left->nqubits == 1) {
             node->matrix = node->matrix.matmul(left->matrix);
-            connectTwoNodes(left->leftNodes[0], node, node->qubits[0]);
             removeGateNode(left);
             nFused += 1;
         }
-        GateNode* right = node->rightNodes[0];
+        GateNode* right = node->dataVector[0].rightNode;
         if (right != nullptr && right->nqubits == 1) {
             node->matrix = right->matrix.matmul(node->matrix);
-            connectTwoNodes(node, right->rightNodes[0], node->qubits[0]);
             removeGateNode(right);
             nFused += 1;
         }
-    } else if (node->nqubits == 2) {
-        GateNode* leftK = node->leftNodes[0];
-        if (leftK != nullptr && leftK->nqubits == 1) {
-            // R @ (L otimes I)
-            node->matrix = (node->matrix).matmul(leftK->matrix.rightKronI());
-            connectTwoNodes(leftK->leftNodes[0], node, node->qubits[0]);
-            removeGateNode(leftK);
-            nFused += 1;
-        }
-        GateNode* leftL = node->leftNodes[1];
-        if (leftL != nullptr && leftL->nqubits == 1) {
-            // R @ (I otimes L)
-            node->matrix = node->matrix.matmul(leftL->matrix.leftKronI());
-            connectTwoNodes(leftL->leftNodes[0], node, node->qubits[1]);
-            removeGateNode(leftL);
-            nFused += 1;
-        }
-
-        GateNode* rightK = node->rightNodes[0];
-        if (rightK != nullptr && rightK->nqubits == 1) {
-            // (R otimes I) @ L
-            node->matrix = rightK->matrix.rightKronI().matmul(node->matrix);
-            connectTwoNodes(node, rightK->rightNodes[0], node->qubits[0]);
-            removeGateNode(rightK);
-            nFused += 1;
-        }
-        GateNode* rightL = node->rightNodes[1];
-        if (rightL != nullptr && rightL->nqubits == 1) {
-            // (I otimes R) @ L
-            node->matrix = rightL->matrix.leftKronI().matmul(node->matrix);
-            connectTwoNodes(node, rightL->rightNodes[0], node->qubits[1]);
-            removeGateNode(rightL);
-            nFused += 1;
-        }
+        return nFused;
     }
     
+    GateNode* leftK = node->dataVector[0].leftNode;
+    if (leftK != nullptr && leftK->nqubits == 1) {
+        // R @ (L otimes I)
+        node->matrix = (node->matrix).matmul(leftK->matrix.rightKronI());
+        removeGateNode(leftK);
+        nFused += 1;
+    }
+    GateNode* leftL = node->dataVector[1].leftNode;
+    if (leftL != nullptr && leftL->nqubits == 1) {
+        // R @ (I otimes L)
+        node->matrix = node->matrix.matmul(leftL->matrix.leftKronI());
+        removeGateNode(leftL);
+        nFused += 1;
+    }
+    GateNode* rightK = node->dataVector[0].rightNode;
+    if (rightK != nullptr && rightK->nqubits == 1) {
+        // (R otimes I) @ L
+        node->matrix = rightK->matrix.rightKronI().matmul(node->matrix);
+        removeGateNode(rightK);
+        nFused += 1;
+    }
+    GateNode* rightL = node->dataVector[1].rightNode;
+    if (rightL != nullptr && rightL->nqubits == 1) {
+        // (I otimes R) @ L
+        node->matrix = rightL->matrix.leftKronI().matmul(node->matrix);
+        removeGateNode(rightL);
+        nFused += 1;
+    }
     return nFused;
 }
 
 unsigned CircuitGraph::absorbNeighbouringTwoQubitGates(GateNode* node) {
+    assert(node != nullptr && node->nqubits < 3);
+
     if (node->nqubits == 1)
         return 0;
     
-    unsigned nFused = 0;
-    if (node->leftNodes[0] != nullptr && node->leftNodes[0] == node->leftNodes[1]) {
-        GateNode* leftNode = node->leftNodes[0]; 
-        node->matrix = node->matrix.matmul(leftNode->matrix);
-        connectTwoNodes(leftNode->leftNodes[0], node, node->qubits[0]);
-        connectTwoNodes(leftNode->leftNodes[1], node, node->qubits[1]);
-        removeGateNode(leftNode);
-        nFused += 1;
+    GateNode* left = node->dataVector[0].leftNode;
+    if (left == nullptr || left != node->dataVector[1].leftNode)
+        return 0;
+    
+    if (left->dataVector[0].qubit == node->dataVector[0].qubit) {
+        node->matrix = node->matrix.matmul(left->matrix);
+    } else {
+        node->matrix = node->matrix.matmul(left->matrix.swapTargetQubits());
     }
-    if (node->rightNodes[0] != nullptr && node->rightNodes[0] == node->rightNodes[1]) {
-        GateNode* rightNode = node->rightNodes[0]; 
-        node->matrix = rightNode->matrix.matmul(node->matrix);
-        connectTwoNodes(node, rightNode->rightNodes[0], node->qubits[0]);
-        connectTwoNodes(node, rightNode->rightNodes[1], node->qubits[1]);
-        removeGateNode(rightNode);
-        nFused += 1;
-    }
-    return nFused;
+    
+    removeGateNode(left);
+    return 1;
 }
 
 
 void CircuitGraph::transpileForCPU() {
     // step 1: absorb single-qubit gates
-    bool updates = false;
+    unsigned nFused;
     do {
-        updates = false;
+        nFused = 0;
         for (GateNode* node : allNodes) {
-            auto nFused = absorbNeighbouringSingleQubitGates(node);
+            nFused += absorbNeighbouringSingleQubitGates(node);
             if (nFused > 0) {
-                updates = true;
                 break;
             }
         }
-    } while (updates);
+    } while (nFused > 0);
     std::cerr << "-- Fusion step 1 finished! " << allNodes.size() << " nodes remaining\n";
 
     // step 2: fuse two-qubit gates
     do {
-        updates = false;
+        nFused = 0;
         for (GateNode* node : allNodes) {
             auto nFused = absorbNeighbouringTwoQubitGates(node);
             if (nFused > 0) {
-                updates = true;
                 break;
             }
         }
-    } while (updates);
+    } while (nFused > 0);
     std::cerr << "-- Fusion step 2 finished! " << allNodes.size() << " nodes remaining\n";
-
 }
 
 namespace {
@@ -269,12 +305,190 @@ RootNode CircuitGraph::toQch() const {
             gateApply->addParameter(approximate(p.real));
             gateApply->addParameter(approximate(p.imag));
         }
-        for (auto q : node->qubits) {
-            gateApply->addTargetQubit(q);
+        for (auto& data : node->dataVector) {
+            gateApply->addTargetQubit(data.qubit);
         }
 
         circuit->addStmt(std::move(gateApply));
     }
     root.addStmt(std::move(circuit));
     return root;
+}
+
+void bfsSearch(GateNode* node, std::set<GateNode*>& s) {
+    if (node == nullptr)
+        return;
+    if (s.count(node) == 0)
+        s.insert(node);
+    for (const auto& data : node->dataVector) {
+        if (s.count(data.rightNode) > 0)
+            continue;
+        bfsSearch(data.rightNode, s);
+    }
+}
+
+bool CircuitGraph::sanityCheck(std::ostream& os) const {
+    bool success = true;
+    const std::string ERR = "\033[31mSanity check error:\033[0m\n  ";
+    const std::string CYAN = "\033[36m";
+    const std::string RED = "\033[31m";
+    const std::string GREEN = "\033[32m";
+    const std::string RESET = "\033[0m";
+
+    os << "== " << CYAN << "Circuit Graph Sanity Check" << RESET << " ==\n";
+    // number of qubits
+    if (leftEntry.size() != rightEntry.size()) {
+        success = false;
+        os << ERR << "leftEntry and rightEntry size does not match!\n";
+    } else {
+        os << "leftEntry and rightEntry size = " << leftEntry.size() << "\n";
+        unsigned nqubits = 0;
+        for (size_t i = 0; i < leftEntry.size(); i++) {
+            auto* left = leftEntry[i];
+            auto* right = rightEntry[i];
+            if (left != nullptr && right != nullptr)
+                nqubits += 1;
+            else if (left == nullptr && right == nullptr)
+                continue;
+            else {
+                os << ERR << "leftEntry and rightEntry "
+                   << "does not match at qubit " << i << "\n";
+                success = false;
+            }
+        }
+        os << "Number of qubits = " << nqubits << "\n";
+    }
+
+    // check connection
+    bool connectionSuccess = true;
+    for (const auto& node : allNodes) {
+        if (node->nqubits != node->dataVector.size()) {
+            os << ERR << "Node " << node->id << " has unmatched nqubits\n";
+            connectionSuccess = false;
+        }
+        else if (node->nqubits == 2) {
+            auto k = node->dataVector[0].qubit;
+            auto l = node->dataVector[1].qubit;
+            if (k <= l) {
+                os << ERR << "Node " << node->id << " acts on two qubits, but "
+                   << "k = " << k << " and " << "l = " << l << "\n";
+                connectionSuccess = false;
+            }
+        }
+        for (const auto& data : node->dataVector) {
+            auto q = data.qubit;
+            auto* left = data.leftNode;
+            auto* right = data.rightNode;
+            if (left == nullptr && leftEntry[q] != node) {
+                os << ERR << "Node " << node->id << " (along qubit " << q << ")"
+                   << " has false left connection boundary\n";
+                connectionSuccess = false;
+            }
+            if (right == nullptr && rightEntry[q] != node) {
+                os << ERR << "Node " << node->id << " (along qubit " << q << ")"
+                   << " has false right connection boundary\n";
+                connectionSuccess = false;
+            }
+            if (left != nullptr && !left->actsOnQubit(q)) {
+                os << ERR << "Node " << node->id << " (along qubit " << q << ")"
+                   << " has false left connection\n";
+                connectionSuccess = false;
+            }
+            if (right != nullptr && !right->actsOnQubit(q)) {
+                os << ERR << "Node " << node->id << " (along qubit " << q << ")"
+                   << " has false right connection\n";
+                connectionSuccess = false;
+            }
+        }
+    }
+
+    if (connectionSuccess)
+        os << "Connection checked! (" << allNodes.size() << " nodes)\n";
+    else 
+        success = false;
+    
+
+    // number of nodes
+    std::set<GateNode*> foundNodes;
+    for (auto* entryNode : leftEntry) {
+        if (entryNode != nullptr)
+            bfsSearch(entryNode, foundNodes);
+    }
+
+
+    if (foundNodes.size() != allNodes.size()) {
+        os << ERR << "number of nodes mismatch!"
+           << " foundNodes.size() = " << foundNodes.size()
+           << " allNodes.size() = " << allNodes.size() << "\n";
+        success = false;
+    } else {
+        os << "Number of nodes = " << foundNodes.size() << "\n";
+    }
+
+    // os << "foundNodes: [";
+    // for (auto* n : foundNodes)
+    //     os << "(" << n << "," << n->id << ") ";
+    // os << "]\n";
+
+    os << "allNodes: [";
+    for (auto* n : allNodes)
+        os << n->id << " ";
+    os << "]\n";
+
+
+    if (success)
+        os << "== Sanity Check " << GREEN << "Success" << RESET << " ==\n";
+    else
+        os << "== Sanity Check " << RED << "Failed" << RESET << " ==\n";
+    return success;
+}
+
+
+void CircuitGraph::draw(std::ostream& os) const {
+    std::vector<std::vector<GateNode*>> tile;
+    auto appendOneLine = [&]() {
+        tile.push_back(std::vector<GateNode*>(leftEntry.size(), nullptr));
+    };
+    auto lastEmptyLine = [&](unsigned c) -> unsigned {
+        if (tile[tile.size() - 1][c] != nullptr) {
+            appendOneLine();
+            return tile.size() - 1;
+        }
+        for (unsigned i = tile.size() - 1; i >= 0; i--) {
+            if (tile[i][c] != nullptr)
+                return i + 1;
+        }
+        return 0;
+    };
+
+    appendOneLine();
+    for (auto* node : allNodes) {
+        unsigned l = 0;
+        auto qubits = node->qubits();
+        for (auto q : qubits) {
+            unsigned tmp = lastEmptyLine(q);
+            if (tmp > l)
+                l = tmp;
+        }
+        for (auto q : qubits)
+            tile[l][q] = node;
+    }
+
+    for (auto line : tile) {
+        for (auto* node : line) {
+            if (node == nullptr); {
+                os << "   |   ";
+                continue;
+            }
+            unsigned id = node->id;
+            if (id < 10)
+                os << " ( " << id << " ) ";
+            else if (id < 100)
+                os << " ( " << id << ") ";
+            else
+                os << " (" << id << ") ";
+        }
+        os << "\n";
+    }
+     
 }
