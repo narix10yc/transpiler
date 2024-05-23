@@ -64,7 +64,6 @@ int main(int argc, char** argv) {
 
     std::cerr << get_msg_start() << "converted to CircuitGraph with "
               << graph.allNodes.size() << " nodes\n";
-    graph.sanityCheck(std::cerr);
     graph.draw(std::cerr);
 
     tic = clock::now();
@@ -72,7 +71,6 @@ int main(int argc, char** argv) {
     tok = clock::now();
 
     std::cerr << get_msg_start() << "transpiled for CPU\n";
-    graph.sanityCheck(std::cerr);
     graph.draw(std::cerr);
 
     tic = clock::now();

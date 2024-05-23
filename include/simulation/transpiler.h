@@ -74,6 +74,7 @@ public:
 
 class CircuitGraph {
     unsigned count;
+    unsigned nqubits;
     struct CompareGateNodePointers {
         bool operator()(const GateNode* lhs, const GateNode* rhs) const {
             return lhs->id < rhs->id;
@@ -100,7 +101,7 @@ private:
     unsigned absorbNeighbouringTwoQubitGates(GateNode* node);
 
 public:
-    CircuitGraph() : count(0), leftEntry(32, nullptr),
+    CircuitGraph() : count(0), nqubits(0), leftEntry(32, nullptr),
                      rightEntry(32, nullptr), allNodes() {}
 
     static CircuitGraph FromQch(const qch::ast::RootNode& root);
@@ -118,8 +119,6 @@ public:
     GateNode* addTwoQubitGate(const U2qGate& u2q);
 
     void transpileForCPU();
-
-    std::vector<GateNode> getNodesInOrder() const;
 
     bool sanityCheck(std::ostream& os) const;
 

@@ -20,7 +20,6 @@ void CircuitGraph::removeGateNode(GateNode* node) {
             rightEntry[q] = left;
     }
 
-    // std::cerr << "removing node with id " << node->id << "\n";
     allNodes.erase(node);
     delete(node);
 }
@@ -99,6 +98,8 @@ unsigned CircuitGraph::connectTwoNodes(GateNode* left, GateNode* right, int q) {
 
 GateNode* CircuitGraph::addSingleQubitGate(const U3Gate& u3) {
     unsigned k = u3.k;
+    if (k >= nqubits)
+        nqubits = k + 1;
     if (k >= leftEntry.size()) {
         leftEntry.resize(k + 1, nullptr);
         rightEntry.resize(k + 1, nullptr);
@@ -127,6 +128,8 @@ GateNode* CircuitGraph::addTwoQubitGate(const U2qGate& u2q) {
     unsigned k = u2q.k;
     unsigned l = u2q.l;
     unsigned tmp = (k > l) ? u2q.k : u2q.l;
+    if (tmp >= nqubits)
+        nqubits = tmp + 1;
     if (tmp >= leftEntry.size()) {
         leftEntry.resize(tmp + 1, nullptr);
         rightEntry.resize(tmp + 1, nullptr);
@@ -148,7 +151,7 @@ GateNode* CircuitGraph::addTwoQubitGate(const U2qGate& u2q) {
         if (leftEntry[q] == nullptr) {
             leftEntry[q] = node;
         } else {
-            connectTwoNodes(rightEntry[q], node);
+            connectTwoNodes(rightEntry[q], node, q);
         }
         rightEntry[q] = node;
     }
@@ -202,7 +205,7 @@ unsigned CircuitGraph::absorbNeighbouringSingleQubitGates(GateNode* node) {
         }
         return nFused;
     }
-    
+
     GateNode* leftK = node->dataVector[0].leftNode;
     if (leftK != nullptr && leftK->nqubits == 1) {
         // R @ (L otimes I)
@@ -257,6 +260,8 @@ unsigned CircuitGraph::absorbNeighbouringTwoQubitGates(GateNode* node) {
 
 void CircuitGraph::transpileForCPU() {
     // step 1: absorb single-qubit gates
+    assert(sanityCheck(std::cerr));
+
     unsigned nFused;
     do {
         nFused = 0;
@@ -267,7 +272,8 @@ void CircuitGraph::transpileForCPU() {
             }
         }
     } while (nFused > 0);
-    std::cerr << "-- Fusion step 1 finished! " << allNodes.size() << " nodes remaining\n";
+    std::cerr << "-- Fusion step 1 finished! "
+              << allNodes.size() << " nodes remaining\n";
 
     // step 2: fuse two-qubit gates
     do {
@@ -279,7 +285,10 @@ void CircuitGraph::transpileForCPU() {
             }
         }
     } while (nFused > 0);
-    std::cerr << "-- Fusion step 2 finished! " << allNodes.size() << " nodes remaining\n";
+    std::cerr << "-- Fusion step 2 finished! "
+              << allNodes.size() << " nodes remaining\n";
+    
+    assert(sanityCheck(std::cerr));
 }
 
 namespace {
@@ -313,18 +322,6 @@ RootNode CircuitGraph::toQch() const {
     }
     root.addStmt(std::move(circuit));
     return root;
-}
-
-void bfsSearch(GateNode* node, std::set<GateNode*>& s) {
-    if (node == nullptr)
-        return;
-    if (s.count(node) == 0)
-        s.insert(node);
-    for (const auto& data : node->dataVector) {
-        if (s.count(data.rightNode) > 0)
-            continue;
-        bfsSearch(data.rightNode, s);
-    }
 }
 
 bool CircuitGraph::sanityCheck(std::ostream& os) const {
@@ -401,6 +398,32 @@ bool CircuitGraph::sanityCheck(std::ostream& os) const {
             }
         }
     }
+    // check number of nodes via connection
+    std::set<GateNode*> foundNodes;
+    std::queue<GateNode*> searchQueue;
+    for (auto* entryNode : leftEntry) {
+        if (entryNode != nullptr)
+            searchQueue.push(entryNode);
+    }
+
+    while (!searchQueue.empty()) {
+        auto* node = searchQueue.front();
+        searchQueue.pop();
+        if (foundNodes.count(node) == 0)
+            foundNodes.insert(node);
+        else continue;
+
+        for (auto& data : node->dataVector) {
+            if (data.rightNode != nullptr)
+                searchQueue.push(data.rightNode);
+        }
+    }
+    if (foundNodes.size() != allNodes.size()) {
+        os << ERR << "number of nodes mismatch!"
+           << " foundNodes.size() = " << foundNodes.size()
+           << " allNodes.size() = " << allNodes.size() << "\n";
+        connectionSuccess = false;
+    }
 
     if (connectionSuccess)
         os << "Connection checked! (" << allNodes.size() << " nodes)\n";
@@ -408,85 +431,79 @@ bool CircuitGraph::sanityCheck(std::ostream& os) const {
         success = false;
     
 
-    // number of nodes
-    std::set<GateNode*> foundNodes;
-    for (auto* entryNode : leftEntry) {
-        if (entryNode != nullptr)
-            bfsSearch(entryNode, foundNodes);
-    }
-
-
-    if (foundNodes.size() != allNodes.size()) {
-        os << ERR << "number of nodes mismatch!"
-           << " foundNodes.size() = " << foundNodes.size()
-           << " allNodes.size() = " << allNodes.size() << "\n";
-        success = false;
-    } else {
-        os << "Number of nodes = " << foundNodes.size() << "\n";
-    }
-
-    // os << "foundNodes: [";
-    // for (auto* n : foundNodes)
-    //     os << "(" << n << "," << n->id << ") ";
-    // os << "]\n";
-
-    os << "allNodes: [";
-    for (auto* n : allNodes)
-        os << n->id << " ";
-    os << "]\n";
-
-
     if (success)
-        os << "== Sanity Check " << GREEN << "Success" << RESET << " ==\n";
+        os << "== " << CYAN << "Sanity Check " << GREEN << "Success" << RESET << " ==\n";
     else
-        os << "== Sanity Check " << RED << "Failed" << RESET << " ==\n";
+        os << "== " << CYAN << "Sanity Check " << RED << "Failed" << RESET << " ==\n";
     return success;
 }
 
 
 void CircuitGraph::draw(std::ostream& os) const {
-    std::vector<std::vector<GateNode*>> tile;
-    auto appendOneLine = [&]() {
-        tile.push_back(std::vector<GateNode*>(leftEntry.size(), nullptr));
+    std::vector<std::vector<int>> tile;
+    std::vector<std::vector<bool>> isMultiQubit;
+
+    auto appendOneLine = [&, nqubits=nqubits]() {
+        tile.push_back(std::vector<int>(nqubits, -1));
+        isMultiQubit.push_back(std::vector<bool>(nqubits, false));
     };
+    
     auto lastEmptyLine = [&](unsigned c) -> unsigned {
-        if (tile[tile.size() - 1][c] != nullptr) {
+        if (tile[tile.size() - 1][c] != -1) {
+            // last line is occupied
             appendOneLine();
             return tile.size() - 1;
         }
-        for (unsigned i = tile.size() - 1; i >= 0; i--) {
-            if (tile[i][c] != nullptr)
+
+        for (int i = tile.size() - 2; i >= 0; i--) 
+            // find the first occupied one, bottom up
+            if (tile[i][c] != -1)
                 return i + 1;
-        }
+        
         return 0;
     };
 
+    unsigned largestID = 0;
     appendOneLine();
     for (auto* node : allNodes) {
+        if (node == nullptr)
+            continue;
+
         unsigned l = 0;
-        auto qubits = node->qubits();
+        std::vector<unsigned> qubits = node->qubits();
         for (auto q : qubits) {
             unsigned tmp = lastEmptyLine(q);
             if (tmp > l)
                 l = tmp;
         }
-        for (auto q : qubits)
-            tile[l][q] = node;
+        if (qubits.size() > 1) {
+            for (auto q : qubits) {
+                tile[l][q] = node->id;
+                isMultiQubit[l][q] = true;
+            }
+        } else {
+            tile[l][qubits[0]] = node->id;
+        }
+        
+        if (node->id > largestID)
+            largestID = node->id;
     }
 
-    for (auto line : tile) {
-        for (auto* node : line) {
-            if (node == nullptr); {
-                os << "   |   ";
+    unsigned w = std::log10(largestID) + 1;
+    if (w % 2 == 0)
+        w++;
+    std::string whiteSpace(w/2+1, ' ');
+
+    for (unsigned l = 0; l < tile.size(); l++) {
+        for (unsigned q = 0; q < tile[0].size(); q++) {
+            auto id = tile[l][q];
+            if (id == -1) {
+                os << whiteSpace << "|" << whiteSpace << " ";
                 continue;
             }
-            unsigned id = node->id;
-            if (id < 10)
-                os << " ( " << id << " ) ";
-            else if (id < 100)
-                os << " ( " << id << ") ";
-            else
-                os << " (" << id << ") ";
+            os << ((isMultiQubit[l][q]) ? " " : "(")
+               << std::setw(w) << std::setfill(' ') << id
+               << ((isMultiQubit[l][q]) ? "  " : ") ");
         }
         os << "\n";
     }
