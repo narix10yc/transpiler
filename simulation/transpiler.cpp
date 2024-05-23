@@ -262,29 +262,29 @@ void CircuitGraph::transpileForCPU() {
     // step 1: absorb single-qubit gates
     assert(sanityCheck(std::cerr));
 
-    unsigned nFused;
+    bool update;
     do {
-        nFused = 0;
+        update = false;
         for (GateNode* node : allNodes) {
-            nFused += absorbNeighbouringSingleQubitGates(node);
-            if (nFused > 0) {
+            if (absorbNeighbouringSingleQubitGates(node) > 0) {
+                update = true;
                 break;
             }
         }
-    } while (nFused > 0);
+    } while (update);
     std::cerr << "-- Fusion step 1 finished! "
               << allNodes.size() << " nodes remaining\n";
 
     // step 2: fuse two-qubit gates
     do {
-        nFused = 0;
+        update = false;
         for (GateNode* node : allNodes) {
-            auto nFused = absorbNeighbouringTwoQubitGates(node);
-            if (nFused > 0) {
+            if (absorbNeighbouringTwoQubitGates(node) > 0) {
+                update = true;
                 break;
             }
         }
-    } while (nFused > 0);
+    } while (update);
     std::cerr << "-- Fusion step 2 finished! "
               << allNodes.size() << " nodes remaining\n";
     

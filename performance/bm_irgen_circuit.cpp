@@ -6,7 +6,7 @@
 
 using namespace timeit;
 
-using real_ty = float;
+using real_ty = double;
 const unsigned nqubits = 24;
 
 using Statevector = simulation::sv::StatevectorSep<real_ty>;
