@@ -5,6 +5,7 @@
 #include <memory>
 #include <vector>
 #include <iostream>
+#include <cassert>
 
 namespace simulation {
 class CPUGenContext;
@@ -124,12 +125,24 @@ public:
 
 class CASExpr : public Node {
 public:
+    struct expr_value {
+        bool isConstant;
+        double value;
+    };
     void print(std::ostream&) const;
     void genCPU(simulation::CPUGenContext&) const {}
 
-    virtual void canonicalize();
+    virtual expr_value getExprValue() const { return {false}; }
 
-    virtual std::unique_ptr<CASExpr> derivative() const;
+    virtual std::unique_ptr<CASExpr> canonicalize() const { 
+        assert(false && "Should not call from CASExpr class");
+        return nullptr;
+    }
+
+    virtual std::unique_ptr<CASExpr> derivative(const std::string& var) const {
+        assert(false && "Should not call from CASExpr class");
+        return nullptr;
+    }
     // virtual void printLatex(std::ostream&) const;
 };
 
@@ -141,11 +154,13 @@ public:
 
     double getValue() const { return value; }
 
+    expr_value getExprValue() const override;
+
     void print(std::ostream&) const; 
 
-    void canonicalize() override;
+    std::unique_ptr<CASExpr> canonicalize() const override;
     
-    std::unique_ptr<CASExpr> derivative() const override;
+    std::unique_ptr<CASExpr> derivative(const std::string& var) const override;
 
 };
 
@@ -156,24 +171,14 @@ public:
 
     std::string getName() const { return name; }
 
-    void print(std::ostream&) const; 
-
-    void canonicalize() override;
-
-    std::unique_ptr<CASExpr> derivative() const override;
-
-};
-
-class CASVariable : public CASExpr {
-    std::string name;
-public:
-    CASVariable(std::string name) : name(name) {}
-
-    std::string getName() const { return name; }
+    expr_value getExprValue() const override;
 
     void print(std::ostream&) const; 
 
-    void canonicalize() override;
+    std::unique_ptr<CASExpr> canonicalize() const override;
+
+    std::unique_ptr<CASExpr> derivative(const std::string& var) const override;
+
 };
 
 
@@ -186,9 +191,11 @@ public:
 
     void print(std::ostream&) const; 
 
-    void canonicalize() override;
+    expr_value getExprValue() const override;
 
-    std::unique_ptr<CASExpr> derivative() const override;
+    std::unique_ptr<CASExpr> canonicalize() const override;
+
+    std::unique_ptr<CASExpr> derivative(const std::string& var) const override;
 
 };
 
@@ -201,9 +208,11 @@ public:
 
     void print(std::ostream&) const; 
 
-    void canonicalize() override;
+    expr_value getExprValue() const override;
 
-    std::unique_ptr<CASExpr> derivative() const override;
+    std::unique_ptr<CASExpr> canonicalize() const override;
+
+    std::unique_ptr<CASExpr> derivative(const std::string& var) const override;
 
 };
 
@@ -216,9 +225,11 @@ public:
         
     void print(std::ostream&) const; 
 
-    void canonicalize() override;
+    expr_value getExprValue() const override;
 
-    std::unique_ptr<CASExpr> derivative() const override;
+    std::unique_ptr<CASExpr> canonicalize() const override;
+
+    std::unique_ptr<CASExpr> derivative(const std::string& var) const override;
 
 };
 
@@ -229,15 +240,43 @@ public:
         
     void print(std::ostream&) const; 
 
-    void canonicalize() override;
+    expr_value getExprValue() const override;
 
-    std::unique_ptr<CASExpr> derivative() const override;
+    std::unique_ptr<CASExpr> canonicalize() const override;
+
+    std::unique_ptr<CASExpr> derivative(const std::string& var) const override;
 
 };
 
+class CASCos : public CASExpr {
+    std::unique_ptr<CASExpr> expr;
+public:
+    CASCos(std::unique_ptr<CASExpr> expr) : expr(std::move(expr)) {}
+        
+    void print(std::ostream&) const; 
 
+    expr_value getExprValue() const override;
 
+    std::unique_ptr<CASExpr> canonicalize() const override;
 
+    std::unique_ptr<CASExpr> derivative(const std::string& var) const override;
+
+};
+
+class CASSin : public CASExpr {
+    std::unique_ptr<CASExpr> expr;
+public:
+    CASSin(std::unique_ptr<CASExpr> expr) : expr(std::move(expr)) {}
+        
+    void print(std::ostream&) const; 
+
+    expr_value getExprValue() const override;
+
+    std::unique_ptr<CASExpr> canonicalize() const override;
+
+    std::unique_ptr<CASExpr> derivative(const std::string& var) const override;
+
+};
 
 
 
