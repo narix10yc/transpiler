@@ -88,7 +88,6 @@ public:
     void genCPU(simulation::CPUGenContext& ctx) const override;
 };
 
-
 class CircuitStmt : public Statement {
     std::string name;
     unsigned nqubits;
@@ -121,6 +120,124 @@ public:
 
     void genCPU(simulation::CPUGenContext& ctx) const override;
 };
+
+
+class CASExpr : public Node {
+public:
+    void print(std::ostream&) const;
+    void genCPU(simulation::CPUGenContext&) const {}
+
+    virtual void canonicalize();
+
+    virtual std::unique_ptr<CASExpr> derivative() const;
+    // virtual void printLatex(std::ostream&) const;
+};
+
+
+class CASConstant : public CASExpr {
+    double value;
+public:
+    CASConstant(double value) : value(value) {}
+
+    double getValue() const { return value; }
+
+    void print(std::ostream&) const; 
+
+    void canonicalize() override;
+    
+    std::unique_ptr<CASExpr> derivative() const override;
+
+};
+
+class CASVariable : public CASExpr {
+    std::string name;
+public:
+    CASVariable(std::string name) : name(name) {}
+
+    std::string getName() const { return name; }
+
+    void print(std::ostream&) const; 
+
+    void canonicalize() override;
+
+    std::unique_ptr<CASExpr> derivative() const override;
+
+};
+
+class CASVariable : public CASExpr {
+    std::string name;
+public:
+    CASVariable(std::string name) : name(name) {}
+
+    std::string getName() const { return name; }
+
+    void print(std::ostream&) const; 
+
+    void canonicalize() override;
+};
+
+
+class CASAdd : public CASExpr {
+    std::unique_ptr<CASExpr> lhs;
+    std::unique_ptr<CASExpr> rhs;
+public:
+    CASAdd(std::unique_ptr<CASExpr> lhs, std::unique_ptr<CASExpr> rhs)
+        : lhs(std::move(lhs)), rhs(std::move(rhs)) {}
+
+    void print(std::ostream&) const; 
+
+    void canonicalize() override;
+
+    std::unique_ptr<CASExpr> derivative() const override;
+
+};
+
+class CASSub : public CASExpr {
+    std::unique_ptr<CASExpr> lhs;
+    std::unique_ptr<CASExpr> rhs;
+public:
+    CASSub(std::unique_ptr<CASExpr> lhs, std::unique_ptr<CASExpr> rhs)
+        : lhs(std::move(lhs)), rhs(std::move(rhs)) {}
+
+    void print(std::ostream&) const; 
+
+    void canonicalize() override;
+
+    std::unique_ptr<CASExpr> derivative() const override;
+
+};
+
+class CASMul : public CASExpr {
+    std::unique_ptr<CASExpr> lhs;
+    std::unique_ptr<CASExpr> rhs;
+public:
+    CASMul(std::unique_ptr<CASExpr> lhs, std::unique_ptr<CASExpr> rhs)
+        : lhs(std::move(lhs)), rhs(std::move(rhs)) {}
+        
+    void print(std::ostream&) const; 
+
+    void canonicalize() override;
+
+    std::unique_ptr<CASExpr> derivative() const override;
+
+};
+
+class CASNeg : public CASExpr {
+    std::unique_ptr<CASExpr> expr;
+public:
+    CASNeg(std::unique_ptr<CASExpr> expr) : expr(std::move(expr)) {}
+        
+    void print(std::ostream&) const; 
+
+    void canonicalize() override;
+
+    std::unique_ptr<CASExpr> derivative() const override;
+
+};
+
+
+
+
 
 
 
