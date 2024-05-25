@@ -1,5 +1,4 @@
-#include "simulation/utils.h"
-
+#include "simulation/types.h"
 #include <random>
 
 using namespace simulation;

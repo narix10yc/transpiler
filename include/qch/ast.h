@@ -2,6 +2,8 @@
 #define QCH_AST_H_
 
 #include <string>
+#include <set>
+#include <unordered_set>
 #include <memory>
 #include <vector>
 #include <iostream>
@@ -122,32 +124,198 @@ public:
     void genCPU(simulation::CPUGenContext& ctx) const override;
 };
 
+// forward declaration
+class CASContext;
 
-class CASExpr : public Node {
+class CASNode {
 public:
     struct expr_value {
         bool isConstant;
         double value;
     };
-    void print(std::ostream&) const;
-    void genCPU(simulation::CPUGenContext&) const {}
 
-    virtual expr_value getExprValue() const { return {false}; }
+    virtual ~CASNode() = default;
+    
+    virtual expr_value getExprValue() const = 0;
 
-    virtual std::unique_ptr<CASExpr> canonicalize() const { 
-        assert(false && "Should not call from CASExpr class");
-        return nullptr;
-    }
+    virtual CASNode* canonicalize(CASContext& ctx) const = 0;
 
-    virtual std::unique_ptr<CASExpr> derivative(const std::string& var) const {
-        assert(false && "Should not call from CASExpr class");
-        return nullptr;
-    }
-    // virtual void printLatex(std::ostream&) const;
+    virtual CASNode* derivative(const std::string& var,
+                                CASContext& ctx) const = 0;
+    
+    virtual void print(std::ostream& os) const = 0;
+
+    // virtual void printLatex(std::ostream& os) const = 0;
 };
 
 
-class CASConstant : public CASExpr {
+class CASContext {
+    std::vector<CASNode*> nodes;
+public: 
+    CASContext() : nodes() {}
+
+    CASContext(CASContext&) = delete;
+    CASContext(CASContext&&) = delete;
+    CASContext& operator=(CASContext&) = delete;
+    CASContext& operator=(CASContext&&) = delete;
+    ~CASContext() {
+        for (auto node : nodes)
+            delete(node);
+    }
+
+public:
+    CASNode* addNode(CASNode* node) {
+        nodes.push_back(node);
+        return node;
+    }
+
+    CASNode* getConstant(double value);
+
+    CASNode* getVariable(const std::string& name);
+
+    /// @brief Add
+    CASNode* getAdd(CASNode* lhs, CASNode* rhs);
+    CASNode* getAdd(CASNode* lhs, double value) {
+        return getAdd(lhs, getConstant(value));
+    }
+    CASNode* getAdd(CASNode* lhs, const std::string& var) {
+        return getAdd(lhs, getVariable(var));
+    }
+
+    /// @brief Sub 
+    CASNode* getSub(CASNode* lhs, CASNode* rhs);
+    CASNode* getSub(CASNode* lhs, double value) {
+        return getSub(lhs, getConstant(value));
+    }
+    CASNode* getSub(CASNode* lhs, const std::string& var) {
+        return getSub(lhs, getVariable(var));
+    }
+
+    /// @brief Mul
+    CASNode* getMul(CASNode* lhs, CASNode* rhs);
+    CASNode* getMul(CASNode* lhs, double value) {
+        return getMul(getConstant(value), lhs);
+    }
+    CASNode* getMul(CASNode* lhs, const std::string& var) {
+        return getMul(getVariable(var), lhs);
+    }
+
+    /// @brief Pow
+    CASNode* getPow(CASNode* base, CASNode* exponent);
+    CASNode* getPow(CASNode* lhs, double value) {
+        return getPow(lhs, getConstant(value));
+    }
+
+    /// @brief Neg
+    CASNode* getNeg(CASNode* node);
+
+    /// @brief Cos
+    CASNode* getCos(CASNode* node);
+
+    /// @brief Sin
+    CASNode* getSin(CASNode* node);
+};
+
+
+class CASGraphExpr : public Node {
+    CASContext ctx;
+    CASNode* entry;
+public:
+    CASGraphExpr() : ctx(), entry(nullptr) {}
+
+    CASContext& getContext() { return ctx; }
+
+    CASNode* getConstant(double value) {
+        return ctx.getConstant(value);
+    }
+    CASNode* getVariable(const std::string& name) {
+        return ctx.getVariable(name);
+    }
+
+    /// @brief Add
+    CASNode* getAdd(CASNode* lhs, CASNode* rhs) {
+        return entry = ctx.getAdd(lhs, rhs);
+    }
+    CASNode* getAdd(CASNode* lhs, double value) {
+        return getAdd(lhs, getConstant(value));
+    }
+    CASNode* getAdd(CASNode* lhs, const std::string& var) {
+        return getAdd(lhs, getVariable(var));
+    }
+
+    /// @brief Sub
+    CASNode* getSub(CASNode* lhs, CASNode* rhs) {
+        return entry = ctx.getSub(lhs, rhs);
+    }
+    CASNode* getSub(CASNode* lhs, double value) {
+        return getSub(lhs, getConstant(value));
+    }
+    CASNode* getSub(CASNode* lhs, const std::string& var) {
+        return getSub(lhs, getVariable(var));
+    }
+
+    /// @brief Mul
+    CASNode* getMul(CASNode* lhs, CASNode* rhs) {
+        return entry = ctx.getMul(lhs, rhs);
+    }
+    CASNode* getMul(CASNode* lhs, double value) {
+        return getMul(getConstant(value), lhs);
+    }
+    CASNode* getMul(CASNode* lhs, const std::string& var) {
+        return getMul(getVariable(var), lhs);
+    }
+
+    /// @brief Pow
+    CASNode* getPow(CASNode* base, CASNode* exponent) {
+        return entry = ctx.getPow(base, exponent);
+    }
+    CASNode* getPow(CASNode* lhs, double value) {
+        return getPow(lhs, getConstant(value));
+    }
+
+    /// @brief Neg
+    CASNode* getNeg(CASNode* node) {
+        return entry = ctx.getNeg(node);
+    }
+
+    /// @brief Cos
+    CASNode* getCos(CASNode* node) {
+        return entry = ctx.getCos(node);
+    }
+
+    /// @brief Sin
+    CASNode* getSin(CASNode* node) {
+        return entry = ctx.getSin(node);
+    }
+
+    void setEntry(CASNode* node) { entry = node; }
+
+    void print(std::ostream& os) const override {
+        assert(entry != nullptr);
+        entry->print(os);
+    }
+
+    void genCPU(simulation::CPUGenContext&) const override {}
+
+    CASNode* computeCanonicalize(CASNode* node) {
+        return node->canonicalize(ctx);
+    }
+    CASNode* computeCanonicalize() {
+        return computeCanonicalize(entry);
+    }
+
+    CASNode* computeDerivative(const std::string& var, CASNode* node) {
+        return node->derivative(var, ctx);
+    }
+
+    CASNode* computeDerivative(const std::string& var) {
+        return computeDerivative(var, entry);
+    }
+
+};
+
+
+class CASConstant : public CASNode {
     double value;
 public:
     CASConstant(double value) : value(value) {}
@@ -156,15 +324,16 @@ public:
 
     expr_value getExprValue() const override;
 
-    void print(std::ostream&) const; 
+    CASNode* canonicalize(CASContext& ctx) const override;
 
-    std::unique_ptr<CASExpr> canonicalize() const override;
-    
-    std::unique_ptr<CASExpr> derivative(const std::string& var) const override;
+    CASNode* derivative(const std::string& var,
+                        CASContext& ctx) const override;
+
+    void print(std::ostream& os) const override;
 
 };
 
-class CASVariable : public CASExpr {
+class CASVariable : public CASNode {
     std::string name;
 public:
     CASVariable(std::string name) : name(name) {}
@@ -173,113 +342,128 @@ public:
 
     expr_value getExprValue() const override;
 
-    void print(std::ostream&) const; 
+    CASNode* canonicalize(CASContext& ctx) const override;
 
-    std::unique_ptr<CASExpr> canonicalize() const override;
+    CASNode* derivative(const std::string& var,
+                        CASContext& ctx) const override;
 
-    std::unique_ptr<CASExpr> derivative(const std::string& var) const override;
+    void print(std::ostream& os) const override;
 
 };
 
-
-class CASAdd : public CASExpr {
-    std::unique_ptr<CASExpr> lhs;
-    std::unique_ptr<CASExpr> rhs;
+class CASAdd : public CASNode {
+    CASNode* lhs;
+    CASNode* rhs;
 public:
-    CASAdd(std::unique_ptr<CASExpr> lhs, std::unique_ptr<CASExpr> rhs)
-        : lhs(std::move(lhs)), rhs(std::move(rhs)) {}
-
-    void print(std::ostream&) const; 
+    CASAdd(CASNode* lhs, CASNode* rhs) : lhs(lhs), rhs(rhs) {}
 
     expr_value getExprValue() const override;
 
-    std::unique_ptr<CASExpr> canonicalize() const override;
+    CASNode* canonicalize(CASContext& ctx) const override;
 
-    std::unique_ptr<CASExpr> derivative(const std::string& var) const override;
+    CASNode* derivative(const std::string& var,
+                        CASContext& ctx) const override;
 
+    void print(std::ostream& os) const override;
 };
 
-class CASSub : public CASExpr {
-    std::unique_ptr<CASExpr> lhs;
-    std::unique_ptr<CASExpr> rhs;
+class CASSub : public CASNode {
+    CASNode* lhs;
+    CASNode* rhs;
 public:
-    CASSub(std::unique_ptr<CASExpr> lhs, std::unique_ptr<CASExpr> rhs)
-        : lhs(std::move(lhs)), rhs(std::move(rhs)) {}
-
-    void print(std::ostream&) const; 
+    CASSub(CASNode* lhs, CASNode* rhs) : lhs(lhs), rhs(rhs) {}
 
     expr_value getExprValue() const override;
 
-    std::unique_ptr<CASExpr> canonicalize() const override;
+    CASNode* canonicalize(CASContext& ctx) const override;
 
-    std::unique_ptr<CASExpr> derivative(const std::string& var) const override;
+    CASNode* derivative(const std::string& var,
+                        CASContext& ctx) const override;
 
+    void print(std::ostream& os) const override;
 };
 
-class CASMul : public CASExpr {
-    std::unique_ptr<CASExpr> lhs;
-    std::unique_ptr<CASExpr> rhs;
+class CASMul : public CASNode {
+    CASNode* lhs;
+    CASNode* rhs;
 public:
-    CASMul(std::unique_ptr<CASExpr> lhs, std::unique_ptr<CASExpr> rhs)
-        : lhs(std::move(lhs)), rhs(std::move(rhs)) {}
-        
-    void print(std::ostream&) const; 
+    CASMul(CASNode* lhs, CASNode* rhs) : lhs(lhs), rhs(rhs) {}
 
     expr_value getExprValue() const override;
 
-    std::unique_ptr<CASExpr> canonicalize() const override;
+    CASNode* canonicalize(CASContext& ctx) const override;
 
-    std::unique_ptr<CASExpr> derivative(const std::string& var) const override;
+    CASNode* derivative(const std::string& var,
+                        CASContext& ctx) const override;
 
+    void print(std::ostream& os) const override;
 };
 
-class CASNeg : public CASExpr {
-    std::unique_ptr<CASExpr> expr;
+class CASPow : public CASNode {
+    CASNode* base;
+    CASNode* exponent;
 public:
-    CASNeg(std::unique_ptr<CASExpr> expr) : expr(std::move(expr)) {}
-        
-    void print(std::ostream&) const; 
+    CASPow(CASNode* base, CASNode* exponent) : base(base), exponent(exponent) {}
 
     expr_value getExprValue() const override;
 
-    std::unique_ptr<CASExpr> canonicalize() const override;
+    CASNode* canonicalize(CASContext& ctx) const override;
 
-    std::unique_ptr<CASExpr> derivative(const std::string& var) const override;
+    CASNode* derivative(const std::string& var,
+                        CASContext& ctx) const override;
 
+    void print(std::ostream& os) const override;
 };
 
-class CASCos : public CASExpr {
-    std::unique_ptr<CASExpr> expr;
+class CASNeg : public CASNode {
+    CASNode* node;
 public:
-    CASCos(std::unique_ptr<CASExpr> expr) : expr(std::move(expr)) {}
-        
-    void print(std::ostream&) const; 
+    CASNeg(CASNode* node) : node(node) {}
 
     expr_value getExprValue() const override;
 
-    std::unique_ptr<CASExpr> canonicalize() const override;
+    CASNode* canonicalize(CASContext& ctx) const override;
 
-    std::unique_ptr<CASExpr> derivative(const std::string& var) const override;
+    CASNode* derivative(const std::string& var,
+                        CASContext& ctx) const override;
 
+    void print(std::ostream& os) const override;
 };
 
-class CASSin : public CASExpr {
-    std::unique_ptr<CASExpr> expr;
+class CASCos : public CASNode {
+    CASNode* node;
 public:
-    CASSin(std::unique_ptr<CASExpr> expr) : expr(std::move(expr)) {}
-        
-    void print(std::ostream&) const; 
+    CASCos(CASNode* node) : node(node) {}
 
     expr_value getExprValue() const override;
 
-    std::unique_ptr<CASExpr> canonicalize() const override;
+    CASNode* canonicalize(CASContext& ctx) const override;
 
-    std::unique_ptr<CASExpr> derivative(const std::string& var) const override;
+    CASNode* derivative(const std::string& var,
+                        CASContext& ctx) const override;
 
+    void print(std::ostream& os) const override;
 };
+
+class CASSin : public CASNode {
+    CASNode* node;
+public:
+    CASSin(CASNode* node) : node(node) {}
+
+    expr_value getExprValue() const override;
+
+    CASNode* canonicalize(CASContext& ctx) const override;
+
+    CASNode* derivative(const std::string& var,
+                        CASContext& ctx) const override;
+
+    void print(std::ostream& os) const override;
+};
+
+
 
 
 
 } // namespace qch
 
-#endif // QCH_AST_H_
+#endif // QCH_AST_H_w

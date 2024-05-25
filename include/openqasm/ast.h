@@ -1,6 +1,5 @@
-#ifndef AST_H_
-#define AST_H_
-
+#ifndef OPENQASM_AST_H_
+#define OPENQASM_AST_H_
 
 #include <iostream>
 #include <string>
@@ -341,4 +340,4 @@ public:
 
 } // namespace openqasm::ast
 
-#endif // AST_H_
+#endif // OPENQASM_AST_H_

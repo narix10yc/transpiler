@@ -2,7 +2,7 @@
 #include <cmath>
 
 using namespace qch::ast;
-using expr_value = qch::ast::CASExpr::expr_value;
+using expr_value = qch::ast::CASNode::expr_value;
 
 void GateApplyStmt::print(std::ostream& os) const {
     os << "  " << name;
@@ -34,6 +34,43 @@ void CircuitStmt::print(std::ostream& os) const {
     os << "}\n";
 }
 
+/* #region Hello */
+CASNode* CASContext::getConstant(double value) {
+    return addNode(new CASConstant(value));
+}
+
+CASNode* CASContext::getVariable(const std::string& name) {
+    return addNode(new CASVariable(name));
+}
+
+CASNode* CASContext::getAdd(CASNode* lhs, CASNode* rhs) {
+    return addNode(new CASAdd(lhs, rhs));
+}
+
+CASNode* CASContext::getSub(CASNode* lhs, CASNode* rhs) {
+    return addNode(new CASSub(lhs, rhs));
+}
+
+CASNode* CASContext::getMul(CASNode* lhs, CASNode* rhs) {
+    return addNode(new CASMul(lhs, rhs));
+}
+
+CASNode* CASContext::getPow(CASNode* base, CASNode* exponent) {
+    return addNode(new CASPow(base, exponent));
+}
+
+CASNode* CASContext::getNeg(CASNode* node) {
+    return addNode(new CASNeg(node));
+}
+
+CASNode* CASContext::getCos(CASNode* node) {
+    return addNode(new CASCos(node));
+}
+
+CASNode* CASContext::getSin(CASNode* node) {
+    return addNode(new CASSin(node));
+}
+/* #endregion */
 
 void CASConstant::print(std::ostream& os) const {
     os << value;
@@ -61,20 +98,26 @@ void CASMul::print(std::ostream& os) const {
     rhs->print(os);
 }
 
+void CASPow::print(std::ostream& os) const {
+    base->print(os);
+    os << " ** ";
+    exponent->print(os);
+}
+
 void CASNeg::print(std::ostream& os) const {
     os << "-";
-    expr->print(os);
+    node->print(os);
 }
 
 void CASCos::print(std::ostream& os) const {
     os << "cos(";
-    expr->print(os);
+    node->print(os);
     os << ")";
 }
 
 void CASSin::print(std::ostream& os) const {
     os << "sin(";
-    expr->print(os);
+    node->print(os);
     os << ")";
 }
 
@@ -107,114 +150,200 @@ expr_value CASMul::getExprValue() const {
     auto vR = rhs->getExprValue();
     if (vL.isConstant && vR.isConstant)
         return { true, vL.value * vR.value };
+    else if (vL.isConstant && vL.value == 0.0)
+        return { true, 0.0 };
+    else if (vR.isConstant && vR.value == 0.0)
+        return { true, 0.0 };
+    return { false };
+}
+
+expr_value CASPow::getExprValue() const {
+    auto vB = base->getExprValue();
+    auto vE = exponent->getExprValue();
+    if (vB.isConstant && vE.isConstant)
+        return { true, std::pow(vB.value, vE.value) };
     return { false };
 }
 
 expr_value CASNeg::getExprValue() const {
-    auto v = expr->getExprValue();
+    auto v = node->getExprValue();
     if (v.isConstant)
         return { true, -v.value };
     return { false };
 }
 
 expr_value CASCos::getExprValue() const {
-    auto v = expr->getExprValue();
+    auto v = node->getExprValue();
     if (v.isConstant)
         return { true, std::cos(v.value) };
     return { false };
 }
 
 expr_value CASSin::getExprValue() const {
-    auto v = expr->getExprValue();
+    auto v = node->getExprValue();
     if (v.isConstant)
         return { true, std::sin(v.value) };
     return { false };
 }
 
 
-std::unique_ptr<CASExpr> CASConstant::canonicalize() const {
-    return std::make_unique<CASConstant>(this);
+CASNode* CASConstant::canonicalize(CASContext& ctx) const {
+    return ctx.getConstant(value);
 }
 
-std::unique_ptr<CASExpr> CASVariable::canonicalize() const {
-    return std::make_unique<CASVariable>(this);
+CASNode* CASVariable::canonicalize(CASContext& ctx) const {
+    return ctx.getVariable(name);
 }
 
-std::unique_ptr<CASExpr> CASAdd::canonicalize() const {
-    auto v = getExprValue();
-    if (v.isConstant)
-        return std::make_unique<CASConstant>(v.value);
-    return std::make_unique<CASAdd>(this);
+CASNode* CASAdd::canonicalize(CASContext& ctx) const {
+    auto newLHS = lhs->canonicalize(ctx);
+    auto vL = newLHS->getExprValue();
+    if (vL.isConstant && vL.value == 0.0)
+        return rhs->canonicalize(ctx);
+
+    auto newRHS = rhs->canonicalize(ctx);
+    auto vR = newRHS->getExprValue();
+    if (vR.isConstant && vR.value == 0.0)
+        return newLHS;
+    
+    if (vL.isConstant && vR.isConstant)
+        return ctx.getConstant(vL.value + vR.value);
+
+    return ctx.getAdd(newLHS, newRHS);
 }
 
-std::unique_ptr<CASExpr> CASSub::canonicalize() const {
-    auto v = getExprValue();
-    if (v.isConstant)
-        return std::make_unique<CASConstant>(v.value);
-    return std::make_unique<CASSub>(this);
+CASNode* CASSub::canonicalize(CASContext& ctx) const {
+    auto newLHS = lhs->canonicalize(ctx);
+    auto vL = newLHS->getExprValue();
+    if (vL.isConstant && vL.value == 0.0)
+        return ctx.getNeg(rhs->canonicalize(ctx));
+
+    auto newRHS = rhs->canonicalize(ctx);
+    auto vR = newRHS->getExprValue();
+    if (vR.isConstant && vR.value == 0.0)
+        return newLHS;
+    
+    if (vL.isConstant && vR.isConstant)
+        return ctx.getConstant(vL.value - vR.value);
+
+    return ctx.getSub(newLHS, newRHS);
 }
 
-std::unique_ptr<CASExpr> CASMul::canonicalize() const {
-    auto v = getExprValue();
-    if (v.isConstant)
-        return std::make_unique<CASConstant>(v.value);
-    return std::make_unique<CASMul>(this);
+CASNode* CASMul::canonicalize(CASContext& ctx) const {
+    auto newLHS = lhs->canonicalize(ctx);
+    auto vL = newLHS->getExprValue();
+    if (vL.isConstant) {
+        if (vL.value == 0.0)
+            return ctx.getConstant(0.0);
+        if (vL.value == 1.0)
+            return rhs->canonicalize(ctx);
+        if (vL.value == -1.0)
+            return ctx.getNeg(rhs->canonicalize(ctx));
+    }
+
+    auto newRHS = rhs->canonicalize(ctx);
+    auto vR = newRHS->getExprValue();
+    if (vR.isConstant) {
+        if (vR.value == 0.0)
+            return ctx.getConstant(0.0);
+        if (vR.value == 1.0)
+            return lhs->canonicalize(ctx);
+        if (vR.value == -1.0)
+            return ctx.getNeg(lhs->canonicalize(ctx));
+    }
+    if (vL.isConstant && vR.isConstant)
+        return ctx.getConstant(vL.value * vR.value);
+
+    return ctx.getMul(newLHS, newRHS);
 }
 
-std::unique_ptr<CASExpr> CASNeg::canonicalize() const {
-    auto v = getExprValue();
-    if (v.isConstant)
-        return std::make_unique<CASConstant>(v.value);
-    return std::make_unique<CASNeg>(this);
+CASNode* CASPow::canonicalize(CASContext& ctx) const {
+    auto vB = base->getExprValue();
+    auto vE = exponent->getExprValue();
+    if (vB.isConstant && vE.isConstant)
+        return ctx.getConstant(std::pow(vB.value, vE.value));
+    return ctx.getPow(base, exponent);
 }
 
-std::unique_ptr<CASExpr> CASCos::canonicalize() const {
-    auto v = getExprValue();
-    if (v.isConstant)
-        return std::make_unique<CASConstant>(v.value);
-    return std::make_unique<CASCos>(this);
+CASNode* CASNeg::canonicalize(CASContext& ctx) const {
+    auto vN = node->getExprValue();
+    if (vN.isConstant)
+        return ctx.getConstant(-vN.value);
+    return ctx.getNeg(node);
 }
 
-std::unique_ptr<CASExpr> CASSin::canonicalize() const {
-    auto v = getExprValue();
-    if (v.isConstant)
-        return std::make_unique<CASConstant>(v.value);
-    return std::make_unique<CASSin>(this);
+CASNode* CASCos::canonicalize(CASContext& ctx) const {
+    auto vN = node->getExprValue();
+    if (vN.isConstant)
+        return ctx.getConstant(std::cos(vN.value));
+    return ctx.getCos(node);
+}
+
+CASNode* CASSin::canonicalize(CASContext& ctx) const {
+    auto vN = node->getExprValue();
+    if (vN.isConstant)
+        return ctx.getConstant(std::sin(vN.value));
+    return ctx.getSin(node);
 }
 
 
-std::unique_ptr<CASExpr> CASConstant::derivative(const std::string& var) const {
-    return std::make_unique<CASConstant>(0.0);
+CASNode*
+CASConstant::derivative(const std::string& var, CASContext& ctx) const {
+    return ctx.getConstant(0.0);
 }
 
-std::unique_ptr<CASExpr> CASVariable::derivative(const std::string& var) const {
-    return std::make_unique<CASConstant>((var == name) ? 1.0 : 0.0);
+CASNode*
+CASVariable::derivative(const std::string& var, CASContext& ctx) const {
+    return ctx.getConstant((var == name) ? 1.0 : 0.0);
 }
 
-std::unique_ptr<CASExpr> CASAdd::derivative(const std::string& var) const {
-    return std::make_unique<CASAdd>(lhs->derivative(var), rhs->derivative(var));
+CASNode*
+CASAdd::derivative(const std::string& var, CASContext& ctx) const {
+    return ctx.getAdd(lhs->derivative(var, ctx), rhs->derivative(var, ctx));
 }
 
-std::unique_ptr<CASExpr> CASSub::derivative(const std::string& var) const {
-    return std::make_unique<CASSub>(lhs->derivative(var), rhs->derivative(var));
+CASNode*
+CASSub::derivative(const std::string& var, CASContext& ctx) const {
+    return ctx.getSub(lhs->derivative(var, ctx), rhs->derivative(var, ctx));
 }
 
-std::unique_ptr<CASExpr> CASMul::derivative(const std::string& var) const {
-    auto t1 = std::make_unique<CASMul>(std::move(lhs), rhs->derivative(var));
-    auto t2 = std::make_unique<CASMul>(lhs->derivative(var), std::move(rhs));
-
-    return std::make_unique<CASAdd>(std::move(t1), std::move(t2));
+CASNode*
+CASMul::derivative(const std::string& var, CASContext& ctx) const {
+    auto t1 = ctx.getMul(lhs->derivative(var, ctx), rhs);
+    auto t2 = ctx.getMul(lhs, rhs->derivative(var, ctx));
+    return ctx.getAdd(t1, t2);
 }
 
-std::unique_ptr<CASExpr> CASCos::derivative(const std::string& var) const {
-    // cos(f(x))' = -sin(f(x)) * f'(x)
-    auto t1 = std::make_unique<CASSin>(std::move(expr)); //  sin(f(x))
-    auto t2 = std::make_unique<CASSub>(std::move(t1));   // -sin(f(x))
-    return std::make_unique<CASMul>(std::move(t2), expr->derivative(var));
+CASNode*
+CASPow::derivative(const std::string& var, CASContext& ctx) const {
+    auto vExponent = exponent->getExprValue();
+    assert(vExponent.isConstant && "Non-constant exponent derivative is not "
+                                    "supported yet");
+
+    // (f(x)**n)' = n * f'(x) * f(x)**(n-1)
+    double n = vExponent.value;
+    auto t2 = ctx.getMul(base->derivative(var, ctx), n);
+    auto t1 = ctx.getPow(base, n - 1.0);
+    return ctx.getMul(t1, t2);
 }
 
-std::unique_ptr<CASExpr> CASSin::derivative(const std::string& var) const {
-    // sin(f(x))' = cos(f(x)) * f'(x)
-    auto t1 = std::make_unique<CASCos>(std::move(expr)); // cos(f(x))
-    return std::make_unique<CASMul>(std::move(t1), expr->derivative(var));
+CASNode*
+CASNeg::derivative(const std::string& var, CASContext& ctx) const {
+    return ctx.getNeg(node->derivative(var, ctx));
+}
+
+CASNode*
+CASCos::derivative(const std::string& var, CASContext& ctx) const {
+    // cos(f(x))' = -f'(x) * sin(f(x))
+    auto t1 = ctx.getNeg(node->derivative(var, ctx));
+    auto t2 = ctx.getSin(node);
+    return ctx.getMul(t1, t2);
+}
+
+CASNode*
+CASSin::derivative(const std::string& var, CASContext& ctx) const {
+    // sin(f(x))' = f'(x) * cos(f(x))
+    auto t1 = node->derivative(var, ctx);
+    auto t2 = ctx.getCos(node);
+    return ctx.getMul(t1, t2);
 }

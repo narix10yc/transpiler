@@ -5,7 +5,6 @@
 #include <memory>
 #include <queue>
 #include "openqasm/lexer.h"
-#include "openqasm/utils.h"
 #include "openqasm/ast.h"
 
 namespace openqasm {
@@ -106,7 +105,7 @@ private:
         There are 3 types of primary expr:
         - numerics
         - variable (including funcCall and subscipt)
-        - paranthesis
+        - parenthesis
     */
     std::unique_ptr<ast::Expression> parsePrimaryExpr();
 
