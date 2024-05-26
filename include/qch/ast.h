@@ -126,6 +126,9 @@ public:
 
 // forward declaration
 class CASContext;
+class CASPow;
+class CASMonomial;
+class CASPolynomial;
 
 class CASNode {
 public:
@@ -201,10 +204,7 @@ public:
     }
 
     /// @brief Pow
-    CASNode* getPow(CASNode* base, CASNode* exponent);
-    CASNode* getPow(CASNode* lhs, double value) {
-        return getPow(lhs, getConstant(value));
-    }
+    CASPow* getPow(CASNode* base, int exponent);
 
     /// @brief Neg
     CASNode* getNeg(CASNode* node);
@@ -214,6 +214,14 @@ public:
 
     /// @brief Sin
     CASNode* getSin(CASNode* node);
+
+    /// @brief Monomial
+    CASNode* getMonomial(double coef, std::initializer_list<CASPow*> pows);
+    CASNode* getMonomial(double coef, const std::vector<CASPow*>& pows);
+
+    CASNode* getPolynomial(std::initializer_list<CASMonomial*> monomials);
+    CASNode* getPolynomial(const std::vector<CASMonomial*>& monomials);
+    
 };
 
 
@@ -266,11 +274,10 @@ public:
     }
 
     /// @brief Pow
-    CASNode* getPow(CASNode* base, CASNode* exponent) {
-        return entry = ctx.getPow(base, exponent);
-    }
-    CASNode* getPow(CASNode* lhs, double value) {
-        return getPow(lhs, getConstant(value));
+    CASPow* getPow(CASNode* base, int exponent) {
+        auto node = ctx.getPow(base, exponent);
+        // setEntry(node);
+        return node;
     }
 
     /// @brief Neg
@@ -286,6 +293,18 @@ public:
     /// @brief Sin
     CASNode* getSin(CASNode* node) {
         return entry = ctx.getSin(node);
+    }
+
+    CASNode* getMonomial(double coef, std::initializer_list<CASPow*> pows) {
+        return entry = ctx.getMonomial(coef, pows);
+    }
+
+    CASNode* getMonomial(double coef, const std::vector<CASPow*> pows) {
+        return entry = ctx.getMonomial(coef, pows);
+    }
+
+    CASNode* getPolynomial(std::initializer_list<CASMonomial*> monomials) {
+        return entry = ctx.getPolynomial(monomials);
     }
 
     void setEntry(CASNode* node) { entry = node; }
@@ -401,9 +420,9 @@ public:
 
 class CASPow : public CASNode {
     CASNode* base;
-    CASNode* exponent;
+    int exponent;
 public:
-    CASPow(CASNode* base, CASNode* exponent) : base(base), exponent(exponent) {}
+    CASPow(CASNode* base, int exponent) : base(base), exponent(exponent) {}
 
     expr_value getExprValue() const override;
 
@@ -460,7 +479,43 @@ public:
     void print(std::ostream& os) const override;
 };
 
+class CASMonomial : public CASNode {
+    double coefficient;
+    std::vector<CASPow*> pows;
+public:
+    CASMonomial(double coefficient) : coefficient(coefficient), pows() {}
+    CASMonomial(double coefficient, std::initializer_list<CASPow*> pows)
+        : coefficient(coefficient), pows(pows) {}
+    CASMonomial(double coefficient, const std::vector<CASPow*>& pows)
+        : coefficient(coefficient), pows(pows) {}
 
+    expr_value getExprValue() const override;
+
+    CASNode* canonicalize(CASContext& ctx) const override;
+
+    CASNode* derivative(const std::string& var,
+                        CASContext& ctx) const override;
+
+    void print(std::ostream& os) const override;
+};
+
+class CASPolynomial : public CASNode {
+    std::vector<CASMonomial*> monomials;
+public:
+    CASPolynomial(std::initializer_list<CASMonomial*> monomials)
+        : monomials(monomials) {}
+    CASPolynomial(const std::vector<CASMonomial*>& monomials)
+        : monomials(monomials) {}
+
+    expr_value getExprValue() const override;
+
+    CASNode* canonicalize(CASContext& ctx) const override;
+
+    CASNode* derivative(const std::string& var,
+                        CASContext& ctx) const override;
+
+    void print(std::ostream& os) const override;
+};
 
 
 

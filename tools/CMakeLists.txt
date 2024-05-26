@@ -8,5 +8,5 @@ target_link_libraries(gen_u3 simulation)
 target_link_libraries(gen_u2q simulation)
 
 add_executable(playground "playground.cpp")
-target_link_libraries(playground qch qasm simulation)
+target_link_libraries(playground qch)
 

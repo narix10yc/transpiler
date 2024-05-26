@@ -55,8 +55,10 @@ CASNode* CASContext::getMul(CASNode* lhs, CASNode* rhs) {
     return addNode(new CASMul(lhs, rhs));
 }
 
-CASNode* CASContext::getPow(CASNode* base, CASNode* exponent) {
-    return addNode(new CASPow(base, exponent));
+CASPow* CASContext::getPow(CASNode* base, int exponent) {
+    auto node = new CASPow(base, exponent);
+    addNode(node);
+    return node;
 }
 
 CASNode* CASContext::getNeg(CASNode* node) {
@@ -70,6 +72,23 @@ CASNode* CASContext::getCos(CASNode* node) {
 CASNode* CASContext::getSin(CASNode* node) {
     return addNode(new CASSin(node));
 }
+
+CASNode* CASContext::getMonomial(double coef, std::initializer_list<CASPow*> pows) {
+    return addNode(new CASMonomial(coef, pows));
+}
+
+CASNode* CASContext::getMonomial(double coef, const std::vector<CASPow*>& pows) {
+    return addNode(new CASMonomial(coef, pows));
+}
+
+CASNode* CASContext::getPolynomial(std::initializer_list<CASMonomial*> monomials) {
+    return addNode(new CASPolynomial(monomials));
+}
+
+CASNode* CASContext::getPolynomial(const std::vector<CASMonomial*>& monomials) {
+    return addNode(new CASPolynomial(monomials));
+}
+
 /* #endregion */
 
 void CASConstant::print(std::ostream& os) const {
@@ -100,8 +119,7 @@ void CASMul::print(std::ostream& os) const {
 
 void CASPow::print(std::ostream& os) const {
     base->print(os);
-    os << " ** ";
-    exponent->print(os);
+    os << "**" << exponent;
 }
 
 void CASNeg::print(std::ostream& os) const {
@@ -120,6 +138,26 @@ void CASSin::print(std::ostream& os) const {
     node->print(os);
     os << ")";
 }
+
+void CASMonomial::print(std::ostream& os) const {
+    if (coefficient != 1.0)
+        os << coefficient;
+    for (auto* pow : pows)
+        pow->print(os);
+}
+
+void CASPolynomial::print(std::ostream& os) const {
+    auto length = monomials.size();
+    if (length == 0)
+        return;
+    for (size_t i = 0; i < length-1; i++) {
+        monomials[i]->print(os);
+        os << " + ";
+    }
+    monomials[length-1]->print(os);
+}
+
+
 
 expr_value CASConstant::getExprValue() const {
     return { true, value };
@@ -159,9 +197,8 @@ expr_value CASMul::getExprValue() const {
 
 expr_value CASPow::getExprValue() const {
     auto vB = base->getExprValue();
-    auto vE = exponent->getExprValue();
-    if (vB.isConstant && vE.isConstant)
-        return { true, std::pow(vB.value, vE.value) };
+    if (vB.isConstant)
+        return { true, std::pow(vB.value, exponent) };
     return { false };
 }
 
@@ -186,13 +223,35 @@ expr_value CASSin::getExprValue() const {
     return { false };
 }
 
+expr_value CASMonomial::getExprValue() const {
+    double value = coefficient;
+    for (auto* pow : pows) {
+        auto vPow = pow->getExprValue();
+        if (!vPow.isConstant)
+            return { false };
+        value *= vPow.value;
+    }
+    return { true, value };
+}
+
+expr_value CASPolynomial::getExprValue() const {
+    double value = 0.0;
+    for (auto* monomial : monomials) {
+        auto vM = monomial->getExprValue();
+        if (!vM.isConstant)
+            return { false };
+        value += vM.value;
+    }
+    return { true, value };
+}
+
 
 CASNode* CASConstant::canonicalize(CASContext& ctx) const {
-    return ctx.getConstant(value);
+    return ctx.getMonomial(value, {});
 }
 
 CASNode* CASVariable::canonicalize(CASContext& ctx) const {
-    return ctx.getVariable(name);
+    return ctx.getMonomial(1.0, { ctx.getPow(ctx.getVariable(name), 1.0) });
 }
 
 CASNode* CASAdd::canonicalize(CASContext& ctx) const {
@@ -259,9 +318,8 @@ CASNode* CASMul::canonicalize(CASContext& ctx) const {
 
 CASNode* CASPow::canonicalize(CASContext& ctx) const {
     auto vB = base->getExprValue();
-    auto vE = exponent->getExprValue();
-    if (vB.isConstant && vE.isConstant)
-        return ctx.getConstant(std::pow(vB.value, vE.value));
+    if (vB.isConstant)
+        return ctx.getConstant(std::pow(vB.value, exponent));
     return ctx.getPow(base, exponent);
 }
 
@@ -286,6 +344,17 @@ CASNode* CASSin::canonicalize(CASContext& ctx) const {
     return ctx.getSin(node);
 }
 
+CASNode* CASMonomial::canonicalize(CASContext& ctx) const {
+    if (coefficient == 0.0)
+        return ctx.getConstant(0.0);
+    if (pows.empty())
+        return ctx.getConstant(coefficient);
+    return ctx.getMonomial(coefficient, pows);
+}
+
+CASNode* CASPolynomial::canonicalize(CASContext& ctx) const {
+    return nullptr;
+}
 
 CASNode*
 CASConstant::derivative(const std::string& var, CASContext& ctx) const {
@@ -316,14 +385,9 @@ CASMul::derivative(const std::string& var, CASContext& ctx) const {
 
 CASNode*
 CASPow::derivative(const std::string& var, CASContext& ctx) const {
-    auto vExponent = exponent->getExprValue();
-    assert(vExponent.isConstant && "Non-constant exponent derivative is not "
-                                    "supported yet");
-
     // (f(x)**n)' = n * f'(x) * f(x)**(n-1)
-    double n = vExponent.value;
-    auto t2 = ctx.getMul(base->derivative(var, ctx), n);
-    auto t1 = ctx.getPow(base, n - 1.0);
+    auto t2 = ctx.getMul(base->derivative(var, ctx), exponent);
+    auto t1 = ctx.getPow(base, exponent - 1.0);
     return ctx.getMul(t1, t2);
 }
 
@@ -346,4 +410,14 @@ CASSin::derivative(const std::string& var, CASContext& ctx) const {
     auto t1 = node->derivative(var, ctx);
     auto t2 = ctx.getCos(node);
     return ctx.getMul(t1, t2);
+}
+
+CASNode*
+CASMonomial::derivative(const std::string& var, CASContext& ctx) const {
+    return nullptr;
+}
+
+CASNode*
+CASPolynomial::derivative(const std::string& var, CASContext& ctx) const {
+    return nullptr;
 }

@@ -1,31 +1,32 @@
-#include "parse/lexer.h"
-#include "qch/ast.h"
+#include "qch/cas.h"
 
-using namespace parse;
-using namespace qch::ast;
+using namespace qch::cas;
 
 int main(int argc, char** argv) {
-    // Lexer lexer(argv[0]);
+    CASContext ctx;
+    auto x = ctx.getVariable("x");
+    auto cosx = ctx.getCosine(x); 
+    auto x2 = ctx.getPower(x, 2);
 
-    CASGraphExpr expr;
-    auto x = expr.getVariable("x");
-    auto y = expr.getVariable("y");
-
-    auto term = expr.getPow(x, 3.0);
-    term = expr.getMul(term, 2.0);
-
-    std::cerr << "Expression: ";
-    expr.print(std::cerr);
-
-    std::cerr << "\nDerivative: ";
-
-    auto deriv = expr.computeDerivative("x");
-    deriv->print(std::cerr);
-
-    std::cerr << "\nCanonicalize: ";
-
-    deriv->canonicalize(expr.getContext())->print(std::cerr);
-
+    auto monomial = ctx.getMonomial(2.0, {ctx.getPower(cosx), x2, ctx.getPower(x)});
+    auto p1 = monomial->canonicalize(ctx);
+    
+    p1->print(std::cerr);
     std::cerr << "\n";
+    std::cerr << "There are " << ctx.count() << " nodes in context\n";
+    
+    Polynomial p2 { *p1 };
+
+    p2.print(std::cerr);
+    std::cerr << "\n";
+    std::cerr << "There are " << ctx.count() << " nodes in context\n";
+
+    (p2 + (*p1)).print(std::cerr);
+    std::cerr << "\n";
+    std::cerr << "There are " << ctx.count() << " nodes in context\n";
+
+    p2.print(std::cerr);
+    std::cerr << "\n";
+    std::cerr << "There are " << ctx.count() << " nodes in context\n";
     return 0;
 }

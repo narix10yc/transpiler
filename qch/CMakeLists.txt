@@ -1,1 +1,1 @@
-add_library(qch STATIC "ast.cpp" "genCPU.cpp")
+add_library(qch STATIC "ast.cpp" "cas.cpp" "genCPU.cpp")
