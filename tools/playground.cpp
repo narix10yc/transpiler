@@ -3,30 +3,43 @@
 using namespace qch::cas;
 
 int main(int argc, char** argv) {
-    CASContext ctx;
-    auto x = ctx.getVariable("x");
-    auto cosx = ctx.getCosine(x); 
-    auto x2 = ctx.getPower(x, 2);
+    auto x = std::make_shared<Variable>("x");
+    auto y = std::make_shared<Variable>("y");
+    auto cos1 = std::make_shared<Cosine>(x);
 
-    auto monomial = ctx.getMonomial(2.0, {ctx.getPower(cosx), x2, ctx.getPower(x)});
-    auto p1 = monomial->canonicalize(ctx);
-    
-    p1->print(std::cerr);
-    std::cerr << "\n";
-    std::cerr << "There are " << ctx.count() << " nodes in context\n";
-    
-    Polynomial p2 { *p1 };
+    auto pow1 = std::make_shared<Power>(x, 2);
+    auto pow2 = std::make_shared<Power>(x, 4);
+    auto pow3 = std::make_shared<Power>(cos1, 2);
 
-    p2.print(std::cerr);
-    std::cerr << "\n";
-    std::cerr << "There are " << ctx.count() << " nodes in context\n";
+    auto m1 = std::make_shared<Monomial>(pow1, 3.0);
 
-    (p2 + (*p1)).print(std::cerr);
-    std::cerr << "\n";
-    std::cerr << "There are " << ctx.count() << " nodes in context\n";
+    auto poly1 = pow2->toPolynomial();
+    auto poly2 = pow1->toPolynomial();
+    auto poly3 = pow3->toPolynomial();
 
-    p2.print(std::cerr);
+    std::cerr << "poly1 = ";
+    poly1.print(std::cerr);
+
+    std::cerr << "\n\npoly2 = ";
+    poly2.print(std::cerr);
+
+    std::cerr << "\n\npoly3 = ";
+    poly3.print(std::cerr);
+
+    auto poly4 = poly2 + poly3;
+    auto poly5 = poly3 + poly2;
+
+    poly4.sort();
+    poly5.sort();
+
+    std::cerr << "\n\npoly2 + poly3 = ";
+    poly4.print(std::cerr);
+
+    std::cerr << "\n\npoly3 + poly2 = ";
+    (poly5 + poly3).print(std::cerr);
+
+
     std::cerr << "\n";
-    std::cerr << "There are " << ctx.count() << " nodes in context\n";
+
     return 0;
 }
