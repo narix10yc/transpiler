@@ -309,7 +309,9 @@ public:
             return;
         }
 
-        if (coefficient != 1.0)
+        if (coefficient == -1.0)
+            os << "-";
+        else if (coefficient != 1.0)
             os << coefficient;
         
         for (unsigned i = 0; i < length-1; i++) {
@@ -445,11 +447,6 @@ public:
 
 
 class Polynomial : public Node {
-    struct monomial_cmp_less {
-        bool operator()(const Monomial& a, const Monomial& b) const {
-            return a.compare(b) < 0;
-        }
-    };
 public:
     std::vector<Monomial> monomials;
     
@@ -468,7 +465,7 @@ public:
         Polynomial newPoly;
         // this makes sure no replicates
         for (const auto& monomial : monomials)
-            newPoly += monomial;
+            newPoly += monomial.sortAndSimplify();
         newPoly.sortSelf();
         return newPoly;
     }
@@ -584,14 +581,14 @@ public:
     }
 
     Polynomial& operator*=(const Polynomial& other) {
-        for (const auto& m : other.monomials)
-            (*this) *= m;
-        return *this;
+        return (*this) = (*this) * other;
     }
 
     Polynomial operator*(const Polynomial& other) const {
-        Polynomial newPoly(*this);
-        return newPoly *= other;
+        Polynomial newPoly;
+        for (const auto& m : other.monomials)
+            newPoly += (*this) * m;
+        return newPoly;
     }
 
     inline int getSortPriority() const override { return 60; }

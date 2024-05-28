@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
 
     std::cerr << "== Test Monomial * Power: == ";
 
-    Monomial m1({p1, p2}, 2.5);
+    Monomial m1({p1, p2}, 2);
     std::cerr << "\nm1: "; m1.print(std::cerr);
 
     Power p4(cos1, 2);
@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
 
     std::cerr << "\nm1: "; m1.print(std::cerr);
 
-    Monomial m2({p2, p3}, 4.0);
+    Monomial m2({p2, p3}, -1.0);
     std::cerr << "\nm2: "; m2.print(std::cerr);
     std::cerr << "\nm1 * m2: "; (m1 * m2).print(std::cerr);
     std::cerr << "\n\n";
@@ -39,8 +39,21 @@ int main(int argc, char** argv) {
     std::cerr << "\npoly1: "; poly1.print(std::cerr);
 
     std::cerr << "\nm2: "; m2.print(std::cerr);
-    std::cerr << "\npoly1 * m2: "; (poly1 * m2).sortAndSimplify().print(std::cerr);
+    auto poly2 = poly1 * m2;
+    poly2 = poly2.sortAndSimplify();
+    std::cerr << "\npoly1 * m2: "; poly2.print(std::cerr);
     std::cerr << "\n\n";
+
+
+    std::cerr << "== Test Polynomial * Polynomial: == ";
+
+    std::cerr << "\npoly1: "; poly1.print(std::cerr);
+
+    std::cerr << "\npoly1 * poly1: "; (poly1 * poly1).sortAndSimplify().print(std::cerr);
+    std::cerr << "\n\n";
+
+
+    std::cerr << "\n(poly2 * poly2): "; (poly2 * poly2).print(std::cerr);
 
     return 0;
 }
