@@ -3,29 +3,25 @@
 using namespace qch::cas;
 
 Polynomial Constant::toPolynomial() const {
-    return { std::make_shared<Monomial>(value) };
+    return { Monomial(std::make_shared<Constant>(*this)) };
 }
 
 Polynomial Variable::toPolynomial() const {
-    auto power = std::make_shared<Power>(std::make_shared<Variable>(*this));
-    return { std::make_shared<Monomial>(power) };
+    return { Monomial(std::make_shared<Variable>(*this)) };
 }
 
 Polynomial Cosine::toPolynomial() const {
-    auto power = std::make_shared<Power>(std::make_shared<Cosine>(*this));
-    return { std::make_shared<Monomial>(power) };
+    return { Monomial(std::make_shared<Cosine>(*this)) };
 }
 
 Polynomial Sine::toPolynomial() const {
-    auto power = std::make_shared<Power>(std::make_shared<Sine>(*this));
-    return { std::make_shared<Monomial>(power) };
+    return { Monomial(std::make_shared<Sine>(*this)) };
 }
 
 Polynomial Power::toPolynomial() const {
-    auto power = std::make_shared<Power>(*this);
-    return { std::make_shared<Monomial>(power) };
+    return { Monomial({*this}) };
 }
 
 Polynomial Monomial::toPolynomial() const {
-    return { std::make_shared<Monomial>(*this) };
+    return { *this };
 }

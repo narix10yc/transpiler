@@ -7,39 +7,40 @@ int main(int argc, char** argv) {
     auto y = std::make_shared<Variable>("y");
     auto cos1 = std::make_shared<Cosine>(x);
 
-    auto pow1 = std::make_shared<Power>(x, 2);
-    auto pow2 = std::make_shared<Power>(x, 4);
-    auto pow3 = std::make_shared<Power>(cos1, 2);
-
-    auto m1 = std::make_shared<Monomial>(pow1, 3.0);
-
-    auto poly1 = pow2->toPolynomial();
-    auto poly2 = pow1->toPolynomial();
-    auto poly3 = pow3->toPolynomial();
-
-    std::cerr << "poly1 = ";
-    poly1.print(std::cerr);
-
-    std::cerr << "\n\npoly2 = ";
-    poly2.print(std::cerr);
-
-    std::cerr << "\n\npoly3 = ";
-    poly3.print(std::cerr);
-
-    auto poly4 = poly2 + poly3;
-    auto poly5 = poly3 + poly2;
-
-    poly4.sort();
-    poly5.sort();
-
-    std::cerr << "\n\npoly2 + poly3 = ";
-    poly4.print(std::cerr);
-
-    std::cerr << "\n\npoly3 + poly2 = ";
-    (poly5 + poly3).print(std::cerr);
+    Power p1(cos1, 1);
+    Power p2(y, 3);
+    Power p3(x, 4);
 
 
-    std::cerr << "\n";
+    std::cerr << "== Test Monomial * Power: == ";
+
+    Monomial m1({p1, p2}, 2.5);
+    std::cerr << "\nm1: "; m1.print(std::cerr);
+
+    Power p4(cos1, 2);
+    std::cerr << "\np4: "; p4.print(std::cerr);
+    std::cerr << "\nm1 * p4: "; (m1 * p4).print(std::cerr);
+    std::cerr << "\n\n";
+
+
+    std::cerr << "== Test Monomial * Monomial: == ";
+
+    std::cerr << "\nm1: "; m1.print(std::cerr);
+
+    Monomial m2({p2, p3}, 4.0);
+    std::cerr << "\nm2: "; m2.print(std::cerr);
+    std::cerr << "\nm1 * m2: "; (m1 * m2).print(std::cerr);
+    std::cerr << "\n\n";
+
+
+    std::cerr << "== Test Polynomial * Monomial: == ";
+
+    Polynomial poly1({m1, m2});
+    std::cerr << "\npoly1: "; poly1.print(std::cerr);
+
+    std::cerr << "\nm2: "; m2.print(std::cerr);
+    std::cerr << "\npoly1 * m2: "; (poly1 * m2).sortAndSimplify().print(std::cerr);
+    std::cerr << "\n\n";
 
     return 0;
 }

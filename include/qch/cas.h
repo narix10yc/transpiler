@@ -28,7 +28,10 @@ public:
 
     virtual expr_value getExprValue() const = 0;
 
-    /// @brief Compare with another node
+    /// @brief Compare with another node. In some types of Nodes, compare == 0
+    /// does 'not' mean equal. This includes:
+    /// exponent of the Power class
+    /// coefficient of the Monomial class
     /// @return -1: less than; 0: equal; +1: greater than
     virtual int compare(const Node*) const = 0;
 
@@ -41,6 +44,10 @@ public:
     virtual inline int getSortPriority() const = 0;
 
     virtual Polynomial toPolynomial() const = 0;
+
+    ~Node() {
+        // std::cerr << "destructor\n";
+    }
 };
 
 class BasicNode : public Node {
@@ -216,23 +223,38 @@ public:
             os << "**" << exponent;
     }
 
+    int compare(const Power& other) const {
+        return base->compare(other.base.get());
+    }
+
     int compare(const Node* other) const override {
         if (getSortPriority() < other->getSortPriority())
             return -1;
         if (getSortPriority() > other->getSortPriority())
             return +1;
+
         auto otherPower = dynamic_cast<const Power*>(other);
         assert(otherPower != nullptr);
-        return base->compare(otherPower->base.get());
+        return compare(*otherPower);
+    }
+
+    bool operator==(const Power& other) const {
+        if (exponent != other.exponent)
+            return false;
+        return base->equals(other.base.get());
+    }
+
+    bool operator!=(const Power& other) const {
+        if (exponent != other.exponent)
+            return true;
+        return !(base->equals(other.base.get()));
     }
 
     bool equals(const Node* other) const override {
         auto otherPower = dynamic_cast<const Power*>(other);
         if (otherPower == nullptr)
             return false;
-        if (otherPower->exponent != exponent)
-            return false;
-        return (base->equals(otherPower->base.get()));
+        return (*this) == (*otherPower);
     }
 
     expr_value getExprValue() const override {
@@ -251,17 +273,33 @@ public:
 class Monomial : public Node {
 public:
     double coefficient;
-    std::vector<std::shared_ptr<Power>> pows;
+    std::vector<Power> pows;
 
     Monomial(double coef) : coefficient(coef), pows() {}
-    Monomial(std::shared_ptr<Power> pow, double coef = 1.0)
-        : coefficient(coef), pows({pow}) {}
+    Monomial(std::shared_ptr<BasicNode> basicNode, double coef = 1.0) 
+        : coefficient(coef), pows({Power{basicNode}}) {}
+    Monomial(std::initializer_list<Power> pows, double coef = 1.0)
+        : coefficient(coef), pows(pows) {}
 
-    int order() const {
+    int degree() const {
         int s = 0;
-        for (const auto pow : pows)
-            s += pow->exponent;
+        for (const auto& pow : pows)
+            s += pow.exponent;
         return s;
+    }
+
+    void sortSelf() {
+        std::sort(pows.begin(), pows.end(),
+            [](const Power& a, const Power& b) { return a.compare(b) < 0; });
+    }
+
+    Monomial sortAndSimplify() const {
+        Monomial newMonomial(coefficient);
+        // this makes sure no replicates
+        for (const auto& pow : pows)
+            newMonomial *= pow;
+        newMonomial.sortSelf();
+        return newMonomial;
     }
 
     void print(std::ostream& os) const override {
@@ -275,10 +313,31 @@ public:
             os << coefficient;
         
         for (unsigned i = 0; i < length-1; i++) {
-            pows[i]->print(os);
-            os << " * ";
+            pows[i].print(os);
+            os << " ";
         }
-        pows[length-1]->print(os);
+        pows[length-1].print(os);
+    }
+
+    int compare(const Monomial& other) const {
+        if (degree() < other.degree())
+            return -1;
+        if (degree() > other.degree())
+            return +1;
+        if (pows.size() < other.pows.size())
+            return -1;
+        if (pows.size() > other.pows.size())
+            return +1;
+
+        auto thisIt = pows.begin();
+        auto otherIt = other.pows.begin();
+        while (thisIt != pows.end()) {
+            int r = (*thisIt).compare(*otherIt);
+            if (r == -1) return -1;
+            if (r == +1) return +1;
+            ++thisIt; ++otherIt;
+        }
+        return 0;
     }
 
     int compare(const Node* other) const override {
@@ -286,19 +345,10 @@ public:
             return -1;
         if (getSortPriority() > other->getSortPriority())
             return +1;
+
         auto otherMonomial = dynamic_cast<const Monomial*>(other);
         assert(otherMonomial != nullptr);
-        if (pows.size() < otherMonomial->pows.size())
-            return -1;
-        if (pows.size() > otherMonomial->pows.size())
-            return +1; 
-
-        for (unsigned i = 0; i < pows.size(); i++) {
-            int r = pows[i]->compare(otherMonomial->pows[i].get());
-            if (r == -1) return -1;
-            if (r == +1) return +1;
-        }
-        return 0;
+        return compare(*otherMonomial);
     }
 
     bool equals(const Node* other) const override {
@@ -310,9 +360,12 @@ public:
         if (otherMonomial->pows.size() != pows.size())
             return false;
 
-        for (unsigned i = 0; i < pows.size(); i++) {
-            if (!(pows[i]->equals(otherMonomial->pows[i].get())))
+        auto thisIt = pows.begin();
+        auto otherIt = otherMonomial->pows.begin();
+        while (thisIt != pows.end()) {
+            if ((*thisIt) != (*otherIt))
                 return false;
+            ++thisIt; ++otherIt;
         }
         return true;
     }
@@ -320,8 +373,8 @@ public:
     expr_value getExprValue() const override {
         expr_value value { true, coefficient };
         expr_value powValue;
-        for (const auto pow : pows) {
-            powValue = pow->getExprValue();
+        for (const auto& pow : pows) {
+            powValue = pow.getExprValue();
             if (!powValue.isConstant)
                 return { false };
             value.value *= powValue.value;
@@ -331,50 +384,93 @@ public:
 
     inline int getSortPriority() const override { return 50; }
 
-    Monomial& operator*= (const Power& other) {
-        for (unsigned i = 0; i < pows.size(); i++) {
-            if (pows[i]->base->equals(other.base.get())) {
-                auto newPaw = std::make_shared<Power>(*pows[i]);
-                newPaw->exponent += other.exponent;
-                pows[i] = newPaw;
+    bool operator==(const Monomial& other) const {
+        if (coefficient != other.coefficient)
+            return false;
+    
+        auto thisIt = pows.begin();
+        auto otherIt = other.pows.begin();
+        while (thisIt != pows.end()) {
+            if ((*thisIt) != (*otherIt))
+                return false;
+            ++thisIt; ++otherIt;
+        }
+        return true;
+    }
+
+    bool operator!=(const Monomial& other) const {
+        if (coefficient != other.coefficient)
+            return true;
+
+        auto thisIt = pows.begin();
+        auto otherIt = other.pows.begin();
+        while (thisIt != pows.end()) {
+            if ((*thisIt) != (*otherIt))
+                return true;
+            ++thisIt; ++otherIt;
+        }
+        return false;
+    }   
+
+    Monomial& operator*=(const Power& p) {
+        for (auto& pow : pows) {
+            if (pow.compare(p) == 0) {
+                pow.exponent += p.exponent;
                 return *this;
             }
         }
-        pows.push_back(std::make_shared<Power>(other));
+        pows.push_back(p);
         return *this;
     }
 
-    std::shared_ptr<Monomial> tryAddWith(const Monomial* other) {
-        if (pows.size() != other->pows.size())
-            return nullptr;
-        for (unsigned i = 0; i < pows.size(); i++) {
-            if (!(pows[i]->equals(other->pows[i].get())))
-                return nullptr;
-        }
-        auto pMonomial = std::make_shared<Monomial>(*this);
-        pMonomial->coefficient += other->coefficient;
-        return pMonomial;
+    Monomial operator*(const Power& other) const {
+        Monomial newMonomial(*this);
+        return newMonomial *= other;
     }
 
-    Monomial operator* (const Power& other) const {
-        auto newMonomial(*this);
+    Monomial& operator*=(const Monomial& other) {
+        for (const auto& pow : other.pows)
+            (*this) *= pow;
+        this->coefficient *= other.coefficient;
+        return *this;
+    }
+
+    Monomial operator*(const Monomial& other) const {
+        Monomial newMonomial(*this);
         return newMonomial *= other;
     }
 
     Polynomial toPolynomial() const override;
-
 };
 
 
 class Polynomial : public Node {
+    struct monomial_cmp_less {
+        bool operator()(const Monomial& a, const Monomial& b) const {
+            return a.compare(b) < 0;
+        }
+    };
 public:
-    std::vector<std::shared_ptr<Monomial>> monomials;
+    std::vector<Monomial> monomials;
     
     Polynomial() : monomials() {}
-    Polynomial(std::shared_ptr<Monomial> m) : monomials({m}) {}
+    Polynomial(std::initializer_list<Monomial> monomials)
+        : monomials(monomials) {}
 
-    void sort() {
-        std::sort(monomials.begin(), monomials.end());
+    void sortSelf() {
+        std::sort(monomials.begin(), monomials.end(),
+            [](const Monomial& a, const Monomial& b) {
+                return a.compare(b) < 0;
+            });
+    }
+
+    Polynomial sortAndSimplify() const {
+        Polynomial newPoly;
+        // this makes sure no replicates
+        for (const auto& monomial : monomials)
+            newPoly += monomial;
+        newPoly.sortSelf();
+        return newPoly;
     }
 
     void print(std::ostream& os) const override {
@@ -383,10 +479,24 @@ public:
             return;
 
         for (unsigned i = 0; i < size-1; i++) {
-            monomials[i]->print(os);
+            monomials[i].print(os);
             os << " + ";
         }
-        monomials[size-1]->print(os);
+        monomials[size-1].print(os);
+    }
+
+    int compare(const Polynomial& other) const {
+        if (monomials.size() < other.monomials.size())
+            return -1;
+        if (monomials.size() < other.monomials.size())
+            return +1;
+
+        for (unsigned i = 0; i < monomials.size(); i++) {
+            int r = monomials[i].compare(other.monomials[i]);
+            if (r == -1) return -1;
+            if (r == +1) return +1;
+        }
+        return 0;
     }
 
     int compare(const Node* other) const override {
@@ -394,41 +504,45 @@ public:
             return -1;
         if (getSortPriority() > other->getSortPriority())
             return +1;
+
         auto otherPolynomial = dynamic_cast<const Polynomial*>(other);
         assert(otherPolynomial != nullptr);
-        if (monomials.size() < otherPolynomial->monomials.size())
-            return -1;
-        if (monomials.size() < otherPolynomial->monomials.size())
-            return -1;
+        return compare(*otherPolynomial);
+    }
 
+    bool operator==(const Polynomial& other) const {
+        if (monomials.size() != other.monomials.size())
+            return false;
         for (unsigned i = 0; i < monomials.size(); i++) {
-            int r = monomials[i]->compare(otherPolynomial->monomials[i].get());
-            if (r == -1) return -1;
-            if (r == +1) return +1;
+            if (monomials[i] != other.monomials[i])
+                return false;
         }
-        return 0;
+        return true;
+    }
+
+    bool operator!=(const Polynomial& other) const {
+        if (monomials.size() != other.monomials.size())
+            return true;
+        for (unsigned i = 0; i < monomials.size(); i++) {
+            if (monomials[i] != other.monomials[i])
+                return true;
+        }
+        return false;
     }
 
     bool equals(const Node* other) const override {
         auto otherPolynomial = dynamic_cast<const Polynomial*>(other);
         if (otherPolynomial == nullptr)
             return false;
-        if (otherPolynomial->monomials.size() != monomials.size())
-            return false;
-        
-        for (unsigned i = 0; i < monomials.size(); i++) {
-            if (!(monomials[i]->equals(otherPolynomial->monomials[i].get())))
-                return false;
-        }
-        return true;
+        return (*this) == (*otherPolynomial);
     }
 
     expr_value getExprValue() const override {
         expr_value value { true, 0.0 };
         expr_value monomialValue;
 
-        for (const auto monomial : monomials) {
-            monomialValue = monomial->getExprValue();
+        for (const auto& monomial : monomials) {
+            monomialValue = monomial.getExprValue();
             if (!monomialValue.isConstant)
                 return { false };
             value.value += monomialValue.value;
@@ -436,26 +550,53 @@ public:
         return value;
     }
 
-    inline int getSortPriority() const override { return 60; }
-
-    Polynomial toPolynomial() const override { return *this; }
-
-    void addMonomialInPlace(std::shared_ptr<Monomial> m) {
+    Polynomial& operator+=(const Monomial& m) {
         for (unsigned i = 0; i < monomials.size(); i++) {
-            if (auto pMonomial = monomials[i]->tryAddWith(m.get())) {
-                monomials[i] = pMonomial;
-                return;
+            if (monomials[i].compare(m) == 0) {
+                monomials[i].coefficient += m.coefficient;
+                return *this;
             }
         }
         monomials.push_back(m);
+        return *this;
     }
 
-    Polynomial operator+ (const Polynomial& other) const {
-        Polynomial newPoly(*this);
-        for (const auto monomial : other.monomials)
-            newPoly.addMonomialInPlace(monomial);
-        return newPoly;
+    Polynomial& operator+=(const Polynomial& other) {
+        for (const auto& monomial : other.monomials)
+            (*this) += monomial;
+        return *this;
     }
+
+    Polynomial operator+(const Polynomial& other) const {
+        Polynomial newPoly(*this);
+        return newPoly += other;
+    }
+
+    Polynomial& operator*=(const Monomial& m) {
+        for (auto& monomial : monomials)
+            monomial *= m;
+        return *this;
+    }
+
+    Polynomial operator*(const Monomial& m) const {
+        Polynomial newPoly(*this);
+        return newPoly *= m;
+    }
+
+    Polynomial& operator*=(const Polynomial& other) {
+        for (const auto& m : other.monomials)
+            (*this) *= m;
+        return *this;
+    }
+
+    Polynomial operator*(const Polynomial& other) const {
+        Polynomial newPoly(*this);
+        return newPoly *= other;
+    }
+
+    inline int getSortPriority() const override { return 60; }
+
+    Polynomial toPolynomial() const override { return *this; }
 };
 
 
