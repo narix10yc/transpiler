@@ -1,21 +1,16 @@
-// #include "gen_file.h"
-
 #include <string>
 #include <iostream>
 #include <iomanip>
-#include <ctime>
 #include <fstream>
 #include <sstream>
 #include <chrono>
 #include <thread>
 
-typedef struct { double data[8]; } v8double;
-
 using real_ty = double;
-size_t k = 1;
+size_t k = 2;
 size_t s = 2;
-#define SEP_KERNEL f64_s2_sep_u3_k1_33330333
-// #define ALT_KERNEL f64_alt_u3_k2_33330000
+#define SEP_KERNEL f64_s2_sep_u3_k2_33330333
+// #define ALT_KERNEL f64_s1_alt_u3_k2_33330333
 
 extern "C" {
     void SEP_KERNEL(real_ty*, real_ty*, uint64_t, uint64_t, void*);
@@ -83,10 +78,10 @@ int main() {
     f << "method,compiler,test_name,real_ty,num_threads,nqubits,k,s,t_min,t_q1,t_med,t_q3\n";
     f << std::scientific;
 
-    for (uint64_t nqubit = 4; nqubit < 28; nqubit += 2) {
+    for (uint64_t nqubit = 4; nqubit < 29; nqubit += 2) {
         // Separate Format
         tr = timer.timeit(
-            [&](){ SEP_KERNEL(real, imag, 0, 1 << (nqubit - s - 1), m); },
+            [&, n=nqubit](){ SEP_KERNEL(real, imag, 0, 1 << (n - s - 1), m); },
             setup_sep(nqubit),
             teardown_sep
         );
@@ -104,23 +99,23 @@ int main() {
           << tr.min << "," << tr.q1 << "," << tr.med << "," << tr.q3 << "\n";
 
         // Alternating Format
-        // tr = timer.timeit(
-        //     [&](){ ALT_KERNEL(data, 0, 1 << (nqubit - s), m); },
-        //     setup_alt(nqubit),
-        //     teardown_alt
-        // );
-        // std::cerr << "nqubits = " << nqubit << "\n";
-        // tr.display();
-        // f << "ir_gen_alt" // method
-        //   << "," << "clang-17" // compiler
-        //   << "," << "u3" // test_name
-        //   << "," << "f" << 8 * sizeof(real_ty) // real_ty
-        //   << "," << 1 // num_threads
-        //   << "," << nqubit // nqubits
-        //   << "," << k // k
-        //   << "," << s // s
-        //   << ","
-        //   << tr.min << "," << tr.q1 << "," << tr.med << "," << tr.q3 << "\n";
+    //     tr = timer.timeit(
+    //         [&, n=nqubit](){ ALT_KERNEL(data, 0, 1 << (n - s), m); },
+    //         setup_alt(nqubit),
+    //         teardown_alt
+    //     );
+    //     std::cerr << "nqubits = " << nqubit << "\n";
+    //     tr.display();
+    //     f << "ir_gen_alt" // method
+    //       << "," << "clang-17" // compiler
+    //       << "," << "u3" // test_name
+    //       << "," << "f" << 8 * sizeof(real_ty) // real_ty
+    //       << "," << 1 // num_threads
+    //       << "," << nqubit // nqubits
+    //       << "," << k // k
+    //       << "," << s // s
+    //       << ","
+    //       << tr.min << "," << tr.q1 << "," << tr.med << "," << tr.q3 << "\n";
     }
     
     return 0;

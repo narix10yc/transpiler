@@ -1,5 +1,8 @@
 #include "simulation/transpiler.h"
+#include "simulation/utils.h"
+
 #include <queue>
+#include <tuple>
 
 using namespace simulation;
 using namespace simulation::transpile;
@@ -257,7 +260,6 @@ unsigned CircuitGraph::absorbNeighbouringTwoQubitGates(GateNode* node) {
     return 1;
 }
 
-
 void CircuitGraph::transpileForCPU() {
     // step 1: absorb single-qubit gates
     assert(sanityCheck(std::cerr));
@@ -291,18 +293,6 @@ void CircuitGraph::transpileForCPU() {
     assert(sanityCheck(std::cerr));
 }
 
-namespace {
-    double approximate(double x, double thres=1e-8) {
-        if (abs(x) < thres)
-            return 0;
-        if (abs(x - 1) < thres)
-            return 1;
-        if (abs(x + 1) < thres)
-            return -1;
-        return x;
-    }
-}
-
 RootNode CircuitGraph::toQch() const {
     RootNode root;
     auto circuit = std::make_unique<CircuitStmt>("transpiled");
@@ -311,8 +301,8 @@ RootNode CircuitGraph::toQch() const {
         std::string name = (node->nqubits == 1) ? "u3" : "u2q";
         auto gateApply = std::make_unique<GateApplyStmt>(name);
         for (auto p : node->matrix.data) {
-            gateApply->addParameter(approximate(p.real));
-            gateApply->addParameter(approximate(p.imag));
+            gateApply->addParameter(utils::approximate(p.real));
+            gateApply->addParameter(utils::approximate(p.imag));
         }
         for (auto& data : node->dataVector) {
             gateApply->addTargetQubit(data.qubit);
@@ -438,18 +428,15 @@ bool CircuitGraph::sanityCheck(std::ostream& os) const {
     return success;
 }
 
-
 void CircuitGraph::draw(std::ostream& os) const {
-    std::vector<std::vector<int>> tile;
-    std::vector<std::vector<bool>> isMultiQubit;
+    std::vector<std::vector<std::pair<int, bool>>> tile;
 
     auto appendOneLine = [&, nqubits=nqubits]() {
-        tile.push_back(std::vector<int>(nqubits, -1));
-        isMultiQubit.push_back(std::vector<bool>(nqubits, false));
+        tile.push_back(std::vector<std::pair<int, bool>>(nqubits, {-1, false}));
     };
     
     auto lastEmptyLine = [&](unsigned c) -> unsigned {
-        if (tile[tile.size() - 1][c] != -1) {
+        if (tile[tile.size() - 1][c].first != -1) {
             // last line is occupied
             appendOneLine();
             return tile.size() - 1;
@@ -457,7 +444,7 @@ void CircuitGraph::draw(std::ostream& os) const {
 
         for (int i = tile.size() - 2; i >= 0; i--) 
             // find the first occupied one, bottom up
-            if (tile[i][c] != -1)
+            if (tile[i][c].first != -1)
                 return i + 1;
         
         return 0;
@@ -465,7 +452,7 @@ void CircuitGraph::draw(std::ostream& os) const {
 
     unsigned largestID = 0;
     appendOneLine();
-    for (auto* node : allNodes) {
+    for (const auto* node : allNodes) {
         if (node == nullptr)
             continue;
 
@@ -478,11 +465,11 @@ void CircuitGraph::draw(std::ostream& os) const {
         }
         if (qubits.size() > 1) {
             for (auto q : qubits) {
-                tile[l][q] = node->id;
-                isMultiQubit[l][q] = true;
+                tile[l][q].first = node->id;
+                tile[l][q].second = true;
             }
         } else {
-            tile[l][qubits[0]] = node->id;
+            tile[l][qubits[0]].first = node->id;
         }
         
         if (node->id > largestID)
@@ -496,14 +483,15 @@ void CircuitGraph::draw(std::ostream& os) const {
 
     for (unsigned l = 0; l < tile.size(); l++) {
         for (unsigned q = 0; q < tile[0].size(); q++) {
-            auto id = tile[l][q];
+            auto id = tile[l][q].first;
+            auto isMultiQubit = tile[l][q].second;
             if (id == -1) {
                 os << whiteSpace << "|" << whiteSpace << " ";
                 continue;
             }
-            os << ((isMultiQubit[l][q]) ? " " : "(")
+            os << ((isMultiQubit) ? " " : "(")
                << std::setw(w) << std::setfill(' ') << id
-               << ((isMultiQubit[l][q]) ? "  " : ") ");
+               << ((isMultiQubit) ? "  " : ") ");
         }
         os << "\n";
     }

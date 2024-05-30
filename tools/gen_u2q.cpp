@@ -1,6 +1,7 @@
 #include "simulation/ir_generator.h"
 #include "llvm/Support/CommandLine.h"
 #include <sstream>
+#include <filesystem>
 
 using namespace llvm;
 using namespace simulation;
@@ -37,6 +38,8 @@ int main(int argc, char **argv) {
     }
 
     IRGenerator generator(VecSize);
+    if (std::filesystem::exists(FileName.c_str()))
+        generator.loadFromFile(FileName);
 
     RealTy ty = RealTy::Double;
     if (Ty == "double" || Ty == "f64")

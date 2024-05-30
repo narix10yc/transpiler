@@ -6,7 +6,6 @@
 
 #include <vector>
 #include <set>
-#include <unordered_set>
 #include <iostream>
 
 namespace simulation::transpile {

@@ -11,15 +11,16 @@
 
 
 using real_ty = double;
-constexpr size_t k = 2;
-constexpr size_t l = 1;
+constexpr size_t k = 4;
+constexpr size_t l = 3;
 constexpr size_t s = 1;
-#define KERNEL f64_s1_sep_u2q_k2l1_batched
-// #define KERNEL f64_s1_sep_u2q_k2l1
+constexpr unsigned nthreads = 4;
+#define KERNEL f64_s1_sep_u2q_k4l3_ffffffffffffffff
+// #define KERNEL f64_s1_sep_u2q_k2l1_batched
 
 extern "C" {
-    // void KERNEL(real_ty*, real_ty*, uint64_t, uint64_t, void*);
-    void KERNEL(real_ty*, real_ty*, real_ty*, real_ty*, uint64_t, uint64_t, void*);
+    void KERNEL(real_ty*, real_ty*, uint64_t, uint64_t, void*);
+    // void KERNEL(real_ty*, real_ty*, real_ty*, real_ty*, uint64_t, uint64_t, void*);
 }
 
 std::string getCurrentTime() {
@@ -58,14 +59,14 @@ int main() {
         return [&]() {
             real = (real_ty*) aligned_alloc(64, sizeof(real_ty) * (1<<nqubits));
             imag = (real_ty*) aligned_alloc(64, sizeof(real_ty) * (1<<nqubits));
-            real2 = (real_ty*) aligned_alloc(64, sizeof(real_ty) * (1<<nqubits));
-            imag2 = (real_ty*) aligned_alloc(64, sizeof(real_ty) * (1<<nqubits));
+            // real2 = (real_ty*) aligned_alloc(64, sizeof(real_ty) * (1<<nqubits));
+            // imag2 = (real_ty*) aligned_alloc(64, sizeof(real_ty) * (1<<nqubits));
         };
     };
 
     auto teardown_sep = [&]() {
         free(real); free(imag);
-        free(real2); free(imag2);
+        // free(real2); free(imag2);
         std::this_thread::sleep_for(std::chrono::seconds(2));
     };
 
@@ -82,9 +83,23 @@ int main() {
 
     for (uint64_t nqubit = 6; nqubit < 28; nqubit += 2) {
         // Separate Format
+        std::function<void(void)> task;
+        uint64_t chunkSize = (1 << (nqubit - s - 2)) / nthreads;
+        std::thread threads[nthreads];
+        if (nthreads == 1)
+            task = [&](){
+                        KERNEL(real, imag, 0, 1 << (nqubit - s - 2), m);
+                    };
+        else
+            task = [&]() {
+                for (int i = 0; i < nthreads; i++)
+                    threads[i] = std::thread{KERNEL, real, imag, i*chunkSize, (i+1)*chunkSize, m};
+                for (auto& t : threads)
+                    t.join();
+            };
+    
         tr = timer.timeit(
-            // [&](){ KERNEL(real, imag, 0, 1 << (nqubit - s - 2), m); },
-            [&](){ KERNEL(real, imag, real2, imag2, 0, 1 << (nqubit - s - 2), m); },
+            task,
             setup_sep(nqubit),
             teardown_sep
         );
@@ -92,9 +107,9 @@ int main() {
         tr.display();
         f << "ir_gen_sep" // method
           << "," << "clang-17" // compiler
-          << "," << "u2q_batched" // test_name
+          << "," << "u2q(ffffffffffffffff)" // test_name
           << "," << "f" << 8 * sizeof(real_ty) // real_ty
-          << "," << 1 // num_threads
+          << "," << nthreads // num_threads
           << "," << nqubit // nqubits
           << "," << k // k
           << "," << l // l

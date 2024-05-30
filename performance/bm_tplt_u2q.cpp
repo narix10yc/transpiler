@@ -25,7 +25,7 @@ using namespace simulation;
 using namespace simulation::tplt;
 
 
-using real_ty = float;
+using real_ty = double;
 constexpr size_t k = 4;
 constexpr size_t l = 3;
 

@@ -1,10 +1,21 @@
 #include "simulation/ir_generator.h"
 
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IRReader/IRReader.h"
+#include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace simulation;
 
+void IRGenerator::loadFromFile(const std::string& fileName) {
+    SMDiagnostic err;
+    this->mod = parseIRFile(fileName, err, this->llvmContext);
+    if (mod == nullptr) {
+        err.print("IRGenerator::loadFromFile", llvm::errs());
+        this->mod = std::make_unique<Module>("MyModule", this->llvmContext);
+    }
+}
 
 Value* IRGenerator::genMulAdd(Value* aa, Value* bb, Value* cc, 
                               int bbFlag, const Twine& bbccName,

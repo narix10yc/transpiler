@@ -13,7 +13,7 @@ using Statevector = simulation::sv::StatevectorSep<real_ty>;
 
 int main() {
     Timer timer;
-    timer.setReplication(3);
+    timer.setReplication(7);
     TimingResult tr;
 
     Statevector sv(nqubits);

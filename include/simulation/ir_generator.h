@@ -64,6 +64,8 @@ public:
     void setUseFMA(bool b) { useFMA = b; }
     void setRealTy(ir::RealTy ty) { realTy = ty; }
     void setAmpFormat(ir::AmpFormat format) { ampFormat = format; }
+
+    void loadFromFile(const std::string& fileName);
     
     /// @brief Generate the IR that applies new_aa = aa + bb * cc
     /// @param aa can be nullptr. In such case, new_aa will be assigned to bb * cc
