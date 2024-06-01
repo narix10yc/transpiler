@@ -32,8 +32,7 @@ void GateApplyStmt::genCPU(CPUGenContext& ctx) const {
             ctx.u3GateMap[u3ID] = funcName;
         }
         
-        ctx.u3Params.push_back(mat.toArray());
-        ctx.kernels.push_back({funcName, 1});
+        ctx.addU3Gate(funcName, mat.toArray());
     } else if (name == "u2q") {
         ComplexMatrix4 mat;
         for (size_t i = 0; i < 16; i++) {
@@ -61,9 +60,7 @@ void GateApplyStmt::genCPU(CPUGenContext& ctx) const {
             arr[i] = mat.real[i];
             arr[i+16] = mat.imag[i];
         }
-
-        ctx.u2qParams.push_back(arr);
-        ctx.kernels.push_back({funcName, 2});
+        ctx.addU2qGate(funcName, arr);
     } else {
         std::cerr << "unrecognized gate " << name << " to CPU gen\n";
         return;

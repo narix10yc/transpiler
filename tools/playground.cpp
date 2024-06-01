@@ -1,59 +1,45 @@
-#include "qch/cas.h"
+#include "openqasm/parser.h"
+#include "simulation/cpu.h"
+#include "simulation/transpiler.h"
 
-using namespace qch::cas;
+#include "llvm/Support/CommandLine.h"
+
+#include <chrono>
+#include <sstream>
+#include <fstream>
+
+using namespace simulation;
+using namespace simulation::transpile;
+using namespace llvm;
 
 int main(int argc, char** argv) {
-    auto x = std::make_shared<Variable>("x");
-    auto y = std::make_shared<Variable>("y");
-    auto cos1 = std::make_shared<Cosine>(x);
+    cl::opt<std::string>
+    inputFilename(cl::desc("input file name"), cl::Positional, cl::Required);
+    
+    cl::opt<std::string>
+    outputFilename("o", cl::desc("output file name"), cl::Required);
 
-    Power p1(cos1, 1);
-    Power p2(y, 3);
-    Power p3(x, 4);
+    cl::ParseCommandLineOptions(argc, argv);
 
+    std::cerr << "-- Input file: " << inputFilename << "\n";
+    std::cerr << "-- Output file: " << outputFilename << "\n";
 
-    std::cerr << "== Test Monomial * Power: == ";
-
-    Monomial m1({p1, p2}, 2);
-    std::cerr << "\nm1: "; m1.print(std::cerr);
-
-    Power p4(cos1, 2);
-    std::cerr << "\np4: "; p4.print(std::cerr);
-    std::cerr << "\nm1 * p4: "; (m1 * p4).print(std::cerr);
-    std::cerr << "\n\n";
+    openqasm::Parser parser(inputFilename, 0);
 
 
-    std::cerr << "== Test Monomial * Monomial: == ";
+    auto qasmRoot = parser.parse();
+    std::cerr << "-- qasm AST built\n";
+    auto qchRoot = qasmRoot->toQch();
+    std::cerr << "-- converted to qch AST\n";
+    auto graph = CircuitGraph::FromQch(*qchRoot);
 
-    std::cerr << "\nm1: "; m1.print(std::cerr);
+    std::ofstream file(outputFilename + ".txt");
+    graph.getTile().toTikZ(file);
 
-    Monomial m2({p2, p3}, -1.0);
-    std::cerr << "\nm2: "; m2.print(std::cerr);
-    std::cerr << "\nm1 * m2: "; (m1 * m2).print(std::cerr);
-    std::cerr << "\n\n";
+    graph.transpileForCPU();
 
-
-    std::cerr << "== Test Polynomial * Monomial: == ";
-
-    Polynomial poly1({m1, m2});
-    std::cerr << "\npoly1: "; poly1.print(std::cerr);
-
-    std::cerr << "\nm2: "; m2.print(std::cerr);
-    auto poly2 = poly1 * m2;
-    poly2 = poly2.sortAndSimplify();
-    std::cerr << "\npoly1 * m2: "; poly2.print(std::cerr);
-    std::cerr << "\n\n";
-
-
-    std::cerr << "== Test Polynomial * Polynomial: == ";
-
-    std::cerr << "\npoly1: "; poly1.print(std::cerr);
-
-    std::cerr << "\npoly1 * poly1: "; (poly1 * poly1).sortAndSimplify().print(std::cerr);
-    std::cerr << "\n\n";
-
-
-    std::cerr << "\n(poly2 * poly2): "; (poly2 * poly2).print(std::cerr);
+    file = std::ofstream {outputFilename + "transpiled.txt"};
+    graph.getTile().toTikZ(file);
 
     return 0;
 }

@@ -1,6 +1,7 @@
 .vscode/*
 *.o
 *.exe
-examples/*
+examples/simple.qasm
+examples/complex.qasm
 build/*
 */gen_file*

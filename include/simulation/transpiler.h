@@ -5,6 +5,7 @@
 #include "simulation/types.h"
 
 #include <vector>
+#include <tuple>
 #include <set>
 #include <iostream>
 
@@ -121,9 +122,20 @@ public:
 
     bool sanityCheck(std::ostream& os) const;
 
+    class Tile {
+        std::vector<std::vector<std::pair<int, int>>> rows;
+    public:
+        Tile(const std::vector<std::vector<std::pair<int, int>>>& rows)
+            : rows(rows) {}
+        void toTikZ(std::ostream& os) const;
+    };
+
+    Tile getTile() const;
+
     void draw(std::ostream& os) const;
 
 }; // class CircuitGraph
+
 
 } // namespace simulation
 

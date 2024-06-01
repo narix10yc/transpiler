@@ -7,9 +7,9 @@
 #include <thread>
 
 using real_ty = double;
-size_t k = 2;
-size_t s = 2;
-#define SEP_KERNEL f64_s2_sep_u3_k2_33330333
+size_t k = 1;
+size_t s = 1;
+#define SEP_KERNEL f64_s1_sep_u3_k1_33330333
 // #define ALT_KERNEL f64_s1_alt_u3_k2_33330333
 
 extern "C" {

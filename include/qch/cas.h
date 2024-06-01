@@ -9,6 +9,7 @@
 #include <utility>
 #include <memory>
 #include <cmath>
+#include <algorithm>
 
 namespace qch::cas {
 

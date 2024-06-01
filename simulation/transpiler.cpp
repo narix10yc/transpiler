@@ -3,6 +3,7 @@
 
 #include <queue>
 #include <tuple>
+#include <sstream>
 
 using namespace simulation;
 using namespace simulation::transpile;
@@ -428,11 +429,10 @@ bool CircuitGraph::sanityCheck(std::ostream& os) const {
     return success;
 }
 
-void CircuitGraph::draw(std::ostream& os) const {
-    std::vector<std::vector<std::pair<int, bool>>> tile;
-
+CircuitGraph::Tile CircuitGraph::getTile() const {
+    std::vector<std::vector<std::pair<int, int>>> tile;
     auto appendOneLine = [&, nqubits=nqubits]() {
-        tile.push_back(std::vector<std::pair<int, bool>>(nqubits, {-1, false}));
+        tile.push_back(std::vector<std::pair<int, int>>(nqubits, {-1, 0}));
     };
     
     auto lastEmptyLine = [&](unsigned c) -> unsigned {
@@ -441,12 +441,48 @@ void CircuitGraph::draw(std::ostream& os) const {
             appendOneLine();
             return tile.size() - 1;
         }
-
         for (int i = tile.size() - 2; i >= 0; i--) 
             // find the first occupied one, bottom up
             if (tile[i][c].first != -1)
                 return i + 1;
-        
+        return 0;
+    };
+
+    appendOneLine();
+    for (const auto* node : allNodes) {
+        if (node == nullptr)
+            continue;
+        unsigned l = 0;
+        std::vector<unsigned> qubits = node->qubits();
+        for (auto q : qubits) {
+            unsigned tmp = lastEmptyLine(q);
+            if (tmp > l)
+                l = tmp;
+        }
+        for (auto q : qubits) {
+            tile[l][q].first = node->id;
+            tile[l][q].second = node->nqubits;
+        }
+    }
+    return { tile };
+}
+
+void CircuitGraph::draw(std::ostream& os) const {
+    std::vector<std::vector<std::pair<int, bool>>> tile;
+
+    auto appendOneLine = [&, nqubits=nqubits]() {
+        tile.push_back(std::vector<std::pair<int, bool>>(nqubits, {-1, false}));
+    };
+    auto lastEmptyLine = [&](unsigned c) -> unsigned {
+        if (tile[tile.size() - 1][c].first != -1) {
+            // last line is occupied
+            appendOneLine();
+            return tile.size() - 1;
+        }
+        for (int i = tile.size() - 2; i >= 0; i--) 
+            // find the first occupied one, bottom up
+            if (tile[i][c].first != -1)
+                return i + 1;
         return 0;
     };
 
@@ -455,7 +491,6 @@ void CircuitGraph::draw(std::ostream& os) const {
     for (const auto* node : allNodes) {
         if (node == nullptr)
             continue;
-
         unsigned l = 0;
         std::vector<unsigned> qubits = node->qubits();
         for (auto q : qubits) {
@@ -471,7 +506,6 @@ void CircuitGraph::draw(std::ostream& os) const {
         } else {
             tile[l][qubits[0]].first = node->id;
         }
-        
         if (node->id > largestID)
             largestID = node->id;
     }
@@ -496,4 +530,45 @@ void CircuitGraph::draw(std::ostream& os) const {
         os << "\n";
     }
      
+}
+
+void CircuitGraph::Tile::toTikZ(std::ostream& os) const {
+    const double nodeSize = 0.4;
+    const double nodeSeparation = 1.0; 
+
+    int nrows = rows.size();
+    int ncols = rows[0].size();
+
+    const auto coord = [](double x, double y) -> std::string {
+        std::stringstream ss;
+        ss << "(" << x << "," << y << ")";
+        return ss.str();
+    };
+
+    for (size_t c = 0; c < ncols; c++) {
+        double yPos = -nodeSeparation * c;
+        os << "\\draw[thick] " << coord(-nodeSeparation, yPos);
+        for (size_t r = 0; r < nrows; r++) {
+            double xPos = nodeSeparation * r;
+            auto node = rows[r][c];
+            int id = node.first;
+            int nqubits = node.second;
+            if (id < 0)
+                continue;
+            if (nqubits == 1) {
+                os << " -- " << coord(xPos - nodeSize, yPos) << " "
+                   << coord(xPos, yPos) << " circle[radius=" << nodeSize << "] "
+                   << "node {$" << id << "$} "
+                   << coord(xPos + nodeSize, yPos);
+            } else {
+                os << " -- " << coord(xPos - nodeSize, yPos) << " "
+                   << coord(xPos-nodeSize, yPos-nodeSize) << " rectangle "
+                   << coord(xPos+nodeSize, yPos+nodeSize) << " "
+                   << coord(xPos, yPos) << " node {$" << id << "$} "
+                   << coord(xPos+nodeSize, yPos);      
+            }
+        }
+        os << " -- " << coord(nodeSeparation * nrows, yPos) << ";\n";
+    }
+    
 }

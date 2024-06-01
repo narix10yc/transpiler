@@ -25,8 +25,8 @@ using namespace simulation;
 using namespace simulation::tplt;
 
 
-using real_ty = double;
-constexpr unsigned k = 2;
+using real_ty = float;
+constexpr unsigned k = 3;
 
 int main() {
     Timer timer;

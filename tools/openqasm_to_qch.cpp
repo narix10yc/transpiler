@@ -24,6 +24,9 @@ int main(int argc, char** argv) {
     cl::opt<unsigned>
     VecSizeInBits("S", cl::desc("vector size in bits"), cl::Prefix, cl::init(1));
 
+    cl::opt<unsigned>
+    NThreads("nthreads", cl::desc("number of threads"), cl::init(1));
+
     cl::ParseCommandLineOptions(argc, argv);
 
     ir::RealTy realTy = ir::RealTy::Double;
@@ -78,7 +81,7 @@ int main(int argc, char** argv) {
     std::cerr << get_msg_start() << "converted back to qch AST\n";
 
     tic = clock::now();
-    CPUGenContext ctx {VecSizeInBits, outputFilename};
+    CPUGenContext ctx {VecSizeInBits, outputFilename, NThreads};
     ctx.setRealTy(realTy);
     ctx.generate(transpiledRoot);
     tok = clock::now();

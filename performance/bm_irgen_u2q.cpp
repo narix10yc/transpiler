@@ -1,5 +1,3 @@
-// #include "gen_file.h"
-
 #include <string>
 #include <iostream>
 #include <iomanip>
@@ -9,13 +7,13 @@
 #include <chrono>
 #include <thread>
 
-
 using real_ty = double;
-constexpr size_t k = 4;
-constexpr size_t l = 3;
-constexpr size_t s = 1;
-constexpr unsigned nthreads = 4;
-#define KERNEL f64_s1_sep_u2q_k4l3_ffffffffffffffff
+constexpr size_t k = 3;
+constexpr size_t l = 2;
+
+constexpr size_t s = 2;
+constexpr unsigned nthreads = 1;
+#define KERNEL f64_s2_sep_u2q_k3l2_ffffffffffffffff
 // #define KERNEL f64_s1_sep_u2q_k2l1_batched
 
 extern "C" {
@@ -81,7 +79,7 @@ int main() {
     f << "method,compiler,test_name,real_ty,num_threads,nqubits,k,l,s,t_min,t_q1,t_med,t_q3\n";
     f << std::scientific;
 
-    for (uint64_t nqubit = 6; nqubit < 28; nqubit += 2) {
+    for (uint64_t nqubit = 6; nqubit < 29; nqubit += 2) {
         // Separate Format
         std::function<void(void)> task;
         uint64_t chunkSize = (1 << (nqubit - s - 2)) / nthreads;

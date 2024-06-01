@@ -26,8 +26,8 @@ using namespace simulation::tplt;
 
 
 using real_ty = double;
-constexpr size_t k = 4;
-constexpr size_t l = 3;
+constexpr size_t k = 1;
+constexpr size_t l = 0;
 
 int main() {
     Timer timer;
