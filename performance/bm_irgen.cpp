@@ -7,9 +7,9 @@
 #include <thread>
 
 using real_ty = double;
-size_t k = 1;
-size_t s = 1;
-#define SEP_KERNEL f64_s1_sep_u3_k1_33330333
+size_t k = 5;
+size_t s = 4;
+#define SEP_KERNEL f64_s4_sep_u3_k5_33330333
 // #define ALT_KERNEL f64_s1_alt_u3_k2_33330333
 
 extern "C" {
@@ -78,7 +78,7 @@ int main() {
     f << "method,compiler,test_name,real_ty,num_threads,nqubits,k,s,t_min,t_q1,t_med,t_q3\n";
     f << std::scientific;
 
-    for (uint64_t nqubit = 4; nqubit < 29; nqubit += 2) {
+    for (uint64_t nqubit = 6; nqubit < 29; nqubit += 2) {
         // Separate Format
         tr = timer.timeit(
             [&, n=nqubit](){ SEP_KERNEL(real, imag, 0, 1 << (n - s - 1), m); },
