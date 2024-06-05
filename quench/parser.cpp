@@ -73,6 +73,7 @@ Token parseCharsToToken(char c, char next) {
 
 bool Parser::proceed() {
     curToken = nextToken;
+    std::cerr << "curToken: " << curToken << "\n";
     if (curToken.type == TokenTy::Eof)
         return false;
 
@@ -129,23 +130,116 @@ void Parser::skipRestOfLine() {
 }
 
 std::unique_ptr<GateApplyStmt> Parser::parseGateApplyStmt_() {
-    return nullptr;
+    assert(curToken.type == TokenTy::Identifier);
+
+    errorMsgStart = "GateApplyStmt";
+    auto gate = std::make_unique<GateApplyStmt>(curToken.str);
+
+    // parameters
+    if (proceedWithType(TokenTy::L_RoundBraket, false)) {
+        displayParserWarning("Parsing parameters in gate is not implemented yet");
+        if (!proceedWithType(TokenTy::R_RoundBraket)) return nullptr;
+    }
+
+    while (proceedWithType(TokenTy::Numeric, false)) {
+        int qubit;
+        try {
+            qubit = std::stoi(curToken.str);
+        } catch (...) {
+            displayParserError("Cannot parse target qubit '" + curToken.str + "'");
+            return nullptr;
+        }
+        gate->qubits.push_back(qubit);
+    }
+
+    if (gate->qubits.empty())
+        displayParserWarning("Parsed a gate with no target");
+    else
+        proceed(); // eat the last target qubit
+
+    return gate;
 }
 
 std::unique_ptr<CircuitStmt> Parser::parseCircuitStmt_() {
-    return nullptr;
+    assert(curToken.type == TokenTy::Circuit);
+    errorMsgStart = "CircuitStmt";
+
+    auto circuit = std::make_unique<CircuitStmt>();    
+    // number of qubits
+    if (proceedWithType(TokenTy::Less, false)) {
+        if (!proceedWithType(TokenTy::Numeric)) return nullptr;
+        try {
+            circuit->nqubits = std::stoi(curToken.str);
+        } catch (std::invalid_argument) {
+            displayParserError("Cannot parse number of qubits with input '" + curToken.str + "'");
+            return nullptr;
+        } catch (std::out_of_range) {
+            displayParserError("Number of qubits out of range '" + curToken.str + "'");
+            return nullptr;
+        }
+        if (!proceedWithType(TokenTy::Greater)) return nullptr;
+    }
+
+    // name
+    if (!proceedWithType(TokenTy::Identifier)) return nullptr;
+    circuit->name = curToken.str;
+
+    // parameters
+    if (proceedWithType(TokenTy::L_RoundBraket, false)) {
+        displayParserWarning("Parsing parameters in circuit is not implemented yet");
+        if (!proceedWithType(TokenTy::R_RoundBraket)) return nullptr;
+    }
+
+    // body (gates)
+    if (!proceedWithType(TokenTy::L_CurlyBraket)) return nullptr;
+    proceed(); // eat '{'
+
+    std::unique_ptr<Statement> stmt = nullptr;
+    while ((stmt = parseStatement_()) != nullptr) {
+        auto gate = dynamic_cast<GateApplyStmt*>(stmt.get());
+        if (gate == nullptr) {
+            displayParserError("Only gates are allowed in circuit (for now)...");
+            return nullptr;
+        }
+        circuit->addGate(std::make_unique<GateApplyStmt>(*gate));
+    }
+    if (!proceedWithType(TokenTy::R_CurlyBraket)) return nullptr;
+
+    proceed(); // eat '}'
+    return circuit;
 }
 
-
-std::unique_ptr<RootNode> Parser::parse() {
-    proceed();
-    auto root = std::make_unique<RootNode>();
-    while (proceed()) {
+std::unique_ptr<Statement> Parser::parseStatement_() {
+    while (true) {
+        if (curToken.type == TokenTy::Eof) {
+            displayParserWarning("Got EoF when trying start a Statement");
+            return nullptr;
+        }
         if (curToken.type == TokenTy::Comment) {
             skipRestOfLine();
             continue;
         }
-        std::cerr << curToken << " ";
+        if (curToken.type == TokenTy::LineFeed ||
+                                curToken.type == TokenTy::Semicolon) {
+            proceed();
+            continue;
+        }
+
+        break;
+    }
+
+    if (curToken.type == TokenTy::Circuit)
+        return parseCircuitStmt_();
+    return parseGateApplyStmt_();
+}
+
+
+std::unique_ptr<RootNode> Parser::parse() {
+    proceed(); proceed();
+    auto root = std::make_unique<RootNode>();
+    std::unique_ptr<Statement> stmt = nullptr;
+    while ((stmt = parseStatement_()) != nullptr) {
+        root->stmts.push_back(std::move(stmt));
     }
     return root;
 }

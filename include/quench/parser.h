@@ -7,6 +7,7 @@
 #include <fstream>
 #include <exception>
 #include <queue>
+#include <sstream>
 
 #include "quench/ast.h"
 
@@ -61,6 +62,34 @@ enum class TokenTy : int {
 
     Unknown = -1000,
 };
+
+static std::string TokenTyToString(TokenTy ty) {
+    switch (ty) {
+    case TokenTy::Eof: return "EoF";
+    case TokenTy::Identifier: return "Identifier";
+    case TokenTy::Numeric: return "Numeric";
+    
+    case TokenTy::Circuit: return "Circuit";
+
+    case TokenTy::Add: return "Add";
+    case TokenTy::Sub: return "Sub";
+    case TokenTy::Mul: return "Mul";
+    case TokenTy::Div: return "Div";
+    case TokenTy::Pow: return "Pow";
+
+    case TokenTy::Comma: return "Comma";
+    case TokenTy::Semicolon: return "Semicolon";
+    case TokenTy::L_RoundBraket: return "L_RoundBraket";
+    case TokenTy::R_RoundBraket: return "R_RoundBraket";
+    case TokenTy::L_SquareBraket: return "L_SquareBraket";
+    case TokenTy::R_SquareBraket: return "R_SquareBraket";
+    case TokenTy::L_CurlyBraket: return "L_CurlyBraket";
+    case TokenTy::R_CurlyBraket: return "R_CurlyBraket";
+    case TokenTy::SingleQuote: return "SingleQuote";
+
+    default: return "'Not Implemented TokenTy'";
+    }
+}
 
 enum class UnaryOp {
     Positive, Negative, None,
@@ -143,6 +172,14 @@ public:
 };
 
 class Parser {
+private:
+    const std::string RED_FG = "\033[31m";
+    const std::string YELLOW_FG = "\033[33m";
+    const std::string GREEN_FG = "\033[32m";
+    const std::string DEFAULT_FG = "\033[39m";
+    const std::string RESET = "\033[0m";
+    const std::string BOLD = "\033[1m";
+private:
     int line;
     int column;
     std::string currentLine;
@@ -151,19 +188,23 @@ class Parser {
     Token curToken;
     Token nextToken;
 
+    std::string errorMsgStart;
+
     void displayParserError(const std::string& msg) const {
-        // foreground color
-        const std::string RED_FG = "\033[31m";
-        const std::string GREEN_FG = "\033[32m";
-        const std::string DEFAULT_FG = "\033[39m";
-        const std::string RESET = "\033[0m";
-        const std::string BOLD = "\033[1m";
-        std::cerr << RED_FG << BOLD << "parser error: " << DEFAULT_FG << msg
-                  << RESET << "\n"
+        std::cerr << RED_FG << BOLD << "parser error: " << DEFAULT_FG
+                  << errorMsgStart << ": " << msg << RESET << "\n"
                   << std::setw(5) << std::setfill(' ') << line << " | "
                   << currentLine << "\n"
                   << "      | " << std::string(static_cast<size_t>(column), ' ')
                   << GREEN_FG << BOLD << "^\n" << RESET;
+    }
+
+    void displayParserWarning(const std::string& msg) const {
+        std::cerr << YELLOW_FG << BOLD << "parser warning: "
+                  << DEFAULT_FG << msg << RESET << "\n"
+                  << std::setw(5) << std::setfill(' ') << line << " | "
+                  << currentLine << "\n";
+
     }
 
     int nextChar();
@@ -173,10 +214,31 @@ class Parser {
     /// false if EoF is reached.
     bool proceed();
 
+    /// @brief Proceed to the next Token with the expectation that the next
+    /// Token has a specific type. Procession takes place in case of match.
+    /// @param ty Next Token's type
+    /// @param must_match if set to true, display error in case of mismatch 
+    /// @return bool: is the target type met? 
+    bool proceedWithType(TokenTy ty, bool must_match=true) {
+        if (nextToken.type == ty) {
+            proceed();
+            return true;
+        }
+        if (must_match) {
+            std::stringstream ss;
+            ss << "Expecting token type " << TokenTyToString(ty) << ", "
+                << "but nextToken is " << nextToken;
+            displayParserError(ss.str());
+        }
+        return false;
+    }
+
     void skipRestOfLine();
 
     std::unique_ptr<GateApplyStmt> parseGateApplyStmt_();
     std::unique_ptr<CircuitStmt> parseCircuitStmt_();
+
+    std::unique_ptr<Statement> parseStatement_();
 public:
     Parser(const std::string& fileName)
         : line(0), column(0), currentLine(""), file(fileName),
