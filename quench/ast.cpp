@@ -18,8 +18,6 @@ std::ostream& CircuitStmt::print(std::ostream& os) const {
     return os;
 }
 
-
-
 void CircuitStmt::addGate(std::unique_ptr<GateApplyStmt> gate) {
 
 }
