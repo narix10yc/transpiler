@@ -129,15 +129,53 @@ void Parser::skipRestOfLine() {
     column = currentLine.size();
 }
 
+std::unique_ptr<BasicCASExpr> Parser::parseBasicCASExpr_() {
+    errorMsgStart = "BasicCASExpr";
+
+    if (curToken.type == TokenTy::Numeric) {
+
+    }
+    else if (curToken.type == TokenTy::Identifier) {
+        
+    } else {
+        displayParserError("Unknown curToken Type " + TokenTyToString(curToken.type));
+        return nullptr;
+    }
+}
+
+std::unique_ptr<Expression> Parser::parseExpression_() {
+
+}
+
+std::unique_ptr<ParameterRefExpr> Parser::parseParameterRefExpr_() {
+    assert(curToken.type == TokenTy::Hash);
+    errorMsgStart = "ParameterRefExpr";
+
+    if (!proceedWithType(TokenTy::Numeric)) return nullptr;
+    try {
+        return std::make_unique<ParameterRefExpr>(std::stoi(curToken.str));
+    } catch (...) {
+        displayParserError("Cannot parse target parameter reference '" + curToken.str + "'");
+        return nullptr;
+    }
+}
+
 std::unique_ptr<GateApplyStmt> Parser::parseGateApplyStmt_() {
     assert(curToken.type == TokenTy::Identifier);
-
     errorMsgStart = "GateApplyStmt";
+
     auto gate = std::make_unique<GateApplyStmt>(curToken.str);
 
     // parameters
     if (proceedWithType(TokenTy::L_RoundBraket, false)) {
-        displayParserWarning("Parsing parameters in gate is not implemented yet");
+        if (!proceedWithType(TokenTy::Hash)) return nullptr;
+        if (!proceedWithType(TokenTy::Numeric)) return nullptr;
+        try {
+            gate->paramReference = std::stoi(curToken.str);
+        } catch (...) {
+            displayParserError("Cannot parse target parameter reference '" + curToken.str + "'");
+            return nullptr;
+        }
         if (!proceedWithType(TokenTy::R_RoundBraket)) return nullptr;
     }
 
@@ -157,6 +195,7 @@ std::unique_ptr<GateApplyStmt> Parser::parseGateApplyStmt_() {
     else
         proceed(); // eat the last target qubit
 
+    displayParserLog("parsed a gate");
     return gate;
 }
 
@@ -203,10 +242,22 @@ std::unique_ptr<CircuitStmt> Parser::parseCircuitStmt_() {
         }
         circuit->addGate(std::make_unique<GateApplyStmt>(*gate));
     }
-    if (!proceedWithType(TokenTy::R_CurlyBraket)) return nullptr;
+    if (curToken.type != TokenTy::R_CurlyBraket) {
+        displayParserError("Expecting '}' to end circuit definition");
+        return nullptr;
+    }
 
     proceed(); // eat '}'
+    displayParserLog("parsed a circuit");
     return circuit;
+}
+
+std::unique_ptr<ParameterDefStmt> Parser::parseParameterDefStmt_() {
+    assert(curToken.type == TokenTy::Hash);
+    errorMsgStart = "ParameterDefStmt";
+
+    displayParserWarning("Not Implemented yet");
+    return nullptr;
 }
 
 std::unique_ptr<Statement> Parser::parseStatement_() {
@@ -219,20 +270,24 @@ std::unique_ptr<Statement> Parser::parseStatement_() {
             skipRestOfLine();
             continue;
         }
-        if (curToken.type == TokenTy::LineFeed ||
-                                curToken.type == TokenTy::Semicolon) {
+        // skip \n and ';'
+        if (curToken.type == TokenTy::LineFeed
+            || curToken.type == TokenTy::Semicolon) {
             proceed();
             continue;
         }
-
         break;
     }
 
+    displayParserLog("ready to parse a statement");
     if (curToken.type == TokenTy::Circuit)
         return parseCircuitStmt_();
-    return parseGateApplyStmt_();
+    if (curToken.type == TokenTy::Identifier)
+        return parseGateApplyStmt_();
+    if (curToken.type == TokenTy::Hash)
+        return parseParameterDefStmt_();
+    return nullptr;
 }
-
 
 std::unique_ptr<RootNode> Parser::parse() {
     proceed(); proceed();

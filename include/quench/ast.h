@@ -14,8 +14,18 @@ public:
     virtual std::ostream& print(std::ostream& os) const = 0;
 };
 
-class Expression : public Node {
+class Expression : public Node {};
 
+/// @brief '#'<number:int>
+class ParameterRefExpr : public Expression {
+public:
+    int number;
+
+    ParameterRefExpr(int number) : number(number) {}
+
+    std::ostream& print(std::ostream& os) const override {
+        return os << "#" << number;
+    }
 };
 
 class PolynomialExpr;
@@ -603,30 +613,7 @@ public:
 };
 
 
-class Statement : public Node {
-
-};
-
-class RootNode : public Node {
-public:
-    std::vector<std::unique_ptr<Statement>> stmts;
-
-    RootNode() : stmts() {}
-
-    std::ostream& print(std::ostream& os) const override;
-};
-
-/// @brief '#'<number:int>
-class ParameterRefExpr : public Expression {
-public:
-    int number;
-
-    ParameterRefExpr(int number) : number(number) {}
-
-    std::ostream& print(std::ostream& os) const override {
-        return os << "#" << number;
-    }
-};
+class Statement : public Node {};
 
 class GateApplyStmt : public Statement {
 public:
@@ -641,7 +628,10 @@ public:
     std::ostream& print(std::ostream& os) const override;
 };
 
+/// @brief '#'<number:int> '=' '{' ... '}'
 class ParameterDefStmt : public Statement {
+public:
+    std::unique_ptr<ParameterRefExpr> lhs;
 
 };
 
@@ -659,6 +649,15 @@ public:
     std::ostream& print(std::ostream& os) const override;
 };
 
+
+class RootNode : public Node {
+public:
+    std::vector<std::unique_ptr<Statement>> stmts;
+
+    RootNode() : stmts() {}
+
+    std::ostream& print(std::ostream& os) const override;
+};
 
 
 } // namespace quench::ast

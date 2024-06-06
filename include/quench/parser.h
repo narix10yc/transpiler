@@ -86,6 +86,8 @@ static std::string TokenTyToString(TokenTy ty) {
     case TokenTy::L_CurlyBraket: return "L_CurlyBraket";
     case TokenTy::R_CurlyBraket: return "R_CurlyBraket";
     case TokenTy::SingleQuote: return "SingleQuote";
+    case TokenTy::DoubleQuote: return "DoubleQuote";
+    case TokenTy::Hash: return "Hash";
 
     default: return "'Not Implemented TokenTy'";
     }
@@ -176,6 +178,7 @@ private:
     const std::string RED_FG = "\033[31m";
     const std::string YELLOW_FG = "\033[33m";
     const std::string GREEN_FG = "\033[32m";
+    const std::string CYAN_FG = "\033[36m";
     const std::string DEFAULT_FG = "\033[39m";
     const std::string RESET = "\033[0m";
     const std::string BOLD = "\033[1m";
@@ -207,6 +210,11 @@ private:
 
     }
 
+    void displayParserLog(const std::string& msg) const {
+        std::cerr << CYAN_FG << BOLD << "parser log: "
+                << DEFAULT_FG << msg << RESET << "\n";
+    }
+
     int nextChar();
     int peekChar();
 
@@ -235,8 +243,16 @@ private:
 
     void skipRestOfLine();
 
+    std::unique_ptr<BasicCASExpr> parseBasicCASExpr_();
+    
+    std::unique_ptr<Expression> parseExpression_();
+
+    std::unique_ptr<ParameterRefExpr> parseParameterRefExpr_();
+
     std::unique_ptr<GateApplyStmt> parseGateApplyStmt_();
     std::unique_ptr<CircuitStmt> parseCircuitStmt_();
+
+    std::unique_ptr<ParameterDefStmt> parseParameterDefStmt_();
 
     std::unique_ptr<Statement> parseStatement_();
 public:
