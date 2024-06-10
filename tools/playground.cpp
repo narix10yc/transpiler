@@ -1,9 +1,9 @@
 // #include "quench/parser.h"
-#include "qch/GateMatrix.h"
+#include "quench/GateMatrix.h"
 
 // using namespace quench::ast;
 
-using namespace qch::ir;
+using namespace quench::cas;
 
 int main() {
     // Parser parser("../examples/simple.qch");

@@ -1,12 +1,12 @@
-#ifndef QCH_GATE_MATRIX_H
-#define QCH_GATE_MATRIX_H
+#ifndef QUENCH_GATE_MATRIX_H
+#define QUENCH_GATE_MATRIX_H
 
 #include <vector>
 #include <algorithm>
 #include <iostream>
 #include <cassert>
 
-namespace qch::ir {
+namespace quench::cas {
 
 class Polynomial;
 
@@ -388,6 +388,7 @@ class SquareComplexMatrix {
 public:
     std::vector<Complex<real_ty>> data;
 
+    SquareComplexMatrix() : size(0), data() {}
     SquareComplexMatrix(size_t size) : size(size), data(size * size) {}
     SquareComplexMatrix(size_t size, std::initializer_list<Complex<real_ty>> data)
         : size(size), data(data) {}
@@ -477,9 +478,7 @@ public:
 };
 
 
-using CASMatrix = SquareComplexMatrix<Polynomial>;
 
+} // namespace quench::cas
 
-} // namespace qch::ir
-
-#endif // QCH_GATE_MATRIX_H
+#endif // QUENCH_GATE_MATRIX_H

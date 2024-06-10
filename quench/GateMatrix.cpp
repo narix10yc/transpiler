@@ -1,6 +1,6 @@
-#include "qch/GateMatrix.h"
+#include "quench/GateMatrix.h"
 
-using namespace qch::ir;
+using namespace quench::cas;
 
 std::ostream& Polynomial::print(std::ostream& os) const {
     if (monomials.empty())
@@ -47,33 +47,20 @@ std::ostream& Polynomial::printLaTeX(std::ostream& os) const {
 
 // using monomial_t = Polynomial::monomial_t;
 // using power_t = monomial_t::power_t;
-
 Polynomial& Polynomial::operator+=(const monomial_t& monomial) {
-    // std::cerr << "about to add monomial " << monomial << " to ";
-    // print(std::cerr) << "\n";
     auto it = std::lower_bound(monomials.begin(), monomials.end(), monomial, monomial_cmp);
-    if (it == monomials.end()) {
-        // std::cerr << "iter is end, just insert it\n";
+    if (it == monomials.end())
         monomials.insert(it, monomial);
-    }
-    else if (monomial_eq(*it, monomial)) {
-        // std::cerr << "Lower bound element is the same, add coef together\n";
+    else if (monomial_eq(*it, monomial))
         it->coef += monomial.coef;
-    }
-    else {
-        // std::cerr << "The lower bound element " << (*it) << " is different, "
-                    //  "insert monomial " << monomial << "\n";
+    else
         monomials.insert(it, monomial);
-    }
-    // std::cerr << "addition result = ";
-    // print(std::cerr) << "\n";
     return *this;
 }
 
 Polynomial& Polynomial::operator+=(const Polynomial& other) {
     for (const auto& monomial : other.monomials)
         operator+=(monomial);
-
     return *this;
 }
 
@@ -95,16 +82,12 @@ Polynomial& Polynomial::operator*=(const monomial_t& m) {
             }
             int cmp = myIter->base->compare(otherIter->base.get());
             if (cmp == 0) {
-                // std::cerr << "flag3\n";
                 myIter->exponent += otherIter->exponent;
                 myIter++; otherIter++;
             }
-            else if (cmp < 0) {
-                                // std::cerr << "flag4\n";
+            else if (cmp < 0)
                 myIter++;
-            }
             else {
-                                // std::cerr << "flag4\n";
                 monomial.powers.insert(myIter, *otherIter);
                 otherIter++;
             }
@@ -121,14 +104,9 @@ Polynomial Polynomial::operator*(const Polynomial& other) {
     Polynomial newPoly;
     for (const auto& m : other.monomials) {
         auto tmp = *this;
-        std::cerr << "sub step: mul with m = " << m << "\n tmp = ";
         (tmp *= m).print(std::cerr) << "\n";
         newPoly += tmp;
-        std::cerr << "newPoly is now ";
-        newPoly.print(std::cerr) << "\n";
     }
-    std::cerr << "result: ";
-    newPoly.print(std::cerr) << "\n";
     return newPoly;
 }
 

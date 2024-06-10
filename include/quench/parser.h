@@ -243,7 +243,7 @@ private:
 
     void skipRestOfLine();
 
-    std::unique_ptr<BasicCASExpr> parseBasicCASExpr_();
+    // std::unique_ptr<BasicCASExpr> parseBasicCASExpr_();
     
     std::unique_ptr<Expression> parseExpression_();
 

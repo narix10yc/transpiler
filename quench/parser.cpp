@@ -129,19 +129,6 @@ void Parser::skipRestOfLine() {
     column = currentLine.size();
 }
 
-std::unique_ptr<BasicCASExpr> Parser::parseBasicCASExpr_() {
-    errorMsgStart = "BasicCASExpr";
-
-    if (curToken.type == TokenTy::Numeric) {
-
-    }
-    else if (curToken.type == TokenTy::Identifier) {
-        
-    } else {
-        displayParserError("Unknown curToken Type " + TokenTyToString(curToken.type));
-        return nullptr;
-    }
-}
 
 std::unique_ptr<Expression> Parser::parseExpression_() {
 

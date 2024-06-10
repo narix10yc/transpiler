@@ -1,1 +1,1 @@
-add_library(quench "parser.cpp" "ast.cpp" "cas.cpp")
+add_library(quench "parser.cpp" "ast.cpp" "GateMatrix.cpp")
