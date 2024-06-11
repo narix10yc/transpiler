@@ -4,7 +4,9 @@ using namespace quench::cas;
 
 std::ostream& Polynomial::print(std::ostream& os) const {
     if (monomials.empty())
-        return os;
+        return os << "0";
+    if (monomials.size() == 1 && monomials[0].powers.empty())
+        return os << monomials[0].coef;
 
     auto it = monomials.begin();
     while (it != monomials.end()) {
@@ -25,7 +27,9 @@ std::ostream& Polynomial::print(std::ostream& os) const {
 
 std::ostream& Polynomial::printLaTeX(std::ostream& os) const {
     if (monomials.empty())
-        return os;
+        return os << "0";
+    if (monomials.size() == 1 && monomials[0].powers.empty())
+        return os << monomials[0].coef;
 
     auto it = monomials.begin();
     while (it != monomials.end()) {

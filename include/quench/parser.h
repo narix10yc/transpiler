@@ -19,6 +19,7 @@ enum class BinaryOp;
 
 enum class TokenTy : int { 
     Eof = -1,
+    Start = -4,
     Identifier = -2,
     Numeric = -3,
 
@@ -66,6 +67,7 @@ enum class TokenTy : int {
 static std::string TokenTyToString(TokenTy ty) {
     switch (ty) {
     case TokenTy::Eof: return "EoF";
+    case TokenTy::Start: return "Start";
     case TokenTy::Identifier: return "Identifier";
     case TokenTy::Numeric: return "Numeric";
     
@@ -132,6 +134,7 @@ public:
     friend std::ostream& operator<<(std::ostream& os, const Token& token) {
         switch (token.type) {
             case TokenTy::Eof: return os << "EoF";
+            case TokenTy::Start: return os << "Start";
             case TokenTy::Numeric: return os << "Num(" << token.str << ")";
             case TokenTy::Identifier: return os << "Identifier("
                                                 << token.str << ")";
@@ -215,11 +218,17 @@ private:
                 << DEFAULT_FG << msg << RESET << "\n";
     }
 
+    /// @brief read one line from file. Return the length of the read line.
+    /// @return -1 if EoF is reached. In such case file.close() will be called.
+    /// Otherwise, return the length of the read line.
+    int readLine();
+
     int nextChar();
     int peekChar();
 
-    /// @brief Proceed to the next Token. Update curToken and nextToken. Return
-    /// false if EoF is reached.
+    /// @brief Proceed to the next Token. curToken is replaced by nextToken.
+    /// nextToken is updated by reading the next (few) characters.
+    /// return false if EoF is reached (i.e. curToken is EoF after procession)
     bool proceed();
 
     /// @brief Proceed to the next Token with the expectation that the next
@@ -241,13 +250,7 @@ private:
         return false;
     }
 
-    void skipRestOfLine();
-
-    // std::unique_ptr<BasicCASExpr> parseBasicCASExpr_();
-    
-    std::unique_ptr<Expression> parseExpression_();
-
-    std::unique_ptr<ParameterRefExpr> parseParameterRefExpr_();
+    cas::Polynomial parsePolynomial_();
 
     std::unique_ptr<GateApplyStmt> parseGateApplyStmt_();
     std::unique_ptr<CircuitStmt> parseCircuitStmt_();
@@ -258,7 +261,7 @@ private:
 public:
     Parser(const std::string& fileName)
         : line(0), column(0), currentLine(""), file(fileName),
-          curToken(), nextToken() {}
+          curToken(TokenTy::Start), nextToken(TokenTy::Start) {}
 
     std::unique_ptr<RootNode> parse();
 };

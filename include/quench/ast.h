@@ -17,31 +17,20 @@ public:
 };
 
 class Expression : public Node {};
-
-/// @brief '#'<number:int>
-class ParameterRefExpr : public Expression {
-public:
-    int number;
-
-    ParameterRefExpr(int number) : number(number) {}
-
-    std::ostream& print(std::ostream& os) const override {
-        return os << "#" << number;
-    }
-};
-
-
 class Statement : public Node {};
 
 class GateApplyStmt : public Statement {
 public:
     std::string name;
     std::vector<int> qubits;
-    cas::SquareComplexMatrix<cas::Polynomial> matrix;
-    int paramReference;
+    int paramRefNumber;
 
-    GateApplyStmt(const std::string& name)
-        : name(name), qubits(), matrix(), paramReference(-1) {} 
+    GateApplyStmt(const std::string& name, int paramRefNumber = -1)
+        : name(name), qubits(), paramRefNumber(paramRefNumber) {}
+
+    GateApplyStmt(const std::string& name, int paramRefNumber,
+                  std::initializer_list<int> qubits)
+        : name(name), qubits(qubits), paramRefNumber(paramRefNumber) {} 
 
     std::ostream& print(std::ostream& os) const override;
 };
@@ -49,8 +38,29 @@ public:
 /// @brief '#'<number:int> '=' '{' ... '}'
 class ParameterDefStmt : public Statement {
 public:
-    std::unique_ptr<ParameterRefExpr> lhs;
+    int refNumber;
+    int nqubits;
+    using GateMatrix = cas::SquareComplexMatrix<cas::Polynomial>;
+    GateMatrix matrix;
 
+    ParameterDefStmt(int refNumber)
+        : refNumber(refNumber), nqubits(0), matrix() {}
+
+    std::ostream& print(std::ostream& os) const override {return os;}
+
+};
+
+class BlockOfGatesStmt : public Statement {
+public:
+    std::vector<GateApplyStmt> gates;
+
+    BlockOfGatesStmt() : gates() {}
+    
+    std::ostream& print(std::ostream& os) const override {
+        for (const auto& gate : gates)
+            gate.print(os);
+        return os;
+    }
 };
 
 class CircuitStmt : public Statement {

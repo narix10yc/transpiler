@@ -19,5 +19,6 @@ std::ostream& CircuitStmt::print(std::ostream& os) const {
 }
 
 void CircuitStmt::addGate(std::unique_ptr<GateApplyStmt> gate) {
-
+    assert(gate != nullptr);
+    
 }

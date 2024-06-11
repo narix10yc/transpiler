@@ -1,88 +1,57 @@
 #include "quench/parser.h"
 #include <cassert>
 
+using namespace quench::cas;
 using namespace quench::ast;
 
-int Parser::nextChar() {
-    if (currentLine[column] == '\0') {
-        if (file.eof()) {
-            file.close();
-            return -1;
-        }
-        // read new line
-        while (true) {
-            std::getline(file, currentLine);
-            line++;
-            if (file.eof()) {
-                file.close();
-                if (currentLine.empty())
-                    return -1;
-                break;
-            }
-            if (!currentLine.empty())
-                break;
-        }
-        column = 0;
-        return '\n';
+
+int Parser::readLine() {
+    if (file.eof()) {
+        file.close();
+        return -1;
     }
-    return currentLine[column++];
+    std::getline(file, currentLine);
+    line++;
+    return currentLine.size();
 }
 
-int Parser::peekChar() {
+int Parser::nextChar() {
+    column++;
+    if (column == currentLine.size())
+        return '\n';
+    if (column > currentLine.size()) {
+        int flag = 0;
+        while ((flag = readLine()) == 0) {}
+        if (flag < 0)
+            return -1;
+        column = 0;
+        return currentLine[0];
+    }
     return currentLine[column];
 }
 
-Token parseCharsToToken(char c, char next) {
-    switch (c) {
-    // operators
-    case '+': return { TokenTy::Add };
-    case '-': return { TokenTy::Sub };
-    case '*': { 
-        if (next == '*') return { TokenTy::Pow }; // '**'
-        if (next == '/') return { TokenTy::CommentEnd }; // '*/'
-        return { TokenTy::Mul };
-    }
-    case '/': {
-        if (next == '/') return { TokenTy::Comment }; // '//'
-        if (next == '*') return { TokenTy::CommentStart }; // '/*'
-        return { TokenTy::Div };
-    }
-    case '=': return { (next == '=') ? TokenTy::EqualEqual : TokenTy::Equal };
-    case '>': return { (next == '=') ? TokenTy::GreaterEqual : TokenTy::Greater };
-    case '<': return { (next == '=') ? TokenTy::LessEqual : TokenTy::Less };
-    // symbols
-    case ',': return { TokenTy::Comma };
-    case ';': return { TokenTy::Semicolon };
-    case '(': return { TokenTy::L_RoundBraket };
-    case ')': return { TokenTy::R_RoundBraket };
-    case '[': return { TokenTy::L_SquareBraket };
-    case ']': return { TokenTy::R_SquareBraket };
-    case '{': return { TokenTy::L_CurlyBraket };
-    case '}': return { TokenTy::R_CurlyBraket };
-    case '\'': return { TokenTy::SingleQuote };
-    case '\"': return { TokenTy::DoubleQuote };
-    case '@': return { TokenTy::AtSymbol };
-    case '%': return { TokenTy::Percent };
-    case '#': return { TokenTy::Hash };
-    case '\\': return { TokenTy::Backslash };
-
-    case '\n': return { TokenTy::LineFeed };
-    default: return { TokenTy::Unknown };
-    }
+int Parser::peekChar() {
+    if (column >= currentLine.size())
+        return '\0';
+    return currentLine[column+1];
 }
 
 bool Parser::proceed() {
+    // std::cerr << CYAN_FG << "(" << line << ":" << column << ")"
+            //   << " before proceed: " << curToken << "; " << nextToken << "\n" << RESET;
+
     curToken = nextToken;
-    std::cerr << "curToken: " << curToken << "\n";
     if (curToken.type == TokenTy::Eof)
         return false;
 
     int c;
     // skip white space
     while ((c = nextChar()) == ' ');
-
-    if (c < 0)
+    
+    // std::cerr << "c is " << c << "\n";
+    if (c < 0) {
         nextToken = { TokenTy::Eof };
+    }
     else if (std::isdigit(c) || c == '.') {
         // numeric
         std::string str {static_cast<char>(c)};
@@ -110,41 +79,92 @@ bool Parser::proceed() {
     }
     else {
         int next = peekChar();
+        // std::cerr << "next is " << next << "\n";
         assert(c >= 0 && c <= 255);
-        nextToken = parseCharsToToken(c, next);
+        switch (c) {
+        // operators
+        case '+': nextToken = { TokenTy::Add }; break;
+        case '-': nextToken = { TokenTy::Sub }; break;
+        case '*': // '**' or '*/' or '*'
+            if (next == '*') {
+                column++;
+                nextToken = { TokenTy::Pow };
+            } else if (next == '/') {
+                column++;
+                nextToken = { TokenTy::CommentEnd };
+            } else nextToken = { TokenTy::Mul };
+            break;
+        case '/': { // '//' or '/*' or '/'
+            if (next == '/') {
+                column++;
+                nextToken = { TokenTy::Comment };
+            } else if (next == '*') {
+                column++;
+                nextToken = { TokenTy::CommentStart };
+            } else nextToken = { TokenTy::Div };
+            break;
+        }
+        case '=': // '==' or '='
+            if (next == '=') {
+                column++;
+                nextToken = { TokenTy::EqualEqual };
+            } else nextToken = { TokenTy::Equal };
+            break;
+        case '>': // '>=' or '>'
+            if (next == '=') {
+                column++;
+                nextToken = { TokenTy::GreaterEqual };
+            } else nextToken = { TokenTy::Greater };
+            break;
+        case '<': // '<=' or '<'
+            if (next == '=') {
+                column++;
+                nextToken = { TokenTy::LessEqual };
+            } else nextToken = { TokenTy::Less };
+            break;
+        // symbols
+        case ',': nextToken = { TokenTy::Comma }; break;
+        case ';': nextToken = { TokenTy::Semicolon }; break;
+        case '(': nextToken = { TokenTy::L_RoundBraket }; break;
+        case ')': nextToken = { TokenTy::R_RoundBraket }; break;
+        case '[': nextToken = { TokenTy::L_SquareBraket }; break;
+        case ']': nextToken = { TokenTy::R_SquareBraket }; break;
+        case '{': nextToken = { TokenTy::L_CurlyBraket }; break;
+        case '}': nextToken = { TokenTy::R_CurlyBraket }; break;
+        case '\'': nextToken = { TokenTy::SingleQuote }; break;
+        case '\"': nextToken = { TokenTy::DoubleQuote }; break;
+        case '@': nextToken = { TokenTy::AtSymbol }; break;
+        case '%': nextToken = { TokenTy::Percent }; break;
+        case '#': nextToken = { TokenTy::Hash }; break;
+        case '\\': nextToken = { TokenTy::Backslash }; break;
 
-        if (nextToken.type == TokenTy::Unknown) {
-            std::string errMsg("Unknown char '");
-            errMsg += c; errMsg += '\'';
-            displayParserError(errMsg);
+        case '\n': nextToken = { TokenTy::LineFeed }; break;
+        default:
+            nextToken = { TokenTy::Unknown };
+            displayParserError("Unknown char " + std::to_string(c));
             assert(false && "Unknown char");
             return false;
         }
-        return true;
     }
+    std::cerr << CYAN_FG << "(" << line << ":" << column << ")"
+              << " proceed: " << curToken << "; " << nextToken << "\n" << RESET;
     return true;
 }
 
-void Parser::skipRestOfLine() {
-    column = currentLine.size();
-}
 
-
-std::unique_ptr<Expression> Parser::parseExpression_() {
-
-}
-
-std::unique_ptr<ParameterRefExpr> Parser::parseParameterRefExpr_() {
-    assert(curToken.type == TokenTy::Hash);
-    errorMsgStart = "ParameterRefExpr";
-
-    if (!proceedWithType(TokenTy::Numeric)) return nullptr;
-    try {
-        return std::make_unique<ParameterRefExpr>(std::stoi(curToken.str));
-    } catch (...) {
-        displayParserError("Cannot parse target parameter reference '" + curToken.str + "'");
-        return nullptr;
+Polynomial Parser::parsePolynomial_() {
+    if (curToken.type == TokenTy::Numeric) {
+        double value;
+        try {
+            value = std::stod(curToken.str);
+        } catch (...) {
+            displayParserError("Cannot parse numerics '" + curToken.str + "'");
+            return {};
+        }
+        return {{value, {}}};
     }
+    displayParserWarning("Only Numerics is supported in parsePolynomial yet");
+    return {};
 }
 
 std::unique_ptr<GateApplyStmt> Parser::parseGateApplyStmt_() {
@@ -152,13 +172,14 @@ std::unique_ptr<GateApplyStmt> Parser::parseGateApplyStmt_() {
     errorMsgStart = "GateApplyStmt";
 
     auto gate = std::make_unique<GateApplyStmt>(curToken.str);
+    displayParserLog("start parsing a gate with name " + curToken.str);
 
     // parameters
     if (proceedWithType(TokenTy::L_RoundBraket, false)) {
         if (!proceedWithType(TokenTy::Hash)) return nullptr;
         if (!proceedWithType(TokenTy::Numeric)) return nullptr;
         try {
-            gate->paramReference = std::stoi(curToken.str);
+            gate->paramRefNumber = std::stoi(curToken.str);
         } catch (...) {
             displayParserError("Cannot parse target parameter reference '" + curToken.str + "'");
             return nullptr;
@@ -218,48 +239,113 @@ std::unique_ptr<CircuitStmt> Parser::parseCircuitStmt_() {
 
     // body (gates)
     if (!proceedWithType(TokenTy::L_CurlyBraket)) return nullptr;
-    proceed(); // eat '{'
 
-    std::unique_ptr<Statement> stmt = nullptr;
-    while ((stmt = parseStatement_()) != nullptr) {
-        auto gate = dynamic_cast<GateApplyStmt*>(stmt.get());
-        if (gate == nullptr) {
-            displayParserError("Only gates are allowed in circuit (for now)...");
-            return nullptr;
+    while (proceed()) {
+        errorMsgStart = "CircuitStmt";
+        std::cerr << "Hello World! curToken is " << curToken << "\n";
+        if (curToken.type == TokenTy::R_CurlyBraket) {
+            proceed(); // eat '}'
+            displayParserLog("parsed a circuit");
+            return circuit;
         }
-        circuit->addGate(std::make_unique<GateApplyStmt>(*gate));
-    }
-    if (curToken.type != TokenTy::R_CurlyBraket) {
-        displayParserError("Expecting '}' to end circuit definition");
+        if (curToken.type == TokenTy::Semicolon
+                        || curToken.type == TokenTy::LineFeed) {
+            continue;
+        }
+        if (curToken.type == TokenTy::Identifier) {
+            circuit->addGate(parseGateApplyStmt_());
+            continue;
+        }
+        displayParserError("Unrecognized curToken when expecting "
+                           "an identifier to parse a gate");
         return nullptr;
     }
-
-    proceed(); // eat '}'
-    displayParserLog("parsed a circuit");
-    return circuit;
+    return nullptr;
 }
 
 std::unique_ptr<ParameterDefStmt> Parser::parseParameterDefStmt_() {
     assert(curToken.type == TokenTy::Hash);
     errorMsgStart = "ParameterDefStmt";
 
-    displayParserWarning("Not Implemented yet");
-    return nullptr;
+    int refNumber;
+    if (!proceedWithType(TokenTy::Numeric)) return nullptr;
+    try {
+        refNumber = std::stoi(curToken.str);
+    } catch (...) {
+        displayParserError("Cannot parse target qubit '" + curToken.str + "'");
+        return nullptr;
+    }
+
+    if (!proceedWithType(TokenTy::Equal)) return nullptr;
+    if (!proceedWithType(TokenTy::L_CurlyBraket)) return nullptr;
+
+    auto defStmt = std::make_unique<ParameterDefStmt>(refNumber);
+    while (proceed()) {
+        Polynomial real, imag;
+        real = parsePolynomial_();
+        if (!proceedWithType(TokenTy::Comma)) return nullptr;
+        proceed();
+        imag = parsePolynomial_();
+        proceed();
+        defStmt->matrix.data.push_back({real, imag});
+        if (curToken.type == TokenTy::Comma)
+            continue;
+        if (curToken.type == TokenTy::R_CurlyBraket)
+            { proceed(); break; }
+        displayParserError("Unrecognized tokenType");
+        return nullptr;
+    }
+
+    // update number of qubits;
+    int s = defStmt->matrix.updateSize();
+    if (s < 0) {
+        displayParserError("Failed to updateMatrix due to size");
+        return defStmt;
+    }
+    if (s == 0) {
+        displayParserWarning("Parsed a ParamDefStmt with 0 param?");
+        return defStmt;
+    }
+    if (s == 1) {
+        displayParserLog("Parsed a 1-qubit ParamDefStmt");
+        defStmt->nqubits = 1;
+        return defStmt;
+    }
+    if (s == 4) {
+        displayParserLog("Parsed a 2-qubit ParamDefStmt");
+        defStmt->nqubits = 2;
+        return defStmt;
+    }
+    if (s == 8) {
+        displayParserLog("Parsed a 3-qubit ParamDefStmt");
+        defStmt->nqubits = 3;
+        return defStmt;
+    }
+    if (s == 16) {
+        displayParserLog("Parsed a 4-qubit ParamDefStmt");
+        defStmt->nqubits = 4;
+        return defStmt;
+    }
+    displayParserWarning("Unsupported matrix size " + std::to_string(s));
+    return defStmt;
 }
+
 
 std::unique_ptr<Statement> Parser::parseStatement_() {
     while (true) {
         if (curToken.type == TokenTy::Eof) {
-            displayParserWarning("Got EoF when trying start a Statement");
             return nullptr;
         }
         if (curToken.type == TokenTy::Comment) {
-            skipRestOfLine();
+            column = currentLine.size();
+            nextToken = { TokenTy::LineFeed };
+            proceed();
             continue;
         }
         // skip \n and ';'
         if (curToken.type == TokenTy::LineFeed
-            || curToken.type == TokenTy::Semicolon) {
+            || curToken.type == TokenTy::Semicolon
+            || curToken.type == TokenTy::Start) {
             proceed();
             continue;
         }
@@ -269,19 +355,22 @@ std::unique_ptr<Statement> Parser::parseStatement_() {
     displayParserLog("ready to parse a statement");
     if (curToken.type == TokenTy::Circuit)
         return parseCircuitStmt_();
-    if (curToken.type == TokenTy::Identifier)
-        return parseGateApplyStmt_();
     if (curToken.type == TokenTy::Hash)
         return parseParameterDefStmt_();
+    std::cerr << RED_FG << "curToken: " << curToken << RESET << "\n";
+    displayParserError("Unknown token when trying to parse a statement");
     return nullptr;
 }
 
 std::unique_ptr<RootNode> Parser::parse() {
-    proceed(); proceed();
     auto root = std::make_unique<RootNode>();
     std::unique_ptr<Statement> stmt = nullptr;
     while ((stmt = parseStatement_()) != nullptr) {
         root->stmts.push_back(std::move(stmt));
     }
+    if (curToken.type != TokenTy::Eof)
+        displayParserWarning("end of parsing, but curToken is not EoF?");
+    else
+        displayParserLog("Reached EoF");
     return root;
 }

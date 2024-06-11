@@ -394,6 +394,18 @@ public:
         : size(size), data(data) {}
 
     size_t getSize() const { return size; }
+    /// @brief update size based on data.
+    /// @return if data.size() is a perfect square, return the squre root of it.
+    /// otherwise return -1, and size will be set to 0.
+    int updateSize() {
+        int s = std::sqrt(data.size());
+        if (s * s == data.size()) {
+            size = s;
+            return s;
+        }
+        size = 0;
+        return -1;
+    }
 
     static SquareComplexMatrix Identity(size_t size) {
         SquareComplexMatrix m;
