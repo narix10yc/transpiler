@@ -18,7 +18,15 @@ std::ostream& CircuitStmt::print(std::ostream& os) const {
     return os;
 }
 
-void CircuitStmt::addGate(std::unique_ptr<GateApplyStmt> gate) {
-    assert(gate != nullptr);
+void CircuitStmt::addGateChain(const GateChainStmt& chain) {
+    stmts.push_back(std::make_unique<GateChainStmt>(chain));
+    // update number of qubits
+    for (const auto& gate : chain.gates) {
+        for (const auto& q : gate.qubits) {
+            if (q >= nqubits)
+                nqubits = q + 1;
+        }
+    }
     
+
 }

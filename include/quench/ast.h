@@ -50,15 +50,31 @@ public:
 
 };
 
-class BlockOfGatesStmt : public Statement {
+class GateChainStmt : public Statement {
 public:
     std::vector<GateApplyStmt> gates;
 
-    BlockOfGatesStmt() : gates() {}
+    GateChainStmt() : gates() {}
+
+    std::ostream& print(std::ostream& os) const override {
+        auto it = gates.begin();
+        while (it != gates.end()) {
+            os << ((it == gates.begin()) ? "  " : "@ ");
+            it->print(os) << "\n";
+        }
+        return os;
+    }
+};
+
+class BlockOfGatesStmt : public Statement {
+public:
+    std::vector<GateChainStmt> chains;
+
+    BlockOfGatesStmt() : chains() {}
     
     std::ostream& print(std::ostream& os) const override {
-        for (const auto& gate : gates)
-            gate.print(os);
+        for (const auto& chain : chains)
+            chain.print(os);
         return os;
     }
 };
@@ -72,7 +88,7 @@ public:
     
     CircuitStmt() : nqubits(0), stmts() {}
 
-    void addGate(std::unique_ptr<GateApplyStmt> gate);
+    void addGateChain(const GateChainStmt& chain);
 
     std::ostream& print(std::ostream& os) const override;
 };

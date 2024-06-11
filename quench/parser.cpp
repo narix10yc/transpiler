@@ -37,9 +37,6 @@ int Parser::peekChar() {
 }
 
 bool Parser::proceed() {
-    // std::cerr << CYAN_FG << "(" << line << ":" << column << ")"
-            //   << " before proceed: " << curToken << "; " << nextToken << "\n" << RESET;
-
     curToken = nextToken;
     if (curToken.type == TokenTy::Eof)
         return false;
@@ -141,165 +138,138 @@ bool Parser::proceed() {
         case '\n': nextToken = { TokenTy::LineFeed }; break;
         default:
             nextToken = { TokenTy::Unknown };
-            displayParserError("Unknown char " + std::to_string(c));
+            throwParserError("Unknown char " + std::to_string(c));
             assert(false && "Unknown char");
             return false;
         }
     }
     std::cerr << CYAN_FG << "(" << line << ":" << column << ")"
-              << " proceed: " << curToken << "; " << nextToken << "\n" << RESET;
+              << " proceed: " << curToken << " " << nextToken << "\n" << RESET;
     return true;
 }
 
-
 Polynomial Parser::parsePolynomial_() {
     if (curToken.type == TokenTy::Numeric) {
-        double value;
-        try {
-            value = std::stod(curToken.str);
-        } catch (...) {
-            displayParserError("Cannot parse numerics '" + curToken.str + "'");
-            return {};
-        }
-        return {{value, {}}};
+        return {{convertCurTokenToFloat(), {}}};
     }
     displayParserWarning("Only Numerics is supported in parsePolynomial yet");
     return {};
 }
 
-std::unique_ptr<GateApplyStmt> Parser::parseGateApplyStmt_() {
+GateApplyStmt Parser::parseGateApplyStmt_() {
     assert(curToken.type == TokenTy::Identifier);
-    errorMsgStart = "GateApplyStmt";
 
-    auto gate = std::make_unique<GateApplyStmt>(curToken.str);
-    displayParserLog("start parsing a gate with name " + curToken.str);
+    GateApplyStmt gate{curToken.str};
 
     // parameters
     if (proceedWithType(TokenTy::L_RoundBraket, false)) {
-        if (!proceedWithType(TokenTy::Hash)) return nullptr;
-        if (!proceedWithType(TokenTy::Numeric)) return nullptr;
-        try {
-            gate->paramRefNumber = std::stoi(curToken.str);
-        } catch (...) {
-            displayParserError("Cannot parse target parameter reference '" + curToken.str + "'");
-            return nullptr;
-        }
-        if (!proceedWithType(TokenTy::R_RoundBraket)) return nullptr;
+        proceedWithType(TokenTy::Hash);
+        proceedWithType(TokenTy::Numeric);
+        gate.paramRefNumber = convertCurTokenToInt();
+        proceedWithType(TokenTy::R_RoundBraket);
     }
 
-    while (proceedWithType(TokenTy::Numeric, false)) {
-        int qubit;
-        try {
-            qubit = std::stoi(curToken.str);
-        } catch (...) {
-            displayParserError("Cannot parse target qubit '" + curToken.str + "'");
-            return nullptr;
-        }
-        gate->qubits.push_back(qubit);
+    proceed();
+    while (true) {
+        gate.qubits.push_back(convertCurTokenToInt());
+        proceed();
+        if (curToken.type != TokenTy::Numeric)
+            break;
     }
-
-    if (gate->qubits.empty())
-        displayParserWarning("Parsed a gate with no target");
-    else
-        proceed(); // eat the last target qubit
-
-    displayParserLog("parsed a gate");
+    if (gate.qubits.empty())
+        throwParserError("GateApply: Parsed a gate with no target qubit");
+    
+    displayParserLog("Parsed gate '" + gate.name + "'");
     return gate;
 }
 
-std::unique_ptr<CircuitStmt> Parser::parseCircuitStmt_() {
-    assert(curToken.type == TokenTy::Circuit);
-    errorMsgStart = "CircuitStmt";
+GateChainStmt Parser::parseGateChainStmt_() {
+    assert(curToken.type == TokenTy::Identifier);;
 
-    auto circuit = std::make_unique<CircuitStmt>();    
+    GateChainStmt chain{};
+
+    while (true) {
+        chain.gates.push_back(parseGateApplyStmt_());
+        skipLineFeeds();
+        if (curToken.type == TokenTy::AtSymbol) {
+            proceed(); continue;
+        }
+        if (curToken.type == TokenTy::Semicolon) {
+            proceed();
+            break;
+        }
+        throwParserError("GateChain: Unrecognized curToken type");
+    }
+    displayParserLog("Parsed a gate chain with " + std::to_string(chain.gates.size()) + " gates");
+    return chain;
+}
+
+CircuitStmt Parser::parseCircuitStmt_() {
+    assert(curToken.type == TokenTy::Circuit);
+
+    CircuitStmt circuit;
     // number of qubits
     if (proceedWithType(TokenTy::Less, false)) {
-        if (!proceedWithType(TokenTy::Numeric)) return nullptr;
-        try {
-            circuit->nqubits = std::stoi(curToken.str);
-        } catch (std::invalid_argument) {
-            displayParserError("Cannot parse number of qubits with input '" + curToken.str + "'");
-            return nullptr;
-        } catch (std::out_of_range) {
-            displayParserError("Number of qubits out of range '" + curToken.str + "'");
-            return nullptr;
-        }
-        if (!proceedWithType(TokenTy::Greater)) return nullptr;
+        proceedWithType(TokenTy::Numeric);
+        circuit.nqubits = convertCurTokenToInt();
+        proceedWithType(TokenTy::Greater);
     }
 
     // name
-    if (!proceedWithType(TokenTy::Identifier)) return nullptr;
-    circuit->name = curToken.str;
+    proceedWithType(TokenTy::Identifier);
+    circuit.name = curToken.str;
 
     // parameters
     if (proceedWithType(TokenTy::L_RoundBraket, false)) {
         displayParserWarning("Parsing parameters in circuit is not implemented yet");
-        if (!proceedWithType(TokenTy::R_RoundBraket)) return nullptr;
+        proceedWithType(TokenTy::R_RoundBraket);
     }
 
     // body (gates)
-    if (!proceedWithType(TokenTy::L_CurlyBraket)) return nullptr;
-
-    while (proceed()) {
-        errorMsgStart = "CircuitStmt";
-        std::cerr << "Hello World! curToken is " << curToken << "\n";
+    proceedWithType(TokenTy::L_CurlyBraket);
+    proceed(); skipLineFeeds();
+    while (true) {
         if (curToken.type == TokenTy::R_CurlyBraket) {
-            proceed(); // eat '}'
-            displayParserLog("parsed a circuit");
-            return circuit;
+            proceed();
+            break;
         }
-        if (curToken.type == TokenTy::Semicolon
-                        || curToken.type == TokenTy::LineFeed) {
-            continue;
-        }
-        if (curToken.type == TokenTy::Identifier) {
-            circuit->addGate(parseGateApplyStmt_());
-            continue;
-        }
-        displayParserError("Unrecognized curToken when expecting "
-                           "an identifier to parse a gate");
-        return nullptr;
+        circuit.addGateChain(parseGateChainStmt_());
+        skipLineFeeds();
+        continue;
     }
-    return nullptr;
+    displayParserLog("Parsed circuit '" + circuit.name + "'");
+    return circuit;
 }
 
-std::unique_ptr<ParameterDefStmt> Parser::parseParameterDefStmt_() {
+ParameterDefStmt Parser::parseParameterDefStmt_() {
     assert(curToken.type == TokenTy::Hash);
-    errorMsgStart = "ParameterDefStmt";
 
     int refNumber;
-    if (!proceedWithType(TokenTy::Numeric)) return nullptr;
-    try {
-        refNumber = std::stoi(curToken.str);
-    } catch (...) {
-        displayParserError("Cannot parse target qubit '" + curToken.str + "'");
-        return nullptr;
-    }
+    proceedWithType(TokenTy::Numeric);
+    refNumber = convertCurTokenToInt();
+    proceedWithType(TokenTy::Equal);
+    proceedWithType(TokenTy::L_CurlyBraket);
 
-    if (!proceedWithType(TokenTy::Equal)) return nullptr;
-    if (!proceedWithType(TokenTy::L_CurlyBraket)) return nullptr;
-
-    auto defStmt = std::make_unique<ParameterDefStmt>(refNumber);
+    ParameterDefStmt defStmt{refNumber};
     while (proceed()) {
         Polynomial real, imag;
         real = parsePolynomial_();
-        if (!proceedWithType(TokenTy::Comma)) return nullptr;
+        proceedWithType(TokenTy::Comma);
         proceed();
         imag = parsePolynomial_();
         proceed();
-        defStmt->matrix.data.push_back({real, imag});
+        defStmt.matrix.data.push_back({real, imag});
         if (curToken.type == TokenTy::Comma)
             continue;
         if (curToken.type == TokenTy::R_CurlyBraket)
             { proceed(); break; }
-        displayParserError("Unrecognized tokenType");
-        return nullptr;
+        throwParserError("ParameterDef: Unrecognized tokenType");
     }
 
     // update number of qubits;
-    int s = defStmt->matrix.updateSize();
+    int s = defStmt.matrix.updateSize();
     if (s < 0) {
-        displayParserError("Failed to updateMatrix due to size");
+        throwParserError("ParameterDef: Failed to updateMatrix due to size");
         return defStmt;
     }
     if (s == 0) {
@@ -308,28 +278,27 @@ std::unique_ptr<ParameterDefStmt> Parser::parseParameterDefStmt_() {
     }
     if (s == 1) {
         displayParserLog("Parsed a 1-qubit ParamDefStmt");
-        defStmt->nqubits = 1;
+        defStmt.nqubits = 1;
         return defStmt;
     }
     if (s == 4) {
         displayParserLog("Parsed a 2-qubit ParamDefStmt");
-        defStmt->nqubits = 2;
+        defStmt.nqubits = 2;
         return defStmt;
     }
     if (s == 8) {
         displayParserLog("Parsed a 3-qubit ParamDefStmt");
-        defStmt->nqubits = 3;
+        defStmt.nqubits = 3;
         return defStmt;
     }
     if (s == 16) {
         displayParserLog("Parsed a 4-qubit ParamDefStmt");
-        defStmt->nqubits = 4;
+        defStmt.nqubits = 4;
         return defStmt;
     }
     displayParserWarning("Unsupported matrix size " + std::to_string(s));
     return defStmt;
 }
-
 
 std::unique_ptr<Statement> Parser::parseStatement_() {
     while (true) {
@@ -352,13 +321,12 @@ std::unique_ptr<Statement> Parser::parseStatement_() {
         break;
     }
 
-    displayParserLog("ready to parse a statement");
     if (curToken.type == TokenTy::Circuit)
-        return parseCircuitStmt_();
+        return std::make_unique<CircuitStmt>(parseCircuitStmt_());
     if (curToken.type == TokenTy::Hash)
-        return parseParameterDefStmt_();
-    std::cerr << RED_FG << "curToken: " << curToken << RESET << "\n";
-    displayParserError("Unknown token when trying to parse a statement");
+        return std::make_unique<ParameterDefStmt>(parseParameterDefStmt_());
+
+    throwParserError("Statement: Unrecognized curToken type");
     return nullptr;
 }
 

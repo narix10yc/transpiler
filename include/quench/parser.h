@@ -177,7 +177,7 @@ public:
 };
 
 class Parser {
-private:
+protected:
     const std::string RED_FG = "\033[31m";
     const std::string YELLOW_FG = "\033[33m";
     const std::string GREEN_FG = "\033[32m";
@@ -185,7 +185,7 @@ private:
     const std::string DEFAULT_FG = "\033[39m";
     const std::string RESET = "\033[0m";
     const std::string BOLD = "\033[1m";
-private:
+
     int line;
     int column;
     std::string currentLine;
@@ -194,15 +194,14 @@ private:
     Token curToken;
     Token nextToken;
 
-    std::string errorMsgStart;
-
-    void displayParserError(const std::string& msg) const {
+    void throwParserError(const std::string& msg) const {
         std::cerr << RED_FG << BOLD << "parser error: " << DEFAULT_FG
-                  << errorMsgStart << ": " << msg << RESET << "\n"
+                  << msg << RESET << "\n"
                   << std::setw(5) << std::setfill(' ') << line << " | "
                   << currentLine << "\n"
                   << "      | " << std::string(static_cast<size_t>(column), ' ')
                   << GREEN_FG << BOLD << "^\n" << RESET;
+        throw std::runtime_error("parser error");
     }
 
     void displayParserWarning(const std::string& msg) const {
@@ -231,6 +230,35 @@ private:
     /// return false if EoF is reached (i.e. curToken is EoF after procession)
     bool proceed();
 
+    void skipLineFeeds() {
+        while (curToken.type == TokenTy::LineFeed)
+            proceed();
+    }
+
+    double convertCurTokenToFloat() const {
+        assert(curToken.type == TokenTy::Numeric);
+        int count = 0;
+        for (const auto& c : curToken.str) {
+            if (c == '.')
+                count++;
+        }
+        if (count > 1)
+            throwParserError("Unable to parse '" + curToken.str + "' to float");
+        return std::stod(curToken.str);
+    }
+
+    int convertCurTokenToInt() const {
+        assert(curToken.type == TokenTy::Numeric);
+        int count = 0;
+        for (const auto& c : curToken.str) {
+            if (c == '.')
+                count++;
+        }
+        if (count > 1 || (count == 1 && curToken.str.back() != '.'))
+            throwParserError("Unable to parse '" + curToken.str + "' to int");
+        return std::stod(curToken.str);
+    }
+
     /// @brief Proceed to the next Token with the expectation that the next
     /// Token has a specific type. Procession takes place in case of match.
     /// @param ty Next Token's type
@@ -245,17 +273,18 @@ private:
             std::stringstream ss;
             ss << "Expecting token type " << TokenTyToString(ty) << ", "
                 << "but nextToken is " << nextToken;
-            displayParserError(ss.str());
+            throwParserError(ss.str());
         }
         return false;
     }
 
     cas::Polynomial parsePolynomial_();
 
-    std::unique_ptr<GateApplyStmt> parseGateApplyStmt_();
-    std::unique_ptr<CircuitStmt> parseCircuitStmt_();
+    GateApplyStmt parseGateApplyStmt_();
+    GateChainStmt parseGateChainStmt_();
+    CircuitStmt parseCircuitStmt_();
 
-    std::unique_ptr<ParameterDefStmt> parseParameterDefStmt_();
+    ParameterDefStmt parseParameterDefStmt_();
 
     std::unique_ptr<Statement> parseStatement_();
 public:
