@@ -15,7 +15,7 @@ class Lexer {
     int curChar;
     std::ifstream file;
 public:
-    Lexer(std::string& fileName) : fileName(fileName) {}
+    Lexer(const std::string& fileName) : fileName(fileName) {}
     ~Lexer() { file.close(); }
 
     int peekChar();

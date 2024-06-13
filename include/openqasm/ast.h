@@ -7,6 +7,7 @@
 #include <fstream>
 #include "token.h"
 #include "qch/ast.h"
+#include "quench/CircuitGraph.h"
 
 namespace simulation {
 class CPUGenContext;
@@ -62,36 +63,6 @@ public:
 };
 
 
-class RootNode : public Node {
-    std::vector<std::unique_ptr<Statement>> stmts;
-public:
-    std::string toString() const override { return "Root"; }
-    void prettyPrint(std::ofstream& f, int depth) const override;
-    void addStmt(std::unique_ptr<Statement> stmt) {
-        stmts.push_back(std::move(stmt));
-    }
-    
-    size_t countStmts() { return stmts.size(); }
-    Statement getStmt(size_t index) { return *(stmts[index]); }
-
-    std::unique_ptr<qch::ast::RootNode> toQch() const {
-        auto qchCircuit = std::make_unique<qch::ast::CircuitStmt>("mycircuit");
-        for (auto& s : stmts) {
-            auto qchStmt = s->toQchStmt();
-            if (qchStmt == nullptr) {
-                std::cerr << "cannot convert " << s->toString() << " to qch Stmt\n";
-                continue;
-            }
-            // std::cerr << "converted " << s->toString() << " to qch Stmt\n";
-            qchCircuit->addStmt(std::move(qchStmt));
-        }
-        auto qchRoot = std::make_unique<qch::ast::RootNode>();
-        qchRoot->addStmt(std::move(qchCircuit));
-        return qchRoot;
-    }
-};
-
-
 class Expression : public Node {
 public:
     std::string toString() const override { return "expression"; }
@@ -134,9 +105,9 @@ public:
 };
 
 class SubscriptExpr : public Expression {
+public:
     std::string name;
     int index;
-public:
     SubscriptExpr(std::string name, int index) : name(name), index(index) {}
 
     std::string getName() const { return name; }
@@ -287,10 +258,11 @@ public:
 
 
 class GateApplyStmt : public Statement {
+public:
     std::string name;
     std::vector<std::unique_ptr<Expression>> parameters;
     std::vector<std::unique_ptr<SubscriptExpr>> targets;
-public:
+
     GateApplyStmt(std::string name) : name(name) {}
 
     void addParameter(std::unique_ptr<Expression> param)
@@ -337,6 +309,61 @@ public:
         return qchStmt;
     }
 };
+
+
+class RootNode : public Node {
+    std::vector<std::unique_ptr<Statement>> stmts;
+protected:
+    using CircuitGraph = quench::circuit_graph::CircuitGraph;
+    using GateMatrix = quench::cas::GateMatrix;
+public:
+    std::string toString() const override { return "Root"; }
+    void prettyPrint(std::ofstream& f, int depth) const override;
+    void addStmt(std::unique_ptr<Statement> stmt) {
+        stmts.push_back(std::move(stmt));
+    }
+    
+    size_t countStmts() { return stmts.size(); }
+    Statement getStmt(size_t index) { return *(stmts[index]); }
+
+    std::unique_ptr<qch::ast::RootNode> toQch() const {
+        auto qchCircuit = std::make_unique<qch::ast::CircuitStmt>("mycircuit");
+        for (auto& s : stmts) {
+            auto qchStmt = s->toQchStmt();
+            if (qchStmt == nullptr) {
+                std::cerr << "cannot convert " << s->toString() << " to qch Stmt\n";
+                continue;
+            }
+            // std::cerr << "converted " << s->toString() << " to qch Stmt\n";
+            qchCircuit->addStmt(std::move(qchStmt));
+        }
+        auto qchRoot = std::make_unique<qch::ast::RootNode>();
+        qchRoot->addStmt(std::move(qchCircuit));
+        return qchRoot;
+    }
+
+    CircuitGraph toCircuitGraph() const {
+        CircuitGraph graph;
+        std::vector<unsigned> qubits;
+        for (const auto& s : stmts) {
+            auto gateApply = dynamic_cast<GateApplyStmt*>(s.get());
+            if (gateApply == nullptr) {
+                std::cerr << "skipping " << s->toString() << "\n";
+                continue;
+            }
+            qubits.clear();
+            for (unsigned i = 0; i < gateApply->targets.size(); i++) {
+                auto q = static_cast<unsigned>(gateApply->targets[i]->getIndex());
+                qubits.push_back(q);
+            }
+            GateMatrix matrix {static_cast<unsigned>(qubits.size())};
+            graph.addGate(matrix, qubits);
+        }
+
+        return graph;
+    }
+};
+
 
 } // namespace openqasm::ast
 

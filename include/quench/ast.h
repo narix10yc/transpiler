@@ -5,8 +5,9 @@
 #include <memory>
 #include <iostream>
 #include <cassert>
+#include <map>
 
-#include "GateMatrix.h"
+#include "quench/GateMatrix.h"
 
 namespace quench::ast {
 
@@ -17,9 +18,11 @@ public:
 };
 
 class Expression : public Node {};
-class Statement : public Node {};
 
-class GateApplyStmt : public Statement {
+class Statement : public Node {};
+class CircuitCompatibleStmt : public Statement {};
+
+class GateApplyStmt : public CircuitCompatibleStmt {
 public:
     std::string name;
     std::vector<int> qubits;
@@ -35,22 +38,7 @@ public:
     std::ostream& print(std::ostream& os) const override;
 };
 
-/// @brief '#'<number:int> '=' '{' ... '}'
-class ParameterDefStmt : public Statement {
-public:
-    int refNumber;
-    int nqubits;
-    using GateMatrix = cas::SquareComplexMatrix<cas::Polynomial>;
-    GateMatrix matrix;
-
-    ParameterDefStmt(int refNumber)
-        : refNumber(refNumber), nqubits(0), matrix() {}
-
-    std::ostream& print(std::ostream& os) const override {return os;}
-
-};
-
-class GateChainStmt : public Statement {
+class GateChainStmt : public CircuitCompatibleStmt {
 public:
     std::vector<GateApplyStmt> gates;
 
@@ -66,7 +54,7 @@ public:
     }
 };
 
-class BlockOfGatesStmt : public Statement {
+class BlockOfGatesStmt : public CircuitCompatibleStmt {
 public:
     std::vector<GateChainStmt> chains;
 
@@ -83,7 +71,7 @@ class CircuitStmt : public Statement {
 public:
     std::string name;
     int nqubits;
-    std::vector<std::unique_ptr<Statement>> stmts;
+    std::vector<std::unique_ptr<CircuitCompatibleStmt>> stmts;
     std::vector<std::shared_ptr<cas::VariableNode>> parameters;
     
     CircuitStmt() : nqubits(0), stmts() {}
@@ -93,12 +81,43 @@ public:
     std::ostream& print(std::ostream& os) const override;
 };
 
+/// @brief '#'<number:int> '=' '{' ... '}'';'
+class ParameterDefStmt : public Statement {
+public:
+    int refNumber;
+    cas::GateMatrix matrix;
+
+    ParameterDefStmt(int refNumber)
+        : refNumber(refNumber), matrix() {}
+
+    std::ostream& print(std::ostream& os) const override {return os;}
+
+};
 
 class RootNode : public Node {
+private:
+    struct param_def_stmt_cmp {
+        bool operator()
+                (const ParameterDefStmt& a, const ParameterDefStmt& b) const {
+            return a.refNumber < b.refNumber;
+        }
+    };
 public:
-    std::vector<std::unique_ptr<Statement>> stmts;
+    std::vector<std::unique_ptr<CircuitStmt>> circuits;
+    std::map<int, cas::GateMatrix> matrices;
 
-    RootNode() : stmts() {}
+    RootNode() : circuits(), matrices() {}
+
+    void addCircuit(std::unique_ptr<CircuitStmt> circuit) {
+        circuits.push_back(std::move(circuit));
+    }
+
+    /// @brief Insert the ParameterDefStmt. Record refNumber.
+    /// @return whether the insertion is successful. return false if the
+    /// refNumber already exists (re-definition)
+    bool addParameterDef(const ParameterDefStmt& def) {
+        return matrices.insert(std::make_pair(def.refNumber, def.matrix)).second;
+    }
 
     std::ostream& print(std::ostream& os) const override;
 };

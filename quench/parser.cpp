@@ -4,7 +4,6 @@
 using namespace quench::cas;
 using namespace quench::ast;
 
-
 int Parser::readLine() {
     if (file.eof()) {
         file.close();
@@ -267,43 +266,20 @@ ParameterDefStmt Parser::parseParameterDefStmt_() {
     }
 
     // update number of qubits;
-    int s = defStmt.matrix.updateSize();
-    if (s < 0) {
-        throwParserError("ParameterDef: Failed to updateMatrix due to size");
-        return defStmt;
-    }
-    if (s == 0) {
-        displayParserWarning("Parsed a ParamDefStmt with 0 param?");
-        return defStmt;
-    }
-    if (s == 1) {
-        displayParserLog("Parsed a 1-qubit ParamDefStmt");
-        defStmt.nqubits = 1;
-        return defStmt;
-    }
-    if (s == 4) {
-        displayParserLog("Parsed a 2-qubit ParamDefStmt");
-        defStmt.nqubits = 2;
-        return defStmt;
-    }
-    if (s == 8) {
-        displayParserLog("Parsed a 3-qubit ParamDefStmt");
-        defStmt.nqubits = 3;
-        return defStmt;
-    }
-    if (s == 16) {
-        displayParserLog("Parsed a 4-qubit ParamDefStmt");
-        defStmt.nqubits = 4;
-        return defStmt;
-    }
-    displayParserWarning("Unsupported matrix size " + std::to_string(s));
+    int s = defStmt.matrix.updateNQubits();
+    if (s < 0)
+        throwParserError("ParameterDef: Failed to update matrix");
+
+    std::stringstream ss;
+    ss << "Parsed a ParameterDefStmt with " << s << "x" << s << " matrix";
+    displayParserLog(ss.str());
     return defStmt;
 }
 
-std::unique_ptr<Statement> Parser::parseStatement_() {
+bool Parser::parseStatement_(RootNode& root) {
     while (true) {
         if (curToken.type == TokenTy::Eof) {
-            return nullptr;
+            return false;
         }
         if (curToken.type == TokenTy::Comment) {
             column = currentLine.size();
@@ -321,21 +297,27 @@ std::unique_ptr<Statement> Parser::parseStatement_() {
         break;
     }
 
-    if (curToken.type == TokenTy::Circuit)
-        return std::make_unique<CircuitStmt>(parseCircuitStmt_());
-    if (curToken.type == TokenTy::Hash)
-        return std::make_unique<ParameterDefStmt>(parseParameterDefStmt_());
-
-    throwParserError("Statement: Unrecognized curToken type");
-    return nullptr;
+    if (curToken.type == TokenTy::Circuit) {
+        root.addCircuit(std::make_unique<CircuitStmt>(parseCircuitStmt_()));
+    }
+    else if (curToken.type == TokenTy::Hash) {
+        auto defStmt = parseParameterDefStmt_();
+        if (!root.addParameterDef(defStmt)) {
+            std::stringstream ss;
+            ss << "Parameter with ref number " << defStmt.refNumber
+               << " has already been defined";
+            throwParserError(ss.str());
+        }
+    }
+    else {
+        throwParserError("Statement: Unrecognized curToken type");
+    }
+    return true;
 }
 
-std::unique_ptr<RootNode> Parser::parse() {
-    auto root = std::make_unique<RootNode>();
-    std::unique_ptr<Statement> stmt = nullptr;
-    while ((stmt = parseStatement_()) != nullptr) {
-        root->stmts.push_back(std::move(stmt));
-    }
+RootNode Parser::parse() {
+    RootNode root;
+    while (parseStatement_(root)) {}
     if (curToken.type != TokenTy::Eof)
         displayParserWarning("end of parsing, but curToken is not EoF?");
     else

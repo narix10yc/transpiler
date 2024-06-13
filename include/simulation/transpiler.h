@@ -2,6 +2,7 @@
 #define SIMULATION_TRANSPILER_H
 
 #include "qch/ast.h"
+#include "quench/ast.h"
 #include "simulation/types.h"
 
 #include <vector>
@@ -29,7 +30,7 @@ public:
         if (nqubits != other.nqubits)
             return false;
         
-        for (auto& data : dataVector) {
+        for (const auto& data : dataVector) {
             auto q = data.qubit;
             bool flag = false;
             for (auto& otherData : other.dataVector) {

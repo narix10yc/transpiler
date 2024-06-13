@@ -186,7 +186,6 @@ CircuitGraph CircuitGraph::FromQch(const RootNode& root) {
             graph.addTwoQubitGate(u2q);
         }
     }
-
     return graph;
 }
 

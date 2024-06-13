@@ -1,14 +1,23 @@
-#include "quench/parser.h"
+#include "openqasm/parser.h"
+// #include "quench/parser.h"
 #include "quench/GateMatrix.h"
 
-using namespace quench::ast;
-using namespace quench::cas;
+// using namespace quench::ast;
+// using namespace quench::cas;
 
-int main() {
-    Parser parser("../examples/simple.qch");
-    auto root = parser.parse();
+int main(int argc, char** argv) {
+    openqasm::Parser parser(argv[1], 0);
+    auto qasmRoot = parser.parse();
+    std::cerr << "qasm AST built\n";
 
-    std::cerr << std::stoi("3.4.5.01");
+    auto graph = qasmRoot->toCircuitGraph();
+
+    std::cerr << "CircuitGraph built\n";
+
+    graph.print(std::cerr);
+
+    // Parser parser("../examples/simple.qch");
+    // auto root = parser.parse();
 
     return 0;
 }

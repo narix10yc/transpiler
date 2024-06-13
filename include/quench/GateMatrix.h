@@ -281,6 +281,8 @@ private:
     std::vector<monomial_t> monomials;
 
     Polynomial& operator+=(const monomial_t& monomial);
+    
+    Polynomial& operator-=(const monomial_t& monomial);
 
     Polynomial& operator*=(const monomial_t& monomial);
     
@@ -290,6 +292,7 @@ private:
     }
 public:
     Polynomial() : monomials() {}
+    Polynomial(double v) : monomials({{v, {}}}) {}
     Polynomial(std::initializer_list<monomial_t> monomials)
         : monomials(monomials) {}
 
@@ -327,25 +330,30 @@ public:
 
     Polynomial& operator+=(const Polynomial& other);
 
-    Polynomial operator+(const Polynomial& other) {
+    Polynomial operator+(const Polynomial& other) const {
         // TODO: a better method
         Polynomial newPoly(*this);
         return newPoly += other;
     }
 
-    Polynomial& operator*=(const Polynomial& other) {
-        return (*this) = (*this) * other;
+    Polynomial& operator-=(const Polynomial& other);
+
+    Polynomial operator-(const Polynomial& other) const {
+        // TODO: a better method
+        Polynomial newPoly(*this);
+        return newPoly -= other;
     }
 
-    Polynomial operator*(const Polynomial& other);
+    Polynomial& operator*=(const Polynomial& other);
+
+    Polynomial operator*(const Polynomial& other) const;
 };
 
-
-template<typename real_ty=double>
+template<typename real_ty>
 class Complex {
 public:
     real_ty real, imag;
-    Complex() : real(0), imag(0) {}
+    Complex() : real(), imag() {}
     Complex(real_ty real, real_ty imag) : real(real), imag(imag) {}
 
     Complex operator+(const Complex& other) const {
@@ -381,57 +389,76 @@ public:
     }
 };
 
-
-template<typename real_ty=double>
-class SquareComplexMatrix {
-    size_t size;
+class GateMatrix {
 public:
-    std::vector<Complex<real_ty>> data;
+    unsigned nqubits;
+    size_t N;
+    std::vector<Complex<Polynomial>> data;
 
-    SquareComplexMatrix() : size(0), data() {}
-    SquareComplexMatrix(size_t size) : size(size), data(size * size) {}
-    SquareComplexMatrix(size_t size, std::initializer_list<Complex<real_ty>> data)
-        : size(size), data(data) {}
+    GateMatrix() : nqubits(0), N(1), data(1) {}
+    GateMatrix(unsigned nqubits)
+        : nqubits(nqubits), N(1 << nqubits), data(1 << (nqubits*2)) {}
+    GateMatrix(std::initializer_list<Complex<Polynomial>> data)
+        : data(data) { int r = updateNQubits(); assert(r > 0); }
 
-    size_t getSize() const { return size; }
-    /// @brief update size based on data.
-    /// @return if data.size() is a perfect square, return the squre root of it.
-    /// otherwise return -1, and size will be set to 0.
-    int updateSize() {
-        int s = std::sqrt(data.size());
-        if (s * s == data.size()) {
-            size = s;
-            return s;
+    /// @brief update nqubits and N based on data.
+    /// @return if data represents a (2**n) * (2**n) matrix, then return n
+    /// (number of qubits). Otherwise, return -1 if data is empty; -2 if
+    /// data.size() is not a perfect square; -3 if data represents an N * N
+    /// matrix, but N is not a power of two.
+    int updateNQubits() {
+        if (data.empty())
+            return -1;
+        size_t size = static_cast<size_t>(std::sqrt(data.size()));
+        if (size * size == data.size()) {
+            N = size;
+            if ((N & (N-1)) == 0) {
+                nqubits = static_cast<unsigned>(std::log2(N));
+                return nqubits;
+            }
+            return -3;
         }
-        size = 0;
-        return -1;
+        return -2;
+    }
+    
+    bool checkSizeMatch() const {
+        if (N != (1 << nqubits))
+            return false;
+        if (data.size() != N * N)
+            return false;
+        return true;
     }
 
-    static SquareComplexMatrix Identity(size_t size) {
-        SquareComplexMatrix m;
-        for (size_t r = 0; r < size; r++)
-            m.data[r*size + r].real = 1;
+    static GateMatrix Identity(unsigned nqubits) {
+        GateMatrix m {nqubits};
+        for (size_t r = 0; r < m.N; r++)
+            m.data[r*m.N + r].real = { 1.0 };
         return m;
     }
 
-    SquareComplexMatrix matmul(const SquareComplexMatrix& other) {
-        assert(size == other.size);
+    GateMatrix matmul(const GateMatrix& other) const {
+        assert(checkSizeMatch());
+        assert(other.checkSizeMatch());
+        assert(nqubits == other.nqubits && N == other.N);
 
-        SquareComplexMatrix m(size);
-        for (size_t i = 0; i < size; i++) {
-        for (size_t j = 0; j < size; j++) {
-        for (size_t k = 0; k < size; k++) {
+        GateMatrix m(nqubits);
+        for (size_t i = 0; i < N; i++) {
+        for (size_t j = 0; j < N; j++) {
+        for (size_t k = 0; k < N; k++) {
             // C_{ij} = A_{ik} B_{kj}
-            m.data[i*size + j] += data[i*size + k] * other.data[k*size + j];
+            m.data[i*N + j] += data[i*N + k] * other.data[k*N + j];
         } } }
         return m;
     }
 
-    SquareComplexMatrix kron(const SquareComplexMatrix& other) const {
-        size_t lsize = size;
-        size_t rsize = other.size;
+    GateMatrix kron(const GateMatrix& other) const {
+        assert(checkSizeMatch());
+        assert(other.checkSizeMatch());
+
+        size_t lsize = N;
+        size_t rsize = other.N;
         size_t msize = lsize * rsize;
-        SquareComplexMatrix m(msize);
+        GateMatrix m(nqubits + other.nqubits);
         for (size_t lr = 0; lr < lsize; lr++) {
         for (size_t lc = 0; lc < lsize; lc++) {
         for (size_t rr = 0; rr < rsize; rr++) {
@@ -443,49 +470,50 @@ public:
         return m;
     }
 
-    SquareComplexMatrix leftKronI() const {
-        SquareComplexMatrix m(size * size);
-        for (size_t i = 0; i < size; i++) {
-        for (size_t r = 0; r < size; r++) {
-        for (size_t c = 0; c < size; c++) {
-            m.data[(i*size + r) * size * size + (i*size + c)] = data[r*size + c];
+    GateMatrix leftKronI() const {
+        assert(checkSizeMatch());
+
+        GateMatrix m(2 * nqubits);
+        for (size_t i = 0; i < N; i++) {
+        for (size_t r = 0; r < N; r++) {
+        for (size_t c = 0; c < N; c++) {
+            m.data[(i*N + r) * N * N + (i*N + c)] = data[r*N + c];
         } } }
         return m;
     }
 
-    SquareComplexMatrix rightKronI() const {
-        SquareComplexMatrix m(size * size);
-        for (size_t i = 0; i < size; i++) {
-        for (size_t r = 0; r < size; r++) {
-        for (size_t c = 0; c < size; c++) {
-            m.data[(r*size + i) * size * size + (c*size + i)] = data[r*size + c];
+    GateMatrix rightKronI() const {
+        assert(checkSizeMatch());
+
+        GateMatrix m(2 * nqubits);
+        for (size_t i = 0; i < N; i++) {
+        for (size_t r = 0; r < N; r++) {
+        for (size_t c = 0; c < N; c++) {
+            m.data[(r*N + i) * N * N + (c*N + i)] = data[r*N + c];
         } } }
         return m;
     }
 
-    SquareComplexMatrix swapTargetQubits() const {
-        assert(size == 4);
+    GateMatrix swapTargetQubits() const {
+        assert(nqubits == 2 && N == 4);
 
-        return {4, {data[ 0], data[ 2], data[ 1], data[ 3],
-                    data[ 8], data[10], data[ 9], data[11],
-                    data[ 4], data[ 6], data[ 5], data[ 7],
-                    data[12], data[14], data[13], data[15]}};
+        return {{data[ 0], data[ 2], data[ 1], data[ 3],
+                 data[ 8], data[10], data[ 9], data[11],
+                 data[ 4], data[ 6], data[ 5], data[ 7],
+                 data[12], data[14], data[13], data[15]}};
     }
 
-    void print(std::ostream& os) const {
-        for (size_t r = 0; r < size; r++) {
-            for (size_t c = 0; c < size; c++) {
-                auto re = data[r*size + c].real;
-                auto im = data[r*size + c].imag;
-                if (re >= 0)
-                    os << " ";
-                os << re;
-                if (im >= 0)
-                    os << "+";
-                os << im << "i, ";
+    std::ostream& print(std::ostream& os) const {
+        for (size_t r = 0; r < N; r++) {
+            for (size_t c = 0; c < N; c++) {
+                const auto& re = data[r*N + c].real;
+                const auto& im = data[r*N + c].imag;
+                re.print(os) << " + ";
+                im.print(os) << "i ";
             }
             os << "\n";
         }
+        return os;
     }
 };
 

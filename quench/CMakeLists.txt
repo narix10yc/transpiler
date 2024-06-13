@@ -1,1 +1,2 @@
-add_library(quench "parser.cpp" "ast.cpp" "GateMatrix.cpp")
+file(GLOB SRC_FILES "*.cpp")
+add_library(quench ${SRC_FILES})

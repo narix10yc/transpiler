@@ -286,13 +286,13 @@ protected:
 
     ParameterDefStmt parseParameterDefStmt_();
 
-    std::unique_ptr<Statement> parseStatement_();
+    bool parseStatement_(RootNode&);
 public:
     Parser(const std::string& fileName)
         : line(0), column(0), currentLine(""), file(fileName),
           curToken(TokenTy::Start), nextToken(TokenTy::Start) {}
 
-    std::unique_ptr<RootNode> parse();
+    RootNode parse();
 };
 
 

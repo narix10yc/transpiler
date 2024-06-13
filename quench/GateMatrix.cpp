@@ -48,9 +48,6 @@ std::ostream& Polynomial::printLaTeX(std::ostream& os) const {
     return os;
 }
 
-
-// using monomial_t = Polynomial::monomial_t;
-// using power_t = monomial_t::power_t;
 Polynomial& Polynomial::operator+=(const monomial_t& monomial) {
     auto it = std::lower_bound(monomials.begin(), monomials.end(), monomial, monomial_cmp);
     if (it == monomials.end())
@@ -62,9 +59,26 @@ Polynomial& Polynomial::operator+=(const monomial_t& monomial) {
     return *this;
 }
 
+Polynomial& Polynomial::operator-=(const monomial_t& monomial) {
+    auto it = std::lower_bound(monomials.begin(), monomials.end(), monomial, monomial_cmp);
+    if (it == monomials.end())
+        monomials.insert(it, monomial);
+    else if (monomial_eq(*it, monomial))
+        it->coef -= monomial.coef;
+    else
+        monomials.insert(it, monomial);
+    return *this;
+}
+
 Polynomial& Polynomial::operator+=(const Polynomial& other) {
     for (const auto& monomial : other.monomials)
         operator+=(monomial);
+    return *this;
+}
+
+Polynomial& Polynomial::operator-=(const Polynomial& other) {
+    for (const auto& monomial : other.monomials)
+        operator-=(monomial);
     return *this;
 }
 
@@ -100,8 +114,7 @@ Polynomial& Polynomial::operator*=(const monomial_t& m) {
     return *this;
 }
 
-
-Polynomial Polynomial::operator*(const Polynomial& other) {
+Polynomial Polynomial::operator*(const Polynomial& other) const {
     std::cerr << "Start to multiply ";
     print(std::cerr) << " with ";
     other.print(std::cerr) << "\n";
@@ -116,7 +129,7 @@ Polynomial Polynomial::operator*(const Polynomial& other) {
 
 
 Polynomial ConstantNode::toPolynomial() const {
-    return {{value, {}}};
+    return { value };
 }
 
 Polynomial VariableNode::toPolynomial() const {
