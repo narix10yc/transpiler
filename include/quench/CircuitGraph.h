@@ -45,9 +45,9 @@ public:
     }   
 };
 
-class GateChain {
+class GateBlock {
 public:
-    struct chain_data {
+    struct block_data {
         unsigned qubit;
         GateNode* lhsEntry;
         GateNode* rhsEntry;
@@ -55,11 +55,11 @@ public:
 
     int id;
     unsigned nqubits;
-    std::vector<chain_data> dataVector;
+    std::vector<block_data> dataVector;
 
-    GateChain(int id) : id(id), nqubits(0), dataVector() {}
+    GateBlock(int id) : id(id), nqubits(0), dataVector() {}
 
-    GateChain(int id, GateNode* gate)
+    GateBlock(int id, GateNode* gate)
         : id(id), nqubits(gate->nqubits), dataVector(gate->nqubits)
     {
         for (const auto& data : gate->dataVector)
@@ -69,20 +69,24 @@ public:
 
 class CircuitGraph {
 public:
-    std::vector<std::array<GateChain*, 36>> tile;
+    std::vector<std::array<GateBlock*, 36>> tile;
     std::array<GateNode*, 36> lhsEntry, rhsEntry;
-    int currentChainId;
+    int currentBlockId;
     unsigned nqubits;
 
     CircuitGraph()
-        : tile(), lhsEntry({}), rhsEntry({}), currentChainId(0), nqubits(0) {}
+        : tile(), lhsEntry({}), rhsEntry({}), currentBlockId(0), nqubits(0) {}
 
     void addGate(const cas::GateMatrix& matrix,
                       const std::vector<unsigned>& qubits);
 
     std::ostream& print(std::ostream& os) const;
 
-    void updateChains();
+    void dependencyAnalysis();
+
+    void fuseToTwoQubitGates();
+
+    void greedyGateFusion();
 
 
 };

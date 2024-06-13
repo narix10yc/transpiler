@@ -29,15 +29,15 @@ void CircuitGraph::addGate(const cas::GateMatrix& matrix,
         }
     }
 
-    // create chain
-    auto chain = new GateChain(currentChainId, gate);
-    currentChainId++;
+    // create block
+    auto block = new GateBlock(currentBlockId, gate);
+    currentBlockId++;
 
     if (tile.empty()) {
         tile.push_back({});
         auto& back = tile.back();
         for (const auto& q : qubits)
-            back[q] = chain;
+            back[q] = block;
         return;
     }
 
@@ -50,7 +50,7 @@ void CircuitGraph::addGate(const cas::GateMatrix& matrix,
     }
 
     for (const auto& q : qubits)
-        tile.back()[q] = chain;
+        tile.back()[q] = block;
     
 }
 
@@ -58,7 +58,7 @@ std::ostream& CircuitGraph::print(std::ostream& os) const {
     if (tile.empty())
         return os;
 
-    int width = static_cast<int>(std::log10(currentChainId)) + 1;
+    int width = static_cast<int>(std::log10(currentBlockId)) + 1;
     if ((width & 1) == 0)
         width++;
 
@@ -76,6 +76,14 @@ std::ostream& CircuitGraph::print(std::ostream& os) const {
     }
 }
 
-void CircuitGraph::updateChains() {
+void CircuitGraph::dependencyAnalysis() {
+    std::cerr << "Dependency Analysis not implemented yet!\n";
+}
 
+void CircuitGraph::fuseToTwoQubitGates() {
+
+}
+
+void CircuitGraph::greedyGateFusion() {
+    std::cerr << "Greedy Gate Fusion not implemented yet!\n";
 }
