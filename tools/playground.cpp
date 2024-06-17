@@ -14,6 +14,12 @@ int main(int argc, char** argv) {
 
     std::cerr << "CircuitGraph built\n";
 
+    std::cerr << "Before Fusion: " << graph.allBlocks.size() << " blocks\n";
+    graph.print(std::cerr);
+
+    graph.fuseToTwoQubitGates();
+
+    std::cerr << "After Fusion: " << graph.allBlocks.size() << " blocks\n";
     graph.print(std::cerr);
 
     // Parser parser("../examples/simple.qch");
