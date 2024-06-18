@@ -92,23 +92,18 @@ public:
         GateBlock* rhsBlock;
     };
 
-    int id;
-    int lineNumber;
+    const int id;
     unsigned nqubits;
     std::vector<block_data> dataVector;
     // line number in the tile
 
-    GateBlock(int id) : id(id), lineNumber(-1), nqubits(0), dataVector() {}
+    GateBlock(int id) : id(id), nqubits(0), dataVector() {}
 
     GateBlock(int id, GateNode* gate)
-        : id(id), lineNumber(-1), nqubits(gate->nqubits), dataVector()
+        : id(id), nqubits(gate->nqubits), dataVector()
     {
         for (const auto& data : gate->dataVector)
             dataVector.push_back({data.qubit, gate, gate, nullptr, nullptr});
-    }
-
-    ~GateBlock() {
-        std::cerr << "deleting block " << id << "\n";
     }
 
     std::vector<block_data>::iterator findQubit(unsigned q) {
@@ -148,6 +143,7 @@ public:
     }
 
     void fuseWithRHS(GateBlock* rhsBlock);
+    void fuseWithLHS(GateBlock* lhsBlock);
 
 };
 
@@ -173,23 +169,7 @@ public:
 
     GateBlock* createBlock(GateNode* gate);
     
-    void destroyBlock(GateBlock* block) {
-        assert(block != nullptr);
-        assert(allBlocks.find(block) != allBlocks.end());
-
-        std::cerr << "destroying block " << block->id << "\n";
-        for (const auto& data : block->dataVector) {
-            if (data.lhsBlock && data.rhsBlock) {
-                data.lhsBlock->connect(data.rhsBlock, data.qubit);
-                std::cerr << "reconnected " << data.lhsBlock->id << " and "
-                          << data.rhsBlock->id << "\n";
-            }
-        }
-
-        allBlocks.erase(block);
-        // delete(block);
-        std::cerr << "destroyed " << block->id << "\n";
-    }
+    void destroyBlock(GateBlock* block);
 
     std::ostream& print(std::ostream& os) const;
 

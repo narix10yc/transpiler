@@ -11,7 +11,20 @@ void GateBlock::fuseWithRHS(GateBlock* rhsBlock) {
         if (rhsIt == rhsBlock->dataVector.end()) {
             rhsBlock->dataVector.push_back(data);
         } else {
-            rhsIt->rhsBlock = data.rhsBlock;
+            rhsIt->lhsBlock = data.lhsBlock;
+        }
+    }
+}
+
+void GateBlock::fuseWithLHS(GateBlock* lhsBlock) {
+    assert(lhsBlock != nullptr);
+
+    for (const auto& data : dataVector) {
+        auto lhsIt = lhsBlock->findQubit(data.qubit);
+        if (lhsIt == lhsBlock->dataVector.end()) {
+            lhsBlock->dataVector.push_back(data);
+        } else {
+            lhsIt->rhsBlock = data.rhsBlock;
         }
     }
 }
@@ -31,6 +44,7 @@ void CircuitGraph::addGate(const cas::GateMatrix& matrix,
     auto gate = new GateNode(matrix, qubits);
     auto block = createBlock(gate);
 
+    // connect
     for (const auto& q : qubits) {
         if (lhsEntry[q] == nullptr) {
             assert(rhsEntry[q] == nullptr);
@@ -42,7 +56,7 @@ void CircuitGraph::addGate(const cas::GateMatrix& matrix,
             assert(it != rhsBlock->dataVector.end());
 
             it->rhsEntry->connect(gate, q);
-            rhsBlock->connect(block);
+            rhsBlock->connect(block, q);
 
             rhsEntry[q] = block;
         }
@@ -56,10 +70,30 @@ GateBlock* CircuitGraph::createBlock(GateNode* gate) {
     return block;
 }
 
+void CircuitGraph::destroyBlock(GateBlock* block) {
+    assert(block != nullptr);
+    assert(allBlocks.find(block) != allBlocks.end());
+
+    for (auto& data : block->dataVector) {
+        if (data.lhsBlock && data.rhsBlock) {
+            data.lhsBlock->connect(data.rhsBlock, data.qubit);
+        } else if (data.lhsBlock) {
+            auto it = data.lhsBlock->findQubit(data.qubit);
+            (*it).rhsBlock = nullptr;
+        } else if (data.rhsBlock) {
+            auto it = data.rhsBlock->findQubit(data.qubit);
+            (*it).lhsBlock = nullptr;
+        }
+    }
+
+    allBlocks.erase(block);
+    delete(block);
+}
+
+// TODO: More efficient way: store 'lastAvailableRow' array
 std::ostream& CircuitGraph::print(std::ostream& os) const {
     if (allBlocks.empty())
         return os;
-    std::cerr << "printing...\n";
 
     std::vector<std::vector<int>> tile;
     auto appendOneLine = [&, q=nqubits]() {
@@ -128,38 +162,40 @@ void CircuitGraph::dependencyAnalysis() {
 }
 
 void CircuitGraph::fuseToTwoQubitGates() {
-    print(std::cerr);
     bool hasChange = false;
+    GateBlock* lhsBlock;
     GateBlock* rhsBlock;
     while (true) {
         hasChange = false;
-        std::cerr << "Big loop!\n";
+        print(std::cerr) << "\n";
         for (auto* block : allBlocks) {
-            assert(block != nullptr);
-            std::cerr << "checking block " << block->id << "\n";
-            if (block->nqubits == 1) {
-                rhsBlock = block->dataVector[0].rhsBlock;
-                if (rhsBlock == nullptr)
-                    continue;
-                std::cerr << "fusing block " << block->id << " with " << rhsBlock->id << "\n";
-                block->fuseWithRHS(rhsBlock);
-                std::cerr << "done fusing " << block->id << " with " << rhsBlock->id << "\n";
-
-                destroyBlock(block);
-
-                // delete(lhsBlock);
+            if (block->nqubits == 1)
+                continue;
+            // nqubits == 2
+            if ((lhsBlock = block->dataVector[0].lhsBlock)
+                 && lhsBlock->nqubits == 1) {
+                lhsBlock->fuseWithRHS(block);
+                destroyBlock(lhsBlock);
                 hasChange = true;
-                break;
             }
-            // } else {
-            //     // nqubits == 2
-            //     lhsBlock = block->dataVector[0].lhsBlock;
-            //     if (lhsBlock->nqubits == 1) {
-            //         lhsBlock->fuseWithRHS(block);
-            //         destroyBlock(lhsBlock);
-            //         hasChange = true;
-            //     } else {}
-            // }
+            if ((lhsBlock = block->dataVector[1].lhsBlock)
+                 && lhsBlock->nqubits == 1) {
+                lhsBlock->fuseWithRHS(block);
+                destroyBlock(lhsBlock);
+                hasChange = true;
+            }
+            if ((rhsBlock = block->dataVector[0].rhsBlock)
+                 && rhsBlock->nqubits == 1) {
+                rhsBlock->fuseWithLHS(block);
+                destroyBlock(rhsBlock);
+                hasChange = true;
+            }
+            if ((rhsBlock = block->dataVector[1].rhsBlock)
+                 && rhsBlock->nqubits == 1) {
+                rhsBlock->fuseWithLHS(block);
+                destroyBlock(rhsBlock);
+                hasChange = true;
+            }
         }
 
         if (!hasChange)
