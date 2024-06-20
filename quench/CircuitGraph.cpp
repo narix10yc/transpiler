@@ -1,5 +1,8 @@
 #include "quench/CircuitGraph.h"
 #include <iomanip>
+#include <stack>
+#include <thread>
+#include <chrono>
 
 using namespace quench::circuit_graph;
 
@@ -78,9 +81,15 @@ void CircuitGraph::destroyBlock(GateBlock* block) {
         if (data.lhsBlock && data.rhsBlock) {
             data.lhsBlock->connect(data.rhsBlock, data.qubit);
         } else if (data.lhsBlock) {
+            // rightmost block
+            assert(rhsEntry[data.qubit] == block);
+            rhsEntry[data.qubit] = data.lhsBlock;
             auto it = data.lhsBlock->findQubit(data.qubit);
             (*it).rhsBlock = nullptr;
         } else if (data.rhsBlock) {
+            // leftmost block
+            assert(lhsEntry[data.qubit] == block);
+            lhsEntry[data.qubit] = data.rhsBlock;
             auto it = data.rhsBlock->findQubit(data.qubit);
             (*it).lhsBlock = nullptr;
         }
@@ -157,6 +166,29 @@ std::ostream& CircuitGraph::print(std::ostream& os) const {
     return os;
 }
 
+std::ostream& CircuitGraph::displayInfo(std::ostream& os) const {
+    for (const auto* block : allBlocks) {
+        os << "block " << block->id << ", nqubits " << block->nqubits << "\n  [";
+        for (const auto& data : block->dataVector) {
+            os << "(" << data.qubit << ":";
+            if (data.lhsBlock == nullptr)
+                os << "NULL";
+            else
+                os << data.lhsBlock->id;
+
+            os << ",";
+            
+            if (data.rhsBlock == nullptr)
+                os << "NULL";
+            else
+                os << data.rhsBlock->id;
+            os << "),";
+        }
+        os << "]\n";
+    }
+    return os;
+}
+
 void CircuitGraph::dependencyAnalysis() {
     std::cerr << "Dependency Analysis not implemented yet!\n";
 }
@@ -165,25 +197,14 @@ void CircuitGraph::fuseToTwoQubitGates() {
     bool hasChange = false;
     GateBlock* lhsBlock;
     GateBlock* rhsBlock;
-    while (true) {
+    // absorb single-qubit gates to neighboring two-qubit gates
+    hasChange = true;
+    while (hasChange) {
         hasChange = false;
-        print(std::cerr) << "\n";
         for (auto* block : allBlocks) {
             if (block->nqubits == 1)
                 continue;
             // nqubits == 2
-            if ((lhsBlock = block->dataVector[0].lhsBlock)
-                 && lhsBlock->nqubits == 1) {
-                lhsBlock->fuseWithRHS(block);
-                destroyBlock(lhsBlock);
-                hasChange = true;
-            }
-            if ((lhsBlock = block->dataVector[1].lhsBlock)
-                 && lhsBlock->nqubits == 1) {
-                lhsBlock->fuseWithRHS(block);
-                destroyBlock(lhsBlock);
-                hasChange = true;
-            }
             if ((rhsBlock = block->dataVector[0].rhsBlock)
                  && rhsBlock->nqubits == 1) {
                 rhsBlock->fuseWithLHS(block);
@@ -196,13 +217,76 @@ void CircuitGraph::fuseToTwoQubitGates() {
                 destroyBlock(rhsBlock);
                 hasChange = true;
             }
-        }
 
-        if (!hasChange)
-            break;
+            if ((lhsBlock = block->dataVector[0].lhsBlock)
+                 && lhsBlock->nqubits == 1) {
+                lhsBlock->fuseWithRHS(block);
+                destroyBlock(lhsBlock);
+                hasChange = true;
+            }
+            if ((lhsBlock = block->dataVector[1].lhsBlock)
+                 && lhsBlock->nqubits == 1) {
+                lhsBlock->fuseWithRHS(block);
+                destroyBlock(lhsBlock);
+                hasChange = true;
+            }
+        }
+    }
+
+    // fuse two qubit gates acting on same targets
+    hasChange = true;
+    while (hasChange) {
+        hasChange = false;
+        for (auto* block : allBlocks) {
+            if (block->nqubits == 1) {
+                std::cerr << "WARNING: Encountered single-qubit gates\n";
+                continue;
+            }
+            if ((rhsBlock = block->dataVector[0].rhsBlock)
+                && rhsBlock->hasSameTargets(*block)) {
+                rhsBlock->fuseWithLHS(block);
+                destroyBlock(rhsBlock);
+                hasChange = true;
+            }
+        }
     }
 }
 
-void CircuitGraph::greedyGateFusion() {
+void CircuitGraph::greedyGateFusion(int maxNQubits) {
+
     std::cerr << "Greedy Gate Fusion not implemented yet!\n";
+}
+
+void CircuitGraph::applyInOrder(std::function<void(GateBlock&)> f) {
+    std::stack<GateBlock*> blockStack;
+    std::map<GateBlock*, bool> applied;
+
+    for (auto* block : allBlocks)
+        applied.insert(std::make_pair(block, false));
+
+    for (auto* block : rhsEntry) {
+        if (block)
+            blockStack.push(block);
+    }
+
+    // main loop
+    while (!blockStack.empty()) {
+        GateBlock* block = blockStack.top();
+        if (applied.at(block)) {
+            blockStack.pop();
+            continue;
+        }
+        bool canApply = true;
+        for (const auto& data : block->dataVector) {
+            if (data.lhsBlock && !applied[data.lhsBlock]) {
+                canApply = false;
+                blockStack.push(data.lhsBlock);
+            }
+        }
+        if (canApply) {
+            applied.at(block) = true;
+            blockStack.pop();
+            f(*block);
+        }
+    }
 }

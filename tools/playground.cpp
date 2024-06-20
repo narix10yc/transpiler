@@ -5,6 +5,8 @@
 // using namespace quench::ast;
 // using namespace quench::cas;
 
+using namespace quench::circuit_graph;
+
 int main(int argc, char** argv) {
     openqasm::Parser parser(argv[1], 0);
     auto qasmRoot = parser.parse();
@@ -16,14 +18,27 @@ int main(int argc, char** argv) {
 
     std::cerr << "Before Fusion: " << graph.allBlocks.size() << " blocks\n";
     graph.print(std::cerr);
+    // graph.displayInfo(std::cerr);
 
+    // graph.applyInOrder([](GateBlock& block) {
+        // std::cerr << "calling block " << block.id << "\n";
+    // });
+    
     graph.fuseToTwoQubitGates();
 
     std::cerr << "After Fusion: " << graph.allBlocks.size() << " blocks\n";
     graph.print(std::cerr);
+    // graph.displayInfo(std::cerr);
+
+
+    // graph.applyInOrder([](GateBlock& block) {
+        // std::cerr << "calling block " << block.id << "\n";
+    // });
 
     // Parser parser("../examples/simple.qch");
     // auto root = parser.parse();
+
+
 
     return 0;
 }

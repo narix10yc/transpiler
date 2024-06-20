@@ -7,6 +7,7 @@
 #include <map>
 #include <cassert>
 #include <algorithm>
+#include <functional>
 #include "quench/ast.h"
 
 namespace quench::circuit_graph {
@@ -116,6 +117,16 @@ public:
         return it;
     }
 
+    std::vector<block_data>::const_iterator findQubit(unsigned q) const {
+        auto it = dataVector.begin();
+        while (it != dataVector.end()) {
+            if (it->qubit == q)
+                break;
+            it++;
+        }
+        return it;
+    }
+
     int connect(GateBlock* rhsGate, int q = -1) {
         assert(rhsGate != nullptr);
 
@@ -145,6 +156,15 @@ public:
     void fuseWithRHS(GateBlock* rhsBlock);
     void fuseWithLHS(GateBlock* lhsBlock);
 
+    bool hasSameTargets(const GateBlock& other) const {
+        if (nqubits != other.nqubits)
+            return false;
+        for (const auto& data : other.dataVector) {
+            if (findQubit(data.qubit) == dataVector.end())
+                return false;
+        }
+        return true;
+    }
 };
 
 class CircuitGraph {
@@ -173,11 +193,16 @@ public:
 
     std::ostream& print(std::ostream& os) const;
 
+    std::ostream& displayInfo(std::ostream& os) const;
+
     void dependencyAnalysis();
 
     void fuseToTwoQubitGates();
 
-    void greedyGateFusion();
+    void greedyGateFusion(int maxNQubits);
+
+    void applyInOrder(std::function<void(GateBlock&)>);
+
 
 };
 
