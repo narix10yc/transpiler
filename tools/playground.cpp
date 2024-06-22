@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
     std::cerr << "CircuitGraph built\n";
 
     std::cerr << "Before Fusion: " << graph.countBlocks() << " blocks\n";
-    // graph.print(std::cerr, 2) << "\n";
+    graph.print(std::cerr, 2) << "\n";
     graph.displayInfo(std::cerr, 2) << "\n";
 
     // graph.updateTileUpward();
@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
     for (unsigned maxNqubits = 2; maxNqubits < 5; maxNqubits++) {
         graph.greedyGateFusion(maxNqubits);
         std::cerr << "After Greedy Fusion " << maxNqubits << ":\n";
-        // graph.print(std::cerr, 2);
+        graph.print(std::cerr, 2);
         graph.displayInfo(std::cerr, 2) << "\n";
     }
 

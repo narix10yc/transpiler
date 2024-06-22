@@ -4,9 +4,60 @@
 #include <iomanip>
 #include <thread>
 #include <chrono>
+#include <map>
 
 using namespace Color;
 using namespace quench::circuit_graph;
+
+int GateNode::connect(GateNode* rhsGate, int q) {
+    assert(rhsGate);
+
+    if (q >= 0) {
+        auto myIt = findQubit(static_cast<unsigned>(q));
+        if (myIt == dataVector.end())
+            return 0;
+        auto rhsIt = rhsGate->findQubit(static_cast<unsigned>(q));
+        if (rhsIt == rhsGate->dataVector.end())
+            return 0;
+        
+        myIt->rhsGate = rhsGate;
+        rhsIt->lhsGate = this;
+        return 1;
+    }
+    int count = 0;
+    for (auto& data : dataVector) {
+        auto rhsIt = rhsGate->findQubit(data.qubit);
+        if (rhsIt == rhsGate->dataVector.end())
+            continue;
+        data.rhsGate = rhsGate;
+        rhsIt->lhsGate = this;
+        count++;
+    }
+    return count;
+}
+
+int GateBlock::connect(GateBlock* rhsBlock, int q) {
+    assert(rhsBlock);
+    if (q >= 0) {
+        auto myIt = findQubit(static_cast<unsigned>(q));
+        if (myIt == dataVector.end())
+            return 0;
+        auto rhsIt = rhsBlock->findQubit(static_cast<unsigned>(q));
+        if (rhsIt == rhsBlock->dataVector.end())
+            return 0;
+        myIt->rhsEntry->connect(rhsIt->lhsEntry, q);
+        return 1;
+    }
+    int count = 0;
+    for (auto& data : dataVector) {
+        auto rhsIt = rhsBlock->findQubit(data.qubit);
+        if (rhsIt == rhsBlock->dataVector.end())
+            continue;
+        data.rhsEntry->connect(rhsIt->lhsEntry, data.qubit);
+        count++;
+    }
+    return count;
+}
 
 int CircuitGraph::checkFuseCondition(tile_const_iter_t itLHS, size_t q_) const {
     assert((*itLHS)[q_]);
@@ -48,40 +99,46 @@ GateBlock* CircuitGraph::fuse(tile_iter_t itLHS, size_t q_) {
 
     // std::cerr << "Fuse. itLHS = " << &(*itLHS)
     //           << ", itRHS = " << &(*itRHS)
-    //           << ", q = " << q_ << "\n";
+    //           << ", q = " << q_ << "\n"
     //           << "    lhs " << lhs->id << ", rhs " << rhs->id << " => block " << block->id << "\n";
 
     for (const auto& lData : lhs->dataVector) {
-        GateNode* lhsEntry = nullptr;
-        GateNode* rhsEntry = nullptr;
         const auto& q = lData.qubit;
-        lhsEntry = lData.lhsEntry;
+        lhsQubits.push_back(q);
+        (*itLHS)[q] = nullptr;
+
+        GateNode* lhsEntry = lData.lhsEntry;
+        GateNode* rhsEntry;
         auto it = rhs->findQubit(q);
         if (it == rhs->dataVector.end())
             rhsEntry = lData.rhsEntry;
         else
             rhsEntry = it->rhsEntry;
+
+        assert(lhsEntry);
+        assert(rhsEntry);
+
         block->dataVector.push_back({q, lhsEntry, rhsEntry});
         blockQubits.push_back(q);
-
-        lhsQubits.push_back(q);
-        (*itLHS)[q] = nullptr;
     }
 
     for (const auto& rData : rhs->dataVector) {
         const auto& q = rData.qubit;
+        rhsQubits.push_back(q);
+        (*itRHS)[q] = nullptr;
+
         if (lhs->findQubit(q) == lhs->dataVector.end()) {
             block->dataVector.push_back(rData);
             blockQubits.push_back(q);
         }
-        
-        rhsQubits.push_back(q);
-        (*itRHS)[q] = nullptr;
     }
     
     block->nqubits = block->dataVector.size();
     delete(lhs);
     delete(rhs);
+    
+    // std::cerr << BLUE_FG;
+    // block->displayInfo(std::cerr) << RESET;
 
     // insert block to tile
     bool vacant = true;
@@ -140,28 +197,60 @@ void CircuitGraph::addGate(const cas::GateMatrix& matrix,
     auto block = new GateBlock(currentBlockId, gate);
     currentBlockId++;
 
-    // insert to tile
-    auto it = tile.rbegin();
-    while (it != tile.rend()) {
+    // insert block to tile
+    auto rit = tile.rbegin();
+    while (rit != tile.rend()) {
         bool vacant = true;
         for (const auto& q : qubits) {
-            if ((*it)[q] != nullptr) {
+            if ((*rit)[q] != nullptr) {
                 vacant = false;
                 break;
             }
         }
         if (!vacant)
             break;
-        it++;
+        rit++;
     }
-
-    if (it == tile.rbegin())
+    if (rit == tile.rbegin())
         tile.push_back({nullptr});
     else
-        it--;
-    
+        rit--;
     for (const auto& q : qubits)
-        (*it)[q] = block;
+        (*rit)[q] = block;
+
+    // set up gate connections
+    auto itRHS = --rit.base();
+    if (itRHS == tile.begin())
+        return;
+    
+    tile_iter_t itLHS;
+    GateBlock* lhsBlock;
+    for (const auto& q : qubits) {
+        itLHS = itRHS;
+        while (--itLHS != tile.begin()) {
+            if ((*itLHS)[q])
+                break;
+        }
+        if ((lhsBlock = (*itLHS)[q]) == nullptr)
+            continue;
+        lhsBlock->connect(block, q);
+    }
+
+}
+
+size_t GateBlock::countGates() const {
+    std::set<GateNode*> gates;
+    for (const auto& data : dataVector) {
+        assert(data.lhsEntry && data.rhsEntry);
+        GateNode* gate = data.lhsEntry;
+        gates.insert(gate);
+        while (gate != data.rhsEntry) {
+            gate = gate->findRHS(data.qubit);
+            assert(gate);
+            gates.insert(gate);
+        }
+    }
+    return gates.size();
 }
 
 size_t CircuitGraph::countGates() const {
@@ -328,11 +417,27 @@ std::ostream& CircuitGraph::print(std::ostream& os, int verbose) const {
     return os;
 }
 
+std::ostream& GateBlock::displayInfo(std::ostream& os) const {
+    os << "Block " << id << ": [";
+    for (const auto& data : dataVector) {
+        os << "(" << data.qubit << ":";
+        GateNode* gate = data.lhsEntry;
+        assert(gate);
+        os << gate << ",";
+        while (gate != data.rhsEntry) {
+            gate = gate->findRHS(data.qubit);
+            assert(gate);
+            os << gate << ",";
+        }
+        os << "),";
+    }
+    return os << "]\n";
+}
+
 std::ostream& CircuitGraph::displayInfo(std::ostream& os, int verbose) const {
     os << CYAN_FG << "=== CircuitGraph Info (verbose " << verbose << ") ===\n" << RESET;
 
-    // os << "Number of Gates:  " << countGates() << "\n";
-    os << "Number of Gates:  " << "N/A (not implemented)" << "\n";
+    os << "Number of Gates:  " << countGates() << "\n";
     std::set<GateBlock*> allBlocks;
     for (const auto& row : tile) {
         for (unsigned q = 0; q < nqubits; q++) {

@@ -5,9 +5,6 @@
 #include <array>
 #include <set>
 #include <list>
-#include <map>
-#include <cassert>
-#include <algorithm>
 #include <functional>
 #include "quench/ast.h"
 
@@ -57,31 +54,7 @@ public:
         return nullptr;
     }
 
-    int connect(GateNode* rhsGate, int q = -1) {
-        assert(rhsGate != nullptr);
-
-        if (q >= 0) {
-            auto myIt = findQubit(static_cast<unsigned>(q));
-            if (myIt == dataVector.end())
-                return 0;
-            auto rhsIt = rhsGate->findQubit(static_cast<unsigned>(q));
-            if (rhsIt == rhsGate->dataVector.end())
-                return 0;
-            
-            myIt->rhsGate = rhsGate;
-            rhsIt->lhsGate = this;
-            return 1;
-        }
-        int count = 0;
-        for (auto& data : dataVector) {
-            auto rhsIt = rhsGate->findQubit(data.qubit);
-            if (rhsIt == rhsGate->dataVector.end())
-                continue;
-            data.rhsGate = rhsGate;
-            rhsIt->lhsGate = this;
-        }
-        return count;
-    }
+    int connect(GateNode* rhsGate, int q = -1);
 };
 
 class GateBlock {
@@ -105,17 +78,11 @@ public:
             dataVector.push_back({data.qubit, gate, gate});
     }
 
-    size_t countGates() const {
-        std::set<GateNode*> gates;
-        for (const auto& data : dataVector) {
-            GateNode* gate = data.lhsEntry;
-            while (gate != data.rhsEntry) {
-                gate = gate->findRHS(data.qubit);
-                gates.insert(gate);
-            }
-        }
-        return gates.size();
-    }
+    std::ostream& displayInfo(std::ostream& os) const;
+
+    size_t countGates() const;
+
+    int connect(GateBlock* rhsBlock, int q = -1);
 
     std::vector<block_data>::iterator findQubit(unsigned q) {
         auto it = dataVector.begin();
@@ -169,7 +136,6 @@ private:
 
     void updateTileUpward();
     void updateTileDownward();
-
 
     /// @brief 
     /// @param it 
