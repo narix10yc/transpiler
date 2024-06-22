@@ -150,15 +150,35 @@ public:
 
 class CircuitGraph {
 private:
-    int currentBlockId;
-public:
     using row_t = std::array<GateBlock*, 36>;
     using tile_t = std::list<row_t>;
     using tile_iter_t = std::list<row_t>::iterator;
     using tile_riter_t = std::list<row_t>::reverse_iterator;
     using tile_const_iter_t = std::list<row_t>::const_iterator;
-
+    int currentBlockId;
     tile_t tile;
+
+    void eraseEmptyRows();
+
+    void repositionBlockUpward(tile_iter_t it, size_t q_);
+
+    void repositionBlockDownward(tile_riter_t it, size_t q_);
+    void repositionBlockDownward(tile_iter_t it, size_t q_) {
+        return repositionBlockDownward(--std::make_reverse_iterator(it), q_);
+    }
+
+    void updateTileUpward();
+    void updateTileDownward();
+
+
+    /// @brief 
+    /// @param it 
+    /// @param q_ 
+    /// @return -1000 if it is at the last row; -100 if block is null; 
+    /// Otherwise, return the number of qubits after fusion 
+    int checkFuseCondition(tile_const_iter_t it, size_t q_) const;
+    GateBlock* fuse(tile_iter_t tileLHS, size_t q);
+public:
     unsigned nqubits;
 
     CircuitGraph()
@@ -170,29 +190,8 @@ public:
     size_t countGates() const;
     size_t countBlocks() const;
 
-    void repositionBlockUpward(tile_iter_t it, size_t q_);
-    void repositionBlockDownward(tile_riter_t it, size_t q_);
-    void repositionBlockDownward(tile_iter_t it, size_t q_) {
-        return repositionBlockDownward(--std::make_reverse_iterator(it), q_);
-    }
-
-    void eraseEmptyRows();
-
-    void updateTileUpward();
-    void updateTileDownward();
-
     std::ostream& print(std::ostream& os, int verbose = 1) const;
-
     std::ostream& displayInfo(std::ostream& os, int verbose = 1) const;
-
-    /// @brief 
-    /// @param it 
-    /// @param q_ 
-    /// @return -1000 if it is at the last row; -100 if block is null; 
-    /// Otherwise, return the number of qubits after fusion 
-    int checkFuseCondition(tile_const_iter_t it, size_t q_) const;
-
-    GateBlock* fuse(tile_iter_t tileLHS, size_t q);
 
     void dependencyAnalysis();
 
