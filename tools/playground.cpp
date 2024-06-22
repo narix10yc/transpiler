@@ -16,29 +16,30 @@ int main(int argc, char** argv) {
 
     std::cerr << "CircuitGraph built\n";
 
-    std::cerr << "Before Fusion: " << graph.allBlocks.size() << " blocks\n";
-    graph.print(std::cerr);
-    // graph.displayInfo(std::cerr);
+    std::cerr << "Before Fusion: " << graph.countBlocks() << " blocks\n";
+    graph.print(std::cerr, 2);
 
-    // graph.applyInOrder([](GateBlock& block) {
-        // std::cerr << "calling block " << block.id << "\n";
+    // graph.applyInOrder([](GateBlock* block) {
+        // std::cerr << "calling block " << block->id << "\n";
     // });
     
     graph.fuseToTwoQubitGates();
 
-    std::cerr << "After Fusion: " << graph.allBlocks.size() << " blocks\n";
-    graph.print(std::cerr);
-    // graph.displayInfo(std::cerr);
+    std::cerr << "After Fusion 1: " << graph.countBlocks() << " blocks\n";
+    graph.print(std::cerr, 2);
 
+    // graph.displayInfo(std::cerr) << "\n";
 
-    // graph.applyInOrder([](GateBlock& block) {
-        // std::cerr << "calling block " << block.id << "\n";
+    // graph.greedyGateFusion(3);
+    // std::cerr << "After Fusion 2: " << graph.allBlocks.size() << " blocks\n";
+    // graph.print(std::cerr);
+
+    // graph.applyInOrder([](GateBlock* block) {
+        // std::cerr << "calling block " << block->id << "\n";
     // });
 
     // Parser parser("../examples/simple.qch");
     // auto root = parser.parse();
-
-
 
     return 0;
 }

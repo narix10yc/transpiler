@@ -4,6 +4,7 @@
 #include <vector>
 #include <array>
 #include <set>
+#include <list>
 #include <map>
 #include <cassert>
 #include <algorithm>
@@ -89,14 +90,11 @@ public:
         unsigned qubit;
         GateNode* lhsEntry;
         GateNode* rhsEntry;
-        GateBlock* lhsBlock;
-        GateBlock* rhsBlock;
     };
 
     const int id;
     unsigned nqubits;
     std::vector<block_data> dataVector;
-    // line number in the tile
 
     GateBlock(int id) : id(id), nqubits(0), dataVector() {}
 
@@ -104,7 +102,7 @@ public:
         : id(id), nqubits(gate->nqubits), dataVector()
     {
         for (const auto& data : gate->dataVector)
-            dataVector.push_back({data.qubit, gate, gate, nullptr, nullptr});
+            dataVector.push_back({data.qubit, gate, gate});
     }
 
     std::vector<block_data>::iterator findQubit(unsigned q) {
@@ -127,35 +125,6 @@ public:
         return it;
     }
 
-    int connect(GateBlock* rhsGate, int q = -1) {
-        assert(rhsGate != nullptr);
-
-        if (q >= 0) {
-            auto myIt = findQubit(static_cast<unsigned>(q));
-            if (myIt == dataVector.end())
-                return 0;
-            auto rhsIt = rhsGate->findQubit(static_cast<unsigned>(q));
-            if (rhsIt == rhsGate->dataVector.end())
-                return 0;
-            
-            myIt->rhsBlock = rhsGate;
-            rhsIt->lhsBlock = this;
-            return 1;
-        }
-        int count = 0;
-        for (auto& data : dataVector) {
-            auto rhsIt = rhsGate->findQubit(data.qubit);
-            if (rhsIt == rhsGate->dataVector.end())
-                continue;
-            data.rhsBlock = rhsGate;
-            rhsIt->lhsBlock = this;
-        }
-        return count;
-    }
-
-    void fuseWithRHS(GateBlock* rhsBlock);
-    void fuseWithLHS(GateBlock* lhsBlock);
-
     bool hasSameTargets(const GateBlock& other) const {
         if (nqubits != other.nqubits)
             return false;
@@ -170,30 +139,39 @@ public:
 class CircuitGraph {
 private:
     int currentBlockId;
-    struct block_ptr_cmp_by_id {
-        bool operator()(const GateBlock* a, const GateBlock* b) const {
-            return a->id < b->id;
-        }
-    };
 public:
-    std::set<GateBlock*, block_ptr_cmp_by_id> allBlocks;
-    std::array<GateBlock*, 36> lhsEntry, rhsEntry;
+    using row_t = std::array<GateBlock*, 36>;
+    using tile_t = std::list<row_t>;
+    using tile_iter_t = std::list<row_t>::iterator;
+    using tile_const_iter_t = std::list<row_t>::const_iterator;
+
+    tile_t tile;
     unsigned nqubits;
 
     CircuitGraph()
-        : currentBlockId(0), allBlocks(),
-          lhsEntry({}), rhsEntry({}), nqubits(0) {}
+        : currentBlockId(0), tile(1, {nullptr}), nqubits(0) {}
 
     void addGate(const cas::GateMatrix& matrix,
-                      const std::vector<unsigned>& qubits);
+                 const std::vector<unsigned>& qubits);
 
-    GateBlock* createBlock(GateNode* gate);
-    
-    void destroyBlock(GateBlock* block);
+    size_t countBlocks() const;
 
-    std::ostream& print(std::ostream& os) const;
+    void repositionBlock(tile_iter_t it, size_t q_);
 
-    std::ostream& displayInfo(std::ostream& os) const;
+    void eraseEmptyRows();
+
+    void updateTile();
+
+    std::ostream& print(std::ostream& os, int verbose=1) const;
+
+    /// @brief 
+    /// @param it 
+    /// @param q_ 
+    /// @return -1000 if it is at the last row; -100 if block is null; 
+    /// Otherwise, return the number of qubits after fusion 
+    int checkFuseCondition(tile_const_iter_t it, size_t q_) const;
+
+    GateBlock* fuse(tile_iter_t tileLHS, size_t q);
 
     void dependencyAnalysis();
 
@@ -201,8 +179,7 @@ public:
 
     void greedyGateFusion(int maxNQubits);
 
-    void applyInOrder(std::function<void(GateBlock&)>);
-
+    void applyInOrder(std::function<void(GateBlock*)>) const;
 
 };
 
