@@ -105,6 +105,18 @@ public:
             dataVector.push_back({data.qubit, gate, gate});
     }
 
+    size_t countGates() const {
+        std::set<GateNode*> gates;
+        for (const auto& data : dataVector) {
+            GateNode* gate = data.lhsEntry;
+            while (gate != data.rhsEntry) {
+                gate = gate->findRHS(data.qubit);
+                gates.insert(gate);
+            }
+        }
+        return gates.size();
+    }
+
     std::vector<block_data>::iterator findQubit(unsigned q) {
         auto it = dataVector.begin();
         while (it != dataVector.end()) {
@@ -143,6 +155,7 @@ public:
     using row_t = std::array<GateBlock*, 36>;
     using tile_t = std::list<row_t>;
     using tile_iter_t = std::list<row_t>::iterator;
+    using tile_riter_t = std::list<row_t>::reverse_iterator;
     using tile_const_iter_t = std::list<row_t>::const_iterator;
 
     tile_t tile;
@@ -154,15 +167,23 @@ public:
     void addGate(const cas::GateMatrix& matrix,
                  const std::vector<unsigned>& qubits);
 
+    size_t countGates() const;
     size_t countBlocks() const;
 
-    void repositionBlock(tile_iter_t it, size_t q_);
+    void repositionBlockUpward(tile_iter_t it, size_t q_);
+    void repositionBlockDownward(tile_riter_t it, size_t q_);
+    void repositionBlockDownward(tile_iter_t it, size_t q_) {
+        return repositionBlockDownward(--std::make_reverse_iterator(it), q_);
+    }
 
     void eraseEmptyRows();
 
-    void updateTile();
+    void updateTileUpward();
+    void updateTileDownward();
 
-    std::ostream& print(std::ostream& os, int verbose=1) const;
+    std::ostream& print(std::ostream& os, int verbose = 1) const;
+
+    std::ostream& displayInfo(std::ostream& os, int verbose = 1) const;
 
     /// @brief 
     /// @param it 

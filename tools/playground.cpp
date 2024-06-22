@@ -17,22 +17,31 @@ int main(int argc, char** argv) {
     std::cerr << "CircuitGraph built\n";
 
     std::cerr << "Before Fusion: " << graph.countBlocks() << " blocks\n";
-    graph.print(std::cerr, 2);
+    // graph.print(std::cerr, 2) << "\n";
+    graph.displayInfo(std::cerr, 2) << "\n";
 
-    // graph.applyInOrder([](GateBlock* block) {
-        // std::cerr << "calling block " << block->id << "\n";
-    // });
-    
-    graph.fuseToTwoQubitGates();
+    // graph.updateTileUpward();
+    // std::cerr << "upward\n";
+    // graph.print(std::cerr, 2) << "\n";
 
-    std::cerr << "After Fusion 1: " << graph.countBlocks() << " blocks\n";
-    graph.print(std::cerr, 2);
+    // graph.updateTileDownward();
+    // std::cerr << "downward\n";
+    // graph.print(std::cerr, 2);
 
-    // graph.displayInfo(std::cerr) << "\n";
+    // graph.fuseToTwoQubitGates();
 
-    // graph.greedyGateFusion(3);
-    // std::cerr << "After Fusion 2: " << graph.allBlocks.size() << " blocks\n";
-    // graph.print(std::cerr);
+    for (unsigned maxNqubits = 2; maxNqubits < 5; maxNqubits++) {
+        graph.greedyGateFusion(maxNqubits);
+        std::cerr << "After Greedy Fusion " << maxNqubits << ":\n";
+        // graph.print(std::cerr, 2);
+        graph.displayInfo(std::cerr, 2) << "\n";
+    }
+
+
+
+    // graph.greedyGateFusion(4);
+    // std::cerr << "After Fusion 2: " << graph.countBlocks() << " blocks\n";
+    // graph.print(std::cerr, 2);
 
     // graph.applyInOrder([](GateBlock* block) {
         // std::cerr << "calling block " << block->id << "\n";
