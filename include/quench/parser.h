@@ -281,7 +281,7 @@ protected:
     cas::Polynomial parsePolynomial_();
 
     GateApplyStmt parseGateApplyStmt_();
-    GateChainStmt parseGateChainStmt_();
+    GateBlockStmt parseGateBlockStmt_();
     CircuitStmt parseCircuitStmt_();
 
     ParameterDefStmt parseParameterDefStmt_();

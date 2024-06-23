@@ -18,15 +18,19 @@ public:
         GateNode* rhsGate;
     };
     unsigned nqubits;
-    cas::GateMatrix gate;
+    cas::GateMatrix gateMatrix;
     std::vector<gate_data> dataVector;
 
-    GateNode(const cas::GateMatrix& gate, const std::vector<unsigned>& qubits)
-        : nqubits(gate.nqubits), gate(gate), dataVector(gate.nqubits) {
-            assert(gate.nqubits == qubits.size());
-            for (unsigned i = 0; i < qubits.size(); i++)
-                dataVector[i] = { qubits[i], nullptr, nullptr };
-        }
+    GateNode(const cas::GateMatrix& gateMatrix,
+             const std::vector<unsigned>& qubits)
+        : nqubits(gateMatrix.nqubits),
+          gateMatrix(gateMatrix),
+          dataVector(gateMatrix.nqubits)
+    {
+        assert(gateMatrix.nqubits == qubits.size());
+        for (unsigned i = 0; i < qubits.size(); i++)
+            dataVector[i] = { qubits[i], nullptr, nullptr };
+    }
 
     std::vector<gate_data>::iterator findQubit(unsigned q) {
         auto it = dataVector.begin();
@@ -113,6 +117,8 @@ public:
         }
         return true;
     }
+
+    void applyInOrder(std::function<void(GateNode*)>) const;
 };
 
 class CircuitGraph {

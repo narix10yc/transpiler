@@ -52,17 +52,26 @@ int main(int argc, char** argv) {
     TmpStatevector<double> sv1(4);
     auto sv2 = sv1;
     auto allBlocks = graph.getAllBlocks();
-    std::vector<unsigned> qubits = {2};
+    std::vector<GateNode*> gates;
+    std::vector<unsigned> qubits;
 
     std::cerr << "Before Fusion: " << graph.countBlocks() << " blocks\n";
     graph.print(std::cerr, 2) << "\n";
     graph.displayInfo(std::cerr, 2) << "\n";
 
-    for (const auto& block : allBlocks)
-        applyGeneral<double>(sv1.data, block->dataVector[0].lhsEntry->gate, 
-                     qubits, sv1.nqubits);
-    
+    for (const auto& block : allBlocks) {
+        gates.clear();
+        block->applyInOrder([&gates](GateNode* gate) { gates.push_back(gate); });
+        std::cerr << "Block " << block->id << " has " << gates.size() << " gates\n";
 
+        for (const auto& gate : gates) {
+            qubits.clear();
+            for (const auto& data : gate->dataVector)
+                qubits.push_back(data.qubit);
+
+            applyGeneral<double>(sv1.data, gate->gateMatrix, qubits, sv1.nqubits);
+        }
+    }
 
     for (unsigned maxNqubits = 2; maxNqubits < 3; maxNqubits++) {
         graph.greedyGateFusion(maxNqubits);

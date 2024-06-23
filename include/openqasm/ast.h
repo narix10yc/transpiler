@@ -49,14 +49,14 @@ class Node {
 public:
     virtual ~Node() = default;
     virtual std::string toString() const = 0;
-    virtual void prettyPrint(std::ofstream& f, int depth) const = 0;
+    virtual void prettyPrint(std::ostream& f, int depth) const = 0;
 };
 
 
 class Statement : public Node {
 public:
     std::string toString() const override { return "statement"; }
-    void prettyPrint(std::ofstream& f, int depth) const override {}
+    void prettyPrint(std::ostream& f, int depth) const override {}
 
     virtual std::unique_ptr<qch::ast::Statement>
     toQchStmt() const { return nullptr; }
@@ -66,7 +66,7 @@ public:
 class Expression : public Node {
 public:
     std::string toString() const override { return "expression"; }
-    void prettyPrint(std::ofstream& f, int depth) const override {}
+    void prettyPrint(std::ostream& f, int depth) const override {}
     virtual ExpressionValue getExprValue() const { return false; }
 };
 
@@ -79,7 +79,7 @@ public:
         return "(" + std::to_string(value) + ")";
     }
 
-    void prettyPrint(std::ofstream& f, int depth) const override;
+    void prettyPrint(std::ostream& f, int depth) const override;
 
     double getValue() const { return value; }
     ExpressionValue getExprValue() const override { return value; }
@@ -96,7 +96,7 @@ public:
     std::string toString() const override {
         return "(" + name + ")";
     }
-    void prettyPrint(std::ofstream& f, int depth) const override;
+    void prettyPrint(std::ostream& f, int depth) const override;
 
     ExpressionValue getExprValue() const override {
         return (name == "pi") ? 3.14159265358979323846 : false;
@@ -116,7 +116,7 @@ public:
     std::string toString() const override {
         return name + "[" + std::to_string(index) + "]";
     }
-    void prettyPrint(std::ofstream& f, int depth) const override;
+    void prettyPrint(std::ostream& f, int depth) const override;
 
     ExpressionValue getExprValue() const override { return false; }
 };
@@ -128,7 +128,7 @@ public:
     UnaryExpr(UnaryOp op, std::unique_ptr<Expression> expr)
         : op(op), expr(std::move(expr)) {}
     std::string toString() const override { return "UnaryExpr"; }
-    void prettyPrint(std::ofstream& f, int depth) const override;
+    void prettyPrint(std::ostream& f, int depth) const override;
 
     UnaryOp getOp() const { return op; }
     const Expression& getExpr() const { return *expr; }
@@ -156,7 +156,7 @@ public:
         : op(op), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
 
     std::string toString() const override { return "BinaryExpr"; }
-    void prettyPrint(std::ofstream& f, int depth) const override;
+    void prettyPrint(std::ostream& f, int depth) const override;
 
     const Expression& getLHS() const { return *lhs; }
     const Expression& getRHS() const { return *rhs; }
@@ -190,7 +190,7 @@ public:
     std::string toString() const override 
     { return "IfThenElseStmt"; }
 
-    void prettyPrint(std::ofstream& f, int depth) const override;
+    void prettyPrint(std::ostream& f, int depth) const override;
 
     void addThenBody(std::unique_ptr<Statement> stmt)
     { thenBody.push_back(std::move(stmt)); }
@@ -209,7 +209,7 @@ public:
     std::string toString() const override 
     { return "Version(" + version + ")"; }
 
-    void prettyPrint(std::ofstream& f, int depth) const override;
+    void prettyPrint(std::ostream& f, int depth) const override;
 };
 
 class IncludeStmt : public Statement {
@@ -222,7 +222,7 @@ public:
         return "Include(" + fileName + ")";
     }
 
-    void prettyPrint(std::ofstream& f, int depth) const override {}
+    void prettyPrint(std::ostream& f, int depth) const override {}
 };
 
 
@@ -238,7 +238,7 @@ public:
     std::string toString() const override 
     { return "QReg(" + name + ", " + std::to_string(size) + ")"; }
 
-    void prettyPrint(std::ofstream& f, int depth) const override;
+    void prettyPrint(std::ostream& f, int depth) const override;
 };
 
 class CRegStmt : public Statement {
@@ -253,7 +253,7 @@ public:
     std::string toString() const override 
     { return "CReg(" + name + ", " + std::to_string(size) + ")"; }
 
-    void prettyPrint(std::ofstream& f, int depth) const override;
+    void prettyPrint(std::ostream& f, int depth) const override;
 };
 
 
@@ -271,24 +271,11 @@ public:
     void addTarget(std::unique_ptr<SubscriptExpr> targ)
     { targets.push_back(std::move(targ)); }
 
-    std::string getName() const { return name; }
-
-    size_t countParameters() const { return parameters.size(); }
-    size_t countTargets() const { return targets.size(); }
-
-    const Expression& getParameter(size_t index) {
-        return *parameters[index];
-    }
-
-    const Expression& getTarget(size_t index) {
-        return *targets[index];
-    }
-
     std::string toString() const override {
         return "gate " + name;
     }
 
-    void prettyPrint(std::ofstream& f, int depth) const override;
+    void prettyPrint(std::ostream& f, int depth) const override;
 
     std::unique_ptr<qch::ast::Statement> toQchStmt() const override {
         auto qchStmt = std::make_unique<qch::ast::GateApplyStmt>(name);
@@ -318,7 +305,7 @@ protected:
     using GateMatrix = quench::cas::GateMatrix;
 public:
     std::string toString() const override { return "Root"; }
-    void prettyPrint(std::ofstream& f, int depth) const override;
+    void prettyPrint(std::ostream& f, int depth) const override;
     void addStmt(std::unique_ptr<Statement> stmt) {
         stmts.push_back(std::move(stmt));
     }
@@ -345,6 +332,7 @@ public:
     CircuitGraph toCircuitGraph() const {
         CircuitGraph graph;
         std::vector<unsigned> qubits;
+        std::vector<double> params;
         for (const auto& s : stmts) {
             auto gateApply = dynamic_cast<GateApplyStmt*>(s.get());
             if (gateApply == nullptr) {
@@ -352,11 +340,16 @@ public:
                 continue;
             }
             qubits.clear();
-            for (unsigned i = 0; i < gateApply->targets.size(); i++) {
-                auto q = static_cast<unsigned>(gateApply->targets[i]->getIndex());
-                qubits.push_back(q);
+            for (const auto& t : gateApply->targets) {
+                qubits.push_back(static_cast<unsigned>(t->getIndex()));
             }
-            GateMatrix matrix {static_cast<unsigned>(qubits.size())};
+            params.clear();
+            for (const auto& p : gateApply->parameters) {
+                auto ev = p->getExprValue();
+                assert(ev.isConstant);
+                params.push_back(ev.value);
+            }
+            auto matrix = GateMatrix::FromName(gateApply->name, params);
             graph.addGate(matrix, qubits);
         }
 

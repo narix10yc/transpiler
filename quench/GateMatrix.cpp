@@ -1,6 +1,8 @@
 #include "quench/GateMatrix.h"
+#include "utils/iocolor.h"
 
 using namespace quench::cas;
+using namespace Color;
 
 std::ostream& Polynomial::print(std::ostream& os) const {
     if (monomials.empty())
@@ -142,4 +144,45 @@ Polynomial CosineNode::toPolynomial() const {
 
 Polynomial SineNode::toPolynomial() const {
     return {{1.0, {{std::make_shared<SineNode>(*this), 1}}}};
+}
+
+GateMatrix GateMatrix::FromName(const std::string& name,
+                                const std::vector<double>& params)
+{
+    if (name == "u3") {
+        assert(params.size() == 3);
+        const double theta = 0.5 * params[0];
+        const auto& phi = params[1];
+        const auto& lambd = params[2];
+        const double ctheta = std::cos(theta);
+        const double stheta = std::sin(theta);
+
+        return {
+            {ctheta, 0},
+            {-std::cos(lambd) * stheta, -std::sin(lambd) * stheta},
+            {std::cos(phi) * stheta, std::sin(phi) * stheta},
+            {std::cos(phi + lambd) * ctheta, std::sin(phi + lambd) * ctheta}
+        };
+    }
+    if (name == "cx") {
+        return {
+            {1,0}, {0,0}, {0,0}, {0,0},
+            {0,0}, {0,0}, {0,0}, {1,0},
+            {0,0}, {0,0}, {1,0}, {0,0},
+            {0,0}, {1,0}, {0,0}, {0,0}
+        };
+    }
+
+    if (name == "cz") {
+        return {
+            {1,0}, {0,0}, {0,0}, {0,0},
+            {0,0}, {1,0}, {0,0}, {0,0},
+            {0,0}, {0,0}, {1,0}, {0,0},
+            {0,0}, {0,0}, {0,0}, {-1,0}
+        };
+    }
+
+    std::cerr << RED_FG << BOLD << "Error: Unrecognized gate '" << name << "'"
+              << RESET << "\n";
+    return GateMatrix(0);
 }

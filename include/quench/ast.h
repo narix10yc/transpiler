@@ -38,11 +38,11 @@ public:
     std::ostream& print(std::ostream& os) const override;
 };
 
-class GateChainStmt : public CircuitCompatibleStmt {
+class GateBlockStmt : public CircuitCompatibleStmt {
 public:
     std::vector<GateApplyStmt> gates;
 
-    GateChainStmt() : gates() {}
+    GateBlockStmt() : gates() {}
 
     std::ostream& print(std::ostream& os) const override {
         auto it = gates.begin();
@@ -50,19 +50,6 @@ public:
             os << ((it == gates.begin()) ? "  " : "@ ");
             it->print(os) << "\n";
         }
-        return os;
-    }
-};
-
-class BlockOfGatesStmt : public CircuitCompatibleStmt {
-public:
-    std::vector<GateChainStmt> chains;
-
-    BlockOfGatesStmt() : chains() {}
-    
-    std::ostream& print(std::ostream& os) const override {
-        for (const auto& chain : chains)
-            chain.print(os);
         return os;
     }
 };
@@ -76,7 +63,7 @@ public:
     
     CircuitStmt() : nqubits(0), stmts() {}
 
-    void addGateChain(const GateChainStmt& chain);
+    void addGateChain(const GateBlockStmt& chain);
 
     std::ostream& print(std::ostream& os) const override;
 };

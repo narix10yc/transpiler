@@ -516,6 +516,8 @@ public:
         return os;
     }
 
+    static GateMatrix
+    FromName(const std::string& name, const std::vector<double>& params);
 };
 
 } // namespace quench::cas

@@ -182,10 +182,10 @@ GateApplyStmt Parser::parseGateApplyStmt_() {
     return gate;
 }
 
-GateChainStmt Parser::parseGateChainStmt_() {
+GateBlockStmt Parser::parseGateBlockStmt_() {
     assert(curToken.type == TokenTy::Identifier);;
 
-    GateChainStmt chain{};
+    GateBlockStmt chain{};
 
     while (true) {
         chain.gates.push_back(parseGateApplyStmt_());
@@ -232,7 +232,7 @@ CircuitStmt Parser::parseCircuitStmt_() {
             proceed();
             break;
         }
-        circuit.addGateChain(parseGateChainStmt_());
+        circuit.addGateChain(parseGateBlockStmt_());
         skipLineFeeds();
         continue;
     }

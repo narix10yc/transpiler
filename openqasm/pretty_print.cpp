@@ -5,7 +5,7 @@ using namespace openqasm::ast;
 #define INDENT f << std::string(2*depth, ' ')
 #define INDENT2 f << std::string(2*depth + 2, ' ')
 
-void RootNode::prettyPrint(std::ofstream &f, int depth) const {
+void RootNode::prettyPrint(std::ostream &f, int depth) const {
     INDENT << "RootNode" << "\n";
     INDENT2 << "(Statements:)" << "\n";
     for (const auto& item : stmts) {
@@ -13,7 +13,7 @@ void RootNode::prettyPrint(std::ofstream &f, int depth) const {
     }
 }
 
-void IfThenElseStmt::prettyPrint(std::ofstream &f, int depth) const {
+void IfThenElseStmt::prettyPrint(std::ostream &f, int depth) const {
     INDENT << "IfThenElse" << "\n";
     INDENT2 << "(If:)" << "\n";
     ifExpr->prettyPrint(f, depth+1);
@@ -27,20 +27,20 @@ void IfThenElseStmt::prettyPrint(std::ofstream &f, int depth) const {
     }
 }
 
-void VersionStmt::prettyPrint(std::ofstream &f, int depth) const {
+void VersionStmt::prettyPrint(std::ostream &f, int depth) const {
     INDENT << "Version: " << getVersion() << "\n";
 }
 
-void QRegStmt::prettyPrint(std::ofstream &f, int depth) const {
+void QRegStmt::prettyPrint(std::ostream &f, int depth) const {
     INDENT << "QReg: " << getName() << "[" << getSize() << "]\n";
 }
 
-void CRegStmt::prettyPrint(std::ofstream &f, int depth) const {
+void CRegStmt::prettyPrint(std::ostream &f, int depth) const {
     INDENT << "CReg: " << getName() << "[" << getSize() << "]\n";
 }
 
-void GateApplyStmt::prettyPrint(std::ofstream &f, int depth) const {
-    INDENT << "GateApply: " << getName() << "\n";
+void GateApplyStmt::prettyPrint(std::ostream &f, int depth) const {
+    INDENT << "GateApply: " << name << "\n";
     INDENT2 << "(Parameters:)\n";
     for (const auto& item : parameters)
         item->prettyPrint(f, depth+1);
@@ -49,25 +49,25 @@ void GateApplyStmt::prettyPrint(std::ofstream &f, int depth) const {
         item->prettyPrint(f, depth+1);
 }
 
-void NumericExpr::prettyPrint(std::ofstream &f, int depth) const {
+void NumericExpr::prettyPrint(std::ostream &f, int depth) const {
     INDENT << "Numeric[" << value << "]";
     f << "\n";
 }
 
-void VariableExpr::prettyPrint(std::ofstream &f, int depth) const {
+void VariableExpr::prettyPrint(std::ostream &f, int depth) const {
     INDENT << "Variable[" << name << "]";
     f << "\n";
 }
 
-void SubscriptExpr::prettyPrint(std::ofstream &f, int depth) const {
+void SubscriptExpr::prettyPrint(std::ostream &f, int depth) const {
     INDENT << name << "[" << index << "]\n";
 }
 
-void UnaryExpr::prettyPrint(std::ofstream &f, int depth) const {
+void UnaryExpr::prettyPrint(std::ostream &f, int depth) const {
     INDENT << "UnaryExpr" << "\n";
 }
 
-void BinaryExpr::prettyPrint(std::ofstream &f, int depth) const {
+void BinaryExpr::prettyPrint(std::ostream &f, int depth) const {
     INDENT << "BinaryExpr" << "\n";
     INDENT2 << "(Op:) " << "\n";
     INDENT2 << "(LHS:)" << "\n";

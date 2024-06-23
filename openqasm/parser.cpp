@@ -115,7 +115,7 @@ std::unique_ptr<ast::CRegStmt> Parser::parseCRegStmt() {
 std::unique_ptr<ast::GateApplyStmt> Parser::parseGateApplyStmt() {
     auto stmt = std::make_unique<ast::GateApplyStmt>(curToken.str);
     nextToken(); // eat the identifier
-    logDebug(2, "parsing GateApplyStmt " + stmt->getName());
+    logDebug(2, "parsing GateApplyStmt " + stmt->name);
     if (curToken.type == TokenTy::L_RoundBraket) {
         // parameters
         nextToken(); // eat '('
@@ -138,8 +138,8 @@ std::unique_ptr<ast::GateApplyStmt> Parser::parseGateApplyStmt() {
             stmt->addParameter(std::move(param));
         }
     }
-    logDebug(2, "GateApplyStmt " + stmt->getName() + ": " + \
-        std::to_string(stmt->countParameters()) + " parameters parsed");
+    logDebug(2, "GateApplyStmt " + stmt->name + ": " + \
+        std::to_string(stmt->parameters.size()) + " parameters parsed");
 
     logDebug(1, "Current Token: " + tokenTypetoString(curToken.type));
     while (true) {
@@ -158,7 +158,7 @@ std::unique_ptr<ast::GateApplyStmt> Parser::parseGateApplyStmt() {
         stmt->addTarget(std::move(targ));
     }
 
-    logDebug(2, std::to_string(stmt->countTargets()) + " targets parsed");
+    logDebug(2, std::to_string(stmt->targets.size()) + " targets parsed");
 
     return stmt;
 }
