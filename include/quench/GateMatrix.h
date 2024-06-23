@@ -393,24 +393,24 @@ class GateMatrix {
 public:
     unsigned nqubits;
     size_t N;
-    std::vector<Complex<Polynomial>> data;
+    std::vector<Complex<Polynomial>> matrix;
 
-    GateMatrix() : nqubits(0), N(1), data(1) {}
+    GateMatrix() : nqubits(0), N(1), matrix(1) {}
     GateMatrix(unsigned nqubits)
-        : nqubits(nqubits), N(1 << nqubits), data(1 << (nqubits*2)) {}
-    GateMatrix(std::initializer_list<Complex<Polynomial>> data)
-        : data(data) { int r = updateNQubits(); assert(r > 0); }
+        : nqubits(nqubits), N(1 << nqubits), matrix(1 << (nqubits*2)) {}
+    GateMatrix(std::initializer_list<Complex<Polynomial>> matrix)
+        : matrix(matrix) { int r = updateNQubits(); assert(r > 0); }
 
-    /// @brief update nqubits and N based on data.
-    /// @return if data represents a (2**n) * (2**n) matrix, then return n
-    /// (number of qubits). Otherwise, return -1 if data is empty; -2 if
-    /// data.size() is not a perfect square; -3 if data represents an N * N
+    /// @brief update nqubits and N based on matrix.
+    /// @return if matrix represents a (2**n) * (2**n) matrix, then return n
+    /// (number of qubits). Otherwise, return -1 if matrix is empty; -2 if
+    /// matrix.size() is not a perfect square; -3 if matrix represents an N * N
     /// matrix, but N is not a power of two.
     int updateNQubits() {
-        if (data.empty())
+        if (matrix.empty())
             return -1;
-        size_t size = static_cast<size_t>(std::sqrt(data.size()));
-        if (size * size == data.size()) {
+        size_t size = static_cast<size_t>(std::sqrt(matrix.size()));
+        if (size * size == matrix.size()) {
             N = size;
             if ((N & (N-1)) == 0) {
                 nqubits = static_cast<unsigned>(std::log2(N));
@@ -424,7 +424,7 @@ public:
     bool checkSizeMatch() const {
         if (N != (1 << nqubits))
             return false;
-        if (data.size() != N * N)
+        if (matrix.size() != N * N)
             return false;
         return true;
     }
@@ -432,7 +432,7 @@ public:
     static GateMatrix Identity(unsigned nqubits) {
         GateMatrix m {nqubits};
         for (size_t r = 0; r < m.N; r++)
-            m.data[r*m.N + r].real = { 1.0 };
+            m.matrix[r*m.N + r].real = { 1.0 };
         return m;
     }
 
@@ -446,7 +446,7 @@ public:
         for (size_t j = 0; j < N; j++) {
         for (size_t k = 0; k < N; k++) {
             // C_{ij} = A_{ik} B_{kj}
-            m.data[i*N + j] += data[i*N + k] * other.data[k*N + j];
+            m.matrix[i*N + j] += matrix[i*N + k] * other.matrix[k*N + j];
         } } }
         return m;
     }
@@ -465,7 +465,7 @@ public:
         for (size_t rc = 0; rc < rsize; rc++) {
             size_t r = lr * rsize + rr;
             size_t c = lc * rsize + rc;
-            m.data[r*msize + c] = data[lr*lsize + lc] * other.data[rr*rsize + rc];
+            m.matrix[r*msize + c] = matrix[lr*lsize + lc] * other.matrix[rr*rsize + rc];
         } } } }
         return m;
     }
@@ -477,7 +477,7 @@ public:
         for (size_t i = 0; i < N; i++) {
         for (size_t r = 0; r < N; r++) {
         for (size_t c = 0; c < N; c++) {
-            m.data[(i*N + r) * N * N + (i*N + c)] = data[r*N + c];
+            m.matrix[(i*N + r) * N * N + (i*N + c)] = matrix[r*N + c];
         } } }
         return m;
     }
@@ -489,7 +489,7 @@ public:
         for (size_t i = 0; i < N; i++) {
         for (size_t r = 0; r < N; r++) {
         for (size_t c = 0; c < N; c++) {
-            m.data[(r*N + i) * N * N + (c*N + i)] = data[r*N + c];
+            m.matrix[(r*N + i) * N * N + (c*N + i)] = matrix[r*N + c];
         } } }
         return m;
     }
@@ -497,17 +497,17 @@ public:
     GateMatrix swapTargetQubits() const {
         assert(nqubits == 2 && N == 4);
 
-        return {{data[ 0], data[ 2], data[ 1], data[ 3],
-                 data[ 8], data[10], data[ 9], data[11],
-                 data[ 4], data[ 6], data[ 5], data[ 7],
-                 data[12], data[14], data[13], data[15]}};
+        return {{matrix[ 0], matrix[ 2], matrix[ 1], matrix[ 3],
+                 matrix[ 8], matrix[10], matrix[ 9], matrix[11],
+                 matrix[ 4], matrix[ 6], matrix[ 5], matrix[ 7],
+                 matrix[12], matrix[14], matrix[13], matrix[15]}};
     }
 
     std::ostream& print(std::ostream& os) const {
         for (size_t r = 0; r < N; r++) {
             for (size_t c = 0; c < N; c++) {
-                const auto& re = data[r*N + c].real;
-                const auto& im = data[r*N + c].imag;
+                const auto& re = matrix[r*N + c].real;
+                const auto& im = matrix[r*N + c].imag;
                 re.print(os) << " + ";
                 im.print(os) << "i ";
             }
@@ -515,9 +515,8 @@ public:
         }
         return os;
     }
+
 };
-
-
 
 } // namespace quench::cas
 

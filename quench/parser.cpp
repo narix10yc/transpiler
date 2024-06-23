@@ -257,7 +257,7 @@ ParameterDefStmt Parser::parseParameterDefStmt_() {
         proceed();
         imag = parsePolynomial_();
         proceed();
-        defStmt.matrix.data.push_back({real, imag});
+        defStmt.matrix.matrix.push_back({real, imag});
         if (curToken.type == TokenTy::Comma)
             continue;
         if (curToken.type == TokenTy::R_CurlyBraket)

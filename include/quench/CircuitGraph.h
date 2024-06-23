@@ -18,12 +18,12 @@ public:
         GateNode* rhsGate;
     };
     unsigned nqubits;
-    cas::GateMatrix matrix;
+    cas::GateMatrix gate;
     std::vector<gate_data> dataVector;
 
-    GateNode(const cas::GateMatrix& matrix, const std::vector<unsigned>& qubits)
-        : nqubits(matrix.nqubits), matrix(matrix), dataVector(matrix.nqubits) {
-            assert(matrix.nqubits == qubits.size());
+    GateNode(const cas::GateMatrix& gate, const std::vector<unsigned>& qubits)
+        : nqubits(gate.nqubits), gate(gate), dataVector(gate.nqubits) {
+            assert(gate.nqubits == qubits.size());
             for (unsigned i = 0; i < qubits.size(); i++)
                 dataVector[i] = { qubits[i], nullptr, nullptr };
         }
@@ -152,6 +152,8 @@ public:
 
     void addGate(const cas::GateMatrix& matrix,
                  const std::vector<unsigned>& qubits);
+
+    std::set<GateBlock*> getAllBlocks() const;
 
     size_t countGates() const;
     size_t countBlocks() const;

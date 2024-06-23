@@ -92,7 +92,7 @@ public:
         normalize();
     }
 
-    void print(std::ostream& os) const {
+    std::ostream& print(std::ostream& os) const {
         // const char* red = "\033[31m";
         const char* cyan = "\033[36m";
         const char* bold = "\033[1m";
@@ -114,7 +114,8 @@ public:
             os << i << ": ";
             print_number(i);
             os << "\n";
-        }   
+        }
+        return os;
     }
 };
 

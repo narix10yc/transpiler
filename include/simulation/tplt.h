@@ -63,9 +63,9 @@ void applySingleQubitQuEST(real_ty* real,
 
 template<typename real_ty, size_t k>
 void applySingleQubitTemplate(real_ty* real,
-                           real_ty* imag,
-                           const ComplexMatrix2<real_ty>& mat,
-                           size_t nqubits) {
+                              real_ty* imag,
+                              const ComplexMatrix2<real_ty>& mat,
+                              size_t nqubits) {
     size_t K = 1 << k;
     size_t N = 1 << nqubits;
     real_ty x_real, x_imag, y_real, y_imag;
@@ -110,10 +110,10 @@ inline uint64_t insertTwoZeroBits(uint64_t number, int bit1, int bit2) {
 /// @param k more significant qubit
 template<typename real_ty>
 void applyTwoQubitQuEST(real_ty* real,
-                   real_ty* imag,
-                   const ComplexMatrix4<real_ty>& mat,
-                   size_t nqubits,
-                   size_t k, size_t l) {
+                        real_ty* imag,
+                        const ComplexMatrix4<real_ty>& mat,
+                        size_t nqubits,
+                        size_t k, size_t l) {
     size_t nTasks = 1 << (nqubits - 2);
     size_t idx00, idx01, idx10, idx11;
 
@@ -171,6 +171,8 @@ void applyTwoQubitQuEST(real_ty* real,
                       (mat.real[15] * im11 + mat.imag[15] * re11);
     }
 }
+
+
 
 
 } // namespace simultion::tplt

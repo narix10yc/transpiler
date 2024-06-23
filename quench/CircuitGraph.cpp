@@ -253,6 +253,18 @@ size_t GateBlock::countGates() const {
     return gates.size();
 }
 
+std::set<GateBlock*> CircuitGraph::getAllBlocks() const {
+    std::set<GateBlock*> allBlocks;
+    for (const auto& row : tile) {
+        for (unsigned q = 0; q < nqubits; q++) {
+            const auto& block = row[q];
+            if (block)
+                allBlocks.insert(block);
+        }
+    }
+    return allBlocks;
+}
+
 size_t CircuitGraph::countGates() const {
     size_t count = 0;
     std::set<GateBlock*> s;
