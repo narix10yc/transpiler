@@ -5,7 +5,7 @@
 #include <thread>
 #include <chrono>
 #include <map>
-#include <stack>
+#include <deque>
 
 using namespace Color;
 using namespace quench::circuit_graph;
@@ -555,15 +555,16 @@ void CircuitGraph::greedyGateFusion(int maxNQubits) {
 }
 
 void GateBlock::applyInOrder(std::function<void(GateNode*)> f) const {
-    std::stack<GateNode*> stack;
+    std::deque<GateNode*> queue;
     // for small size, vector is usually more efficient
     std::vector<GateNode*> applied;
     for (const auto& data : dataVector) {
-        stack.push(data.rhsEntry);
+        if (std::find(queue.begin(), queue.end(), data.rhsEntry) == queue.end())
+            queue.push_back(data.rhsEntry);
     }
     
-    while (!stack.empty()) {
-        auto& gate = stack.top();
+    while (!queue.empty()) {
+        auto& gate = queue.back();
         bool isLHSGate = false;
         for (const auto& data : dataVector) {
             if (gate == data.lhsEntry) {
@@ -578,12 +579,12 @@ void GateBlock::applyInOrder(std::function<void(GateNode*)> f) const {
             for (const auto& gateData : gate->dataVector) {
                 if (std::find(applied.begin(), applied.end(), gateData.lhsGate) == applied.end()) {
                     canApply = false;
-                    stack.push(gateData.lhsGate);
+                    queue.push_back(gateData.lhsGate);
                 }
             }
         }
         if (canApply) {
-            stack.pop();
+            queue.pop_back();
             applied.push_back(gate);
             f(gate);
         }

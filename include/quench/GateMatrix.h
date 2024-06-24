@@ -312,7 +312,7 @@ public:
         double v = 0.0;
         double mV = 1.0;
         for (const auto& m : monomials) {
-            mV = 1.0;
+            mV = m.coef;
             for (const auto& p : m.powers) {
                 auto baseV = p.base->getExprValue();
                 if (!baseV.isConstant)

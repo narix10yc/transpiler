@@ -23,29 +23,33 @@ void applyGeneral(quench::cas::Complex<real_ty>* sv,
     assert(gate.nqubits == qubits.size());
     using complex_t = quench::cas::Complex<real_ty>;
 
-    std::cerr << "applyGenerator (nqubits = " << nqubits << ") with gate\n";
-    gate.print(std::cerr);
-    std::cerr << " on qubits ";
+    std::cerr << "applyGeneral (nqubits = " << nqubits << ") on qubits ";
     for (const auto& q : qubits)
         std::cerr << q << " ";
-    std::cerr << "\n";
+    std::cerr << "\nwith gate\n";
+    gate.print(std::cerr);
 
-    const auto& N = gate.N;
-    const size_t Nsquared = N * N;
-    const size_t K = 1 << gate.nqubits;
-    std::vector<std::vector<complex_t>> constMatrix;
-    for (unsigned r = 0; r < N; r++) {
-        constMatrix.push_back({});
-        for (unsigned c = 0; c < N; c++) {
-            auto idx = r * N + c;
+    const auto& K = gate.N;
+    std::vector<complex_t> constMatrix(K*K);
+    for (unsigned r = 0; r < K; r++) {
+        for (unsigned c = 0; c < K; c++) {
+            auto idx = r * K + c;
             auto reE = gate.matrix[idx].real.getExprValue();
             assert(reE.isConstant);
             auto imE = gate.matrix[idx].imag.getExprValue();
             assert(imE.isConstant);
-            constMatrix[r].push_back({reE.value, imE.value});
+            constMatrix[idx] = {reE.value, imE.value};
         }
     }
 
+    // std::cerr << "constMatrix:\n";
+    // for (size_t r = 0; r < K; r++) {
+    //     for (size_t c = 0; c < K; c++) {
+    //         const auto& elem = constMatrix[r * K + c];
+    //         std::cerr << elem.real << " + " << elem.imag << "i, ";
+    //     }
+    //     std::cerr << "\n";
+    // }
 
     std::vector<size_t> qubitsPower;
     for (const auto& q : qubits)
@@ -70,20 +74,24 @@ void applyGeneral(quench::cas::Complex<real_ty>* sv,
             idxVector[i] = idx;
         }
 
-        std::cerr << "t = " << t << ": [";
-        for (const auto& idx : idxVector)
-            std::cerr << std::bitset<4>(idx) << ",";
-        std::cerr << "]\n";
+        // std::cerr << "t = " << t << ": [";
+        // for (const auto& idx : idxVector)
+        //     std::cerr << std::bitset<4>(idx) << ",";
+        // std::cerr << "]\n";
 
         // multiply
         for (size_t i = 0; i < K; i++) {
             updatedAmp[i] = { 0.0, 0.0 };
             for (size_t ii = 0; ii < K; ii++)
-                updatedAmp[i] += sv[idxVector[ii]] * constMatrix[i][ii];
+                updatedAmp[i] += sv[idxVector[ii]] * constMatrix[i*K + ii];
         }
         // store
-        for (size_t i = 0; i < K; i++)
-            sv[i] = updatedAmp[i];
+        for (size_t i = 0; i < K; i++) {
+            // std::cerr << "idx " << i << " new amp = " << updatedAmp[i].real 
+            //           << " + " << updatedAmp[i].imag << "i"
+            //           << " store back at position " << idxVector[i] << "\n";
+            sv[idxVector[i]] = updatedAmp[i];
+        }
     }
 
 }
