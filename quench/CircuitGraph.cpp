@@ -194,7 +194,7 @@ void CircuitGraph::addGate(const cas::GateMatrix& matrix,
     }
 
     // create gate and block
-    auto gate = new GateNode(matrix, qubits);
+    auto gate = new GateNode(currentBlockId, matrix, qubits);
     auto block = new GateBlock(currentBlockId, gate);
     currentBlockId++;
 
@@ -254,16 +254,10 @@ size_t GateBlock::countGates() const {
     return gates.size();
 }
 
-std::set<GateBlock*> CircuitGraph::getAllBlocks() const {
-    std::set<GateBlock*> allBlocks;
-    for (const auto& row : tile) {
-        for (unsigned q = 0; q < nqubits; q++) {
-            const auto& block = row[q];
-            if (block)
-                allBlocks.insert(block);
-        }
-    }
-    return allBlocks;
+std::vector<GateBlock*> CircuitGraph::getAllBlocks() const {
+    std::vector<GateBlock*> vec;
+    applyInOrder([&vec](GateBlock* b) { vec.push_back(b); });
+    return vec;
 }
 
 size_t CircuitGraph::countGates() const {
@@ -554,10 +548,10 @@ void CircuitGraph::greedyGateFusion(int maxNQubits) {
     }
 }
 
-void GateBlock::applyInOrder(std::function<void(GateNode*)> f) const {
+std::vector<GateNode*> GateBlock::getOrderedGates() const {
     std::deque<GateNode*> queue;
     // for small size, vector is usually more efficient
-    std::vector<GateNode*> applied;
+    std::vector<GateNode*> gates;
     for (const auto& data : dataVector) {
         if (std::find(queue.begin(), queue.end(), data.rhsEntry) == queue.end())
             queue.push_back(data.rhsEntry);
@@ -565,30 +559,37 @@ void GateBlock::applyInOrder(std::function<void(GateNode*)> f) const {
     
     while (!queue.empty()) {
         auto& gate = queue.back();
-        bool isLHSGate = false;
+        if (std::find(gates.begin(), gates.end(), gate) != gates.end()) {
+            queue.pop_back();
+            continue;
+        }
+        std::vector<GateNode*> higherPriorityGates;
         for (const auto& data : dataVector) {
-            if (gate == data.lhsEntry) {
-                isLHSGate = true;
-                break;
-            }
+            if (gate == data.lhsEntry)
+                continue;
+            auto it = gate->findQubit(data.qubit);
+            if (it == gate->dataVector.end())
+                continue;
+            assert(it->lhsGate);
+            if (std::find(gates.begin(), gates.end(), it->lhsGate) == gates.end())
+                higherPriorityGates.push_back(it->lhsGate);
         }
 
-        bool canApply = true;
-        if (isLHSGate) {}
-        else {
-            for (const auto& gateData : gate->dataVector) {
-                if (std::find(applied.begin(), applied.end(), gateData.lhsGate) == applied.end()) {
-                    canApply = false;
-                    queue.push_back(gateData.lhsGate);
-                }
-            }
-        }
-        if (canApply) {
+        if (higherPriorityGates.empty()) {
             queue.pop_back();
-            applied.push_back(gate);
-            f(gate);
+            gates.push_back(gate);
+        } else {
+            for (const auto& g : higherPriorityGates)
+                queue.push_back(g);    
         }
     }
+    return gates;
+}
+
+void GateBlock::applyInOrder(std::function<void(GateNode*)> f) const {
+    auto gates = getOrderedGates();
+    for (const auto& gate : gates)
+        f(gate);
 }
 
 void CircuitGraph::applyInOrder(std::function<void(GateBlock*)> f) const {

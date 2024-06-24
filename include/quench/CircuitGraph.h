@@ -17,13 +17,16 @@ public:
         GateNode* lhsGate;
         GateNode* rhsGate;
     };
+    const int id;
     unsigned nqubits;
     cas::GateMatrix gateMatrix;
     std::vector<gate_data> dataVector;
 
-    GateNode(const cas::GateMatrix& gateMatrix,
+    GateNode(int id,
+             const cas::GateMatrix& gateMatrix,
              const std::vector<unsigned>& qubits)
-        : nqubits(gateMatrix.nqubits),
+        : id(id),
+          nqubits(gateMatrix.nqubits),
           gateMatrix(gateMatrix),
           dataVector(gateMatrix.nqubits)
     {
@@ -117,6 +120,8 @@ public:
         }
         return true;
     }
+ 
+    std::vector<GateNode*> getOrderedGates() const;
 
     void applyInOrder(std::function<void(GateNode*)>) const;
 };
@@ -131,6 +136,7 @@ private:
     int currentBlockId;
     tile_t tile;
 
+    /// @brief Erase empty rows in the tile
     void eraseEmptyRows();
 
     void repositionBlockUpward(tile_iter_t it, size_t q_);
@@ -144,8 +150,6 @@ private:
     void updateTileDownward();
 
     /// @brief 
-    /// @param it 
-    /// @param q_ 
     /// @return -1000 if it is at the last row; -100 if block is null; 
     /// Otherwise, return the number of qubits after fusion 
     int checkFuseCondition(tile_const_iter_t it, size_t q_) const;
@@ -159,7 +163,8 @@ public:
     void addGate(const cas::GateMatrix& matrix,
                  const std::vector<unsigned>& qubits);
 
-    std::set<GateBlock*> getAllBlocks() const;
+    /// @return ordered vector of blocks
+    std::vector<GateBlock*> getAllBlocks() const;
 
     size_t countGates() const;
     size_t countBlocks() const;
@@ -169,6 +174,8 @@ public:
 
     void dependencyAnalysis();
 
+    /// @brief It is possible that we could just call greedyGateFusion(2)
+    /// to achieve the same as this function. Needs more investigation
     void fuseToTwoQubitGates();
 
     void greedyGateFusion(int maxNQubits);

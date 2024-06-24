@@ -110,9 +110,9 @@ int main(int argc, char** argv) {
     auto graph = qasmRoot->toCircuitGraph();
     std::cerr << "CircuitGraph built\n";
 
-    TmpStatevector<double> sv1(4);
-    sv1.zeroState();
-    // sv1.randomize();
+    TmpStatevector<double> sv1(graph.nqubits);
+    // sv1.zeroState();
+    sv1.randomize();
     auto sv2 = sv1;
     auto allBlocks = graph.getAllBlocks();
     std::vector<GateNode*> gates;
@@ -122,13 +122,14 @@ int main(int argc, char** argv) {
     graph.print(std::cerr, 2) << "\n";
     graph.displayInfo(std::cerr, 2) << "\n";
 
-    sv1.print(std::cerr);
-
     for (const auto& block : allBlocks) {
         gates.clear();
-        block->applyInOrder([&gates](GateNode* gate) { gates.push_back(gate); });
-        std::cerr << CYAN_FG << BOLD << "Block " << block->id
-                  << " has " << gates.size() << " gates\n" << RESET;
+        block->applyInOrder([&gates](GateNode* g) { gates.push_back(g); });
+
+        std::cerr << CYAN_FG << BOLD << "gates in block " << block->id << ": ";
+        for (const auto* gate : gates)
+            std::cerr << gate->id << ",";
+        std::cerr << RESET << "\n";
 
         for (const auto& gate : gates) {
             qubits.clear();
@@ -139,15 +140,31 @@ int main(int argc, char** argv) {
         }
     }
 
-    sv1.print(std::cerr);
+    graph.greedyGateFusion(2);
+    std::cerr << "After Greedy Fusion " << 2 << ":\n";
+    graph.print(std::cerr, 2);
+    graph.displayInfo(std::cerr, 2) << "\n";
+    allBlocks = graph.getAllBlocks();
 
+    sv2.print(std::cerr);
+    for (const auto& block : allBlocks) {
+        gates.clear();
+        block->applyInOrder([&gates](GateNode* g) { gates.push_back(g); });
+        std::cerr << CYAN_FG << BOLD << "gates in block " << block->id << ": ";
+        for (const auto* gate : gates)
+            std::cerr << gate->id << ",";
+        std::cerr << RESET << "\n";
 
-    for (unsigned maxNqubits = 2; maxNqubits < 3; maxNqubits++) {
-        graph.greedyGateFusion(maxNqubits);
-        std::cerr << "After Greedy Fusion " << maxNqubits << ":\n";
-        graph.print(std::cerr, 2);
-        graph.displayInfo(std::cerr, 2) << "\n";
+        for (const auto& gate : gates) {
+            qubits.clear();
+            for (const auto& data : gate->dataVector)
+                qubits.push_back(data.qubit);
+
+            applyGeneral<double>(sv2.data, gate->gateMatrix, qubits, sv2.nqubits);
+        }
     }
+    sv1.print(std::cerr) << "\n";
+    sv2.print(std::cerr);
 
     return 0;
 }
