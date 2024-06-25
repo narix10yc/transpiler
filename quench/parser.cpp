@@ -243,6 +243,7 @@ CircuitStmt Parser::parseCircuitStmt_() {
 ParameterDefStmt Parser::parseParameterDefStmt_() {
     assert(curToken.type == TokenTy::Hash);
 
+
     int refNumber;
     proceedWithType(TokenTy::Numeric);
     refNumber = convertCurTokenToInt();
@@ -250,30 +251,33 @@ ParameterDefStmt Parser::parseParameterDefStmt_() {
     proceedWithType(TokenTy::L_CurlyBraket);
 
     ParameterDefStmt defStmt{refNumber};
-    while (proceed()) {
-        Polynomial real, imag;
-        real = parsePolynomial_();
-        proceedWithType(TokenTy::Comma);
-        proceed();
-        imag = parsePolynomial_();
-        proceed();
-        defStmt.matrix.matrix.push_back({real, imag});
-        if (curToken.type == TokenTy::Comma)
-            continue;
-        if (curToken.type == TokenTy::R_CurlyBraket)
-            { proceed(); break; }
-        throwParserError("ParameterDef: Unrecognized tokenType");
-    }
-
-    // update number of qubits;
-    int s = defStmt.matrix.updateNQubits();
-    if (s < 0)
-        throwParserError("ParameterDef: Failed to update matrix");
-
-    std::stringstream ss;
-    ss << "Parsed a ParameterDefStmt with " << s << "x" << s << " matrix";
-    displayParserLog(ss.str());
+    throwParserError("Not Implemented yet!");
     return defStmt;
+
+    // while (proceed()) {
+    //     Polynomial real, imag;
+    //     real = parsePolynomial_();
+    //     proceedWithType(TokenTy::Comma);
+    //     proceed();
+    //     imag = parsePolynomial_();
+    //     proceed();
+    //     defStmt.matrix.matrix.push_back({real, imag});
+    //     if (curToken.type == TokenTy::Comma)
+    //         continue;
+    //     if (curToken.type == TokenTy::R_CurlyBraket)
+    //         { proceed(); break; }
+    //     throwParserError("ParameterDef: Unrecognized tokenType");
+    // }
+
+    // // update number of qubits;
+    // int s = defStmt.matrix.updateNQubits();
+    // if (s < 0)
+    //     throwParserError("ParameterDef: Failed to update matrix");
+
+    // std::stringstream ss;
+    // ss << "Parsed a ParameterDefStmt with " << s << "x" << s << " matrix";
+    // displayParserLog(ss.str());
+    // return defStmt;
 }
 
 bool Parser::parseStatement_(RootNode& root) {

@@ -302,7 +302,7 @@ class RootNode : public Node {
     std::vector<std::unique_ptr<Statement>> stmts;
 protected:
     using CircuitGraph = quench::circuit_graph::CircuitGraph;
-    using GateMatrix = quench::cas::GateMatrix;
+    using GateMatrix = quench::quantum_gate::GateMatrix;
 public:
     std::string toString() const override { return "Root"; }
     void prettyPrint(std::ostream& f, int depth) const override;

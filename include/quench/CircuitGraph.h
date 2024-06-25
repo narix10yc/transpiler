@@ -19,11 +19,11 @@ public:
     };
     const int id;
     unsigned nqubits;
-    cas::GateMatrix gateMatrix;
+    quantum_gate::GateMatrix gateMatrix;
     std::vector<gate_data> dataVector;
 
     GateNode(int id,
-             const cas::GateMatrix& gateMatrix,
+             const quantum_gate::GateMatrix& gateMatrix,
              const std::vector<unsigned>& qubits)
         : id(id),
           nqubits(gateMatrix.nqubits),
@@ -160,7 +160,7 @@ public:
     CircuitGraph()
         : currentBlockId(0), tile(1, {nullptr}), nqubits(0) {}
 
-    void addGate(const cas::GateMatrix& matrix,
+    void addGate(const quantum_gate::GateMatrix& matrix,
                  const std::vector<unsigned>& qubits);
 
     /// @return ordered vector of blocks

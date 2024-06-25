@@ -7,7 +7,7 @@
 #include <cassert>
 #include <map>
 
-#include "quench/GateMatrix.h"
+#include "quench/QuantumGate.h"
 
 namespace quench::ast {
 
@@ -72,7 +72,7 @@ public:
 class ParameterDefStmt : public Statement {
 public:
     int refNumber;
-    cas::GateMatrix matrix;
+    quantum_gate::GateMatrix matrix;
 
     ParameterDefStmt(int refNumber)
         : refNumber(refNumber), matrix() {}
@@ -91,7 +91,7 @@ private:
     };
 public:
     std::vector<std::unique_ptr<CircuitStmt>> circuits;
-    std::map<int, cas::GateMatrix> matrices;
+    std::map<int, quantum_gate::GateMatrix> matrices;
 
     RootNode() : circuits(), matrices() {}
 

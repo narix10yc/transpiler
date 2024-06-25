@@ -1,6 +1,6 @@
 #include "openqasm/parser.h"
 // #include "quench/parser.h"
-#include "quench/GateMatrix.h"
+#include "quench/Polynomial.h"
 #include "quench/simulate.h"
 
 #include <random>
@@ -12,7 +12,7 @@ using namespace quench::circuit_graph;
 
 template<typename real_t = double>
 class TmpStatevector {
-    using complex_t = quench::cas::Complex<real_t>;
+    using complex_t = quench::complex_matrix::Complex<real_t>;
 public:
     unsigned nqubits;
     size_t N;

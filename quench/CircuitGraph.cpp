@@ -182,7 +182,7 @@ GateBlock* CircuitGraph::fuse(tile_iter_t itLHS, size_t q_) {
     return block;
 }
 
-void CircuitGraph::addGate(const cas::GateMatrix& matrix,
+void CircuitGraph::addGate(const quantum_gate::GateMatrix& matrix,
                            const std::vector<unsigned>& qubits)
 {
     assert(matrix.nqubits == qubits.size());
