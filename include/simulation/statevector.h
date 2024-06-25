@@ -7,24 +7,24 @@
 
 namespace simulation::sv {
 
-template<typename real_ty>
+template<typename real_t>
 class StatevectorSep;
 
-template<typename real_ty>
+template<typename real_t>
 class StatevectorAlt;
 
-template<typename real_ty>
+template<typename real_t>
 class StatevectorSep {
 public:
     unsigned nqubits;
     uint64_t N;
-    real_ty* real;
-    real_ty* imag;
+    real_t* real;
+    real_t* imag;
 
     StatevectorSep(unsigned nqubits, bool initialize=false)
             : nqubits(nqubits), N(1 << nqubits) {
-        real = (real_ty*) aligned_alloc(64, N * sizeof(real_ty));
-        imag = (real_ty*) aligned_alloc(64, N * sizeof(real_ty));
+        real = (real_t*) aligned_alloc(64, N * sizeof(real_t));
+        imag = (real_t*) aligned_alloc(64, N * sizeof(real_t));
         if (initialize) {
             for (size_t i = 0; i < (1 << nqubits); i++) {
                 real[i] = 0;
@@ -35,8 +35,8 @@ public:
     }
 
     StatevectorSep(const StatevectorSep& that) : nqubits(that.nqubits), N(that.N) {
-        real = (real_ty*) aligned_alloc(64, N * sizeof(real_ty));
-        imag = (real_ty*) aligned_alloc(64, N * sizeof(real_ty));
+        real = (real_t*) aligned_alloc(64, N * sizeof(real_t));
+        imag = (real_t*) aligned_alloc(64, N * sizeof(real_t));
         for (size_t i = 0; i < that.N; i++) {
             real[i] = that.real[i];
             imag[i] = that.imag[i];
@@ -59,7 +59,7 @@ public:
 
     StatevectorSep& operator=(StatevectorSep&&) = delete;
 
-    void copyValueFrom(const StatevectorAlt<real_ty>&);
+    void copyValueFrom(const StatevectorAlt<real_t>&);
 
     double normSquared() const {
         double s = 0;
@@ -83,7 +83,7 @@ public:
     void randomize() {
         std::random_device rd;
         std::mt19937 gen { rd() };
-        std::normal_distribution<real_ty> d { 0, 1 };
+        std::normal_distribution<real_t> d { 0, 1 };
         
         for (size_t i = 0; i < N; i++) {
             real[i] = d(gen);
@@ -120,16 +120,16 @@ public:
 };
 
 
-template<typename real_ty>
+template<typename real_t>
 class StatevectorAlt {
 public:
     unsigned nqubits;
     uint64_t N;
-    real_ty* data;
+    real_t* data;
 
     StatevectorAlt(unsigned nqubits, bool initialize=false) 
             : nqubits(nqubits), N(1 << nqubits) {
-        data = (real_ty*) aligned_alloc(64, 2 * N * sizeof(real_ty));
+        data = (real_t*) aligned_alloc(64, 2 * N * sizeof(real_t));
         if (initialize) {
             for (size_t i = 0; i < (1 << (nqubits+1)); i++)
                 data[i] = 0;
@@ -138,7 +138,7 @@ public:
     }
 
     StatevectorAlt(const StatevectorAlt& that) : nqubits(that.nqubits), N(that.N) {
-        data = (real_ty*) aligned_alloc(64, 2 * N * sizeof(real_ty));
+        data = (real_t*) aligned_alloc(64, 2 * N * sizeof(real_t));
         for (size_t i = 0; i < 2 * that.N; i++)
             data[i] = that.data[i];
     }
@@ -157,7 +157,7 @@ public:
 
     StatevectorAlt& operator=(StatevectorAlt&&) = delete;
 
-    void copyValueFrom(const StatevectorSep<real_ty>&);
+    void copyValueFrom(const StatevectorSep<real_t>&);
 
     double normSquared() const {
         double s = 0;
@@ -177,7 +177,7 @@ public:
     void randomize() {
         std::random_device rd;
         std::mt19937 gen { rd() };
-        std::normal_distribution<real_ty> d { 0, 1 };
+        std::normal_distribution<real_t> d { 0, 1 };
         for (size_t i = 0; i < 2*N; i++)
             data[i] = d(gen);
         normalize();
@@ -210,8 +210,8 @@ public:
 };
 
 
-template<typename real_ty>
-double fidelity(const StatevectorSep<real_ty>& sv1, const StatevectorSep<real_ty>& sv2) {
+template<typename real_t>
+double fidelity(const StatevectorSep<real_t>& sv1, const StatevectorSep<real_t>& sv2) {
     assert(sv1.nqubits == sv2.nqubits);
 
     double re = 0.0, im = 0.0;
@@ -222,8 +222,8 @@ double fidelity(const StatevectorSep<real_ty>& sv1, const StatevectorSep<real_ty
     return re * re + im * im;
 }
 
-template<typename real_ty>
-double fidelity(const StatevectorSep<real_ty>& sep, const StatevectorAlt<real_ty>& alt) {
+template<typename real_t>
+double fidelity(const StatevectorSep<real_t>& sep, const StatevectorAlt<real_t>& alt) {
     assert(sep.nqubits == alt.nqubits);
 
     double re = 0.0, im = 0.0;
@@ -234,14 +234,14 @@ double fidelity(const StatevectorSep<real_ty>& sep, const StatevectorAlt<real_ty
     return re * re + im * im;
 }
 
-template<typename real_ty>
-double fidelity(const StatevectorAlt<real_ty>& alt, const StatevectorSep<real_ty>& sep) {
+template<typename real_t>
+double fidelity(const StatevectorAlt<real_t>& alt, const StatevectorSep<real_t>& sep) {
     return fidelity(sep, alt);
 }
 
 
-template<typename real_ty>
-void StatevectorSep<real_ty>::copyValueFrom(const StatevectorAlt<real_ty>& alt) {
+template<typename real_t>
+void StatevectorSep<real_t>::copyValueFrom(const StatevectorAlt<real_t>& alt) {
     assert(nqubits == alt.nqubits);
 
     for (size_t i = 0; i < N; i++) {
@@ -250,8 +250,8 @@ void StatevectorSep<real_ty>::copyValueFrom(const StatevectorAlt<real_ty>& alt) 
     }
 }
 
-template<typename real_ty>
-void StatevectorAlt<real_ty>::copyValueFrom(const StatevectorSep<real_ty>& sep) {
+template<typename real_t>
+void StatevectorAlt<real_t>::copyValueFrom(const StatevectorSep<real_t>& sep) {
     assert(nqubits == sep.nqubits);
     
     for (size_t i = 0; i < N; i++) {

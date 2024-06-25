@@ -6,15 +6,15 @@
 
 namespace simulation::tplt {
 
-template<typename real_ty>
-void applySingleQubit(real_ty* real,
-                      real_ty* imag,
-                      const ComplexMatrix2<real_ty>& mat,
+template<typename real_t>
+void applySingleQubit(real_t* real,
+                      real_t* imag,
+                      const ComplexMatrix2<real_t>& mat,
                       size_t nqubits,
                       size_t k) {
     size_t K = 1 << k;
     size_t N = 1 << nqubits;
-    real_ty x_real, x_imag, y_real, y_imag;
+    real_t x_real, x_imag, y_real, y_imag;
 
     for (size_t t = 0; t < N; t += (2*K)) {
     for (size_t tt = 0; tt < K; tt++) {
@@ -33,16 +33,16 @@ void applySingleQubit(real_ty* real,
     } }
 }
 
-template<typename real_ty>
-void applySingleQubitQuEST(real_ty* real,
-                           real_ty* imag,
-                           const ComplexMatrix2<real_ty>& mat,
+template<typename real_t>
+void applySingleQubitQuEST(real_t* real,
+                           real_t* imag,
+                           const ComplexMatrix2<real_t>& mat,
                            size_t nqubits,
                            size_t k) {
     size_t K = 1 << k;
     size_t sizeBlock = 2 * K;
     size_t N = 1 << nqubits;
-    real_ty x_real, x_imag, y_real, y_imag;
+    real_t x_real, x_imag, y_real, y_imag;
     size_t thisBlock, alpha, beta;
 
     for (size_t t = 0; t < (N>>1); t++) {
@@ -61,14 +61,14 @@ void applySingleQubitQuEST(real_ty* real,
     }
 }
 
-template<typename real_ty, size_t k>
-void applySingleQubitTemplate(real_ty* real,
-                              real_ty* imag,
-                              const ComplexMatrix2<real_ty>& mat,
+template<typename real_t, size_t k>
+void applySingleQubitTemplate(real_t* real,
+                              real_t* imag,
+                              const ComplexMatrix2<real_t>& mat,
                               size_t nqubits) {
     size_t K = 1 << k;
     size_t N = 1 << nqubits;
-    real_ty x_real, x_imag, y_real, y_imag;
+    real_t x_real, x_imag, y_real, y_imag;
 
     for (size_t t = 0; t < N; t += (2*K)) {
     for (size_t tt = 0; tt < K; tt++) {
@@ -108,16 +108,16 @@ inline uint64_t insertTwoZeroBits(uint64_t number, int bit1, int bit2) {
 /// @brief Apply a general two-qubit gate.
 /// @param l less significant qubit
 /// @param k more significant qubit
-template<typename real_ty>
-void applyTwoQubitQuEST(real_ty* real,
-                        real_ty* imag,
-                        const ComplexMatrix4<real_ty>& mat,
+template<typename real_t>
+void applyTwoQubitQuEST(real_t* real,
+                        real_t* imag,
+                        const ComplexMatrix4<real_t>& mat,
                         size_t nqubits,
                         size_t k, size_t l) {
     size_t nTasks = 1 << (nqubits - 2);
     size_t idx00, idx01, idx10, idx11;
 
-    real_ty re00, re01, re10, re11, im00, im01, im10, im11;
+    real_t re00, re01, re10, re11, im00, im01, im10, im11;
 
     for (size_t t = 0; t < nTasks; t++) {
         idx00 = insertTwoZeroBits(t, k, l);

@@ -16,9 +16,9 @@ double approximate(double x, double thres=1e-8) {
 }
 
 /// @brief Kronecker product
-// template<typename real_ty>
-// ComplexMatrix4<real_ty>
-// kron(ComplexMatrix2<real_ty> l, ComplexMatrix2<real_ty> r) {
+// template<typename real_t>
+// ComplexMatrix4<real_t>
+// kron(ComplexMatrix2<real_t> l, ComplexMatrix2<real_t> r) {
 //     const auto& Lr = &(l.real); const auto& Rr = &(r.real);
 //     const auto& Li = &(l.imag); const auto& Ri = &(r.imag);
 //     return {

@@ -13,12 +13,12 @@
 
 namespace simulation {
 
-template<typename real_ty=double>
+template<typename real_t=double>
 class Complex {
 public:
-    real_ty real, imag;
+    real_t real, imag;
     Complex() : real(0), imag(0) {}
-    Complex(real_ty real, real_ty imag) : real(real), imag(imag) {}
+    Complex(real_t real, real_t imag) : real(real), imag(imag) {}
 
     Complex operator+(const Complex& other) const {
         return Complex(real + other.real, imag + other.imzg);
@@ -46,7 +46,7 @@ public:
     }
 
     Complex& operator*=(const Complex& other) {
-        real_ty r = real * other.real - imag * other.imag;
+        real_t r = real * other.real - imag * other.imag;
         imag = real * other.imag + imag * other.real;
         real = r;
         return *this;
@@ -54,14 +54,14 @@ public:
 };
 
 
-template<typename real_ty=double>
+template<typename real_t=double>
 class SquareComplexMatrix {
     size_t size;
 public:
-    std::vector<Complex<real_ty>> data;
+    std::vector<Complex<real_t>> data;
 
     SquareComplexMatrix(size_t size) : size(size), data(size * size) {}
-    SquareComplexMatrix(size_t size, std::initializer_list<Complex<real_ty>> data)
+    SquareComplexMatrix(size_t size, std::initializer_list<Complex<real_t>> data)
         : size(size), data(data) {}
 
     size_t getSize() const { return size; }
@@ -230,25 +230,25 @@ public:
     
 }; // OptionalComplexMatrix2
 
-template<typename real_ty=double>
+template<typename real_t=double>
 class ComplexMatrix2;
 
-template<typename real_ty=double>
+template<typename real_t=double>
 class ComplexMatrix4;
 
 
-template<typename real_ty>
+template<typename real_t>
 class ComplexMatrix2 {
 public:
-    std::array<real_ty, 4> real, imag;
+    std::array<real_t, 4> real, imag;
 
     ComplexMatrix2() : real(), imag() {}
     
-    ComplexMatrix2(std::array<real_ty, 4> real, std::array<real_ty, 4> imag)
+    ComplexMatrix2(std::array<real_t, 4> real, std::array<real_t, 4> imag)
         : real(real), imag(imag) {}
 
 
-    ir::ComplexMatrix2 ToIRMatrix(real_ty threshold=1e-8) const {
+    ir::ComplexMatrix2 ToIRMatrix(real_t threshold=1e-8) const {
         std::array<int, 4> realArr, imagArr;
         for (size_t i = 0; i < 4; i++) {
             if (abs(real[i] - 1) < threshold)
@@ -293,7 +293,7 @@ public:
     static ComplexMatrix2 Random() {
         std::random_device rd;
         std::mt19937 gen { rd() };
-        std::normal_distribution<real_ty> d { 0, 1 };
+        std::normal_distribution<real_t> d { 0, 1 };
         ComplexMatrix2 mat {};
         for (size_t i = 0; i < 4; i++) {
             mat.real[i] = d(gen);
@@ -304,7 +304,7 @@ public:
     }
 
     /// @brief I otimes U
-    ComplexMatrix4<real_ty> leftKronI() const {
+    ComplexMatrix4<real_t> leftKronI() const {
         return {
             {
                 real[0], real[1], 0, 0,
@@ -322,7 +322,7 @@ public:
     }
 
     /// @brief U otimes I 
-    ComplexMatrix4<real_ty> rightKronI() const {
+    ComplexMatrix4<real_t> rightKronI() const {
         return {
             {
                 real[0],      0, real[1],      0,
@@ -340,17 +340,17 @@ public:
     }
 };
 
-template<typename real_ty>
+template<typename real_t>
 class ComplexMatrix4 {
 public:
-    std::array<real_ty, 16> real, imag;
+    std::array<real_t, 16> real, imag;
 
     ComplexMatrix4() : real(), imag() {}
 
-    ComplexMatrix4(std::array<real_ty, 16> real, std::array<real_ty, 16> imag)
+    ComplexMatrix4(std::array<real_t, 16> real, std::array<real_t, 16> imag)
         : real(real), imag(imag) {}
 
-    uint64_t toIRMatrix(real_ty threshold=1e-8) const {
+    uint64_t toIRMatrix(real_t threshold=1e-8) const {
         uint64_t id = 0ULL;
         for (size_t i = 0; i < 16; i++) {
             if (abs(real[i]) < threshold) {} // add 0

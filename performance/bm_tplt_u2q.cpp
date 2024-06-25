@@ -25,21 +25,21 @@ using namespace simulation;
 using namespace simulation::tplt;
 
 
-using real_ty = double;
+using real_t = double;
 constexpr size_t k = 1;
 constexpr size_t l = 0;
 
 int main() {
     Timer timer;
     TimingResult tr;
-    real_ty *real, *imag;
+    real_t *real, *imag;
     uint64_t nqubits;
 
     auto setup = [&](uint64_t _nqubits) {
         nqubits = _nqubits;
         return [&]() {
-            real = (real_ty*) aligned_alloc(64, sizeof(real_ty) * (1<<nqubits));
-            imag = (real_ty*) aligned_alloc(64, sizeof(real_ty) * (1<<nqubits));
+            real = (real_t*) aligned_alloc(64, sizeof(real_t) * (1<<nqubits));
+            imag = (real_t*) aligned_alloc(64, sizeof(real_t) * (1<<nqubits));
         };
     };
 
@@ -56,10 +56,10 @@ int main() {
         return 1;
     }
 
-    f << "method,compiler,test_name,real_ty,num_threads,nqubits,k,l,s,t_min,t_q1,t_med,t_q3\n";
+    f << "method,compiler,test_name,real_t,num_threads,nqubits,k,l,s,t_min,t_q1,t_med,t_q3\n";
     f << std::scientific;
 
-    auto mat = ComplexMatrix4<real_ty>::Random();
+    auto mat = ComplexMatrix4<real_t>::Random();
 
     for (uint64_t nqubit = 6; nqubit < 28; nqubit += 2) {
         // QuEST
@@ -73,7 +73,7 @@ int main() {
         f << "quest" // method
           << "," << "clang-17" // compiler
           << "," << "u3" // test_name
-          << "," << "f" << 8*sizeof(real_ty) // real_ty
+          << "," << "f" << 8*sizeof(real_t) // real_t
           << "," << 1 // num_threads
           << "," << nqubit // nqubits
           << "," << k // k
@@ -84,7 +84,7 @@ int main() {
 
         // template
         // tr = timer.timeit(
-        //     [&](){ applySingleQubitTemplate<real_ty, k>(real, imag, mat, nqubit); },
+        //     [&](){ applySingleQubitTemplate<real_t, k>(real, imag, mat, nqubit); },
         //     setup(nqubit),
         //     teardown
         // );
@@ -93,7 +93,7 @@ int main() {
         // f << "template" // method
         //   << "," << "clang-17" // compiler
         //   << "," << "u3" // test_name
-        //   << "," << "f" << 8*sizeof(real_ty) // real_ty
+        //   << "," << "f" << 8*sizeof(real_t) // real_t
         //   << "," << 1 // num_threads
         //   << "," << nqubit // nqubits
         //   << "," << k // k

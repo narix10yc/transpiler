@@ -14,14 +14,14 @@ inline size_t insertZeroBit(size_t number, int index) {
     return (left << 1) ^ right;
 }
 
-template<typename real_ty = double>
-void applyGeneral(quench::cas::Complex<real_ty>* sv,
+template<typename real_t = double>
+void applyGeneral(quench::cas::Complex<real_t>* sv,
                   const quench::cas::GateMatrix& gate,
                   const std::vector<unsigned>& qubits,
                   unsigned nqubits)
 {
     assert(gate.nqubits == qubits.size());
-    using complex_t = quench::cas::Complex<real_ty>;
+    using complex_t = quench::cas::Complex<real_t>;
 
     std::cerr << "applyGeneral (nqubits = " << nqubits << ") on qubits ";
     for (const auto& q : qubits)

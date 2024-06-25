@@ -6,10 +6,10 @@
 
 using namespace timeit;
 
-using real_ty = double;
+using real_t = double;
 const unsigned nqubits = 24;
 
-using Statevector = simulation::sv::StatevectorSep<real_ty>;
+using Statevector = simulation::sv::StatevectorSep<real_t>;
 
 int main() {
     Timer timer;

@@ -25,7 +25,7 @@ using namespace simulation;
 using namespace simulation::tplt;
 
 
-using real_ty = double;
+using real_t = double;
 #define K_VALUE 5
 
 unsigned k = K_VALUE;
@@ -34,14 +34,14 @@ constexpr unsigned constK = K_VALUE;
 int main() {
     Timer timer;
     TimingResult tr;
-    real_ty *real, *imag;
+    real_t *real, *imag;
     uint64_t nqubits;
 
     auto setup = [&](uint64_t _nqubits) {
         nqubits = _nqubits;
         return [&]() {
-            real = (real_ty*) aligned_alloc(64, sizeof(real_ty) * (1<<nqubits));
-            imag = (real_ty*) aligned_alloc(64, sizeof(real_ty) * (1<<nqubits));
+            real = (real_t*) aligned_alloc(64, sizeof(real_t) * (1<<nqubits));
+            imag = (real_t*) aligned_alloc(64, sizeof(real_t) * (1<<nqubits));
         };
     };
 
@@ -58,10 +58,10 @@ int main() {
         return 1;
     }
 
-    f << "method,compiler,test_name,real_ty,num_threads,nqubits,k,s,t_min,t_q1,t_med,t_q3\n";
+    f << "method,compiler,test_name,real_t,num_threads,nqubits,k,s,t_min,t_q1,t_med,t_q3\n";
     f << std::scientific;
 
-    ComplexMatrix2<real_ty> mat {
+    ComplexMatrix2<real_t> mat {
         {0.7455743899704769,-0.6611393443073451,0.5681414468755827,0.6795542237022189},
         {0,0.08374721744037222,0.3483304829644841,0.3067364145782554}};
 
@@ -77,7 +77,7 @@ int main() {
         f << "quest" // method
           << "," << "gcc-11" // compiler
           << "," << "u3" // test_name
-          << "," << "f" << 8*sizeof(real_ty) // real_ty
+          << "," << "f" << 8*sizeof(real_t) // real_t
           << "," << 1 // num_threads
           << "," << nqubit // nqubits
           << "," << k // k
@@ -96,7 +96,7 @@ int main() {
         f << "double-loop" // method
           << "," << "gcc-11" // compiler
           << "," << "u3" // test_name
-          << "," << "f" << 8*sizeof(real_ty) // real_ty
+          << "," << "f" << 8*sizeof(real_t) // real_t
           << "," << 1 // num_threads
           << "," << nqubit // nqubits
           << "," << k // k
@@ -106,7 +106,7 @@ int main() {
 
         // template
         tr = timer.timeit(
-            [&](){ applySingleQubitTemplate<real_ty, constK>(real, imag, mat, nqubit); },
+            [&](){ applySingleQubitTemplate<real_t, constK>(real, imag, mat, nqubit); },
             setup(nqubit),
             teardown
         );
@@ -115,7 +115,7 @@ int main() {
         f << "template" // method
           << "," << "gcc-11" // compiler
           << "," << "u3" // test_name
-          << "," << "f" << 8*sizeof(real_ty) // real_ty
+          << "," << "f" << 8*sizeof(real_t) // real_t
           << "," << 1 // num_threads
           << "," << nqubit // nqubits
           << "," << k // k
