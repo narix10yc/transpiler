@@ -2,6 +2,7 @@
 // #include "quench/parser.h"
 #include "quench/Polynomial.h"
 #include "quench/simulate.h"
+#include "quench/QuantumGate.h"
 
 #include <random>
 #include "utils/iocolor.h"
@@ -9,6 +10,7 @@
 using namespace Color;
 using namespace quench::simulate;
 using namespace quench::circuit_graph;
+using namespace quench::quantum_gate;
 
 template<typename real_t = double>
 class TmpStatevector {
@@ -166,6 +168,22 @@ int main(int argc, char** argv) {
     // }
     // sv1.print(std::cerr) << "\n";
     // sv2.print(std::cerr);
+
+    auto m1 = GateMatrix::FromName("u3", {3.1415926, 0.0, 3.1415926});
+    m1.matrix.constantMatrix = m1.matrix.constantMatrix.leftKronI();
+    m1.nqubits += 1;
+    m1.N *= 2;
+    m1.printMatrix(std::cerr) << "\n";
+
+    auto m2 = m1.permute({1, 0});
+    m2.printMatrix(std::cerr);
+
+    QuantumGate gate1(m1, {4, 3});
+    gate1.displayInfo(std::cerr);
+
+    gate1.sortQubits();
+    gate1.displayInfo(std::cerr);
+
 
     return 0;
 }

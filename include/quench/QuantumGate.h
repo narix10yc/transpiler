@@ -58,10 +58,7 @@ class GateMatrix {
             }
         }
 
-        matrix_t& operator=(const matrix_t&) = delete;
-        matrix_t& operator=(matrix_t&&) = delete;
-
-        ~matrix_t() {
+        void destroyMatrix(ActiveMatrixType newActiveType = ActiveMatrixType::None) {
             switch (activeType) {
             case ActiveMatrixType::P:
                 parametrizedMatrix.~p_matrix_t();
@@ -72,6 +69,61 @@ class GateMatrix {
             default:
                 break;
             }
+            activeType = newActiveType;
+        }
+
+        matrix_t& operator=(const matrix_t& other) {
+            if (this == &other)
+                return *this;
+            destroyMatrix(other.activeType);
+            switch (other.activeType) {
+            case ActiveMatrixType::P:
+                new (&parametrizedMatrix) p_matrix_t(other.parametrizedMatrix);
+                break;
+            case ActiveMatrixType::C:
+                new (&constantMatrix) c_matrix_t(other.constantMatrix);
+                break;
+            default:
+                break;
+            }
+            return *this;
+        }
+
+        matrix_t& operator=(matrix_t&& other) {
+            if (this == &other)
+                return *this;
+            destroyMatrix(other.activeType);
+            switch (other.activeType) {
+            case ActiveMatrixType::P:
+                new (&parametrizedMatrix) p_matrix_t(std::move(other.parametrizedMatrix));
+                break;
+            case ActiveMatrixType::C:
+                new (&constantMatrix) c_matrix_t(std::move(other.constantMatrix));
+                break;
+            default:
+                break;
+            }
+            return *this;
+        }
+
+        matrix_t& operator=(const c_matrix_t& cMatrix) {
+            if (activeType == ActiveMatrixType::P)
+                parametrizedMatrix.~p_matrix_t();
+            activeType = ActiveMatrixType::C;
+            new (&constantMatrix) c_matrix_t(cMatrix);
+            return *this;
+        }
+
+        matrix_t& operator=(c_matrix_t&& cMatrix) {
+            if (activeType == ActiveMatrixType::P)
+                parametrizedMatrix.~p_matrix_t();
+            activeType = ActiveMatrixType::C;
+            new (&constantMatrix) c_matrix_t(std::move(cMatrix));
+            return *this;
+        }
+
+        ~matrix_t() {
+            destroyMatrix();
         }
     };
 
@@ -82,6 +134,11 @@ public:
     GateMatrix() : nqubits(0), N(0), matrix() {}
 
     GateMatrix(std::initializer_list<complex_matrix::Complex<double>> m);
+
+    bool checkConsistency() const {
+        return (1 << nqubits == N)
+            && (matrix.getSize() == N);
+    }
 
     static GateMatrix
     FromName(const std::string& name, const std::vector<double>& params);
@@ -94,27 +151,40 @@ public:
         return matrix.activeType == matrix_t::ActiveMatrixType::P;
     }
 
-    std::ostream& printMatrix(std::ostream& os) const {
-        assert(matrix.activeType == matrix_t::ActiveMatrixType::C
-               && "Only supporting constant matrices now");
+    GateMatrix permute(const std::vector<unsigned>& flags) const;
+    
+    GateMatrix& permuteSelf(const std::vector<unsigned>& flags);
 
-        const auto& data = matrix.constantMatrix.data;
-        for (size_t r = 0; r < N; r++) {
-            for (size_t c = 0; c < N; c++) {
-                auto re = data[r*N + c].real;
-                auto im = data[r*N + c].imag;
-                if (re >= 0)
-                    os << " ";
-                os << re;
-                if (im >= 0)
-                    os << " + " << im << "i, ";
-                else
-                    os << " - " << -im << "i, ";
-            }
-            os << "\n";
-        }
-        return os;
+    std::ostream& printMatrix(std::ostream& os) const;
+};
+
+class QuantumGate {
+public:
+    std::vector<unsigned> qubits;
+    GateMatrix matrix;
+
+    QuantumGate() : qubits(), matrix() {}
+    QuantumGate(const GateMatrix& matrix, std::initializer_list<unsigned> qubits)
+        : matrix(matrix), qubits(qubits) {
+        assert(matrix.nqubits == qubits.size());
     }
+    QuantumGate(const GateMatrix& matrix, const std::vector<unsigned>& qubits)
+        : matrix(matrix), qubits(qubits) {
+        assert(matrix.nqubits == qubits.size());
+    }
+
+    bool checkConsistency() const {
+        return (matrix.nqubits == qubits.size())
+            && (matrix.checkConsistency());
+    }
+
+    std::ostream& displayInfo(std::ostream& os) const;
+
+    void sortQubits();
+
+    QuantumGate& leftMatmulInplace(const QuantumGate& other);
+
+
 };
 
 } // namespace quench::quantum_gate
