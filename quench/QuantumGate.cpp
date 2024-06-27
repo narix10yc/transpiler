@@ -1,5 +1,6 @@
 #include "quench/QuantumGate.h"
 #include "utils/iocolor.h"
+#include <iomanip>
 
 using namespace Color;
 using namespace quench::complex_matrix;
@@ -92,11 +93,8 @@ GateMatrix& GateMatrix::permuteSelf(const std::vector<unsigned>& flags) {
     return *this;
 }
 
-GateMatrix::GateMatrix(std::initializer_list<Complex<double>> m) {
-    std::cerr << "Constructing ConstantMatrix\n";
-    auto mSize = m.size();
-    matrix = matrix_t::c_matrix_t(m);
-
+int GateMatrix::updateNqubits() {
+    const auto mSize = matrix.getSize();
     switch (mSize) {
     case 0:
         assert(false && "Empty matrix");
@@ -114,7 +112,9 @@ GateMatrix::GateMatrix(std::initializer_list<Complex<double>> m) {
         break;
     }
     N = 1 << nqubits;
+    return nqubits;
 }
+
 
 GateMatrix GateMatrix::FromName(const std::string& name,
                                 const std::vector<double>& params)
@@ -157,22 +157,35 @@ GateMatrix GateMatrix::FromName(const std::string& name,
     return GateMatrix();
 }
 
+namespace {
+    std::ostream&
+    print_complex(std::ostream& os, Complex<double> c, int precision=3) {
+        const double thres = 0.5 * std::pow(0.1, precision);
+        if (c.real >= -thres)
+            os << " ";
+        if (std::fabs(c.real) < thres)
+            os << "0." << std::string(precision, ' ');
+        else
+            os << std::fixed << std::setprecision(precision) << c.real;
+        
+        if (c.imag >= -thres)
+            os << "+";
+        if (std::fabs(c.imag) < thres)
+            os << "0." << std::string(precision, ' ');
+        else
+            os << std::fixed << std::setprecision(precision) << c.imag;
+        return os << "i";
+    }
+}
+
 std::ostream& GateMatrix::printMatrix(std::ostream& os) const {     
     assert(matrix.activeType == matrix_t::ActiveMatrixType::C
             && "Only supporting constant matrices now");
-
+            
     const auto& data = matrix.constantMatrix.data;
     for (size_t r = 0; r < N; r++) {
         for (size_t c = 0; c < N; c++) {
-            auto re = data[r*N + c].real;
-            auto im = data[r*N + c].imag;
-            if (re >= 0)
-                os << " ";
-            os << re;
-            if (im >= 0)
-                os << " + " << im << "i, ";
-            else
-                os << " - " << -im << "i, ";
+            print_complex(os, data[r * N + c], 3) << ", ";
         }
         os << "\n";
     }
@@ -206,8 +219,86 @@ void QuantumGate::sortQubits() {
     matrix.permuteSelf(indices);
 }
 
-QuantumGate& QuantumGate::leftMatmulInplace(const QuantumGate& other) {
+QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
+    // Matrix Mul A @ B
+    // A is other, B is this
+    const unsigned aNqubits = other.qubits.size();
+    const unsigned bNqubits = qubits.size();
 
-    return *this;
+    std::vector<unsigned> allQubits;
+    for (const auto& q : qubits)
+        allQubits.push_back(q);
+    for (const auto& q : other.qubits) {
+        if (std::find(qubits.begin(), qubits.end(), q) == qubits.end())
+            allQubits.push_back(q);
+    }
+    std::sort(allQubits.begin(), allQubits.end());
+
+    const auto newNqubits = allQubits.size();
+    std::vector<size_t> aShift(2 * newNqubits), bShift(2 * newNqubits);
+    std::vector<std::pair<size_t, size_t>> sShift;
+    
+    for (unsigned i = 0; i < newNqubits; i++) {
+        const auto& q = allQubits[i];
+        int aPosition = other.findQubit(q);
+        int bPosition = findQubit(q);
+
+        if (aPosition >= 0 && bPosition >= 0) {
+            bShift[i] = 1 << bPosition; // c_q
+            aShift[i+newNqubits] = 1 << (aPosition + aNqubits); // r_q
+            sShift.push_back({1 << aPosition, 1 << (bPosition + bNqubits)}); // s_q
+        } else if (aPosition >= 0) {
+            aShift[i] = 1 << aPosition; // c_q
+            aShift[i+newNqubits] = 1 << (aPosition + aNqubits); // r_q
+        } else {
+            assert(bPosition >= 0);
+            bShift[i] = 1 << bPosition; // c_q
+            bShift[i+newNqubits] = 1 << (bPosition + bNqubits); // r_q
+        }
+    }
+
+    std::cerr << "aShift: [";
+    for (const auto& s : aShift)
+        std::cerr << s << ",";
+    std::cerr << "]\n" << "bShift: [";
+    for (const auto& s : bShift)
+        std::cerr << s << ",";
+    std::cerr << "]\n" << "sShift: [";
+    for (const auto& s : sShift)
+        std::cerr << "(" << s.first << "," << s.second << "),";
+    std::cerr << "]\n";
+
+    matrix_t::c_matrix_t newCMatrix(1 << newNqubits);
+    using complex_t = complex_matrix::Complex<double>;
+
+    assert(other.matrix.isConstantMatrix());
+    assert(matrix.isConstantMatrix());
+    const auto twiceNewNqubits = 2 * newNqubits;
+    const auto contractionBitwidth = sShift.size();
+    for (size_t i = 0; i < (1 << twiceNewNqubits); i++) {
+        auto aPtrStart = other.matrix.matrix.constantMatrix.data.data();
+        auto bPtrStart = matrix.matrix.constantMatrix.data.data();
+        for (unsigned bit = 0; bit < twiceNewNqubits; bit++) {
+            if ((i & (1 << bit)) != 0) {
+                aPtrStart += aShift[bit];
+                bPtrStart += bShift[bit];
+            }
+        }
+
+        newCMatrix.data[i] = {0.0, 0.0};
+        for (size_t j = 0; j < (1 << contractionBitwidth); j++) {
+            auto aPtr = aPtrStart;
+            auto bPtr = bPtrStart;
+            for (unsigned bit = 0; bit < contractionBitwidth; bit++) {
+                if ((j & (1 << bit)) != 0) {
+                    aPtr += sShift[bit].first;
+                    bPtr += sShift[bit].second;
+                }
+            }
+            newCMatrix.data[i] += (*aPtr) * (*bPtr);
+        }
+    }
+
+    return {newCMatrix, allQubits};
 }
 

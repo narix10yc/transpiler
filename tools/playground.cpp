@@ -106,23 +106,23 @@ public:
 };
 
 int main(int argc, char** argv) {
-    openqasm::Parser parser(argv[1], 0);
-    auto qasmRoot = parser.parse();
-    std::cerr << "qasm AST built\n";
-    auto graph = qasmRoot->toCircuitGraph();
-    std::cerr << "CircuitGraph built\n";
+    // openqasm::Parser parser(argv[1], 0);
+    // auto qasmRoot = parser.parse();
+    // std::cerr << "qasm AST built\n";
+    // auto graph = qasmRoot->toCircuitGraph();
+    // std::cerr << "CircuitGraph built\n";
 
-    // TmpStatevector<double> sv1(graph.nqubits);
-    // sv1.zeroState();
-    // sv1.randomize();
-    // auto sv2 = sv1;
-    // auto allBlocks = graph.getAllBlocks();
-    // std::vector<GateNode*> gates;
-    // std::vector<unsigned> qubits;
+    // // TmpStatevector<double> sv1(graph.nqubits);
+    // // sv1.zeroState();
+    // // sv1.randomize();
+    // // auto sv2 = sv1;
+    // // auto allBlocks = graph.getAllBlocks();
+    // // std::vector<GateNode*> gates;
+    // // std::vector<unsigned> qubits;
 
-    std::cerr << "Before Fusion: " << graph.countBlocks() << " blocks\n";
-    // graph.print(std::cerr, 2) << "\n";
-    graph.displayInfo(std::cerr, 2) << "\n";
+    // std::cerr << "Before Fusion: " << graph.countBlocks() << " blocks\n";
+    // // graph.print(std::cerr, 2) << "\n";
+    // graph.displayInfo(std::cerr, 2) << "\n";
     // for (const auto& block : allBlocks) {
     //     gates.clear();
     //     block->applyInOrder([&gates](GateNode* g) { gates.push_back(g); });
@@ -141,12 +141,12 @@ int main(int argc, char** argv) {
     //     }
     // }
 
-    for (int m = 2; m < 6; m++) {
-        graph.greedyGateFusion(m);
-        std::cerr << "After Greedy Fusion " << m << ":\n";
-        // graph.print(std::cerr, 2);
-        graph.displayInfo(std::cerr, 2) << "\n";
-    }
+    // for (int m = 2; m < 6; m++) {
+    //     graph.greedyGateFusion(m);
+    //     std::cerr << "After Greedy Fusion " << m << ":\n";
+    //     // graph.print(std::cerr, 2);
+    //     graph.displayInfo(std::cerr, 2) << "\n";
+    // }
     // allBlocks = graph.getAllBlocks();
 
     // sv2.print(std::cerr);
@@ -178,12 +178,10 @@ int main(int argc, char** argv) {
     auto m2 = m1.permute({1, 0});
     m2.printMatrix(std::cerr);
 
-    QuantumGate gate1(m1, {4, 3});
-    gate1.displayInfo(std::cerr);
+    QuantumGate gate1(m1, {2,3});
+    QuantumGate gate2(m1, {3,4});
 
-    gate1.sortQubits();
-    gate1.displayInfo(std::cerr);
-
+    gate2.lmatmul(gate1).displayInfo(std::cerr);
 
     return 0;
 }

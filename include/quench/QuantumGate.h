@@ -6,134 +6,143 @@
 
 namespace quench::quantum_gate {
 
-class GateMatrix {
-    struct matrix_t {
-        // parametrised matrix type
-        using p_matrix_t = complex_matrix::SquareComplexMatrix<cas::Polynomial>;
-        // constant matrix type
-        using c_matrix_t = complex_matrix::SquareComplexMatrix<double>;
-        union {
-            p_matrix_t parametrizedMatrix;
-            c_matrix_t constantMatrix;
-        };
-        enum class ActiveMatrixType { P, C, None } activeType;
-
-        matrix_t() : activeType(ActiveMatrixType::None) {}
-
-        size_t getSize() const {
-            switch (activeType) {
-            case ActiveMatrixType::P: return parametrizedMatrix.getSize();
-            case ActiveMatrixType::C: return constantMatrix.getSize();
-            default: return 0;
-            }
-        }
-
-        matrix_t(matrix_t&& other) : activeType(other.activeType) {
-            std::cerr << "called matrix_t(matrix_t&&)\n";
-            
-            switch (other.activeType) {
-            case ActiveMatrixType::P:
-                new (&parametrizedMatrix) p_matrix_t(std::move(other.parametrizedMatrix));
-                break;
-            case ActiveMatrixType::C:
-                new (&constantMatrix) c_matrix_t(std::move(other.constantMatrix));
-                break;
-            default:
-                break;
-            }
-        }
-
-        matrix_t(const matrix_t& other) : activeType(other.activeType) {
-            std::cerr << "called matrix_t(const matrix_t&)\n";
-
-            switch (other.activeType) {
-            case ActiveMatrixType::P:
-                new (&parametrizedMatrix) p_matrix_t(other.parametrizedMatrix);
-                break;
-            case ActiveMatrixType::C:
-                new (&constantMatrix) c_matrix_t(other.constantMatrix);
-                break;
-            default:
-                break;
-            }
-        }
-
-        void destroyMatrix(ActiveMatrixType newActiveType = ActiveMatrixType::None) {
-            switch (activeType) {
-            case ActiveMatrixType::P:
-                parametrizedMatrix.~p_matrix_t();
-                break;
-            case ActiveMatrixType::C:
-                constantMatrix.~c_matrix_t();
-                break;
-            default:
-                break;
-            }
-            activeType = newActiveType;
-        }
-
-        matrix_t& operator=(const matrix_t& other) {
-            if (this == &other)
-                return *this;
-            destroyMatrix(other.activeType);
-            switch (other.activeType) {
-            case ActiveMatrixType::P:
-                new (&parametrizedMatrix) p_matrix_t(other.parametrizedMatrix);
-                break;
-            case ActiveMatrixType::C:
-                new (&constantMatrix) c_matrix_t(other.constantMatrix);
-                break;
-            default:
-                break;
-            }
-            return *this;
-        }
-
-        matrix_t& operator=(matrix_t&& other) {
-            if (this == &other)
-                return *this;
-            destroyMatrix(other.activeType);
-            switch (other.activeType) {
-            case ActiveMatrixType::P:
-                new (&parametrizedMatrix) p_matrix_t(std::move(other.parametrizedMatrix));
-                break;
-            case ActiveMatrixType::C:
-                new (&constantMatrix) c_matrix_t(std::move(other.constantMatrix));
-                break;
-            default:
-                break;
-            }
-            return *this;
-        }
-
-        matrix_t& operator=(const c_matrix_t& cMatrix) {
-            if (activeType == ActiveMatrixType::P)
-                parametrizedMatrix.~p_matrix_t();
-            activeType = ActiveMatrixType::C;
-            new (&constantMatrix) c_matrix_t(cMatrix);
-            return *this;
-        }
-
-        matrix_t& operator=(c_matrix_t&& cMatrix) {
-            if (activeType == ActiveMatrixType::P)
-                parametrizedMatrix.~p_matrix_t();
-            activeType = ActiveMatrixType::C;
-            new (&constantMatrix) c_matrix_t(std::move(cMatrix));
-            return *this;
-        }
-
-        ~matrix_t() {
-            destroyMatrix();
-        }
+struct matrix_t {
+    // parametrised matrix type
+    using p_matrix_t = complex_matrix::SquareComplexMatrix<cas::Polynomial>;
+    // constant matrix type
+    using c_matrix_t = complex_matrix::SquareComplexMatrix<double>;
+    union {
+        p_matrix_t parametrizedMatrix;
+        c_matrix_t constantMatrix;
     };
+    enum class ActiveMatrixType { P, C, None } activeType;
 
+    matrix_t() : activeType(ActiveMatrixType::None) {}
+
+    size_t getSize() const {
+        switch (activeType) {
+        case ActiveMatrixType::P: return parametrizedMatrix.getSize();
+        case ActiveMatrixType::C: return constantMatrix.getSize();
+        default: return 0;
+        }
+    }
+
+    matrix_t(matrix_t&& other) : activeType(other.activeType) {
+        std::cerr << "called matrix_t(matrix_t&&)\n";
+        
+        switch (other.activeType) {
+        case ActiveMatrixType::P:
+            new (&parametrizedMatrix) p_matrix_t(std::move(other.parametrizedMatrix));
+            break;
+        case ActiveMatrixType::C:
+            new (&constantMatrix) c_matrix_t(std::move(other.constantMatrix));
+            break;
+        default:
+            break;
+        }
+    }
+
+    matrix_t(const matrix_t& other) : activeType(other.activeType) {
+        std::cerr << "called matrix_t(const matrix_t&)\n";
+
+        switch (other.activeType) {
+        case ActiveMatrixType::P:
+            new (&parametrizedMatrix) p_matrix_t(other.parametrizedMatrix);
+            break;
+        case ActiveMatrixType::C:
+            new (&constantMatrix) c_matrix_t(other.constantMatrix);
+            break;
+        default:
+            break;
+        }
+    }
+
+    void destroyMatrix(ActiveMatrixType newActiveType = ActiveMatrixType::None) {
+        switch (activeType) {
+        case ActiveMatrixType::P:
+            parametrizedMatrix.~p_matrix_t();
+            break;
+        case ActiveMatrixType::C:
+            constantMatrix.~c_matrix_t();
+            break;
+        default:
+            break;
+        }
+        activeType = newActiveType;
+    }
+
+    matrix_t& operator=(const matrix_t& other) {
+        if (this == &other)
+            return *this;
+        destroyMatrix(other.activeType);
+        switch (other.activeType) {
+        case ActiveMatrixType::P:
+            new (&parametrizedMatrix) p_matrix_t(other.parametrizedMatrix);
+            break;
+        case ActiveMatrixType::C:
+            new (&constantMatrix) c_matrix_t(other.constantMatrix);
+            break;
+        default:
+            break;
+        }
+        return *this;
+    }
+
+    matrix_t& operator=(matrix_t&& other) {
+        if (this == &other)
+            return *this;
+        destroyMatrix(other.activeType);
+        switch (other.activeType) {
+        case ActiveMatrixType::P:
+            new (&parametrizedMatrix) p_matrix_t(std::move(other.parametrizedMatrix));
+            break;
+        case ActiveMatrixType::C:
+            new (&constantMatrix) c_matrix_t(std::move(other.constantMatrix));
+            break;
+        default:
+            break;
+        }
+        return *this;
+    }
+
+    matrix_t& operator=(const c_matrix_t& cMatrix) {
+        if (activeType == ActiveMatrixType::P)
+            parametrizedMatrix.~p_matrix_t();
+        activeType = ActiveMatrixType::C;
+        new (&constantMatrix) c_matrix_t(cMatrix);
+        return *this;
+    }
+
+    matrix_t& operator=(c_matrix_t&& cMatrix) {
+        if (activeType == ActiveMatrixType::P)
+            parametrizedMatrix.~p_matrix_t();
+        activeType = ActiveMatrixType::C;
+        new (&constantMatrix) c_matrix_t(std::move(cMatrix));
+        return *this;
+    }
+
+    ~matrix_t() {
+        destroyMatrix();
+    }
+};
+
+
+class GateMatrix {
 public:
     unsigned nqubits;
     size_t N;
     matrix_t matrix;
     GateMatrix() : nqubits(0), N(0), matrix() {}
 
-    GateMatrix(std::initializer_list<complex_matrix::Complex<double>> m);
+    GateMatrix(const matrix_t::c_matrix_t& cMatrix) {
+        matrix = cMatrix;
+        updateNqubits();
+    }
+
+    GateMatrix(std::initializer_list<complex_matrix::Complex<double>> m) {
+        matrix = matrix_t::c_matrix_t(m);
+        updateNqubits();
+    }
 
     bool checkConsistency() const {
         return (1 << nqubits == N)
@@ -151,6 +160,8 @@ public:
         return matrix.activeType == matrix_t::ActiveMatrixType::P;
     }
 
+    int updateNqubits();
+
     GateMatrix permute(const std::vector<unsigned>& flags) const;
     
     GateMatrix& permuteSelf(const std::vector<unsigned>& flags);
@@ -160,6 +171,7 @@ public:
 
 class QuantumGate {
 public:
+    /// The canonical form of qubits is in ascending order
     std::vector<unsigned> qubits;
     GateMatrix matrix;
 
@@ -173,16 +185,37 @@ public:
         assert(matrix.nqubits == qubits.size());
     }
 
+    bool isQubitsSorted() const {
+        if (qubits.empty())
+            return true;
+        for (unsigned i = 0; i < qubits.size()-1; i++) {
+            if (qubits[i+1] <= qubits[i])
+                return false;
+        }
+        return true;
+    }
+
     bool checkConsistency() const {
         return (matrix.nqubits == qubits.size())
-            && (matrix.checkConsistency());
+            // && isQubitsSorted()
+            && matrix.checkConsistency();
     }
 
     std::ostream& displayInfo(std::ostream& os) const;
 
+    int findQubit(unsigned q) const {
+        for (unsigned i = 0; i < qubits.size(); i++) {
+            if (qubits[i] == q)
+                return i;
+        }
+        return -1;
+    }
+
     void sortQubits();
 
-    QuantumGate& leftMatmulInplace(const QuantumGate& other);
+    QuantumGate lmatmul(const QuantumGate& other) const;
+
+    // QuantumGate& lmatmulEqual(const QuantumGate& other);
 
 
 };
