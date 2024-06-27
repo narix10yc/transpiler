@@ -10,13 +10,19 @@
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/FileSystem.h>
 
-#include <memory>
 #include <vector>
 #include <array>
 
 #include "simulation/types.h"
+#include "quench/QuantumGate.h"
 
 namespace simulation {
+
+class GeneratorConfiguration {
+public:
+    unsigned s;
+};
+
 
 /// @brief IR Generator.
 /// @param vecSizeInBits: Required; default 2; the value of s.
@@ -47,8 +53,8 @@ private:
         return vec;  
     }
 
-    llvm::Function* genU3_Sep(const ir::U3Gate& u3, std::string funcName="");
-    llvm::Function* genU3_Alt(const ir::U3Gate& u3, std::string funcName="");
+    llvm::Function* genU3_Sep(const ir::U3Gate& u3, const std::string& funcName="");
+    llvm::Function* genU3_Alt(const ir::U3Gate& u3, const std::string& funcName="");
 
 public:
     IRGenerator(unsigned vecSizeInBits=2) : 
@@ -95,15 +101,19 @@ public:
             const llvm::Twine& bbccName="",
             const llvm::Twine& aaName="");
 
-    llvm::Function* genU3(const ir::U3Gate& u3, std::string funcName="") {
+    llvm::Function* genU3(const ir::U3Gate& u3, const std::string& funcName="") {
         if (ampFormat == ir::AmpFormat::Separate)
             return genU3_Sep(u3, funcName);
         else
             return genU3_Alt(u3, funcName);
     }
 
-    llvm::Function* genU2qBatched(const ir::U2qGate& u2q, std::string funcName="");
-    llvm::Function* genU2q(const ir::U2qGate& u2q, std::string funcName="");
+    llvm::Function* genU2qBatched(const ir::U2qGate& u2q, const std::string& funcName="");
+    llvm::Function* genU2q(const ir::U2qGate& u2q, const std::string& funcName="");
+
+    llvm::Function*
+    generateKernel(const quench::quantum_gate::QuantumGate& gate,
+                   const std::string& funName = "");
 };
 
 

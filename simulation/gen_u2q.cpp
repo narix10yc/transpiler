@@ -17,7 +17,7 @@ std::string getDefaultU2qFuncName(const ir::U2qGate& u2q, const IRGenerator& gen
     return ss.str();
 }
 
-Function* IRGenerator::genU2q(const ir::U2qGate& u2q, std::string _funcName) {
+Function* IRGenerator::genU2q(const ir::U2qGate& u2q, const std::string& _funcName) {
     std::string funcName = (_funcName != "") ? _funcName
                          : getDefaultU2qFuncName(u2q, *this);
 
@@ -243,8 +243,11 @@ Function* IRGenerator::genU2q(const ir::U2qGate& u2q, std::string _funcName) {
             newRe[i] = builder.CreateFNeg(newRe1, "newRe" + std::to_string(i));
         else if (newRe1 == nullptr)
             newRe[i] = newRe0;
-        else // should never happen
+        else {
+            // should never happen
+            assert(false);
             newRe[i] = nullptr;
+        }
     }
 
     for (size_t i = 0; i < 4; i++) {
@@ -306,7 +309,7 @@ Function* IRGenerator::genU2q(const ir::U2qGate& u2q, std::string _funcName) {
     return func;
 }
 
-Function* IRGenerator::genU2qBatched(const ir::U2qGate& u2q, std::string _funcName) {
+Function* IRGenerator::genU2qBatched(const ir::U2qGate& u2q, const std::string& _funcName) {
     std::string funcName = (_funcName != "") ? _funcName
                          : getDefaultU2qFuncName(u2q, *this) + "_batched";
 

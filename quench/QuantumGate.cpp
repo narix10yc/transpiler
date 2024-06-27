@@ -209,7 +209,9 @@ void QuantumGate::sortQubits() {
         indices[i] = i;
     
     std::sort(indices.begin(), indices.end(),
-        [&qubits=this->qubits](unsigned i, unsigned j) { return qubits[i] < qubits[j]; });
+        [&qubits=this->qubits](unsigned i, unsigned j) {
+            return qubits[i] < qubits[j];
+        });
 
     std::vector<unsigned> newQubits(nqubits);
     for (unsigned i = 0; i < nqubits; i++)
@@ -235,7 +237,7 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
     std::sort(allQubits.begin(), allQubits.end());
 
     const auto newNqubits = allQubits.size();
-    std::vector<size_t> aShift(2 * newNqubits), bShift(2 * newNqubits);
+    std::vector<size_t> aShift(2 * newNqubits, 0), bShift(2 * newNqubits, 0);
     std::vector<std::pair<size_t, size_t>> sShift;
     
     for (unsigned i = 0; i < newNqubits; i++) {
@@ -257,16 +259,16 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
         }
     }
 
-    std::cerr << "aShift: [";
-    for (const auto& s : aShift)
-        std::cerr << s << ",";
-    std::cerr << "]\n" << "bShift: [";
-    for (const auto& s : bShift)
-        std::cerr << s << ",";
-    std::cerr << "]\n" << "sShift: [";
-    for (const auto& s : sShift)
-        std::cerr << "(" << s.first << "," << s.second << "),";
-    std::cerr << "]\n";
+    // std::cerr << "aShift: [";
+    // for (const auto& s : aShift)
+    //     std::cerr << s << ",";
+    // std::cerr << "]\n" << "bShift: [";
+    // for (const auto& s : bShift)
+    //     std::cerr << s << ",";
+    // std::cerr << "]\n" << "sShift: [";
+    // for (const auto& s : sShift)
+    //     std::cerr << "(" << s.first << "," << s.second << "),";
+    // std::cerr << "]\n";
 
     matrix_t::c_matrix_t newCMatrix(1 << newNqubits);
     using complex_t = complex_matrix::Complex<double>;

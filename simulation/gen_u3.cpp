@@ -17,7 +17,7 @@ std::string getDefaultU3FuncName(const ir::U3Gate& u3, const IRGenerator& gen) {
     return ss.str();
 }
 
-Function* IRGenerator::genU3_Sep(const ir::U3Gate& u3, std::string _funcName) {
+Function* IRGenerator::genU3_Sep(const ir::U3Gate& u3, const std::string& _funcName) {
     const ir::ComplexMatrix2& mat = u3.mat;
     std::string funcName = (_funcName != "") ? _funcName
                          : getDefaultU3FuncName(u3, *this);
@@ -200,7 +200,7 @@ Function* IRGenerator::genU3_Sep(const ir::U3Gate& u3, std::string _funcName) {
     return func;
 }
 
-Function* IRGenerator::genU3_Alt(const ir::U3Gate& u3, std::string _funcName) {
+Function* IRGenerator::genU3_Alt(const ir::U3Gate& u3, const std::string& _funcName) {
     const ir::ComplexMatrix2& mat = u3.mat;
     std::string funcName = (_funcName != "") ? _funcName
                          : getDefaultU3FuncName(u3, *this);
