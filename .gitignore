@@ -4,4 +4,5 @@
 examples/simple.qasm
 examples/complex.qasm
 build/*
+tmp/*
 */gen_file*

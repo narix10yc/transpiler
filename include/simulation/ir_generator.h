@@ -40,6 +40,7 @@ public:
     bool useFMA;
     ir::RealTy realTy;
     ir::AmpFormat ampFormat;
+    int verbose;
 private:
     llvm::Value* 
     genVectorWithSameElem(llvm::Type* elemTy, unsigned length, 
@@ -63,13 +64,15 @@ public:
         vecSizeInBits(vecSizeInBits),
         useFMA(true),
         realTy(ir::RealTy::Double),
-        ampFormat(ir::AmpFormat::Separate) {}
+        ampFormat(ir::AmpFormat::Separate),
+        verbose(0) {}
 
     const llvm::Module& getModule() const { return *mod; }
 
     void setUseFMA(bool b) { useFMA = b; }
     void setRealTy(ir::RealTy ty) { realTy = ty; }
     void setAmpFormat(ir::AmpFormat format) { ampFormat = format; }
+    void setVerbose(int v) { verbose = v; }
 
     void loadFromFile(const std::string& fileName);
     

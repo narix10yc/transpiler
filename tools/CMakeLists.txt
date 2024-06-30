@@ -10,3 +10,5 @@ target_link_libraries(gen_u2q simulation)
 add_executable(playground "playground.cpp")
 target_link_libraries(playground quench qch qasm simulation)
 
+add_executable(kernel "general_kernel.cpp")
+target_link_libraries(kernel quench simulation)
