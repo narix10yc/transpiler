@@ -1,5 +1,6 @@
 #include "simulation/ir_generator.h"
 #include "utils/iocolor.h"
+#include "utils/utils.h"
 
 using namespace llvm;
 using namespace Color;
@@ -23,6 +24,45 @@ namespace {
             os << v[i] << ",";
         os << v.back() << "]";
         return os;
+    }
+
+ 
+    /// @return (mask, vec)
+    std::pair<std::vector<int>, std::vector<int>>
+    getMaskToMerge(const std::vector<int>& v0, const std::vector<int>& v1) {
+        assert(v0.size() == v1.size());
+        const auto s = v0.size();
+        std::vector<int> mask(2*s);
+        std::vector<int> vec(2*s);
+        unsigned i0 = 0, i1 = 0, i;
+        int elem0, elem1;
+        while (i0 < s || i1 < s) {
+            i = i0 + i1;
+            if (i0 == s) {
+                vec[i] = v1[i1];
+                mask[i] = i1 + s;
+                i1++;
+                continue;
+            }
+            if (i1 == s) {
+                vec[i] = v0[i0];
+                mask[i] = i0;
+                i0++;
+                continue;
+            }
+            elem0 = v0[i0];
+            elem1 = v1[i1];
+            if (elem0 < elem1) {
+                vec[i] = elem0;
+                mask[i] = i0;
+                i0++;
+            } else {
+                vec[i] = elem1;
+                mask[i] = i1 + s;
+                i1++;
+            }
+        }
+        return std::make_pair(mask, vec);
     }
 }
 
@@ -57,19 +97,17 @@ IRGenerator::generateKernel(const QuantumGate& gate,
     FunctionType* funcTy = FunctionType::get(retTy, argTy, false);
     Function* func = Function::Create(funcTy, Function::ExternalLinkage, funcName, mod.get());
 
+    SmallVector<StringRef> argNames
+        { "preal", "pimag", "counter_start", "counter_end", "pmat"};
+    unsigned i = 0;
+    for (auto& arg : func->args())
+        arg.setName(argNames[i++]);
+
     auto* pRealArg = func->getArg(0);
     auto* pImagArg = func->getArg(1);
     auto* counterStartArg = func->getArg(2);
     auto* counterEndArg = func->getArg(3);
     auto* pMatArg = func->getArg(4);
-
-    SmallVector<StringRef> argNames
-        { "preal", "pimag", "counter_start", "counter_end", "pmat"};
-
-    // set arg names
-    size_t i = 0;
-    for (auto& arg : func->args())
-        arg.setName(argNames[i++]);
 
     // init basic blocks
     BasicBlock* entryBB = BasicBlock::Create(llvmContext, "entry", func);
@@ -79,7 +117,7 @@ IRGenerator::generateKernel(const QuantumGate& gate,
 
     builder.SetInsertPoint(entryBB);
 
-    // set up matrix
+    // load matrix
     std::vector<matrix_data_t> matrix(K * K);
     auto* matV = builder.CreateLoad(VectorType::get(scalarTy, 2 * K * K, false),
                                     pMatArg, "matrix");
@@ -112,6 +150,7 @@ IRGenerator::generateKernel(const QuantumGate& gate,
             matrix[i].imagFlag = 2;
     }
 
+    // split qubits
     unsigned _q = 0;
     auto qubitsIt = gate.qubits.cbegin();
     std::vector<unsigned> simdQubits, higherQubits, lowerQubits;
@@ -132,6 +171,13 @@ IRGenerator::generateKernel(const QuantumGate& gate,
     if (!lowerQubits.empty() && lowerQubits.back() > sepBit)
         sepBit = lowerQubits.back();
     sepBit++;
+    unsigned vecSize = 1U << sepBit;
+    auto* vecType = VectorType::get(scalarTy, vecSize, false);
+
+    unsigned lk = lowerQubits.size();
+    unsigned LK = 1 << lk;
+    unsigned hk = higherQubits.size();
+    unsigned HK = 1 << hk;
 
     if (verbose > 1) {
         std::cerr << "simdQubits: ";
@@ -141,11 +187,12 @@ IRGenerator::generateKernel(const QuantumGate& gate,
         std::cerr << "higherQubits: ";
         printVector(higherQubits) << "\n";
         std::cerr << "sepBit: " << sepBit << "\n";
+        std::cerr << "vecSize: " << vecSize << "\n";
     }
 
     builder.CreateBr(loopBB);
 
-    // loop
+    // loop entry
     builder.SetInsertPoint(loopBB);
     PHINode* counterV = builder.CreatePHI(builder.getInt64Ty(), 2, "counter");
     counterV->addIncoming(counterStartArg, entryBB);
@@ -155,56 +202,17 @@ IRGenerator::generateKernel(const QuantumGate& gate,
     // loop body
     builder.SetInsertPoint(loopBodyBB);
 
-    // load amplitude registers
-    Value* idxV = nullptr;
-    std::vector<Value*> real(K, nullptr);
-    std::vector<Value*> imag(K, nullptr);
-    Value *pReal, *pImag, *realFull, *imagFull;
-    unsigned vecSize = 1U << sepBit;
-    auto* vecType = VectorType::get(scalarTy, vecSize, false);
-    if (higherQubits.empty()) {
-        assert(k == lowerQubits.size());
-
-        idxV = counterV;
-        pReal = builder.CreateGEP(vecType, pRealArg, idxV, "pReal");
-        pImag = builder.CreateGEP(vecType, pImagArg, idxV, "pImag");
-        realFull = builder.CreateLoad(vecType, pReal, "reFull");
-        imagFull = builder.CreateLoad(vecType, pImag, "imFull");
-
-        std::vector<std::vector<int>> splits(K);
-        for (size_t i = 0; i < vecSize; i++) {
-            unsigned key = 0;
-            for (unsigned lowerI = 0; lowerI < k; lowerI++) {
-                if (i & (1 << lowerQubits[lowerI]))
-                    key |= (1 << lowerI);
-            }
-            splits[key].push_back(i);
-        }
-        if (verbose > 1) {
-            std::cerr << "splits: [";
-            for (const auto& split : splits) {
-                std::cerr << "\n ";
-                printVector(split);
-            }
-            std::cerr << "\n]\n";
-        }
-        for (unsigned i = 0; i < K; i++) {
-            real[i] = builder.CreateShuffleVector(
-                realFull, splits[i], "real_" + std::to_string(i));
-            imag[i] = builder.CreateShuffleVector(
-                imagFull, splits[i], "imag_" + std::to_string(i));
-        }
-    }
-    else {
+    // find start pointer
+    Value* idxStartV = builder.getInt64(0ULL);
+    if (!higherQubits.empty()) {
         // idx = insert 0 to every bit in higherQubits to counter
         uint64_t mask = 0ULL;
         Value* tmpCounterV = counterV;
-        Value* idxStartV = builder.getInt64(0ULL);
         for (unsigned i = 0; i < higherQubits.size(); i++) {
             mask = ((1ULL << (higherQubits[i] - sepBit - i)) - 1) - mask;
             if (verbose > 2) {
                 std::cerr << "i = " << i << ", bit = " << higherQubits[i]
-                          << ", mask = " << std::bitset<12>(mask) << "\n";
+                        << ", mask = " << std::bitset<12>(mask) << "\n";
             }
             tmpCounterV = builder.CreateAnd(tmpCounterV, mask, "tmpCounter");
             tmpCounterV = builder.CreateShl(tmpCounterV, i, "tmpCounter");
@@ -213,63 +221,65 @@ IRGenerator::generateKernel(const QuantumGate& gate,
         mask = ~((1ULL << (higherQubits.back() - sepBit - higherQubits.size() + 1)) - 1);
         if (verbose > 2) {
             std::cerr << "                mask = "
-                      << std::bitset<12>(mask) << "\n";
+                    << std::bitset<12>(mask) << "\n";
         }
         tmpCounterV = builder.CreateAnd(tmpCounterV, mask, "tmpCounter");
         tmpCounterV = builder.CreateShl(tmpCounterV, higherQubits.size(), "tmpCounter");
         idxStartV = builder.CreateAdd(idxStartV, tmpCounterV, "idxStart");
-
-        std::vector<std::vector<int>> splits(1 << lowerQubits.size());
-        for (size_t i = 0; i < vecSize; i++) {
-            unsigned key = 0;
-            for (unsigned lowerI = 0; lowerI < lowerQubits.size(); lowerI++) {
-                if (i & (1 << lowerQubits[lowerI]))
-                    key |= (1 << lowerI);
-            }
-            splits[key].push_back(i);
-        }
-        if (verbose > 1) {
-            std::cerr << "splits: [";
-            for (const auto& split : splits) {
-                std::cerr << "\n ";
-                printVector(split);
-            }
-            std::cerr << "\n]\n";
-        }
-
-        for (unsigned hi = 0; hi < (1 << higherQubits.size()); hi++) {
-            unsigned keyStart = 0;
-            uint64_t idxShift = 0ULL;
-            for (unsigned higherI = 0; higherI < higherQubits.size(); higherI++) {
-                if (hi & (1 << higherI)) {
-                    idxShift += 1ULL << (higherQubits[higherI] - sepBit);
-                    keyStart += 1 << (higherI + lowerQubits.size());
-                }
-            }
-            if (verbose > 2) {
-                std::cerr << "hi = " << hi << ", "
-                          << "idxShift = " << std::bitset<12>(idxShift) << ", "
-                          << "keyStart = " << keyStart << "\n";
-            }
-            idxV = builder.CreateAdd(idxStartV, builder.getInt64(idxShift), "idx");
-            pReal = builder.CreateGEP(vecType, pRealArg, idxV, "pReal");
-            pImag = builder.CreateGEP(vecType, pImagArg, idxV, "pImag");
-            realFull = builder.CreateLoad(vecType, pReal, "reFull");
-            imagFull = builder.CreateLoad(vecType, pImag, "imFull");
-            for (unsigned i = 0; i < (1 << lowerQubits.size()); i++) {
-                unsigned key = keyStart + i;
-                if (verbose > 2) {
-                    std::cerr << "key = " << key << "\n";
-                    printVector(splits[i]) << "\n";
-                }
-                real[key] = builder.CreateShuffleVector(
-                    realFull, splits[i], "real_" + std::to_string(key));
-                imag[key] = builder.CreateShuffleVector(
-                    imagFull, splits[i], "imag_" + std::to_string(key));
-            }
-        }
     }
 
+    // split masks, to be used in loading amplitude registers
+    std::vector<std::vector<int>> splits(LK);
+    for (size_t i = 0; i < vecSize; i++) {
+        unsigned key = 0;
+        for (unsigned lowerI = 0; lowerI < lk; lowerI++) {
+            if (i & (1 << lowerQubits[lowerI]))
+                key |= (1 << lowerI);
+        }
+        splits[key].push_back(i);
+    }
+    // debug print splits
+    if (verbose > 1) {
+        std::cerr << "splits: [";
+        for (const auto& split : splits) {
+            std::cerr << "\n ";
+            printVector(split);
+        }
+        std::cerr << "\n]\n";
+    }
+    
+    // load amplitude registers
+    std::vector<Value*> real(K, nullptr);
+    std::vector<Value*> imag(K, nullptr);
+    Value *pReal, *pImag, *realFull, *imagFull;
+    for (unsigned hi = 0; hi < HK; hi++) {
+        unsigned keyStart = 0;
+        uint64_t idxShift = 0ULL;
+        for (unsigned higherI = 0; higherI < hk; higherI++) {
+            if (hi & (1 << higherI)) {
+                idxShift += 1ULL << (higherQubits[higherI] - sepBit);
+                keyStart += 1 << (higherI + lowerQubits.size());
+            }
+        }
+        if (verbose > 2) {
+            std::cerr << "hi = " << hi << ", "
+                      << "idxShift = " << std::bitset<12>(idxShift) << ", "
+                      << "keyStart = " << keyStart << "\n";
+        }
+        auto* _idxV = builder.CreateAdd(idxStartV, builder.getInt64(idxShift), "idx");
+        pReal = builder.CreateGEP(vecType, pRealArg, _idxV, "pReal");
+        pImag = builder.CreateGEP(vecType, pImagArg, _idxV, "pImag");
+        realFull = builder.CreateLoad(vecType, pReal, "reFull");
+        imagFull = builder.CreateLoad(vecType, pImag, "imFull");
+        for (unsigned i = 0; i < LK; i++) {
+            unsigned key = keyStart + i;
+            real[key] = builder.CreateShuffleVector(
+                realFull, splits[i], "real_" + std::to_string(key));
+            imag[key] = builder.CreateShuffleVector(
+                imagFull, splits[i], "imag_" + std::to_string(key));
+        }
+    }
+    
     // matrix-vector multiplication
     std::vector<Value*> newReal(K, nullptr);
     for (unsigned r = 0; r < K; r++) {
@@ -278,9 +288,6 @@ IRGenerator::generateKernel(const QuantumGate& gate,
 
         Value *newRe0 = nullptr, *newRe1 = nullptr;
         for (unsigned c = 0; c < K; c++) {
-            // std::cerr << "r*K+c = " << r*K+c << ", "
-            //           << "realFlag = " << matrix[r * K + c].realFlag << ", "
-            //           << "imagFlag = " << matrix[r * K + c].imagFlag << "\n";
             newRe0 = genMulAdd(newRe0, matrix[r * K + c].realVal, real[c],
                                matrix[r * K + c].realFlag, "", name0);
             newRe1 = genMulAdd(newRe1, matrix[r * K + c].imagVal, imag[c],
@@ -293,7 +300,7 @@ IRGenerator::generateKernel(const QuantumGate& gate,
         else if (newRe1 == nullptr)
             newReal[r] = newRe0;
         else
-            assert(false);
+            assert(false && "newReal is null");
     }
 
     std::vector<Value*> newImag(K, nullptr);
@@ -306,9 +313,25 @@ IRGenerator::generateKernel(const QuantumGate& gate,
                                matrix[r * K + c].imagFlag, "", name);
         }
     }
-    // store amplitudes
 
+    // merge updated amplitudes
+    for (unsigned round = 0; round < lk; round++) {
+        for (unsigned pairI = 0; pairI < (1 << (lk - round - 1)); pairI++) {
+            auto pair = getMaskToMerge(splits[2*pairI], splits[2*pairI + 1]);
+            splits[pairI] = std::move(pair.second);
+            newReal[pairI] = builder.CreateShuffleVector(
+                    newReal[2*pairI], newReal[2*pairI + 1],
+                    pair.first, "mergeRe");
+            newImag[pairI] = builder.CreateShuffleVector(
+                    newImag[2*pairI], newImag[2*pairI + 1],
+                    pair.first, "mergeIm");
+        }
+    }
+    assert(utils::isOrdered(splits[0]));
 
+    // store back
+    builder.CreateStore(newReal[0], pReal, false);
+    builder.CreateStore(newImag[0], pImag, false);
 
     // increment counter and return 
     auto* counterNextV = builder.CreateAdd(counterV, builder.getInt64(1), "counterNext");
