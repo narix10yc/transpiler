@@ -15,7 +15,7 @@ inline size_t insertZeroBit(size_t number, int index) {
 }
 
 template<typename real_t = double>
-void applyGeneral(std::complex<real_t>* sv,
+static void applyGeneral(std::complex<real_t>* sv,
                   const quench::quantum_gate::GateMatrix& gate,
                   const std::vector<unsigned>& qubits,
                   unsigned nqubits)
@@ -64,18 +64,18 @@ void applyGeneral(std::complex<real_t>* sv,
         for (size_t i = 0; i < K; i++) {
             updatedAmp[i] = { 0.0, 0.0 };
             for (size_t ii = 0; ii < K; ii++)
-                updatedAmp[i] += sv[idxVector[ii]] * static_cast<real_t>(constMatrix[i*K + ii]);
+                updatedAmp[i] += sv[idxVector[ii]] * static_cast<complex_t>(constMatrix[i*K + ii]);
         }
         // store
         for (size_t i = 0; i < K; i++) {
-            // std::cerr << "idx " << i << " new amp = " << updatedAmp[i].real 
-            //           << " + " << updatedAmp[i].imag << "i"
-            //           << " store back at position " << idxVector[i] << "\n";
+        //     std::cerr << "idx " << i << " new amp = " << updatedAmp[i].real()
+        //               << " + " << updatedAmp[i].imag() << "i"
+        //               << " store back at position " << idxVector[i] << "\n";
             sv[idxVector[i]] = updatedAmp[i];
         }
     }
-
 }
 
 } // namespace quench::simulate
+
 #endif // QUENCH_SIMULATE_H

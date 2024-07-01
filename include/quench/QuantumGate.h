@@ -136,12 +136,9 @@ public:
 
     GateMatrix(const matrix_t::c_matrix_t& cMatrix) {
         matrix = cMatrix;
-        updateNqubits();
-    }
-
-    GateMatrix(std::initializer_list<std::complex<double>> m) {
-        matrix = matrix_t::c_matrix_t(m);
-        updateNqubits();
+        int r = updateNqubits();
+        std::cerr << "r = " << r << "\n";
+        assert(r > 0);
     }
 
     bool checkConsistency() const {

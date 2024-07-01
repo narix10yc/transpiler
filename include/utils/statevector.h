@@ -208,8 +208,7 @@ public:
     }
 };
 
-
-template<typename real_t = double>
+template<typename real_t>
 class StatevectorComp {
     using complex_t = std::complex<real_t>;
 public:
@@ -246,8 +245,8 @@ public:
     double normSquared() const {
         double sum = 0;
         for (size_t i = 0; i < N; i++) {
-            sum += data[i].real * data[i].real;
-            sum += data[i].imag * data[i].imag;
+            sum += data[i].real() * data[i].real();
+            sum += data[i].imag() * data[i].imag();
         }
         return sum;
     }
@@ -256,37 +255,34 @@ public:
 
     void normalize() {
         double n = norm();
-        for (size_t i = 0; i < N; i++) {
-            data[i].real /= n;
-            data[i].imag /= n;
-        }
+        for (size_t i = 0; i < N; i++)
+            data[i] /= n;
     }
 
     void zeroState() {
         for (size_t i = 0; i < N; i++)
             data[i] = {0.0, 0.0};
-        data[0].real = 1.0;
+        data[0] = {1.0, 0.0};
     }
 
     void randomize() {
         std::random_device rd;
         std::mt19937 gen { rd() };
         std::normal_distribution<real_t> d { 0, 1 };
-        for (size_t i = 0; i < N; i++) {
-            data[i].real = d(gen);
-            data[i].imag = d(gen);
-        }
+        for (size_t i = 0; i < N; i++)
+            data[i] = { d(gen), d(gen) };
         normalize();
     }
 
     std::ostream& print(std::ostream& os) const {
+        using namespace Color;
         const auto print_number = [&](size_t idx) {
-            if (data[idx].real >= 0)
+            if (data[idx].real() >= 0)
                 os << " ";
-            os << data[idx].real;
-            if (data[idx].imag >= 0)
+            os << data[idx].real();
+            if (data[idx].imag() >= 0)
                 os << " + ";
-            os << data[idx].imag << "i";
+            os << data[idx].imag() << "i";
         };
 
         if (N > 32) {

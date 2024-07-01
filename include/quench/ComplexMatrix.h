@@ -19,8 +19,10 @@ public:
     SquareComplexMatrix() : size(0), data() {}
     SquareComplexMatrix(size_t size) : size(size), data(size * size) {}
     SquareComplexMatrix(std::initializer_list<complex_t> data)
-        : size(std::sqrt(data.size())), data(data) {
-        assert(size * size == data.size() && "data.size() should be a perfect square");
+        : size(std::sqrt(data.size())), data(data)
+    {
+        assert(size * size == data.size()
+               && "data.size() should be a perfect square");
     }
 
     size_t getSize() const { return size; }

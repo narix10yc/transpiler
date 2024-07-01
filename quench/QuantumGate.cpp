@@ -102,10 +102,10 @@ int GateMatrix::updateNqubits() {
     case 1:
         assert(false && "1x1 matrix does not represent quantum gates");
         break;
-    case 4: nqubits = 1; break;
-    case 16: nqubits = 2; break;
-    case 64: nqubits = 3; break;
-    case 256: nqubits = 4; break;
+    case 2: nqubits = 1; break;
+    case 4: nqubits = 2; break;
+    case 8: nqubits = 3; break;
+    case 16: nqubits = 4; break;
     default:
         nqubits = std::log2(mSize);
         assert(std::pow(2, nqubits) == mSize);
@@ -127,29 +127,29 @@ GateMatrix GateMatrix::FromName(const std::string& name,
         const double ctheta = std::cos(theta);
         const double stheta = std::sin(theta);
 
-        return { 
+        return {{
             {ctheta, 0},
             {-std::cos(lambd) * stheta, -std::sin(lambd) * stheta},
             {std::cos(phi) * stheta, std::sin(phi) * stheta},
             {std::cos(phi + lambd) * ctheta, std::sin(phi + lambd) * ctheta}
-        };
+        }};
     }
     if (name == "cx") {
-        return {
+        return {{
             {1,0}, {0,0}, {0,0}, {0,0},
             {0,0}, {0,0}, {0,0}, {1,0},
             {0,0}, {0,0}, {1,0}, {0,0},
             {0,0}, {1,0}, {0,0}, {0,0}
-        };
+        }};
     }
 
     if (name == "cz") {
-        return {
+        return {{
             {1,0}, {0,0}, {0,0}, {0,0},
             {0,0}, {1,0}, {0,0}, {0,0},
             {0,0}, {0,0}, {1,0}, {0,0},
             {0,0}, {0,0}, {0,0}, {-1,0}
-        };
+        }};
     }
 
     std::cerr << RED_FG << BOLD << "Error: Unrecognized gate '" << name << "'"
