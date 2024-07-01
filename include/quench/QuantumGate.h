@@ -139,7 +139,7 @@ public:
         updateNqubits();
     }
 
-    GateMatrix(std::initializer_list<complex_matrix::Complex<double>> m) {
+    GateMatrix(std::initializer_list<std::complex<double>> m) {
         matrix = matrix_t::c_matrix_t(m);
         updateNqubits();
     }

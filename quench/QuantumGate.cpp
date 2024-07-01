@@ -159,21 +159,21 @@ GateMatrix GateMatrix::FromName(const std::string& name,
 
 namespace {
     std::ostream&
-    print_complex(std::ostream& os, Complex<double> c, int precision=3) {
+    print_complex(std::ostream& os, std::complex<double> c, int precision=3) {
         const double thres = 0.5 * std::pow(0.1, precision);
-        if (c.real >= -thres)
+        if (c.real() >= -thres)
             os << " ";
-        if (std::fabs(c.real) < thres)
+        if (std::fabs(c.real()) < thres)
             os << "0." << std::string(precision, ' ');
         else
-            os << std::fixed << std::setprecision(precision) << c.real;
+            os << std::fixed << std::setprecision(precision) << c.real();
         
-        if (c.imag >= -thres)
+        if (c.imag() >= -thres)
             os << "+";
-        if (std::fabs(c.imag) < thres)
+        if (std::fabs(c.imag()) < thres)
             os << "0." << std::string(precision, ' ');
         else
-            os << std::fixed << std::setprecision(precision) << c.imag;
+            os << std::fixed << std::setprecision(precision) << c.imag();
         return os << "i";
     }
 }
@@ -271,7 +271,7 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
     // std::cerr << "]\n";
 
     matrix_t::c_matrix_t newCMatrix(1 << newNqubits);
-    using complex_t = complex_matrix::Complex<double>;
+    using complex_t = std::complex<double>;
 
     assert(other.matrix.isConstantMatrix());
     assert(matrix.isConstantMatrix());

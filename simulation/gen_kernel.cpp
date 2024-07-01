@@ -26,7 +26,6 @@ namespace {
         return os;
     }
 
- 
     /// @return (mask, vec)
     std::pair<std::vector<int>, std::vector<int>>
     getMaskToMerge(const std::vector<int>& v0, const std::vector<int>& v1) {
@@ -127,8 +126,8 @@ IRGenerator::generateKernel(const QuantumGate& gate,
         matrix[i].imagVal = builder.CreateShuffleVector(
             matV, std::vector<int>(S, 2*i+1), "mIm_" + std::to_string(i));
 
-        auto real = gate.matrix.matrix.constantMatrix.data.at(i).real;
-        auto imag = gate.matrix.matrix.constantMatrix.data.at(i).imag;
+        auto real = gate.matrix.matrix.constantMatrix.data.at(i).real();
+        auto imag = gate.matrix.matrix.constantMatrix.data.at(i).imag();
 
         double thres = 1e-8;
         if (std::abs(real) < thres)

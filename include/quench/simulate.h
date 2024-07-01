@@ -15,7 +15,7 @@ inline size_t insertZeroBit(size_t number, int index) {
 }
 
 template<typename real_t = double>
-void applyGeneral(quench::complex_matrix::Complex<real_t>* sv,
+void applyGeneral(std::complex<real_t>* sv,
                   const quench::quantum_gate::GateMatrix& gate,
                   const std::vector<unsigned>& qubits,
                   unsigned nqubits)
@@ -39,7 +39,7 @@ void applyGeneral(quench::complex_matrix::Complex<real_t>* sv,
     std::sort(qubitsSorted.begin(), qubitsSorted.end());
 
     std::vector<size_t> idxVector(K);
-    using complex_t = quench::complex_matrix::Complex<real_t>;
+    using complex_t = std::complex<real_t>;
     std::vector<complex_t> updatedAmp(K);
 
     for (size_t t = 0; t < (1 << (nqubits - gate.nqubits)); t++) {

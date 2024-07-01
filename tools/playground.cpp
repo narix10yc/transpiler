@@ -14,7 +14,7 @@ using namespace quench::quantum_gate;
 
 template<typename real_t = double>
 class TmpStatevector {
-    using complex_t = quench::complex_matrix::Complex<real_t>;
+    using complex_t = std::complex<real_t>;
 public:
     unsigned nqubits;
     size_t N;
@@ -169,7 +169,9 @@ int main(int argc, char** argv) {
     // sv1.print(std::cerr) << "\n";
     // sv2.print(std::cerr);
 
-    auto m1 = GateMatrix::FromName("u3", {3.1415926, 0.0, 3.1415926});
+    auto m1 = GateMatrix::FromName("u3", {M_PI * 0.5, 0.0, M_PI});
+    m1.printMatrix(std::cerr) << "\n";
+
     m1.matrix.constantMatrix = m1.matrix.constantMatrix.leftKronI();
     m1.nqubits += 1;
     m1.N *= 2;

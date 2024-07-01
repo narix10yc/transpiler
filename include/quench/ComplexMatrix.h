@@ -4,56 +4,17 @@
 #include <vector>
 #include <cassert>
 #include <cmath>
+#include <complex>
 #include <iostream>
 
 namespace quench::complex_matrix {
 
 template<typename real_t>
-class Complex {
-public:
-    real_t real, imag;
-    Complex() : real(), imag() {}
-    Complex(real_t real, real_t imag) : real(real), imag(imag) {}
-
-    Complex operator+(const Complex& other) const {
-        return Complex(real + other.real, imag + other.imzg);
-    }
-
-    Complex operator-(const Complex& other) const {
-        return Complex(real - other.real, imag - other.imag);
-    }
-
-    Complex operator*(const Complex& other) const {
-        return Complex(real * other.real - imag * other.imag,
-                       real * other.imag + imag * other.real);
-    }
-
-    Complex& operator+=(const Complex& other) {
-        real += other.real;
-        imag += other.imag;
-        return *this;
-    }
-
-    Complex& operator-=(const Complex& other) {
-        real -= other.real;
-        imag -= other.imag;
-        return *this;
-    }
-
-    Complex& operator*=(const Complex& other) {
-        real_t r = real * other.real - imag * other.imag;
-        imag = real * other.imag + imag * other.real;
-        real = r;
-        return *this;
-    }
-};
-
-template<typename real_t>
 class SquareComplexMatrix {
     size_t size;
 public:
-    using complex_t = Complex<real_t>;
-    std::vector<Complex<real_t>> data;
+    using complex_t = std::complex<real_t>;
+    std::vector<complex_t> data;
 
     SquareComplexMatrix() : size(0), data() {}
     SquareComplexMatrix(size_t size) : size(size), data(size * size) {}
