@@ -11,10 +11,11 @@ using namespace Color;
 using namespace quench::quantum_gate;
 
 int main(int argc, char** argv) {
-
-    simulation::IRGenerator generator(3);
+    simulation::IRGenerator generator;
     generator.setVerbose(999);
     generator.vecSizeInBits = 4;
+
+    auto matrix_u1q = GateMatrix::FromName("u3", {0.1, 0.2, 0.3});
 
     auto m1 = GateMatrix::FromName("u3", {M_PI / 2, 0.0, M_PI});
     m1.matrix.constantMatrix = m1.matrix.constantMatrix.leftKronI();
@@ -28,15 +29,16 @@ int main(int argc, char** argv) {
     // QuantumGate gate1(m1, {8,4});
     // auto gate2 = gate1.lmatmul({m1, {4,6}});
 
-    // QuantumGate gate1(m1, {8,4});
-    // auto gate2 = gate1.lmatmul({m1, {4,0}});
+    QuantumGate gate1(m1, {8,4});
+    auto gate2 = gate1.lmatmul({m1, {4,0}});
 
-    QuantumGate gate1(m1, {5,2});
-    auto gate2 = gate1.lmatmul({m1, {1,2}});
+    // QuantumGate gate1(m1, {5,2});
+    // auto gate2 = gate1.lmatmul({m1, {1,2}});
 
-    gate2.matrix.printMatrix(std::cerr) << "\n";
+    QuantumGate gate_u1q(matrix_u1q, {0});
 
-    generator.generateKernel(gate2, "funcName");
+    generator.generateKernel(gate_u1q, "simulation_kernel_1");
+    // generator.generateKernel(gate2, "funcName");
     if (argc > 1) {
         std::error_code ec;
         llvm::raw_fd_ostream fIR(argv[1], ec);

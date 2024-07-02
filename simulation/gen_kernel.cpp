@@ -63,6 +63,7 @@ namespace {
         }
         return std::make_pair(mask, vec);
     }
+
 }
 
 Function*
@@ -148,6 +149,22 @@ IRGenerator::generateKernel(const QuantumGate& gate,
         else 
             matrix[i].imagFlag = 2;
     }
+    
+    // debug print matrix
+    if (verbose > 1) {
+        std::cerr << "IRMatrix:\n[";
+        for (unsigned r = 0; r < K; r++) {
+            for (unsigned c = 0; c < K; c++) {
+                int real = matrix[r*K + c].realFlag;
+                int imag = matrix[r*K + c].realFlag;
+                std::cerr << "(" << real << "," << imag << "),";
+            }
+            if (r < K - 1)
+                std::cerr << "\n ";
+            else
+                std::cerr << "]\n";
+        }
+    }
 
     // split qubits
     unsigned _q = 0;
@@ -169,15 +186,16 @@ IRGenerator::generateKernel(const QuantumGate& gate,
     unsigned sepBit = simdQubits.back();
     if (!lowerQubits.empty() && lowerQubits.back() > sepBit)
         sepBit = lowerQubits.back();
-    sepBit++;
+    sepBit++; // separation bit = lk + s
     unsigned vecSize = 1U << sepBit;
     auto* vecType = VectorType::get(scalarTy, vecSize, false);
 
-    unsigned lk = lowerQubits.size();
-    unsigned LK = 1 << lk;
-    unsigned hk = higherQubits.size();
-    unsigned HK = 1 << hk;
+    const unsigned lk = lowerQubits.size();
+    const unsigned LK = 1 << lk;
+    const unsigned hk = higherQubits.size();
+    const unsigned HK = 1 << hk;
 
+    // debug print qubit splits
     if (verbose > 1) {
         std::cerr << "simdQubits: ";
         printVector(simdQubits) << "\n";
@@ -248,9 +266,9 @@ IRGenerator::generateKernel(const QuantumGate& gate,
     }
     
     // load amplitude registers
-    std::vector<Value*> real(K, nullptr);
-    std::vector<Value*> imag(K, nullptr);
-    Value *pReal, *pImag, *realFull, *imagFull;
+    std::vector<Value*> real(K, nullptr), imag(K, nullptr);
+    std::vector<Value*> pReal(HK, nullptr), pImag(HK, nullptr);
+    Value *realFull, *imagFull;
     for (unsigned hi = 0; hi < HK; hi++) {
         unsigned keyStart = 0;
         uint64_t idxShift = 0ULL;
@@ -265,11 +283,11 @@ IRGenerator::generateKernel(const QuantumGate& gate,
                       << "idxShift = " << std::bitset<12>(idxShift) << ", "
                       << "keyStart = " << keyStart << "\n";
         }
-        auto* _idxV = builder.CreateAdd(idxStartV, builder.getInt64(idxShift), "idx");
-        pReal = builder.CreateGEP(vecType, pRealArg, _idxV, "pReal");
-        pImag = builder.CreateGEP(vecType, pImagArg, _idxV, "pImag");
-        realFull = builder.CreateLoad(vecType, pReal, "reFull");
-        imagFull = builder.CreateLoad(vecType, pImag, "imFull");
+        auto* _idxV = builder.CreateAdd(idxStartV, builder.getInt64(idxShift), "idx_" + std::to_string(hi));
+        pReal[hi] = builder.CreateGEP(vecType, pRealArg, _idxV, "pReal_" + std::to_string(hi));
+        pImag[hi] = builder.CreateGEP(vecType, pImagArg, _idxV, "pImag_" + std::to_string(hi));
+        realFull = builder.CreateLoad(vecType, pReal[hi], "reFull_" + std::to_string(hi));
+        imagFull = builder.CreateLoad(vecType, pImag[hi], "imFull_" + std::to_string(hi));
         for (unsigned i = 0; i < LK; i++) {
             unsigned key = keyStart + i;
             real[key] = builder.CreateShuffleVector(
@@ -293,9 +311,9 @@ IRGenerator::generateKernel(const QuantumGate& gate,
                                matrix[r * K + c].imagFlag, "", name1);  
         }
         if (newRe0 != nullptr && newRe1 != nullptr)
-            newReal[r] = builder.CreateFSub(newRe0, newRe1, "newRe" + std::to_string(r));
+            newReal[r] = builder.CreateFSub(newRe0, newRe1, "newRe" + std::to_string(r) + "_");
         else if (newRe0 == nullptr)
-            newReal[r] = builder.CreateFNeg(newRe1, "newRe" + std::to_string(r));
+            newReal[r] = builder.CreateFNeg(newRe1, "newRe" + std::to_string(r) + "_");
         else if (newRe1 == nullptr)
             newReal[r] = newRe0;
         else
@@ -314,23 +332,47 @@ IRGenerator::generateKernel(const QuantumGate& gate,
     }
 
     // merge updated amplitudes
+    std::vector<std::vector<int>> mergeMasks;
     for (unsigned round = 0; round < lk; round++) {
         for (unsigned pairI = 0; pairI < (1 << (lk - round - 1)); pairI++) {
             auto pair = getMaskToMerge(splits[2*pairI], splits[2*pairI + 1]);
+            mergeMasks.push_back(std::move(pair.first));
             splits[pairI] = std::move(pair.second);
-            newReal[pairI] = builder.CreateShuffleVector(
-                    newReal[2*pairI], newReal[2*pairI + 1],
-                    pair.first, "mergeRe");
-            newImag[pairI] = builder.CreateShuffleVector(
-                    newImag[2*pairI], newImag[2*pairI + 1],
-                    pair.first, "mergeIm");
         }
     }
-    assert(utils::isOrdered(splits[0]));
+    std::cerr << "mergeMasks:\n";
+    for (const auto& vec : mergeMasks)
+        printVector(vec) << "\n";
+    std::cerr << "\n";
 
-    // store back
-    builder.CreateStore(newReal[0], pReal, false);
-    builder.CreateStore(newImag[0], pImag, false);
+    // merge and store back
+    for (unsigned hi = 0; hi < HK; hi++) {
+        unsigned mergeBegin = hi << lk;
+        auto maskIt = mergeMasks.cbegin();
+        std::cerr << "hi = " << hi << ", "
+                  << "mergeBegin = " << mergeBegin << "\n";
+        for (unsigned round = 0; round < lk; round++) {
+            std::cerr << " round " << round
+                      << ", there are " << (1 << (lk - round - 1)) << " pairs\n";
+            for (unsigned pairI = 0; pairI < (1 << (lk - round - 1)); pairI++) {
+                unsigned mergeIdx = mergeBegin + 2*pairI;
+                unsigned storeIdx = mergeBegin + pairI;
+                std::cerr << "  pairI = " << pairI << ", "
+                          << "pair = (" << mergeIdx << "," << mergeIdx + 1 << ")"
+                          << " => " << storeIdx << "\n";
+                newReal[storeIdx] = builder.CreateShuffleVector(
+                        newReal[mergeIdx], newReal[mergeIdx + 1],
+                        *maskIt, "mergeRe");
+                newImag[storeIdx] = builder.CreateShuffleVector(
+                        newImag[mergeIdx], newImag[mergeIdx + 1],
+                        *maskIt, "mergeIm");
+                maskIt++;
+            }
+        }
+        std::cerr << "store " << mergeBegin << " to pReal " << hi << "\n";
+        builder.CreateStore(newReal[mergeBegin], pReal[hi], false);
+        builder.CreateStore(newImag[mergeBegin], pImag[hi], false);
+    }
 
     // increment counter and return 
     auto* counterNextV = builder.CreateAdd(counterV, builder.getInt64(1), "counterNext");

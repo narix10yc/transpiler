@@ -2,8 +2,12 @@
 #define UTILS_STATEVECTOR_H
 
 #include <cstdlib>
+#include <cassert>
+#include <complex>
 #include <random>
 #include <iostream>
+
+#include "utils/iocolor.h"
 
 namespace utils::statevector {
 
@@ -21,8 +25,9 @@ public:
     real_t* real;
     real_t* imag;
 
-    StatevectorSep(unsigned nqubits, bool initialize=false)
-            : nqubits(nqubits), N(1 << nqubits) {
+    StatevectorSep(int nqubits, bool initialize=false)
+            : nqubits(static_cast<unsigned>(nqubits)), N(1 << nqubits) {
+        assert(nqubits > 0);
         real = (real_t*) aligned_alloc(64, N * sizeof(real_t));
         imag = (real_t*) aligned_alloc(64, N * sizeof(real_t));
         if (initialize) {
