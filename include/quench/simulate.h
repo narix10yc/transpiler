@@ -25,11 +25,11 @@ static void applyGeneral(std::complex<real_t>* sv,
     const auto& constMatrix = gate.matrix.constantMatrix.data;
     const auto& K = gate.N;
 
-    std::cerr << "applyGeneral (nqubits = " << nqubits << ") on qubits ";
-    for (const auto& q : qubits)
-        std::cerr << q << " ";
-    std::cerr << "\nwith gate\n";
-    gate.printMatrix(std::cerr);
+    // std::cerr << "applyGeneral (nqubits = " << nqubits << ") on qubits ";
+    // for (const auto& q : qubits)
+    //     std::cerr << q << " ";
+    // std::cerr << "\nwith gate\n";
+    // gate.printMatrix(std::cerr);
 
     std::vector<size_t> qubitsPower;
     for (const auto& q : qubits)

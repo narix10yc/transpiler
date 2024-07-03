@@ -166,23 +166,29 @@ GateMatrix GateMatrix::FromName(const std::string& name,
     return GateMatrix();
 }
 
-
 std::ostream& GateMatrix::printMatrix(std::ostream& os) const {     
     assert(matrix.activeType == matrix_t::ActiveMatrixType::C
             && "Only supporting constant matrices now");
             
     const auto& data = matrix.constantMatrix.data;
+    os << "[";
     for (size_t r = 0; r < N; r++) {
         for (size_t c = 0; c < N; c++) {
-            utils::print_complex(os, data[r * N + c], 3) << ", ";
+            utils::print_complex(os, data[r * N + c], 3);
+            if (c != N-1 || r != N-1)
+                os << ",";
+            os << " ";
         }
-        os << "\n";
+        if (r == N-1)
+            os << "]\n";
+        else 
+            os << "\n ";
     }
     return os;   
 }
 
 std::ostream& QuantumGate::displayInfo(std::ostream& os) const {
-    os << "QuantumGate on qubits [";
+    os << CYAN_FG << "QuantumGate" << RESET << " on qubits [";
     for (const auto& q : qubits)
         os << q << ",";
     os << "]\nMatrix:\n";

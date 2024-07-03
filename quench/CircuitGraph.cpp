@@ -185,9 +185,6 @@ GateBlock* CircuitGraph::fuse(tile_iter_t itLHS, size_t q_) {
 void CircuitGraph::addGate(const quantum_gate::GateMatrix& matrix,
                            const std::vector<unsigned>& qubits)
 {
-    std::cerr << "matrix.nqubits = " << matrix.nqubits << "\n";
-    std::cerr << "qubits.size() = " << qubits.size() << "\n";
-    matrix.printMatrix(std::cerr);
     assert(matrix.nqubits == qubits.size());
 
     // update nqubits
@@ -606,4 +603,21 @@ void CircuitGraph::applyInOrder(std::function<void(GateBlock*)> f) const {
             f(block);
         }
     }
+}
+
+using QuantumGate = quench::quantum_gate::QuantumGate;
+
+QuantumGate GateNode::toQuantumGate() const {
+    return QuantumGate(gateMatrix, getQubits());
+}
+
+QuantumGate GateBlock::toQuantumGate() const {
+    const auto gateNodes = getOrderedGates();
+    assert(!gateNodes.empty());
+
+    auto gate = gateNodes[0]->toQuantumGate();
+    for (unsigned i = 1; i < gateNodes.size(); i++)
+        gate = gate.lmatmul(gateNodes[i]->toQuantumGate());
+    
+    return gate;
 }

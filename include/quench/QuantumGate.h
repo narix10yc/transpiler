@@ -28,7 +28,7 @@ struct matrix_t {
     }
 
     matrix_t(matrix_t&& other) : activeType(other.activeType) {
-        std::cerr << "called matrix_t(matrix_t&&)\n";
+        // std::cerr << "called matrix_t(matrix_t&&)\n";
         
         switch (other.activeType) {
         case ActiveMatrixType::P:
@@ -43,7 +43,7 @@ struct matrix_t {
     }
 
     matrix_t(const matrix_t& other) : activeType(other.activeType) {
-        std::cerr << "called matrix_t(const matrix_t&)\n";
+        // std::cerr << "called matrix_t(const matrix_t&)\n";
 
         switch (other.activeType) {
         case ActiveMatrixType::P:
@@ -136,9 +136,7 @@ public:
 
     GateMatrix(const matrix_t::c_matrix_t& cMatrix) {
         matrix = cMatrix;
-        int r = updateNqubits();
-        std::cerr << "r = " << r << "\n";
-        assert(r > 0);
+        updateNqubits();
     }
 
     bool checkConsistency() const {
@@ -217,6 +215,7 @@ public:
 
     void sortQubits();
 
+    /// @brief A.lmatmul(B) will return BA 
     QuantumGate lmatmul(const QuantumGate& other) const;
 
 };

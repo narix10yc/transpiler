@@ -7,6 +7,7 @@
 #include <list>
 #include <functional>
 #include "quench/ast.h"
+#include "quench/QuantumGate.h"
 
 namespace quench::circuit_graph {
 
@@ -62,6 +63,16 @@ public:
     }
 
     int connect(GateNode* rhsGate, int q = -1);
+
+    std::vector<unsigned> getQubits() const {
+        std::vector<unsigned> qubits(nqubits);
+        for (unsigned i = 0; i < nqubits; i++)
+            qubits[i] = dataVector[i].qubit;
+        
+        return qubits;
+    }
+
+    quantum_gate::QuantumGate toQuantumGate() const;
 };
 
 class GateBlock {
@@ -124,6 +135,8 @@ public:
     std::vector<GateNode*> getOrderedGates() const;
 
     void applyInOrder(std::function<void(GateNode*)>) const;
+
+    quantum_gate::QuantumGate toQuantumGate() const;
 };
 
 class CircuitGraph {
