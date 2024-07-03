@@ -344,26 +344,26 @@ IRGenerator::generateKernel(const QuantumGate& gate,
             splits[pairI] = std::move(pair.second);
         }
     }
-    std::cerr << "mergeMasks:\n";
-    for (const auto& vec : mergeMasks)
-        printVector(vec) << "\n";
-    std::cerr << "\n";
+    // std::cerr << "mergeMasks:\n";
+    // for (const auto& vec : mergeMasks)
+        // printVector(vec) << "\n";
+    // std::cerr << "\n";
 
     // merge and store back
     for (unsigned hi = 0; hi < HK; hi++) {
         unsigned mergeBegin = hi << lk;
         auto maskIt = mergeMasks.cbegin();
-        std::cerr << "hi = " << hi << ", "
-                  << "mergeBegin = " << mergeBegin << "\n";
+        // std::cerr << "hi = " << hi << ", "
+                //   << "mergeBegin = " << mergeBegin << "\n";
         for (unsigned round = 0; round < lk; round++) {
-            std::cerr << " round " << round
-                      << ", there are " << (1 << (lk - round - 1)) << " pairs\n";
+            // std::cerr << " round " << round
+                    //   << ", there are " << (1 << (lk - round - 1)) << " pairs\n";
             for (unsigned pairI = 0; pairI < (1 << (lk - round - 1)); pairI++) {
                 unsigned mergeIdx = mergeBegin + 2*pairI;
                 unsigned storeIdx = mergeBegin + pairI;
-                std::cerr << "  pairI = " << pairI << ", "
-                          << "pair = (" << mergeIdx << "," << mergeIdx + 1 << ")"
-                          << " => " << storeIdx << "\n";
+                // std::cerr << "  pairI = " << pairI << ", "
+                        //   << "pair = (" << mergeIdx << "," << mergeIdx + 1 << ")"
+                        //   << " => " << storeIdx << "\n";
                 newReal[storeIdx] = builder.CreateShuffleVector(
                         newReal[mergeIdx], newReal[mergeIdx + 1],
                         *maskIt, "mergeRe");
@@ -373,7 +373,7 @@ IRGenerator::generateKernel(const QuantumGate& gate,
                 maskIt++;
             }
         }
-        std::cerr << "store " << mergeBegin << " to pReal " << hi << "\n";
+        // std::cerr << "store " << mergeBegin << " to pReal " << hi << "\n";
         builder.CreateStore(newReal[mergeBegin], pReal[hi], false);
         builder.CreateStore(newImag[mergeBegin], pImag[hi], false);
     }

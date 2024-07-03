@@ -59,8 +59,6 @@ std::string TimingResult::timeToString(double t, int n_sig_dig) {
     return stream.str();
 }
 
-
-
 void TimingResult::display(int n_sig_dig) const {
     std::cout << replication << " replications (" << repeat << " repeats each): ";
     std::cout << "min " << timeToString(min, n_sig_dig)

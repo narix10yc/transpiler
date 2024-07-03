@@ -1,14 +1,14 @@
 #include "openqasm/parser.h"
-#include "simulation/cpu.h"
-#include "simulation/transpiler.h"
+#include "quench/CircuitGraph.h"
+#include "quench/cpu.h"
 
 #include "llvm/Support/CommandLine.h"
 
 #include <chrono>
 #include <sstream>
 
-using namespace simulation;
-using namespace simulation::transpile;
+using CircuitGraph = quench::circuit_graph::CircuitGraph;
+using CodeGeneratorCPU = quench::cpu::CodeGeneratorCPU;
 using namespace llvm;
 
 int main(int argc, char** argv) {
@@ -25,19 +25,12 @@ int main(int argc, char** argv) {
     VecSizeInBits("S", cl::desc("vector size in bits"), cl::Prefix, cl::init(1));
 
     cl::opt<unsigned>
+    MaxNQubits("max_k", cl::desc("maximum number of qubits of gates"), cl::init(2));
+
+    cl::opt<unsigned>
     NThreads("nthreads", cl::desc("number of threads"), cl::init(1));
 
     cl::ParseCommandLineOptions(argc, argv);
-
-    ir::RealTy realTy = ir::RealTy::Double;
-    if (Precision == "f64" || Precision == "double" || Precision == "64")
-        realTy = ir::RealTy::Double;
-    else if (Precision == "f32" || Precision == "float" || Precision == "32")
-        realTy = ir::RealTy::Float;
-    else {
-        std::cerr << "Unrecognized precision (-p). Use either 'f64' or 'f32'\n";
-        return 1;
-    }
 
     using clock = std::chrono::high_resolution_clock;
     auto tic = clock::now();
@@ -60,33 +53,26 @@ int main(int argc, char** argv) {
     // parse and write ast
     auto qasmRoot = parser.parse();
     std::cerr << "-- qasm AST built\n";
-    auto qchRoot = qasmRoot->toQch();
-    std::cerr << "-- converted to qch AST\n";
-    auto graph = CircuitGraph::FromQch(*qchRoot);
+    auto graph = qasmRoot->toCircuitGraph();
+
     tok = clock::now();
 
-    std::cerr << get_msg_start() << "converted to CircuitGraph with "
-              << graph.allNodes.size() << " nodes\n";
+    std::cerr << get_msg_start() << "converted to CircuitGraph\n";
+    graph.displayInfo(std::cerr);
 
     tic = clock::now();
-    graph.transpileForCPU();
+    graph.greedyGateFusion(MaxNQubits);
     tok = clock::now();
 
-    std::cerr << get_msg_start() << "transpiled for CPU\n";
+    std::cerr << get_msg_start() << "Greedy gate fusion complete\n";
+    graph.displayInfo(std::cerr);
 
     tic = clock::now();
-    auto transpiledRoot = graph.toQch();
+    CodeGeneratorCPU codeGenerator(outputFilename);
+    codeGenerator.generate(graph);
     tok = clock::now();
 
-    std::cerr << get_msg_start() << "converted back to qch AST\n";
-
-    tic = clock::now();
-    CPUGenContext ctx {VecSizeInBits, outputFilename, NThreads};
-    ctx.setRealTy(realTy);
-    ctx.generate(transpiledRoot);
-    tok = clock::now();
-
-    std::cerr << get_msg_start() << "generated files\n";
+    std::cerr << get_msg_start() << "Code generation done\n";
 
     return 0;
 }

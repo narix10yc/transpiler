@@ -1,5 +1,5 @@
-add_executable(qasm_to_qch "openqasm_to_qch.cpp")
-target_link_libraries(qasm_to_qch qch qasm simulation)
+add_executable(qasm_to_quench "openqasm_to_quench.cpp")
+target_link_libraries(qasm_to_quench quench qch qasm simulation)
 
 add_executable(gen_u3 "gen_u3.cpp")
 add_executable(gen_u2q "gen_u2q.cpp")
