@@ -155,9 +155,9 @@ IRGenerator::generateKernel(const QuantumGate& gate,
         std::cerr << "IRMatrix:\n[";
         for (unsigned r = 0; r < K; r++) {
             for (unsigned c = 0; c < K; c++) {
-                int real = matrix[r*K + c].realFlag;
-                int imag = matrix[r*K + c].realFlag;
-                std::cerr << "(" << real << "," << imag << "),";
+                int realFlag = matrix[r*K + c].realFlag;
+                int imagFlag = matrix[r*K + c].imagFlag;
+                std::cerr << "(" << realFlag << "," << imagFlag << "),";
             }
             if (r < K - 1)
                 std::cerr << "\n ";
@@ -220,18 +220,22 @@ IRGenerator::generateKernel(const QuantumGate& gate,
     builder.SetInsertPoint(loopBodyBB);
 
     // find start pointer
+    if (verbose > 2) {
+        std::cerr << "finding masks... sum of ((counter & mask) << i)\n";
+    }
     Value* idxStartV = builder.getInt64(0ULL);
     if (!higherQubits.empty()) {
         // idx = insert 0 to every bit in higherQubits to counter
         uint64_t mask = 0ULL;
         Value* tmpCounterV = counterV;
         for (unsigned i = 0; i < higherQubits.size(); i++) {
-            mask = ((1ULL << (higherQubits[i] - sepBit - i)) - 1) - mask;
+            unsigned bit = higherQubits[i];
+            mask = ((1ULL << (bit - sepBit - i)) - 1) - mask;
             if (verbose > 2) {
-                std::cerr << "i = " << i << ", bit = " << higherQubits[i]
+                std::cerr << "i = " << i << ", bit = " << bit
                         << ", mask = " << std::bitset<12>(mask) << "\n";
             }
-            tmpCounterV = builder.CreateAnd(tmpCounterV, mask, "tmpCounter");
+            tmpCounterV = builder.CreateAnd(counterV, mask, "tmpCounter");
             tmpCounterV = builder.CreateShl(tmpCounterV, i, "tmpCounter");
             idxStartV = builder.CreateAdd(idxStartV, tmpCounterV, "tmpIdx");
         }
@@ -240,7 +244,7 @@ IRGenerator::generateKernel(const QuantumGate& gate,
             std::cerr << "                mask = "
                     << std::bitset<12>(mask) << "\n";
         }
-        tmpCounterV = builder.CreateAnd(tmpCounterV, mask, "tmpCounter");
+        tmpCounterV = builder.CreateAnd(counterV, mask, "tmpCounter");
         tmpCounterV = builder.CreateShl(tmpCounterV, higherQubits.size(), "tmpCounter");
         idxStartV = builder.CreateAdd(idxStartV, tmpCounterV, "idxStart");
     }

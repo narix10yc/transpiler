@@ -8,6 +8,7 @@
 #include <iostream>
 
 #include "utils/iocolor.h"
+#include "utils/utils.h"
 
 namespace utils::statevector {
 
@@ -98,26 +99,14 @@ public:
     }
 
     std::ostream& print(std::ostream& os) const {
-        // const char* red = "\033[31m";
-        const char* cyan = "\033[36m";
-        const char* bold = "\033[1m";
-        const char* reset = "\033[0m";
-        const auto print_number = [&](size_t idx) {
-            if (real[idx] >= 0)
-                os << " ";
-            os << real[idx];
-            if (imag[idx] >= 0)
-                os << "+";
-            os << imag[idx] << "i";
-        };
-
         if (N > 32) {
-            os << bold << cyan << "Warning: " << reset << "statevector has more "
-                "than 5 qubits, only the first 32 entries are shown.\n";
+            os << Color::BOLD << Color::CYAN_FG << "Warning: " << Color::RESET
+               << "statevector has more than 5 qubits, "
+                    "only the first 32 entries are shown.\n";
         }
         for (size_t i = 0; i < ((N > 32) ? 32 : N); i++) {
             os << i << ": ";
-            print_number(i);
+            print_complex(os, {real[i], imag[i]});
             os << "\n";
         }
         return os;
@@ -281,14 +270,6 @@ public:
 
     std::ostream& print(std::ostream& os) const {
         using namespace Color;
-        const auto print_number = [&](size_t idx) {
-            if (data[idx].real() >= 0)
-                os << " ";
-            os << data[idx].real();
-            if (data[idx].imag() >= 0)
-                os << " + ";
-            os << data[idx].imag() << "i";
-        };
 
         if (N > 32) {
             os << BOLD << CYAN_FG << "Warning: " << RESET << "statevector has more "
@@ -296,7 +277,7 @@ public:
         }
         for (size_t i = 0; i < ((N > 32) ? 32 : N); i++) {
             os << std::bitset<5>(i) << ": ";
-            print_number(i);
+            print_complex(os, data[i]);
             os << "\n";
         }
         return os;

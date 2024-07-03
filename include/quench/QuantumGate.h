@@ -147,7 +147,7 @@ public:
     }
 
     static GateMatrix
-    FromName(const std::string& name, const std::vector<double>& params);
+    FromName(const std::string& name, const std::vector<double>& params = {});
 
     bool isConstantMatrix() const {
         return matrix.activeType == matrix_t::ActiveMatrixType::C;
@@ -173,10 +173,17 @@ public:
     GateMatrix matrix;
 
     QuantumGate() : qubits(), matrix() {}
+
+    QuantumGate(const GateMatrix& matrix, unsigned q)
+        : matrix(matrix), qubits({q}) {
+        assert(matrix.nqubits == 1);
+    }
+
     QuantumGate(const GateMatrix& matrix, std::initializer_list<unsigned> qubits)
         : matrix(matrix), qubits(qubits) {
         assert(matrix.nqubits == qubits.size());
     }
+
     QuantumGate(const GateMatrix& matrix, const std::vector<unsigned>& qubits)
         : matrix(matrix), qubits(qubits) {
         assert(matrix.nqubits == qubits.size());
@@ -211,9 +218,6 @@ public:
     void sortQubits();
 
     QuantumGate lmatmul(const QuantumGate& other) const;
-
-    // QuantumGate& lmatmulEqual(const QuantumGate& other);
-
 
 };
 

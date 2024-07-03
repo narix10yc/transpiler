@@ -13,31 +13,19 @@ using namespace quench::quantum_gate;
 int main(int argc, char** argv) {
     simulation::IRGenerator generator;
     generator.setVerbose(999);
-    generator.vecSizeInBits = 4;
+    generator.vecSizeInBits = 1;
 
     auto matrix_u1q = GateMatrix::FromName("u3", {0.1, 0.2, 0.3});
 
-    auto m1 = GateMatrix::FromName("u3", {M_PI / 2, 0.0, M_PI});
-    m1.matrix.constantMatrix = m1.matrix.constantMatrix.leftKronI();
-    m1.nqubits += 1;
-    m1.N *= 2;
-    // m1.printMatrix(std::cerr) << "\n";
+    auto matrix_h = GateMatrix::FromName("h");
 
-    auto m2 = m1.permute({1, 0});
-    // m2.printMatrix(std::cerr);
+    QuantumGate gate = QuantumGate(matrix_h, 1)
+                        .lmatmul({matrix_h, 2})
+                        .lmatmul({matrix_h, 3});
 
-    // QuantumGate gate1(m1, {8,4});
-    // auto gate2 = gate1.lmatmul({m1, {4,6}});
-
-    QuantumGate gate1(m1, {8,4});
-    auto gate2 = gate1.lmatmul({m1, {4,0}});
-
-    // QuantumGate gate1(m1, {5,2});
-    // auto gate2 = gate1.lmatmul({m1, {1,2}});
-
-    QuantumGate gate_u1q(matrix_u1q, {0});
-
-    generator.generateKernel(gate_u1q, "simulation_kernel_1");
+    gate.displayInfo(std::cerr);
+    
+    generator.generateKernel(gate, "simulation_kernel_1");
     // generator.generateKernel(gate2, "funcName");
     if (argc > 1) {
         std::error_code ec;

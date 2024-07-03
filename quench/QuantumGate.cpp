@@ -1,5 +1,6 @@
 #include "quench/QuantumGate.h"
 #include "utils/iocolor.h"
+#include "utils/utils.h"
 #include <iomanip>
 
 using namespace Color;
@@ -115,7 +116,6 @@ int GateMatrix::updateNqubits() {
     return nqubits;
 }
 
-
 GateMatrix GateMatrix::FromName(const std::string& name,
                                 const std::vector<double>& params)
 {
@@ -134,6 +134,14 @@ GateMatrix GateMatrix::FromName(const std::string& name,
             {std::cos(phi + lambd) * ctheta, std::sin(phi + lambd) * ctheta}
         }};
     }
+
+    if (name == "h") {
+        return {{
+            { M_SQRT1_2, 0}, { M_SQRT1_2, 0},
+            { M_SQRT1_2, 0}, {-M_SQRT1_2, 0} 
+        }};
+    }
+
     if (name == "cx") {
         return {{
             {1,0}, {0,0}, {0,0}, {0,0},
@@ -154,29 +162,10 @@ GateMatrix GateMatrix::FromName(const std::string& name,
 
     std::cerr << RED_FG << BOLD << "Error: Unrecognized gate '" << name << "'"
               << RESET << "\n";
+    assert(false);
     return GateMatrix();
 }
 
-namespace {
-    std::ostream&
-    print_complex(std::ostream& os, std::complex<double> c, int precision=3) {
-        const double thres = 0.5 * std::pow(0.1, precision);
-        if (c.real() >= -thres)
-            os << " ";
-        if (std::fabs(c.real()) < thres)
-            os << "0." << std::string(precision, ' ');
-        else
-            os << std::fixed << std::setprecision(precision) << c.real();
-        
-        if (c.imag() >= -thres)
-            os << "+";
-        if (std::fabs(c.imag()) < thres)
-            os << "0." << std::string(precision, ' ');
-        else
-            os << std::fixed << std::setprecision(precision) << c.imag();
-        return os << "i";
-    }
-}
 
 std::ostream& GateMatrix::printMatrix(std::ostream& os) const {     
     assert(matrix.activeType == matrix_t::ActiveMatrixType::C
@@ -185,7 +174,7 @@ std::ostream& GateMatrix::printMatrix(std::ostream& os) const {
     const auto& data = matrix.constantMatrix.data;
     for (size_t r = 0; r < N; r++) {
         for (size_t c = 0; c < N; c++) {
-            print_complex(os, data[r * N + c], 3) << ", ";
+            utils::print_complex(os, data[r * N + c], 3) << ", ";
         }
         os << "\n";
     }
@@ -196,8 +185,7 @@ std::ostream& QuantumGate::displayInfo(std::ostream& os) const {
     os << "QuantumGate on qubits [";
     for (const auto& q : qubits)
         os << q << ",";
-    os << "]\n"
-       << "Matrix:\n";
+    os << "]\nMatrix:\n";
     matrix.printMatrix(os);
     return os;
 }
