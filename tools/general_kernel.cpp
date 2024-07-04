@@ -3,10 +3,6 @@
 #include "llvm/Support/CommandLine.h"
 #include <sstream>
 
-#ifndef M_PI
-    #define M_PI (3.14159265358979323846264338327950288)
-#endif
-
 using namespace Color;
 using namespace quench::quantum_gate;
 

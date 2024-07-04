@@ -8,7 +8,6 @@ using namespace quench::cpu;
 using IRGenerator = simulation::IRGenerator;
 using CircuitGraph = quench::circuit_graph::CircuitGraph;
 
-
 void CodeGeneratorCPU::generate(const CircuitGraph& graph) {
     IRGenerator irGenerator(config.s);
     irGenerator.setVerbose(0);
@@ -22,16 +21,12 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph) {
     matrixSS << "const static double _mPtr[] = {\n";
     kernelSS << "void simulation_kernel(double* re, double* im) {\n";
 
-    kernelSS << "using clock = std::chrono::high_resolution_clock;\n";
-    kernelSS << "auto tic = clock::now();\n"
-                "auto tok = clock::now();\n";
-
-    kernelSS << "auto elapsedTime = [&]() {\n"
-                " return static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(tok - tic).count());\n"
-                "};\n";
+    if (config.installTimer)
+        kernelSS << "using clock = std::chrono::high_resolution_clock;\n"
+                    "auto tic = clock::now();\n"
+                    "auto tok = clock::now();\n";
 
     unsigned matrixPosition = 0;
-
     for (const auto& block : allBlocks) {
         const auto gate = block->toQuantumGate();
         std::string kernelName = "kernel_block_" + std::to_string(block->id);
@@ -46,21 +41,14 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph) {
         }
         matrixSS << "\n";
 
-        kernelSS << " tic = clock::now();\n";
-
         kernelSS << " " << kernelName << "(re, im, 0, "
                  << (1 << (graph.nqubits - gate.qubits.size() - config.s)) << ", "
                  << "_mPtr + " << matrixPosition << ");\n";
         
-        kernelSS << " tok = clock::now();\n";
-        kernelSS << " std::cerr << \"time taken for block " << block->id << ": \""
-                 << " << elapsedTime() << \" ms\\n\";";  
+        if (config.installTimer)
+            kernelSS << " PRINT_BLOCK_TIME(" << block->id << ")\n";
 
         matrixPosition += gate.matrix.matrix.getSize() * gate.matrix.matrix.getSize() * 2;
-
-        if (block->id == 1270) {
-            gate.displayInfo(std::cerr) << "\n";
-        }
     }
     
     externSS << "};\n";
@@ -69,9 +57,17 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph) {
 
     std::ofstream hFile(config.fileName + ".h");
     assert(hFile.is_open());
+
+    if (config.installTimer)
+        hFile << "#include <chrono>\n"
+                 "#include <iostream>\n"
+                 "#define PRINT_BLOCK_TIME(BLOCK)\\\n"
+                 "  tok = clock::now();\\\n"
+                 "  std::cerr << \" Block \" << BLOCK << \" takes \" << "
+                 "std::chrono::duration_cast<std::chrono::milliseconds>(tok - tic).count() << \" ms;\\n\";\\\n"
+                 "  tic = clock::now();\n\n";
+
     hFile << "#include <cstdint>\n"
-          << "#include <chrono>\n"
-          << "#include <iostream>\n\n"
           << externSS.str() << "\n"
           << matrixSS.str() << "\n"
           << kernelSS.str() << "\n";

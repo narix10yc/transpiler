@@ -186,25 +186,8 @@ public:
     size_t countGates() const {
         const auto allBlocks = getAllBlocks();
         size_t sum = 0;
-        for (const auto& block : allBlocks) {
-            if (block->id == 1384) {
-                std::cerr << "Block 1384: ";
-                for (const auto& data : block->dataVector) {
-                    std::cerr << "(" << data.qubit << ":"
-                              << data.lhsEntry->id << ","
-                              << data.rhsEntry->id << ")";
-                }
-                std::cerr << "\n";
-            }
-
-            // std::cerr << "block " << block->id << ": [";
-            // const auto gates = block->getOrderedGates();
-            // for (const auto& gate : gates)
-            //     std::cerr << gate->id  << ",";
-            // std::cerr << "].size() = " << gates.size() << "\n";
-
+        for (const auto& block : allBlocks)
             sum += block->countGates();
-        }
         return sum;
     }
 

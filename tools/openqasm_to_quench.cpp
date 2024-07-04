@@ -24,6 +24,9 @@ int main(int argc, char** argv) {
     cl::opt<unsigned>
     VecSizeInBits("S", cl::desc("vector size in bits"), cl::Prefix, cl::init(1));
 
+    cl::opt<bool>
+    InstallTimer("timer", cl::desc("install timer"), cl::init(false));
+
     cl::opt<unsigned>
     MaxNQubits("max_k", cl::desc("maximum number of qubits of gates"), cl::init(2));
 
@@ -35,12 +38,11 @@ int main(int argc, char** argv) {
     using clock = std::chrono::high_resolution_clock;
     auto tic = clock::now();
     auto tok = clock::now();
-    auto get_msg_start = [&]() -> std::string {
+    auto msg_start = [&]() -> std::string {
         std::stringstream ss;
-        ss << std::setprecision(2) << "-- ("
-           << static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(tok - tic).count())
-           << " ms) ";
-
+        ss << "-- ("
+           << std::chrono::duration_cast<std::chrono::milliseconds>(tok - tic).count()
+           << " ms)";
         return ss.str();
     };
 
@@ -57,22 +59,23 @@ int main(int argc, char** argv) {
 
     tok = clock::now();
 
-    std::cerr << get_msg_start() << "converted to CircuitGraph\n";
+    std::cerr << msg_start() << "converted to CircuitGraph\n";
     graph.displayInfo(std::cerr, 2);
 
     tic = clock::now();
     graph.greedyGateFusion(MaxNQubits);
     tok = clock::now();
 
-    std::cerr << get_msg_start() << "Greedy gate fusion complete\n";
+    std::cerr << msg_start() << "Greedy gate fusion complete\n";
     graph.displayInfo(std::cerr, 2);
 
     tic = clock::now();
     CodeGeneratorCPU codeGenerator(outputFilename);
+    codeGenerator.config_installTimer(InstallTimer);
     codeGenerator.generate(graph);
     tok = clock::now();
 
-    std::cerr << get_msg_start() << "Code generation done\n";
+    std::cerr << msg_start() << "Code generation done\n";
 
     return 0;
 }
