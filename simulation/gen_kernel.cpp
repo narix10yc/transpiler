@@ -227,10 +227,12 @@ IRGenerator::generateKernel(const QuantumGate& gate,
     if (!higherQubits.empty()) {
         // idx = insert 0 to every bit in higherQubits to counter
         uint64_t mask = 0ULL;
+        uint64_t maskSum = 0ULL;
         Value* tmpCounterV = counterV;
         for (unsigned i = 0; i < higherQubits.size(); i++) {
             unsigned bit = higherQubits[i];
-            mask = ((1ULL << (bit - sepBit - i)) - 1) - mask;
+            mask = ((1ULL << (bit - sepBit - i)) - 1) - maskSum;
+            maskSum = (1ULL << (bit - sepBit - i)) - 1;
             if (verbose > 2) {
                 std::cerr << "i = " << i << ", bit = " << bit
                         << ", mask = " << std::bitset<12>(mask) << "\n";

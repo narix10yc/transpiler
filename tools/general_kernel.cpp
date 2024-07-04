@@ -20,9 +20,9 @@ int main(int argc, char** argv) {
     // auto matrix_h = GateMatrix::FromName("u3", {0.1, 0.2, 0.3});
     auto matrix_h = GateMatrix::FromName("h");
 
-    QuantumGate gate = QuantumGate(matrix_h, 1);
-                        // .lmatmul({matrix_h, 2});
-                        // .lmatmul({matrix_h, 3});
+    QuantumGate gate = QuantumGate(matrix_h, 5)
+                        .lmatmul({matrix_h, 11})
+                        .lmatmul({matrix_h, 27});
 
     gate.displayInfo(std::cerr);
     

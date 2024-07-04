@@ -98,7 +98,11 @@ public:
 
     std::ostream& displayInfo(std::ostream& os) const;
 
-    size_t countGates() const;
+    std::vector<GateNode*> getOrderedGates() const;
+
+    size_t countGates() const {
+        return getOrderedGates().size();
+    }
 
     int connect(GateBlock* rhsBlock, int q = -1);
 
@@ -132,10 +136,6 @@ public:
         return true;
     }
  
-    std::vector<GateNode*> getOrderedGates() const;
-
-    void applyInOrder(std::function<void(GateNode*)>) const;
-
     quantum_gate::QuantumGate toQuantumGate() const;
 };
 
@@ -179,8 +179,34 @@ public:
     /// @return ordered vector of blocks
     std::vector<GateBlock*> getAllBlocks() const;
 
-    size_t countGates() const;
-    size_t countBlocks() const;
+    size_t countBlocks() const {
+        return getAllBlocks().size();
+    }
+
+    size_t countGates() const {
+        const auto allBlocks = getAllBlocks();
+        size_t sum = 0;
+        for (const auto& block : allBlocks) {
+            if (block->id == 1384) {
+                std::cerr << "Block 1384: ";
+                for (const auto& data : block->dataVector) {
+                    std::cerr << "(" << data.qubit << ":"
+                              << data.lhsEntry->id << ","
+                              << data.rhsEntry->id << ")";
+                }
+                std::cerr << "\n";
+            }
+
+            // std::cerr << "block " << block->id << ": [";
+            // const auto gates = block->getOrderedGates();
+            // for (const auto& gate : gates)
+            //     std::cerr << gate->id  << ",";
+            // std::cerr << "].size() = " << gates.size() << "\n";
+
+            sum += block->countGates();
+        }
+        return sum;
+    }
 
     std::ostream& print(std::ostream& os, int verbose = 1) const;
     std::ostream& displayInfo(std::ostream& os, int verbose = 1) const;
@@ -192,8 +218,6 @@ public:
     void fuseToTwoQubitGates();
 
     void greedyGateFusion(int maxNQubits);
-
-    void applyInOrder(std::function<void(GateBlock*)>) const;
 
 };
 

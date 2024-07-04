@@ -57,6 +57,10 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph) {
                  << " << elapsedTime() << \" ms\\n\";";  
 
         matrixPosition += gate.matrix.matrix.getSize() * gate.matrix.matrix.getSize() * 2;
+
+        if (block->id == 1270) {
+            gate.displayInfo(std::cerr) << "\n";
+        }
     }
     
     externSS << "};\n";
