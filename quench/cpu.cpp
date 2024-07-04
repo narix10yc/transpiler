@@ -8,6 +8,7 @@ using namespace quench::cpu;
 using IRGenerator = simulation::IRGenerator;
 using CircuitGraph = quench::circuit_graph::CircuitGraph;
 
+
 void CodeGeneratorCPU::generate(const CircuitGraph& graph) {
     IRGenerator irGenerator(config.s);
     irGenerator.setVerbose(0);
@@ -20,6 +21,14 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph) {
     externSS << "extern \"C\" {\n";
     matrixSS << "const static double _mPtr[] = {\n";
     kernelSS << "void simulation_kernel(double* re, double* im) {\n";
+
+    kernelSS << "using clock = std::chrono::high_resolution_clock;\n";
+    kernelSS << "auto tic = clock::now();\n"
+                "auto tok = clock::now();\n";
+
+    kernelSS << "auto elapsedTime = [&]() {\n"
+                " return static_cast<double>(std::chrono::duration_cast<std::chrono::milliseconds>(tok - tic).count());\n"
+                "};\n";
 
     unsigned matrixPosition = 0;
 
@@ -37,19 +46,28 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph) {
         }
         matrixSS << "\n";
 
+        kernelSS << " tic = clock::now();\n";
+
         kernelSS << " " << kernelName << "(re, im, 0, "
                  << (1 << (graph.nqubits - gate.qubits.size() - config.s)) << ", "
                  << "_mPtr + " << matrixPosition << ");\n";
+        
+        kernelSS << " tok = clock::now();\n";
+        kernelSS << " std::cerr << \"time taken for block " << block->id << ": \""
+                 << " << elapsedTime() << \" ms\\n\";";  
+
         matrixPosition += gate.matrix.matrix.getSize() * gate.matrix.matrix.getSize() * 2;
     }
-
+    
     externSS << "};\n";
     matrixSS << "};\n";
     kernelSS << "};\n";
 
     std::ofstream hFile(config.fileName + ".h");
     assert(hFile.is_open());
-    hFile << "#include <cstdint>\n\n"
+    hFile << "#include <cstdint>\n"
+          << "#include <chrono>\n"
+          << "#include <iostream>\n\n"
           << externSS.str() << "\n"
           << matrixSS.str() << "\n"
           << kernelSS.str() << "\n";

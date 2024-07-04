@@ -58,14 +58,14 @@ int main(int argc, char** argv) {
     tok = clock::now();
 
     std::cerr << get_msg_start() << "converted to CircuitGraph\n";
-    graph.displayInfo(std::cerr);
+    graph.displayInfo(std::cerr, 2);
 
     tic = clock::now();
     graph.greedyGateFusion(MaxNQubits);
     tok = clock::now();
 
     std::cerr << get_msg_start() << "Greedy gate fusion complete\n";
-    graph.displayInfo(std::cerr);
+    graph.displayInfo(std::cerr, 2);
 
     tic = clock::now();
     CodeGeneratorCPU codeGenerator(outputFilename);
