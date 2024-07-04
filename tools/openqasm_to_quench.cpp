@@ -72,6 +72,7 @@ int main(int argc, char** argv) {
     tic = clock::now();
     CodeGeneratorCPU codeGenerator(outputFilename);
     codeGenerator.config_installTimer(InstallTimer);
+    codeGenerator.config_nthreads(NThreads);
     codeGenerator.generate(graph);
     tok = clock::now();
 

@@ -19,7 +19,16 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph) {
 
     externSS << "extern \"C\" {\n";
     matrixSS << "const static double _mPtr[] = {\n";
-    kernelSS << "void simulation_kernel(double* re, double* im) {\n";
+
+    if (config.nthreads > 1)
+        kernelSS << "void simulation_kernel(double* re, double* im, "
+                    "const int nthreads = " << config.nthreads << ") {\n";
+    else
+        kernelSS << "void simulation_kernel(double* re, double* im) {\n";
+
+    if (config.nthreads > 1)
+        kernelSS << " std::array<std::thread, " << config.nthreads << "> threads;\n"
+                 << " size_t chunkSize;\n";
 
     if (config.installTimer)
         kernelSS << "using clock = std::chrono::high_resolution_clock;\n"
@@ -41,9 +50,23 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph) {
         }
         matrixSS << "\n";
 
-        kernelSS << " " << kernelName << "(re, im, 0, "
-                 << (1 << (graph.nqubits - gate.qubits.size() - config.s)) << ", "
-                 << "_mPtr + " << matrixPosition << ");\n";
+        size_t idxMax = (1 << (graph.nqubits - gate.qubits.size() - config.s));
+        if (config.nthreads > 1) {
+            size_t chunkSize = idxMax / config.nthreads;
+            assert(chunkSize * config.nthreads == idxMax
+                   && "Uneven split not implemented yet...");
+                   
+            kernelSS << " chunkSize = " << idxMax << "ULL / nthreads;\n"
+                     << " for (unsigned i = 0; i < nthreads; i++)\n"
+                     << "  threads[i] = std::thread(" << kernelName << ", re, im, "
+                     << "i*chunkSize, (i+1)*chunkSize, "
+                     << "_mPtr + " << matrixPosition << ");\n"
+                     << " for (unsigned i = 0; i < nthreads; i++)\n"
+                     << "  threads[i].join();\n";
+        }
+        else 
+            kernelSS << " " << kernelName << "(re, im, 0, "
+                     << idxMax << "ULL, " << "_mPtr + " << matrixPosition << ");\n";
         
         if (config.installTimer)
             kernelSS << " PRINT_BLOCK_TIME(" << block->id << ")\n";
@@ -66,6 +89,10 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph) {
                  "  std::cerr << \" Block \" << BLOCK << \" takes \" << "
                  "std::chrono::duration_cast<std::chrono::milliseconds>(tok - tic).count() << \" ms;\\n\";\\\n"
                  "  tic = clock::now();\n\n";
+
+    if (config.nthreads > 1)
+        hFile << "#include <array>\n"
+                 "#include <thread>\n";
 
     hFile << "#include <cstdint>\n"
           << externSS.str() << "\n"
