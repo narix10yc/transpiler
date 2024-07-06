@@ -6,7 +6,6 @@
 #include <vector>
 #include <fstream>
 #include "token.h"
-#include "qch/ast.h"
 #include "quench/CircuitGraph.h"
 
 namespace simulation {
@@ -57,9 +56,6 @@ class Statement : public Node {
 public:
     std::string toString() const override { return "statement"; }
     void prettyPrint(std::ostream& f, int depth) const override {}
-
-    virtual std::unique_ptr<qch::ast::Statement>
-    toQchStmt() const { return nullptr; }
 };
 
 
@@ -276,25 +272,6 @@ public:
     }
 
     void prettyPrint(std::ostream& f, int depth) const override;
-
-    std::unique_ptr<qch::ast::Statement> toQchStmt() const override {
-        auto qchStmt = std::make_unique<qch::ast::GateApplyStmt>(name);
-    
-        // parameters
-        for (auto& p : parameters) {
-            auto exprValue = p->getExprValue();
-            if (!(exprValue.isConstant))
-                std::cerr << "expect constant expression value?\n";
-            else
-                qchStmt->addParameter(exprValue.value);
-        }
-        // targets
-        for (auto& t : targets) {
-            qchStmt->addTargetQubit(t->getIndex());
-        }
-
-        return qchStmt;
-    }
 };
 
 
@@ -312,22 +289,6 @@ public:
     
     size_t countStmts() { return stmts.size(); }
     Statement getStmt(size_t index) { return *(stmts[index]); }
-
-    std::unique_ptr<qch::ast::RootNode> toQch() const {
-        auto qchCircuit = std::make_unique<qch::ast::CircuitStmt>("mycircuit");
-        for (auto& s : stmts) {
-            auto qchStmt = s->toQchStmt();
-            if (qchStmt == nullptr) {
-                std::cerr << "cannot convert " << s->toString() << " to qch Stmt\n";
-                continue;
-            }
-            // std::cerr << "converted " << s->toString() << " to qch Stmt\n";
-            qchCircuit->addStmt(std::move(qchStmt));
-        }
-        auto qchRoot = std::make_unique<qch::ast::RootNode>();
-        qchRoot->addStmt(std::move(qchCircuit));
-        return qchRoot;
-    }
 
     CircuitGraph toCircuitGraph() const {
         CircuitGraph graph;

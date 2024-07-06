@@ -6,10 +6,10 @@
 #include <chrono>
 #include <thread>
 
-using real_t = double;
+using real_t = float;
 size_t k = 5;
-size_t s = 4;
-#define SEP_KERNEL f64_s4_sep_u3_k5_33330333
+size_t s = 5;
+#define SEP_KERNEL f32_s5_sep_u3_k5_33330333
 // #define ALT_KERNEL f64_s1_alt_u3_k2_33330333
 
 extern "C" {

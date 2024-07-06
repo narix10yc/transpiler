@@ -2,6 +2,8 @@
 #include "utils/iocolor.h"
 #include "utils/utils.h"
 
+#include <bitset>
+
 using namespace llvm;
 using namespace Color;
 using namespace simulation;

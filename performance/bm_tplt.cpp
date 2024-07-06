@@ -25,7 +25,7 @@ using namespace simulation;
 using namespace simulation::tplt;
 
 
-using real_t = double;
+using real_ty = double;
 #define K_VALUE 5
 
 unsigned k = K_VALUE;

@@ -17,6 +17,9 @@ clang++ -Ofast ../performance/bm_irgen.cpp ../performance/gen_file.ll \
 g++ -Ofast ../performance/bm_tplt.cpp ../timeit/timeit.cpp \
 -o tplt_perftest -I../include -march=native
 
+clang++ -O3 ../performance/bm_irgen_circuit.cpp ../performance/gen_file.ll \
+--gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/11 -std=c++17 -march=native \
+-I../include -Ltimeit -ltimeit -o circuit
 
 # u2q gate 
 $llvm_root/bin/clang++ -Ofast ../performance/bm_irgen_u2q.cpp ../performance/gen_file.ll \

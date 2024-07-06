@@ -7,13 +7,13 @@
 using namespace timeit;
 
 using real_t = double;
-const unsigned nqubits = 24;
+const unsigned nqubits = 28;
 
 using Statevector = simulation::sv::StatevectorSep<real_t>;
 
 int main() {
     Timer timer;
-    timer.setReplication(7);
+    timer.setReplication(1);
     TimingResult tr;
 
     Statevector sv(nqubits);
