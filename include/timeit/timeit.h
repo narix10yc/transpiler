@@ -5,32 +5,34 @@
 #include <string>
 #include <iostream>
 #include <functional>
+#include <cassert>
 
 namespace timeit {
 
 class TimingResult {
-unsigned repeat, replication;
+int repeat, replication;
 public:
     std::vector<double> tarr;
     double min, med, q1, q3;
     int n_sig_dig = 4;
     TimingResult() {}
-    TimingResult(unsigned repeat, unsigned replication,
+    TimingResult(int repeat, int replication,
                  const std::vector<double>& tarr) 
-        : repeat(repeat), replication(replication), tarr(tarr) { calcStats(); }
+        : repeat(repeat), replication(replication), tarr(tarr)
+    {
+        assert(repeat >= 1);
+        assert(replication >= 1);
+        calcStats();
+    }
 
     static std::string timeToString(double, int);
 
-    void display(int=4) const;
+    std::ostream& display(int nsig = 4, std::ostream& os = std::cerr) const;
 
     std::string raw_string() const;
 
     void setNumSignificantDigits(int n) { 
-        if (n < 1) {
-            std::cerr << "Timer: number of significant digits cannot be < 1. Set to 1\n";
-            n_sig_dig = 1;
-            return;
-        }
+        assert(n >= 1);
         n_sig_dig = n;
     }
 private:
@@ -44,12 +46,10 @@ double runTime = 0.1;
 unsigned replication;
 unsigned verbose;
 public:
-    Timer(unsigned replication=15, unsigned verbose=0) 
-            : replication(replication), verbose(verbose) {
-        if (replication > 99) {
-            std::cerr << "Timer: replication cannot be lager than 99. Set to 99\n";
-            replication = 99;
-        }
+    Timer(int replication=15, int verbose=0) 
+            : replication(replication), verbose(verbose)
+    {
+        assert(replication >= 1);
     }
 
     void setWarmupTime(double t) { warmupTime = t; }

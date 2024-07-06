@@ -59,11 +59,12 @@ std::string TimingResult::timeToString(double t, int n_sig_dig) {
     return stream.str();
 }
 
-void TimingResult::display(int n_sig_dig) const {
-    std::cout << replication << " replications (" << repeat << " repeats each): ";
-    std::cout << "min " << timeToString(min, n_sig_dig)
-              << "; median " << timeToString(med, n_sig_dig);
-    std::cout << std::endl;
+std::ostream&
+TimingResult::display(int n_sig_dig, std::ostream& os) const {
+    os << replication << " replications (" << repeat << " repeats each): "
+       << "min " << timeToString(min, n_sig_dig)
+       << "; median " << timeToString(med, n_sig_dig) << "\n";
+    return os;
 }
 
 std::string TimingResult::raw_string() const {
