@@ -6,6 +6,7 @@
 #include <complex>
 #include <random>
 #include <iostream>
+#include <bitset>
 
 #include "utils/iocolor.h"
 #include "utils/utils.h"

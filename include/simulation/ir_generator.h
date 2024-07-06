@@ -13,7 +13,6 @@
 #include <vector>
 #include <array>
 
-#include "simulation/types.h"
 #include "quench/QuantumGate.h"
 
 namespace simulation {
@@ -36,26 +35,15 @@ class IRGenerator {
     std::unique_ptr<llvm::Module> mod;
 
 public:
+    enum class RealTy {
+        Float, Double
+    };
+
+public:
     unsigned vecSizeInBits;
     bool useFMA;
-    ir::RealTy realTy;
-    ir::AmpFormat ampFormat;
     int verbose;
-private:
-    llvm::Value* 
-    genVectorWithSameElem(llvm::Type* elemTy, unsigned length, 
-                          llvm::Value* elem, const llvm::Twine &name = "") {
-        llvm::Type* vecTy = llvm::VectorType::get(elemTy, length, false);
-        llvm::Value* vec = llvm::UndefValue::get(vecTy);
-        for (size_t i = 0; i < length - 1; ++i) {
-            vec = builder.CreateInsertElement(vec, elem, i, name + "_insert_" + std::to_string(i));
-        }
-        vec = builder.CreateInsertElement(vec, elem, length - 1, name + "_vec");  
-        return vec;  
-    }
-
-    llvm::Function* genU3_Sep(const ir::U3Gate& u3, const std::string& funcName="");
-    llvm::Function* genU3_Alt(const ir::U3Gate& u3, const std::string& funcName="");
+    RealTy realTy;
 
 public:
     IRGenerator(unsigned vecSizeInBits=2) : 
@@ -63,15 +51,13 @@ public:
         mod(std::make_unique<llvm::Module>("myModule", llvmContext)),
         vecSizeInBits(vecSizeInBits),
         useFMA(true),
-        realTy(ir::RealTy::Double),
-        ampFormat(ir::AmpFormat::Separate),
+        realTy(RealTy::Double),
         verbose(0) {}
 
     const llvm::Module& getModule() const { return *mod; }
 
     void setUseFMA(bool b) { useFMA = b; }
-    void setRealTy(ir::RealTy ty) { realTy = ty; }
-    void setAmpFormat(ir::AmpFormat format) { ampFormat = format; }
+    void setRealTy(RealTy ty) { realTy = ty; }
     void setVerbose(int v) { verbose = v; }
 
     void loadFromFile(const std::string& fileName);
@@ -103,16 +89,6 @@ public:
             int bbFlag,
             const llvm::Twine& bbccName="",
             const llvm::Twine& aaName="");
-
-    llvm::Function* genU3(const ir::U3Gate& u3, const std::string& funcName="") {
-        if (ampFormat == ir::AmpFormat::Separate)
-            return genU3_Sep(u3, funcName);
-        else
-            return genU3_Alt(u3, funcName);
-    }
-
-    llvm::Function* genU2qBatched(const ir::U2qGate& u2q, const std::string& funcName="");
-    llvm::Function* genU2q(const ir::U2qGate& u2q, const std::string& funcName="");
 
     llvm::Function*
     generateKernel(const quench::quantum_gate::QuantumGate& gate,

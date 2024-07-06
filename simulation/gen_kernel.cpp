@@ -86,8 +86,8 @@ IRGenerator::generateKernel(const QuantumGate& gate,
         printVector(gate.qubits) << "\n";
     }
 
-    Type* scalarTy = (realTy == ir::RealTy::Float) ? builder.getFloatTy()
-                                                   : builder.getDoubleTy();
+    Type* scalarTy = (realTy == RealTy::Float) ? builder.getFloatTy()
+                                               : builder.getDoubleTy();
     Type* retTy = builder.getVoidTy();
     SmallVector<Type*> argTy;
     argTy.push_back(builder.getPtrTy()); // ptr to real amp
