@@ -151,15 +151,35 @@ struct FusionConfig {
     double zeroSkippingThreshold;
 public:
     static FusionConfig Disable() {
-        return { .maxNQubits = 0,
-                 .maxOpCount = 0, 
-                 .zeroSkippingThreshold = 0.0 };
+        return {
+            .maxNQubits = 0,
+            .maxOpCount = 0, 
+            .zeroSkippingThreshold = 0.0
+        };
     }
 
     static FusionConfig Default() {
-        return { .maxNQubits = 4,
-                 .maxOpCount = 128, // 3-qubit dense gate 
-                 .zeroSkippingThreshold = 1e-8 };
+        return {
+            .maxNQubits = 4,
+            .maxOpCount = 128, // 3-qubit dense
+            .zeroSkippingThreshold = 1e-8
+        };
+    }
+
+    static FusionConfig TwoQubitOnly() {
+        return {
+            .maxNQubits = 2,
+            .maxOpCount = 32, // 2-qubit dense
+            .zeroSkippingThreshold = 1e-8
+        };
+    }
+
+    static FusionConfig Aggressive() {
+        return {
+            .maxNQubits = 5,
+            .maxOpCount = 1024, // 4-qubit dense takes 512 op
+            .zeroSkippingThreshold = 1e-8
+        };
     }
 };
 

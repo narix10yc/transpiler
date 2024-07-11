@@ -461,7 +461,7 @@ void CircuitGraph::greedyGateFusion() {
 
     bool hasChange = true;
     tile_iter_t it;
-    print(std::cerr, 2) << "\n\n";
+    // print(std::cerr, 2) << "\n\n";
 
     it = tile.begin();
     while (std::next(it) != tile.end()) {
