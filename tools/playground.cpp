@@ -19,7 +19,14 @@ int main(int argc, char** argv) {
     auto qasmRoot = parser.parse();
     std::cerr << "qasm AST built\n";
     auto graph = qasmRoot->toCircuitGraph();
-    graph.updateFusionConfig({4});
+
+    graph.updateFusionConfig(FusionConfig::Default());
+    // graph.updateFusionConfig({
+        // .maxNQubits = 2,
+        // .maxOpCount = 128,
+        // .zeroSkippingThreshold = 1e-8,
+    // });
+
     std::cerr << "CircuitGraph built\n";
 
     // StatevectorComp<double> sv1(graph.nqubits);

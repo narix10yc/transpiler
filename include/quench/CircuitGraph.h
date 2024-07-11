@@ -11,6 +11,8 @@
 
 namespace quench::circuit_graph {
 
+using QuantumGate = quench::quantum_gate::QuantumGate;
+
 class GateNode {
 public:
     struct gate_data {
@@ -72,7 +74,9 @@ public:
         return qubits;
     }
 
-    quantum_gate::QuantumGate toQuantumGate() const;
+    quantum_gate::QuantumGate toQuantumGate() const {
+        return QuantumGate(gateMatrix, getQubits());
+    }
 };
 
 class GateBlock {
@@ -86,14 +90,18 @@ public:
     const int id;
     unsigned nqubits;
     std::vector<block_data> dataVector;
+    std::unique_ptr<QuantumGate> quantumGate;
 
-    GateBlock(int id) : id(id), nqubits(0), dataVector() {}
+    GateBlock(int id, std::unique_ptr<QuantumGate> quantumGate = nullptr)
+        : id(id), nqubits(0), dataVector(),
+          quantumGate(std::move(quantumGate)) {}
 
-    GateBlock(int id, GateNode* gate)
-        : id(id), nqubits(gate->nqubits), dataVector()
+    GateBlock(int id, GateNode* gateNode)
+        : id(id), nqubits(gateNode->nqubits), dataVector(),
+          quantumGate(std::make_unique<QuantumGate>(gateNode->toQuantumGate()))
     {
-        for (const auto& data : gate->dataVector)
-            dataVector.push_back({data.qubit, gate, gate});
+        for (const auto& data : gateNode->dataVector)
+            dataVector.push_back({data.qubit, gateNode, gateNode});
     }
 
     std::ostream& displayInfo(std::ostream& os) const;
@@ -135,21 +143,23 @@ public:
         }
         return true;
     }
- 
-    quantum_gate::QuantumGate toQuantumGate() const;
 };
 
-class FusionConfig {
-public:
+struct FusionConfig {
     int maxNQubits;
     int maxOpCount;
-
+    double zeroSkippingThreshold;
 public:
-    FusionConfig(int maxNQubits, int maxOpCount = INT32_MAX)
-        : maxNQubits(maxNQubits), maxOpCount(maxOpCount) {}
-    
     static FusionConfig Disable() {
-        return { 0, 0 };
+        return { .maxNQubits = 0,
+                 .maxOpCount = 0, 
+                 .zeroSkippingThreshold = 0.0 };
+    }
+
+    static FusionConfig Default() {
+        return { .maxNQubits = 4,
+                 .maxOpCount = 128, // 3-qubit dense gate 
+                 .zeroSkippingThreshold = 1e-8 };
     }
 };
 
@@ -167,22 +177,20 @@ private:
     /// @brief Erase empty rows in the tile
     void eraseEmptyRows();
 
-    void repositionBlockUpward(tile_iter_t it, size_t q_);
+    tile_iter_t repositionBlockUpward(tile_iter_t it, size_t q_);
+    tile_iter_t repositionBlockUpward(tile_riter_t it, size_t q_) {
+        return repositionBlockUpward(--(it.base()), q_);
+    }
 
-    void repositionBlockDownward(tile_riter_t it, size_t q_);
-    void repositionBlockDownward(tile_iter_t it, size_t q_) {
+    tile_riter_t repositionBlockDownward(tile_riter_t it, size_t q_);
+    tile_riter_t repositionBlockDownward(tile_iter_t it, size_t q_) {
         return repositionBlockDownward(--std::make_reverse_iterator(it), q_);
     }
 
     void updateTileUpward();
     void updateTileDownward();
 
-    /// @brief 
-    /// @return -1000 if it is at the last row; -100 if block is null; 
-    /// Otherwise, return the number of qubits after fusion 
-    bool checkFuseCondition(tile_const_iter_t it, size_t q_) const;
-
-    GateBlock* fuse(tile_iter_t tileLHS, size_t q);
+    GateBlock* tryFuse(tile_iter_t tileLHS, size_t q);
 public:
     unsigned nqubits;
 
@@ -212,6 +220,16 @@ public:
         return sum;
     }
 
+    size_t countOps() const {
+        const auto allBlocks = getAllBlocks();
+        size_t sum = 0;
+        for (const auto& block : allBlocks) {
+            assert(block->quantumGate != nullptr);
+            sum += block->quantumGate->opCount();
+        }
+        return sum;
+    }
+
     /// @brief Console print the tile.
     /// @param verbose If > 1, also print the address of each row in front
     std::ostream& print(std::ostream& os, int verbose = 1) const;
@@ -219,10 +237,6 @@ public:
     std::ostream& displayInfo(std::ostream& os, int verbose = 1) const;
 
     void dependencyAnalysis();
-
-    /// @brief It is possible that we could just call greedyGateFusion(2)
-    /// to achieve the same as this function. Needs more investigation
-    void fuseToTwoQubitGates();
 
     void greedyGateFusion();
 

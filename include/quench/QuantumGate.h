@@ -157,9 +157,19 @@ public:
         return matrix.activeType == matrix_t::ActiveMatrixType::P;
     }
 
+    const matrix_t::c_matrix_t& cMatrix() const {
+        assert(isConstantMatrix());
+        return matrix.constantMatrix;
+    }
+
     matrix_t::c_matrix_t& cMatrix() {
         assert(isConstantMatrix());
         return matrix.constantMatrix;
+    }
+
+    const matrix_t::p_matrix_t& pMatrix() const {
+        assert(isParametrizedMatrix());
+        return matrix.parametrizedMatrix;
     }
 
     matrix_t::p_matrix_t& pMatrix() {
@@ -234,6 +244,8 @@ public:
 
     /// @brief A.lmatmul(B) will return BA 
     QuantumGate lmatmul(const QuantumGate& other) const;
+
+    int opCount(double zeroSkippingThres = 1e-8) const;
 
 };
 

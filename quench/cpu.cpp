@@ -37,7 +37,7 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph) {
 
     unsigned matrixPosition = 0;
     for (const auto& block : allBlocks) {
-        const auto gate = block->toQuantumGate();
+        const auto& gate = *(block->quantumGate);
         std::string kernelName = "kernel_block_" + std::to_string(block->id);
         irGenerator.generateKernel(gate, kernelName);
 
