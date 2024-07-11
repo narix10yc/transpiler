@@ -169,6 +169,11 @@ public:
 
     int updateNqubits();
 
+    /// @brief Approximate matrix elements. Change matrix in-place.
+    /// @param level : optimization level. Level 0 turns off everything. Level 1
+    /// only applies zero-skipping. Level > 1 also applies to 1 and -1.
+    GateMatrix& approximateSelf(int level, double thres = 1e-8);
+
     GateMatrix permute(const std::vector<unsigned>& flags) const;
     
     GateMatrix& permuteSelf(const std::vector<unsigned>& flags);
@@ -180,23 +185,23 @@ class QuantumGate {
 public:
     /// The canonical form of qubits is in ascending order
     std::vector<unsigned> qubits;
-    GateMatrix matrix;
+    GateMatrix gateMatrix;
 
-    QuantumGate() : qubits(), matrix() {}
+    QuantumGate() : qubits(), gateMatrix() {}
 
-    QuantumGate(const GateMatrix& matrix, unsigned q)
-        : matrix(matrix), qubits({q}) {
-        assert(matrix.nqubits == 1);
+    QuantumGate(const GateMatrix& gateMatrix, unsigned q)
+        : gateMatrix(gateMatrix), qubits({q}) {
+        assert(gateMatrix.nqubits == 1);
     }
 
-    QuantumGate(const GateMatrix& matrix, std::initializer_list<unsigned> qubits)
-        : matrix(matrix), qubits(qubits) {
-        assert(matrix.nqubits == qubits.size());
+    QuantumGate(const GateMatrix& gateMatrix, std::initializer_list<unsigned> qubits)
+        : gateMatrix(gateMatrix), qubits(qubits) {
+        assert(gateMatrix.nqubits == qubits.size());
     }
 
-    QuantumGate(const GateMatrix& matrix, const std::vector<unsigned>& qubits)
-        : matrix(matrix), qubits(qubits) {
-        assert(matrix.nqubits == qubits.size());
+    QuantumGate(const GateMatrix& gateMatrix, const std::vector<unsigned>& qubits)
+        : gateMatrix(gateMatrix), qubits(qubits) {
+        assert(gateMatrix.nqubits == qubits.size());
     }
 
     bool isQubitsSorted() const {
@@ -210,9 +215,9 @@ public:
     }
 
     bool checkConsistency() const {
-        return (matrix.nqubits == qubits.size())
+        return (gateMatrix.nqubits == qubits.size())
             // && isQubitsSorted()
-            && matrix.checkConsistency();
+            && gateMatrix.checkConsistency();
     }
 
     std::ostream& displayInfo(std::ostream& os) const;

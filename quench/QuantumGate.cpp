@@ -8,7 +8,7 @@ using namespace quench::complex_matrix;
 using namespace quench::quantum_gate;
 
 namespace {
-    bool _isValidShuffleFlag(const std::vector<unsigned>& flags) {
+    static bool _isValidShuffleFlag(const std::vector<unsigned>& flags) {
         auto copy = flags;
         std::sort(copy.begin(), copy.end());
         for (unsigned i = 0; i < copy.size(); i++) {
@@ -17,6 +17,34 @@ namespace {
         }
         return true;
     }
+}
+
+GateMatrix& GateMatrix::approximateSelf(int level, double thres) {
+    assert(isConstantMatrix());
+    if (level < 1)
+        return *this;
+    
+    auto& cMat = cMatrix();
+    for (auto& cplx : cMat.data) {
+        if (std::abs(cplx.real()) < thres)
+            cplx.real(0.0);
+        else if (level > 1) {
+            if (std::abs(cplx.real() - 1.0) < thres)
+                cplx.real(1.0);
+            else if (std::abs(cplx.real() + 1.0) < thres)
+                cplx.real(-1.0);
+        }
+        
+        if (std::abs(cplx.imag()) < thres)
+            cplx.imag(0.0);
+        else if (level > 1) {
+            if (std::abs(cplx.imag() - 1.0) < thres)
+                cplx.imag(1.0);
+            else if (std::abs(cplx.imag() + 1.0) < thres)
+                cplx.imag(-1.0);
+        }
+    }
+    return *this;
 }
 
 GateMatrix GateMatrix::permute(const std::vector<unsigned>& flags) const {
@@ -192,7 +220,7 @@ std::ostream& QuantumGate::displayInfo(std::ostream& os) const {
     for (const auto& q : qubits)
         os << q << ",";
     os << "]\nMatrix:\n";
-    matrix.printMatrix(os);
+    gateMatrix.printMatrix(os);
     return os;
 }
 
@@ -212,7 +240,7 @@ void QuantumGate::sortQubits() {
         newQubits[i] = qubits[indices[i]];
     
     qubits = std::move(newQubits);
-    matrix.permuteSelf(indices);
+    gateMatrix.permuteSelf(indices);
 }
 
 QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
@@ -267,13 +295,13 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
     matrix_t::c_matrix_t newCMatrix(1 << newNqubits);
     using complex_t = std::complex<double>;
 
-    assert(other.matrix.isConstantMatrix());
-    assert(matrix.isConstantMatrix());
+    assert(other.gateMatrix.isConstantMatrix());
+    assert(gateMatrix.isConstantMatrix());
     const auto twiceNewNqubits = 2 * newNqubits;
     const auto contractionBitwidth = sShift.size();
     for (size_t i = 0; i < (1 << twiceNewNqubits); i++) {
-        auto aPtrStart = other.matrix.matrix.constantMatrix.data.data();
-        auto bPtrStart = matrix.matrix.constantMatrix.data.data();
+        auto aPtrStart = other.gateMatrix.matrix.constantMatrix.data.data();
+        auto bPtrStart = gateMatrix.matrix.constantMatrix.data.data();
         for (unsigned bit = 0; bit < twiceNewNqubits; bit++) {
             if ((i & (1 << bit)) != 0) {
                 aPtrStart += aShift[bit];
@@ -297,4 +325,3 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
 
     return {newCMatrix, allQubits};
 }
-

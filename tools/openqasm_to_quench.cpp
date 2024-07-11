@@ -56,6 +56,7 @@ int main(int argc, char** argv) {
     auto qasmRoot = parser.parse();
     std::cerr << "-- qasm AST built\n";
     auto graph = qasmRoot->toCircuitGraph();
+    graph.updateFusionConfig({static_cast<int>(MaxNQubits)});
 
     tok = clock::now();
 
@@ -63,7 +64,7 @@ int main(int argc, char** argv) {
     graph.displayInfo(std::cerr, 2);
 
     tic = clock::now();
-    graph.greedyGateFusion(MaxNQubits);
+    graph.greedyGateFusion();
     tok = clock::now();
 
     std::cerr << msg_start() << "Greedy gate fusion complete\n";

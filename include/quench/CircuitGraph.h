@@ -139,6 +139,20 @@ public:
     quantum_gate::QuantumGate toQuantumGate() const;
 };
 
+class FusionConfig {
+public:
+    int maxNQubits;
+    int maxOpCount;
+
+public:
+    FusionConfig(int maxNQubits, int maxOpCount = INT32_MAX)
+        : maxNQubits(maxNQubits), maxOpCount(maxOpCount) {}
+    
+    static FusionConfig Disable() {
+        return { 0, 0 };
+    }
+};
+
 class CircuitGraph {
 private:
     using row_t = std::array<GateBlock*, 36>;
@@ -148,6 +162,7 @@ private:
     using tile_const_iter_t = std::list<row_t>::const_iterator;
     int currentBlockId;
     tile_t tile;
+    FusionConfig fusionConfig;
 
     /// @brief Erase empty rows in the tile
     void eraseEmptyRows();
@@ -165,13 +180,19 @@ private:
     /// @brief 
     /// @return -1000 if it is at the last row; -100 if block is null; 
     /// Otherwise, return the number of qubits after fusion 
-    int checkFuseCondition(tile_const_iter_t it, size_t q_) const;
+    bool checkFuseCondition(tile_const_iter_t it, size_t q_) const;
+
     GateBlock* fuse(tile_iter_t tileLHS, size_t q);
 public:
     unsigned nqubits;
 
-    CircuitGraph()
-        : currentBlockId(0), tile(1, {nullptr}), nqubits(0) {}
+    CircuitGraph(FusionConfig fusionConfig = FusionConfig::Disable())
+        : currentBlockId(0), tile(1, {nullptr}),
+          nqubits(0), fusionConfig(fusionConfig) {}
+
+    void updateFusionConfig(const FusionConfig& newConfig) {
+        fusionConfig = newConfig;
+    }
 
     void addGate(const quantum_gate::GateMatrix& matrix,
                  const std::vector<unsigned>& qubits);
@@ -191,7 +212,10 @@ public:
         return sum;
     }
 
+    /// @brief Console print the tile.
+    /// @param verbose If > 1, also print the address of each row in front
     std::ostream& print(std::ostream& os, int verbose = 1) const;
+
     std::ostream& displayInfo(std::ostream& os, int verbose = 1) const;
 
     void dependencyAnalysis();
@@ -200,7 +224,7 @@ public:
     /// to achieve the same as this function. Needs more investigation
     void fuseToTwoQubitGates();
 
-    void greedyGateFusion(int maxNQubits);
+    void greedyGateFusion();
 
 };
 

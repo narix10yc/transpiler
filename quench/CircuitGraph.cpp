@@ -60,17 +60,17 @@ int GateBlock::connect(GateBlock* rhsBlock, int q) {
     return count;
 }
 
-int CircuitGraph::checkFuseCondition(tile_const_iter_t itLHS, size_t q_) const {
+bool CircuitGraph::checkFuseCondition(tile_const_iter_t itLHS, size_t q_) const {
     assert((*itLHS)[q_]);
 
     auto itRHS = std::next(itLHS);
     if (itRHS == tile.cend())
-        return -1000;
+        return false;
     
     GateBlock* lhs = (*itLHS)[q_];
     GateBlock* rhs = (*itRHS)[q_];
     if (!(lhs && rhs))
-        return -100;
+        return false;
 
     std::set<unsigned> qubits;
     for (const auto& data : lhs->dataVector)
@@ -78,7 +78,7 @@ int CircuitGraph::checkFuseCondition(tile_const_iter_t itLHS, size_t q_) const {
     for (const auto& data : rhs->dataVector)
         qubits.insert(data.qubit);
     
-    return qubits.size();
+    return qubits.size() <= fusionConfig.maxNQubits;
 }
 
 GateBlock* CircuitGraph::fuse(tile_iter_t itLHS, size_t q_) {
@@ -472,7 +472,7 @@ void CircuitGraph::fuseToTwoQubitGates() {
     }
 }
 
-void CircuitGraph::greedyGateFusion(int maxNQubits) {
+void CircuitGraph::greedyGateFusion() {
     if (tile.size() < 2)
         return;
 
@@ -488,13 +488,10 @@ void CircuitGraph::greedyGateFusion(int maxNQubits) {
             for (unsigned q = 0; q < nqubits; q++) {
                 if ((*it)[q] == nullptr)
                     continue;
-                int check = checkFuseCondition(it, q);
-                if (check <= 0) {
+                if (!checkFuseCondition(it, q)) {
                     repositionBlockDownward(it, q);
                     continue;
                 }
-                if (check > maxNQubits)
-                    continue;
                 fuse(it, q);
                 hasChange = true;
                 // print(std::cerr, 2) << "\n\n";
@@ -563,3 +560,17 @@ QuantumGate GateBlock::toQuantumGate() const {
     
     return gate;
 }
+
+namespace {
+static int opCount(const QuantumGate& gate) {
+    assert(gate.gateMatrix.isConstantMatrix());
+
+    int count = 0;
+    // for (const auto& cplx : gate.gateMatrix.cMatrix().data) {
+        // if ()
+    // }
+
+    return count;
+}
+} // namespace
+

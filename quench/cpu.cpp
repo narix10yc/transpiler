@@ -44,7 +44,7 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph) {
         externSS << " void " << kernelName << "(double*, double*, uint64_t, uint64_t, const void*);\n";
 
         matrixSS << " ";
-        for (const auto& elem : gate.matrix.matrix.constantMatrix.data) {
+        for (const auto& elem : gate.gateMatrix.matrix.constantMatrix.data) {
             matrixSS << std::setprecision(16) << elem.real() << ","
                      << std::setprecision(16) << elem.imag() << ", ";
         }
@@ -71,7 +71,8 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph) {
         if (config.installTimer)
             kernelSS << " PRINT_BLOCK_TIME(" << block->id << ")\n";
 
-        matrixPosition += gate.matrix.matrix.getSize() * gate.matrix.matrix.getSize() * 2;
+        auto matrixSize = gate.gateMatrix.matrix.getSize();
+        matrixPosition += 2 * matrixSize * matrixSize;
     }
     
     externSS << "};\n";

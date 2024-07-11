@@ -19,6 +19,7 @@ int main(int argc, char** argv) {
     auto qasmRoot = parser.parse();
     std::cerr << "qasm AST built\n";
     auto graph = qasmRoot->toCircuitGraph();
+    graph.updateFusionConfig({4});
     std::cerr << "CircuitGraph built\n";
 
     // StatevectorComp<double> sv1(graph.nqubits);
@@ -36,7 +37,7 @@ int main(int argc, char** argv) {
     // }
     // sv1.print(std::cerr) << "\n";
 
-    graph.greedyGateFusion(4);
+    graph.greedyGateFusion();
     graph.print(std::cerr);
     graph.displayInfo(std::cerr, 2);
     // for (const auto& block : graph.getAllBlocks()) {

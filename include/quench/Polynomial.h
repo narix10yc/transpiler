@@ -347,7 +347,10 @@ public:
         return newPoly -= other;
     }
 
-    Polynomial& operator*=(const Polynomial& other);
+    Polynomial& operator*=(const Polynomial& other) {
+        auto newPoly = (*this) * other;
+        return (*this) = newPoly;
+    }
 
     Polynomial operator*(const Polynomial& other) const;
 };
