@@ -68,6 +68,10 @@ namespace {
 
 }
 
+/// @brief 
+/// @param gate 
+/// @param funcName 
+/// @return 
 Function*
 IRGenerator::generateKernel(const QuantumGate& gate,
                             const std::string& funcName)

@@ -21,33 +21,31 @@ int main(int argc, char** argv) {
     auto graph = qasmRoot->toCircuitGraph();
     std::cerr << "CircuitGraph built\n";
 
-    StatevectorComp<double> sv1(graph.nqubits);
-    sv1.zeroState();
-    sv1.randomize();
-    auto sv2 = sv1;
+    // StatevectorComp<double> sv1(graph.nqubits);
+    // sv1.zeroState();
+    // sv1.randomize();
+    // auto sv2 = sv1;
 
     graph.print(std::cerr);
-    graph.displayInfo(std::cerr);
-    for (const auto& block : graph.getAllBlocks()) {
-        auto gate = block->toQuantumGate();
-        gate.displayInfo(std::cerr);
+    graph.displayInfo(std::cerr, 2);
+    // for (const auto& block : graph.getAllBlocks()) {
+    //     auto gate = block->toQuantumGate();
+    //     gate.displayInfo(std::cerr);
 
-        applyGeneral(sv1.data, gate.matrix, gate.qubits, sv1.nqubits);
-    }
-    sv1.print(std::cerr) << "\n";
+    //     applyGeneral(sv1.data, gate.matrix, gate.qubits, sv1.nqubits);
+    // }
+    // sv1.print(std::cerr) << "\n";
 
-    graph.greedyGateFusion(3);
+    graph.greedyGateFusion(4);
     graph.print(std::cerr);
-    graph.displayInfo(std::cerr);
-    for (const auto& block : graph.getAllBlocks()) {
-        auto gate = block->toQuantumGate();
-        gate.displayInfo(std::cerr);
+    graph.displayInfo(std::cerr, 2);
+    // for (const auto& block : graph.getAllBlocks()) {
+    //     auto gate = block->toQuantumGate();
+    //     gate.displayInfo(std::cerr);
 
-        applyGeneral(sv2.data, gate.matrix, gate.qubits, sv2.nqubits);
-    }
-    sv2.print(std::cerr) << "\n";
-
-    
+    //     applyGeneral(sv2.data, gate.matrix, gate.qubits, sv2.nqubits);
+    // }
+    // sv2.print(std::cerr) << "\n";
 
     return 0;
 }

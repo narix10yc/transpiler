@@ -2,6 +2,7 @@
 #define UTILS_UTILS_H
 
 #include <vector>
+#include <complex>
 #include <iomanip>
 
 namespace utils {

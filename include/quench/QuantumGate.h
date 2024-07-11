@@ -126,7 +126,9 @@ struct matrix_t {
     }
 };
 
-
+/// @brief GateMatrix is a wrapper around constant and polynomial-based square
+/// matrices. Matrix size will always be a power of 2 so that it represents
+/// quantum gates. 
 class GateMatrix {
 public:
     unsigned nqubits;
@@ -153,6 +155,16 @@ public:
 
     bool isParametrizedMatrix() const {
         return matrix.activeType == matrix_t::ActiveMatrixType::P;
+    }
+
+    matrix_t::c_matrix_t& cMatrix() {
+        assert(isConstantMatrix());
+        return matrix.constantMatrix;
+    }
+
+    matrix_t::p_matrix_t& pMatrix() {
+        assert(isParametrizedMatrix());
+        return matrix.parametrizedMatrix;
     }
 
     int updateNqubits();

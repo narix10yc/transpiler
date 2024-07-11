@@ -41,10 +41,10 @@ private:
 
 /// Total running time will be approximately warmupTime + replication * runTime
 class Timer {
-double warmupTime = 0.05;
-double runTime = 0.1;
-unsigned replication;
-unsigned verbose;
+    double warmupTime = 0.05;
+    double runTime = 0.1;
+    int replication;
+    int verbose;
 public:
     Timer(int replication=15, int verbose=0) 
             : replication(replication), verbose(verbose)
@@ -54,7 +54,10 @@ public:
 
     void setWarmupTime(double t) { warmupTime = t; }
     void setRunTime(double t) { runTime = t; }
-    void setReplication(unsigned r) { replication = r; }
+    void setReplication(int r) {
+        assert(r > 0 && r < 100);
+        replication = r;
+    }
 
     TimingResult timeit(std::function<void()> method, 
                         std::function<void()> setup=[](){},
