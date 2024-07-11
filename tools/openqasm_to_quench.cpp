@@ -7,6 +7,7 @@
 #include <chrono>
 #include <sstream>
 
+using FusionConfig = quench::circuit_graph::FusionConfig;
 using CircuitGraph = quench::circuit_graph::CircuitGraph;
 using CodeGeneratorCPU = quench::cpu::CodeGeneratorCPU;
 using namespace llvm;
@@ -28,7 +29,16 @@ int main(int argc, char** argv) {
     InstallTimer("timer", cl::desc("install timer"), cl::init(false));
 
     cl::opt<unsigned>
-    MaxNQubits("max_k", cl::desc("maximum number of qubits of gates"), cl::init(2));
+    MaxNQubits("max-k", cl::desc("maximum number of qubits of gates"), cl::Optional);
+
+    cl::opt<unsigned>
+    MaxOpCount("max-op", cl::desc("maximum operation count"), cl::Optional);
+
+    cl::opt<double>
+    ZeroSkipThreshold("zero-thres", cl::desc("zero skipping threshold"), cl::Optional);
+
+    cl::opt<std::string>
+    FusionMode("fusion-mode", cl::desc("fusion mode. Presets are 'default', 'aggressive'"), cl::init("default"));
 
     cl::opt<unsigned>
     NThreads("nthreads", cl::desc("number of threads"), cl::init(1));
@@ -42,7 +52,7 @@ int main(int argc, char** argv) {
         std::stringstream ss;
         ss << "-- ("
            << std::chrono::duration_cast<std::chrono::milliseconds>(tok - tic).count()
-           << " ms)";
+           << " ms) ";
         return ss.str();
     };
 
@@ -56,11 +66,22 @@ int main(int argc, char** argv) {
     auto qasmRoot = parser.parse();
     std::cerr << "-- qasm AST built\n";
     auto graph = qasmRoot->toCircuitGraph();
-    graph.updateFusionConfig({static_cast<int>(MaxNQubits)});
+
+    if (FusionMode == "aggressive")
+        graph.updateFusionConfig(FusionConfig::Aggressive());
+    else if (FusionMode == "default")
+        graph.updateFusionConfig(FusionConfig::Default());
+    else {
+        graph.updateFusionConfig({
+                .maxNQubits = static_cast<int>(MaxNQubits),
+                .maxOpCount = static_cast<int>(MaxOpCount),
+                .zeroSkippingThreshold = ZeroSkipThreshold
+            });
+    }
 
     tok = clock::now();
 
-    std::cerr << msg_start() << "converted to CircuitGraph\n";
+    std::cerr << msg_start() << "Parsed to CircuitGraph\n";
     graph.displayInfo(std::cerr, 2);
 
     tic = clock::now();
