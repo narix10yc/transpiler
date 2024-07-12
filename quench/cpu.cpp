@@ -57,10 +57,12 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph) {
                    && "Uneven split not implemented yet...");
                    
             kernelSS << " chunkSize = " << idxMax << "ULL / nthreads;\n"
+
                      << " for (unsigned i = 0; i < nthreads; i++)\n"
                      << "  threads[i] = std::thread(" << kernelName << ", re, im, "
                      << "i*chunkSize, (i+1)*chunkSize, "
                      << "_mPtr + " << matrixPosition << ");\n"
+            
                      << " for (unsigned i = 0; i < nthreads; i++)\n"
                      << "  threads[i].join();\n";
         }
@@ -85,6 +87,7 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph) {
     if (config.installTimer)
         hFile << "#include <chrono>\n"
                  "#include <iostream>\n"
+                 
                  "#define PRINT_BLOCK_TIME(BLOCK)\\\n"
                  "  tok = clock::now();\\\n"
                  "  std::cerr << \" Block \" << BLOCK << \" takes \" << "
@@ -93,7 +96,8 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph) {
 
     if (config.nthreads > 1)
         hFile << "#include <array>\n"
-                 "#include <thread>\n";
+                 "#include <thread>\n"
+                 "#define MULTI_THREAD_SIMULATION_KERNEL\n\n";
 
     hFile << "#include <cstdint>\n"
           << externSS.str() << "\n"

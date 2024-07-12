@@ -87,7 +87,7 @@ TimingResult Timer::timeit(
     using TimePoint = std::chrono::time_point<Clock>;
     using Duration = std::chrono::duration<double>;
 
-    size_t repeat = 1;
+    unsigned repeat = 1;
     std::vector<double> tarr(replication);
     TimePoint tic, toc;
     double dur;
@@ -105,18 +105,17 @@ TimingResult Timer::timeit(
     toc = Clock::now();
     dur = Duration(toc - tic).count();
 
-    while (dur < warmupTime) {
+    unsigned r0 = 0;
+    if (dur > warmupTime) {
+        tarr[0] = dur;
+        r0 = 1;
+    } else {
         repeat = static_cast<double>(repeat) * warmupTime / dur + 1;
         tic = Clock::now();
         for (unsigned i = 0; i < repeat; ++i)
             method();
         toc = Clock::now();
         dur = Duration(toc - tic).count();
-    }
-    unsigned r0 = 0;
-    if (dur > runTime) {
-        tarr[0] = dur;
-        r0 = 1;
     }
 
     // main loop
