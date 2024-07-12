@@ -8,9 +8,9 @@ using namespace quench::cpu;
 using IRGenerator = simulation::IRGenerator;
 using CircuitGraph = quench::circuit_graph::CircuitGraph;
 
-void CodeGeneratorCPU::generate(const CircuitGraph& graph) {
+void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
     IRGenerator irGenerator(config.s);
-    irGenerator.setVerbose(0);
+    irGenerator.setVerbose(verbose);
     const auto allBlocks = graph.getAllBlocks();
 
     std::stringstream externSS;

@@ -127,8 +127,8 @@ struct matrix_t {
 };
 
 /// @brief GateMatrix is a wrapper around constant and polynomial-based square
-/// matrices. Matrix size will always be a power of 2 so that it represents
-/// quantum gates. 
+/// matrices. It does NOT store qubits array.
+/// Matrix size is always a power of 2.
 class GateMatrix {
 public:
     unsigned nqubits;
@@ -207,11 +207,13 @@ public:
     QuantumGate(const GateMatrix& gateMatrix, std::initializer_list<unsigned> qubits)
         : gateMatrix(gateMatrix), qubits(qubits) {
         assert(gateMatrix.nqubits == qubits.size());
+        sortQubits();
     }
 
     QuantumGate(const GateMatrix& gateMatrix, const std::vector<unsigned>& qubits)
         : gateMatrix(gateMatrix), qubits(qubits) {
         assert(gateMatrix.nqubits == qubits.size());
+        sortQubits();
     }
 
     bool isQubitsSorted() const {

@@ -406,11 +406,11 @@ std::ostream& GateBlock::displayInfo(std::ostream& os) const {
         os << "(" << data.qubit << ":";
         GateNode* gate = data.lhsEntry;
         assert(gate);
-        os << gate << ",";
+        os << gate->id << ",";
         while (gate != data.rhsEntry) {
             gate = gate->findRHS(data.qubit);
             assert(gate);
-            os << gate << ",";
+            os << gate->id << ",";
         }
         os << "),";
     }

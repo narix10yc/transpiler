@@ -2,6 +2,7 @@
 #include "quench/Polynomial.h"
 #include "quench/simulate.h"
 #include "quench/QuantumGate.h"
+#include "quench/cpu.h"
 
 #include "utils/iocolor.h"
 #include "utils/statevector.h"
@@ -10,6 +11,8 @@ using namespace Color;
 using namespace quench::simulate;
 using namespace quench::circuit_graph;
 using namespace quench::quantum_gate;
+using namespace quench::cpu;
+
 using namespace utils::statevector;
 
 int main(int argc, char** argv) {
@@ -20,7 +23,7 @@ int main(int argc, char** argv) {
     std::cerr << "qasm AST built\n";
     auto graph = qasmRoot->toCircuitGraph();
 
-    graph.updateFusionConfig(FusionConfig::Aggressive());
+    // graph.updateFusionConfig(FusionConfig::Aggressive());
     // graph.updateFusionConfig({
         // .maxNQubits = 2,
         // .maxOpCount = 128,
@@ -34,8 +37,12 @@ int main(int argc, char** argv) {
     // sv1.randomize();
     // auto sv2 = sv1;
 
-    // graph.print(std::cerr);
+    graph.print(std::cerr);
     graph.displayInfo(std::cerr, 2);
+    CodeGeneratorCPU gen("gen_file");
+    gen.generate(graph, 999);
+
+    
     // for (const auto& block : graph.getAllBlocks()) {
     //     auto gate = block->toQuantumGate();
     //     gate.displayInfo(std::cerr);
@@ -44,9 +51,9 @@ int main(int argc, char** argv) {
     // }
     // sv1.print(std::cerr) << "\n";
 
-    graph.greedyGateFusion();
+    // graph.greedyGateFusion();
     // graph.print(std::cerr);
-    graph.displayInfo(std::cerr, 2);
+    // graph.displayInfo(std::cerr, 2);
     // for (const auto& block : graph.getAllBlocks()) {
     //     auto gate = block->toQuantumGate();
     //     gate.displayInfo(std::cerr);

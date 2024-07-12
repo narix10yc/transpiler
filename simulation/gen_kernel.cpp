@@ -241,7 +241,7 @@ IRGenerator::generateKernel(const QuantumGate& gate,
             maskSum = (1ULL << (bit - sepBit - i)) - 1;
             if (verbose > 2) {
                 std::cerr << "i = " << i << ", bit = " << bit
-                        << ", mask = " << std::bitset<12>(mask) << "\n";
+                        << ", mask = " << mask << " 0b" << std::bitset<12>(mask) << "\n";
             }
             tmpCounterV = builder.CreateAnd(counterV, mask, "tmpCounter");
             tmpCounterV = builder.CreateShl(tmpCounterV, i, "tmpCounter");
@@ -249,8 +249,8 @@ IRGenerator::generateKernel(const QuantumGate& gate,
         }
         mask = ~((1ULL << (higherQubits.back() - sepBit - higherQubits.size() + 1)) - 1);
         if (verbose > 2) {
-            std::cerr << "                mask = "
-                    << std::bitset<12>(mask) << "\n";
+            std::cerr << "                mask = " << mask << " 0b"
+                      << std::bitset<12>(mask) << "\n";
         }
         tmpCounterV = builder.CreateAnd(counterV, mask, "tmpCounter");
         tmpCounterV = builder.CreateShl(tmpCounterV, higherQubits.size(), "tmpCounter");

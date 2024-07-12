@@ -20,7 +20,7 @@ public:
         : config({.fileName=fileName, .s=1, .nthreads=1,
                   .installTimer=false, .overrideNqubits=-1}) {}
 
-    void generate(const circuit_graph::CircuitGraph& graph);
+    void generate(const circuit_graph::CircuitGraph& graph, int verbose=0);
 
     void config_installTimer(bool b) {
         config.installTimer = b;
