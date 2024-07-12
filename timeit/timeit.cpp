@@ -106,22 +106,25 @@ TimingResult Timer::timeit(
     dur = Duration(toc - tic).count();
 
     while (dur < warmupTime) {
-        repeat = (double)repeat * warmupTime / dur;
-        ++repeat;
+        repeat = static_cast<double>(repeat) * warmupTime / dur + 1;
         tic = Clock::now();
-        for (size_t i = 0; i < repeat; ++i)
+        for (unsigned i = 0; i < repeat; ++i)
             method();
         toc = Clock::now();
         dur = Duration(toc - tic).count();
     }
+    unsigned r0 = 0;
+    if (dur > runTime) {
+        tarr[0] = dur;
+        r0 = 1;
+    }
 
     // main loop
-    repeat = (double)repeat * runTime / dur; 
-    ++repeat;
-    for (size_t r = 0; r < replication; ++r)
+    repeat = static_cast<double>(repeat) * runTime / dur + 1;
+    for (unsigned r = r0; r < replication; ++r)
     {   
         tic = Clock::now();
-        for (size_t i = 0; i < repeat; ++i)
+        for (unsigned i = 0; i < repeat; ++i)
             method();
         toc = Clock::now();
         dur = Duration(toc - tic).count();

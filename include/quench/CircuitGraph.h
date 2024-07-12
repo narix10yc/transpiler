@@ -256,6 +256,8 @@ public:
 
     std::ostream& displayInfo(std::ostream& os, int verbose = 1) const;
 
+    std::ostream& displayFusionConfig(std::ostream& os) const;
+
     void dependencyAnalysis();
 
     void greedyGateFusion();

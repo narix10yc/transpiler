@@ -448,6 +448,16 @@ std::ostream& CircuitGraph::displayInfo(std::ostream& os, int verbose) const {
     return os;
 }
 
+std::ostream& CircuitGraph::displayFusionConfig(std::ostream& os) const {
+    os << CYAN_FG << "=== Fusion Config: ===\n" << RESET;
+    os << "max nqubits:     " << fusionConfig.maxNQubits << "\n";
+    os << "max op count:    " << fusionConfig.maxOpCount << "\n";
+    os << "zero skip thres: " << fusionConfig.zeroSkippingThreshold << "\n";
+
+    os << CYAN_FG << "======================\n" << RESET;
+    return os;
+}
+
 void CircuitGraph::dependencyAnalysis() {
     assert(false && "Not implemented yet!");
 }

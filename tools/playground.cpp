@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
     std::cerr << "qasm AST built\n";
     auto graph = qasmRoot->toCircuitGraph();
 
-    graph.updateFusionConfig(FusionConfig::Default());
+    graph.updateFusionConfig(FusionConfig::Aggressive());
     // graph.updateFusionConfig({
         // .maxNQubits = 2,
         // .maxOpCount = 128,
@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
     // sv1.randomize();
     // auto sv2 = sv1;
 
-    graph.print(std::cerr);
+    // graph.print(std::cerr);
     graph.displayInfo(std::cerr, 2);
     // for (const auto& block : graph.getAllBlocks()) {
     //     auto gate = block->toQuantumGate();
@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
     // sv1.print(std::cerr) << "\n";
 
     graph.greedyGateFusion();
-    graph.print(std::cerr);
+    // graph.print(std::cerr);
     graph.displayInfo(std::cerr, 2);
     // for (const auto& block : graph.getAllBlocks()) {
     //     auto gate = block->toQuantumGate();

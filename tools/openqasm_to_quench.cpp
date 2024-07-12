@@ -66,7 +66,11 @@ int main(int argc, char** argv) {
     auto qasmRoot = parser.parse();
     std::cerr << "-- qasm AST built\n";
     auto graph = qasmRoot->toCircuitGraph();
+    tok = clock::now();
+    std::cerr << msg_start() << "Parsed to CircuitGraph\n";
+    graph.displayInfo(std::cerr, 2);
 
+    tic = clock::now();
     if (FusionMode == "aggressive")
         graph.updateFusionConfig(FusionConfig::Aggressive());
     else if (FusionMode == "default")
@@ -78,16 +82,9 @@ int main(int argc, char** argv) {
                 .zeroSkippingThreshold = ZeroSkipThreshold
             });
     }
-
-    tok = clock::now();
-
-    std::cerr << msg_start() << "Parsed to CircuitGraph\n";
-    graph.displayInfo(std::cerr, 2);
-
-    tic = clock::now();
+    graph.displayFusionConfig(std::cerr);
     graph.greedyGateFusion();
     tok = clock::now();
-
     std::cerr << msg_start() << "Greedy gate fusion complete\n";
     graph.displayInfo(std::cerr, 2);
 
@@ -97,7 +94,6 @@ int main(int argc, char** argv) {
     codeGenerator.config_nthreads(NThreads);
     codeGenerator.generate(graph);
     tok = clock::now();
-
     std::cerr << msg_start() << "Code generation done\n";
 
     return 0;
