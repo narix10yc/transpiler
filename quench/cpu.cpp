@@ -81,7 +81,7 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
     matrixSS << "};\n";
     kernelSS << "};\n";
 
-    std::ofstream hFile(config.fileName + ".h");
+    std::ofstream hFile(fileName + ".h");
     assert(hFile.is_open());
 
     if (config.installTimer)
@@ -106,7 +106,7 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
     hFile.close();
 
     std::error_code ec;
-    llvm::raw_fd_ostream irFile(config.fileName + ".ll", ec);
+    llvm::raw_fd_ostream irFile(fileName + ".ll", ec);
     irGenerator.getModule().print(irFile, nullptr);
 
     irFile.close();

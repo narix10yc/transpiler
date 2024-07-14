@@ -1,6 +1,7 @@
 #include "openqasm/parser.h"
 #include "quench/CircuitGraph.h"
 #include "quench/cpu.h"
+#include "utils/iocolor.h"
 
 #include "llvm/Support/CommandLine.h"
 
@@ -11,6 +12,7 @@ using FusionConfig = quench::circuit_graph::FusionConfig;
 using CircuitGraph = quench::circuit_graph::CircuitGraph;
 using CodeGeneratorCPU = quench::cpu::CodeGeneratorCPU;
 using namespace llvm;
+using namespace Color;
 
 int main(int argc, char** argv) {
     cl::opt<std::string>
@@ -23,23 +25,24 @@ int main(int argc, char** argv) {
     Precision("p", cl::desc("precision (f64 or f32)"), cl::init("f64"));
 
     cl::opt<unsigned>
-    VecSizeInBits("S", cl::desc("vector size in bits"), cl::Prefix, cl::init(1));
+    SimdS("S", cl::desc("vector size (s value)"), cl::Prefix, cl::init(1));
 
     cl::opt<bool>
     InstallTimer("timer", cl::desc("install timer"), cl::init(false));
 
     cl::opt<unsigned>
-    MaxNQubits("max-k", cl::desc("maximum number of qubits of gates"), cl::init(2));
+    MaxNQubits("max-k", cl::desc("maximum number of qubits of gates"), cl::init(0));
 
     cl::opt<unsigned>
-    MaxOpCount("max-op", cl::desc("maximum operation count"), cl::init(32));
+    MaxOpCount("max-op", cl::desc("maximum operation count"), cl::init(0));
 
     cl::opt<double>
     ZeroSkipThreshold("zero-thres", cl::desc("zero skipping threshold"), cl::init(1e-8));
 
     cl::opt<int>
-    FusionLevel("fusion", cl::desc("fusion level. Presets are 0 'disable', 1 'two-qubit only', 2 'default', and 3 'aggresive'"),
-                cl::init(2));
+    FusionLevel("fusion", cl::desc("fusion level. Presets are "
+            "0 (disable), 1 (two-qubit only), 2 (default), and 3 (aggresive)"),
+            cl::init(2));
 
     cl::opt<unsigned>
     NThreads("nthreads", cl::desc("number of threads"), cl::init(1));
@@ -72,15 +75,22 @@ int main(int argc, char** argv) {
     graph.displayInfo(std::cerr, 2);
 
     tic = clock::now();
-    if (FusionLevel >= 0 && FusionLevel <= 3)
-        graph.updateFusionConfig(FusionConfig::Preset(FusionLevel));
-    else {
+    if (MaxNQubits > 0 || MaxOpCount > 0) {
+        if (MaxNQubits == 0 || MaxOpCount == 0) {
+            std::cerr << RED_FG << BOLD << "Argument Error: " << RESET
+                      << "need to provide both 'max-k' and 'max-op'\n";
+            return 1;
+        }
         graph.updateFusionConfig({
                 .maxNQubits = static_cast<int>(MaxNQubits),
                 .maxOpCount = static_cast<int>(MaxOpCount),
                 .zeroSkippingThreshold = ZeroSkipThreshold
             });
     }
+    else {
+        graph.updateFusionConfig(FusionConfig::Preset(FusionLevel));
+    }
+
     graph.displayFusionConfig(std::cerr);
     graph.greedyGateFusion();
     tok = clock::now();
@@ -89,8 +99,11 @@ int main(int argc, char** argv) {
 
     tic = clock::now();
     CodeGeneratorCPU codeGenerator(outputFilename);
-    codeGenerator.config_installTimer(InstallTimer);
+    codeGenerator.config_s(SimdS);
+    codeGenerator.config_timer(InstallTimer);
     codeGenerator.config_nthreads(NThreads);
+    codeGenerator.displayConfig(std::cerr);
+
     codeGenerator.generate(graph);
     tok = clock::now();
     std::cerr << msg_start() << "Code generation done\n";
