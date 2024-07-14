@@ -62,6 +62,7 @@ enum class TokenTy : int {
     CarriageReturn = 13, // '\r'
 
     Unknown = -1000,
+    Any = -1001,
 };
 
 static std::string TokenTyToString(TokenTy ty) {

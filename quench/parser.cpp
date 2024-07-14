@@ -152,6 +152,7 @@ Polynomial Parser::parsePolynomial_() {
         return {{convertCurTokenToFloat(), {}}};
     }
     displayParserWarning("Only Numerics is supported in parsePolynomial yet");
+    assert(false && "Not implemented yet");
     return {};
 }
 
@@ -242,7 +243,6 @@ CircuitStmt Parser::parseCircuitStmt_() {
 
 ParameterDefStmt Parser::parseParameterDefStmt_() {
     assert(curToken.type == TokenTy::Hash);
-
 
     int refNumber;
     proceedWithType(TokenTy::Numeric);

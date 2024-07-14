@@ -252,11 +252,11 @@ public:
 
     /// @brief Console print the tile.
     /// @param verbose If > 1, also print the address of each row in front
-    std::ostream& print(std::ostream& os, int verbose = 1) const;
+    std::ostream& print(std::ostream& os = std::cerr, int verbose = 1) const;
 
-    std::ostream& displayInfo(std::ostream& os, int verbose = 1) const;
+    std::ostream& displayInfo(std::ostream& os = std::cerr, int verbose = 1) const;
 
-    std::ostream& displayFusionConfig(std::ostream& os) const;
+    std::ostream& displayFusionConfig(std::ostream& os = std::cerr) const;
 
     void dependencyAnalysis();
 

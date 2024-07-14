@@ -32,10 +32,10 @@ int main(int argc, char** argv) {
     MaxNQubits("max-k", cl::desc("maximum number of qubits of gates"), cl::Optional);
 
     cl::opt<unsigned>
-    MaxOpCount("max-op", cl::desc("maximum operation count"), cl::Optional);
+    MaxOpCount("max-op", cl::desc("maximum operation count"), cl::init(2));
 
     cl::opt<double>
-    ZeroSkipThreshold("zero-thres", cl::desc("zero skipping threshold"), cl::Optional);
+    ZeroSkipThreshold("zero-thres", cl::desc("zero skipping threshold"), cl::init(1e-8));
 
     cl::opt<std::string>
     FusionMode("fusion-mode", cl::desc("fusion mode. Presets are 'default', 'aggressive'"), cl::init("default"));
