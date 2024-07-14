@@ -29,16 +29,17 @@ int main(int argc, char** argv) {
     InstallTimer("timer", cl::desc("install timer"), cl::init(false));
 
     cl::opt<unsigned>
-    MaxNQubits("max-k", cl::desc("maximum number of qubits of gates"), cl::Optional);
+    MaxNQubits("max-k", cl::desc("maximum number of qubits of gates"), cl::init(2));
 
     cl::opt<unsigned>
-    MaxOpCount("max-op", cl::desc("maximum operation count"), cl::init(2));
+    MaxOpCount("max-op", cl::desc("maximum operation count"), cl::init(32));
 
     cl::opt<double>
     ZeroSkipThreshold("zero-thres", cl::desc("zero skipping threshold"), cl::init(1e-8));
 
-    cl::opt<std::string>
-    FusionMode("fusion-mode", cl::desc("fusion mode. Presets are 'default', 'aggressive'"), cl::init("default"));
+    cl::opt<int>
+    FusionLevel("fusion", cl::desc("fusion level. Presets are 0 'disable', 1 'two-qubit only', 2 'default', and 3 'aggresive'"),
+                cl::init(2));
 
     cl::opt<unsigned>
     NThreads("nthreads", cl::desc("number of threads"), cl::init(1));
@@ -56,7 +57,7 @@ int main(int argc, char** argv) {
         return ss.str();
     };
 
-    std::cerr << "-- Input file: " << inputFilename << "\n";
+    std::cerr << "-- Input file:  " << inputFilename << "\n";
     std::cerr << "-- Output file: " << outputFilename << "\n";
 
     openqasm::Parser parser(inputFilename, 0);
@@ -71,10 +72,8 @@ int main(int argc, char** argv) {
     graph.displayInfo(std::cerr, 2);
 
     tic = clock::now();
-    if (FusionMode == "aggressive")
-        graph.updateFusionConfig(FusionConfig::Aggressive());
-    else if (FusionMode == "default")
-        graph.updateFusionConfig(FusionConfig::Default());
+    if (FusionLevel >= 0 && FusionLevel <= 3)
+        graph.updateFusionConfig(FusionConfig::Preset(FusionLevel));
     else {
         graph.updateFusionConfig({
                 .maxNQubits = static_cast<int>(MaxNQubits),

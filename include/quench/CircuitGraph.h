@@ -181,6 +181,19 @@ public:
             .zeroSkippingThreshold = 1e-8
         };
     }
+
+    static FusionConfig Preset(int level) {
+        if (level == 0)
+            return FusionConfig::Disable();
+        if (level == 1) 
+            return FusionConfig::TwoQubitOnly();
+        if (level == 2) 
+            return FusionConfig::Default();
+        if (level == 3)
+            return FusionConfig::Aggressive();
+        assert(false && "Unsupported FusionConfig preset");
+        return FusionConfig::Disable();
+    }
 };
 
 class CircuitGraph {
