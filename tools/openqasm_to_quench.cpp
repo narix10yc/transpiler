@@ -47,9 +47,6 @@ int main(int argc, char** argv) {
     cl::opt<bool>
     MultiThreaded("multi-thread", cl::desc("enable multi-threading"), cl::init(true));
 
-    cl::opt<unsigned>
-    NThreads("nthreads", cl::desc("number of threads"), cl::init(0));
-
     cl::ParseCommandLineOptions(argc, argv);
 
     using clock = std::chrono::high_resolution_clock;
@@ -105,8 +102,6 @@ int main(int argc, char** argv) {
     codeGenerator.config_s(SimdS);
     codeGenerator.config_timer(InstallTimer);
     codeGenerator.config_multiThreaded(MultiThreaded);
-    if (NThreads > 1)
-        codeGenerator.config_nthreads(NThreads);
     codeGenerator.displayConfig(std::cerr);
 
     codeGenerator.generate(graph);

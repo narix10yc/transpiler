@@ -27,7 +27,7 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
         kernelSS << "void simulation_kernel(double* re, double* im) {\n";
 
     if (config.multiThreaded)
-        kernelSS << " std::vector<std::thread>(nthreads);\n"
+        kernelSS << " std::vector<std::thread> threads(nthreads);\n"
                  << " size_t chunkSize;\n";
 
     if (config.installTimer)
@@ -52,10 +52,6 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
 
         size_t idxMax = (1 << (graph.nqubits - gate.qubits.size() - config.s));
         if (config.multiThreaded) {
-            size_t chunkSize = idxMax / config.nthreads;
-            assert(chunkSize * config.nthreads == idxMax
-                   && "Uneven split not implemented yet...");
-                   
             kernelSS << " chunkSize = " << idxMax << "ULL / nthreads;\n"
 
                      << " for (unsigned i = 0; i < nthreads; i++)\n"
