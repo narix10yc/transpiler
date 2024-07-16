@@ -1,7 +1,7 @@
-$llvm_root/bin/clang -Ofast -march=native ../tmp/gen_file.ll -S -emit-llvm \
--o ../tmp/gen_file.ll.ll \
-&& \
-$llvm_root/bin/clang++ -Ofast -march=native ../tmp/gen_file.ll ../tmp/benchmark.cpp \
--I../include -Ltimeit -ltimeit \
+# $llvm_root/bin/clang -Ofast -march=native ../performance/gen_file.ll -S \
+# -o ../performance/gen_file.ll.s \
+# && \
+$llvm_root/bin/clang++ -Ofast -march=native ../performance/benchmark.cpp ../performance/gen_file.ll \
+-I../include -Ltimeit -ltimeit -lpthread -std=c++17 \
 -o benchmark && \
 echo "Compilation finished!"

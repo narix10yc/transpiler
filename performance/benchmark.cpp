@@ -2,30 +2,36 @@
 #include "utils/statevector.h"
 #include "timeit/timeit.h"
 
-using namespace utils::statevector;
+using Statevector = utils::statevector::StatevectorSep<double>;
 using namespace timeit;
 
 int main(int argc, char** argv) {
-    #ifdef MULTI_THREAD_SIMULATION_KERNEL
-    int nthreads = std::stoi(argv[1]);
-    std::cerr << "Multi-threading enabled. Number of threads: " << nthreads << "\n";
-    #endif
-
-    StatevectorSep<double> sv(28);
+    Statevector sv(34);
 
     Timer timer;
     timer.setReplication(1);
 
+    #ifdef MULTI_THREAD_SIMULATION_KERNEL
+    std::cerr << "Multi-threading enabled.\n";
+    // for (int nthread : {2,4,6,8,10,12,16,20,24,28,32,36}) {
+    for (int nthread : {18, 36}) {
+        std::cerr << "nthreads = " << nthread << "\n";
+        auto rst = timer.timeit(
+            [&]() {
+                simulation_kernel(sv.real, sv.imag, nthread);
+            }
+        );
+        rst.display();
+    }
+
+    #else
     auto rst = timer.timeit(
         [&]() {
-            #ifdef MULTI_THREAD_SIMULATION_KERNEL
-            simulation_kernel(sv.real, sv.imag, nthreads);
-            #else
             simulation_kernel(sv.real, sv.imag);
-            #endif
         }
     );
     rst.display();
+    #endif
 
     return 0;
 }

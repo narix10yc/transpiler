@@ -28,7 +28,7 @@ public:
     real_t* imag;
 
     StatevectorSep(int nqubits, bool initialize=false)
-            : nqubits(static_cast<unsigned>(nqubits)), N(1 << nqubits) {
+            : nqubits(static_cast<unsigned>(nqubits)), N(1ULL << nqubits) {
         assert(nqubits > 0);
         real = (real_t*) aligned_alloc(64, N * sizeof(real_t));
         imag = (real_t*) aligned_alloc(64, N * sizeof(real_t));
