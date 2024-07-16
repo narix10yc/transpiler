@@ -20,14 +20,14 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
     externSS << "extern \"C\" {\n";
     matrixSS << "const static double _mPtr[] = {\n";
 
-    if (config.nthreads > 1)
+    if (config.multiThreaded)
         kernelSS << "void simulation_kernel(double* re, double* im, "
-                    "const int nthreads = " << config.nthreads << ") {\n";
+                    "const int nthreads) {\n";
     else
         kernelSS << "void simulation_kernel(double* re, double* im) {\n";
 
-    if (config.nthreads > 1)
-        kernelSS << " std::array<std::thread, " << config.nthreads << "> threads;\n"
+    if (config.multiThreaded)
+        kernelSS << " std::vector<std::thread>(nthreads);\n"
                  << " size_t chunkSize;\n";
 
     if (config.installTimer)
@@ -51,7 +51,7 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
         matrixSS << "\n";
 
         size_t idxMax = (1 << (graph.nqubits - gate.qubits.size() - config.s));
-        if (config.nthreads > 1) {
+        if (config.multiThreaded) {
             size_t chunkSize = idxMax / config.nthreads;
             assert(chunkSize * config.nthreads == idxMax
                    && "Uneven split not implemented yet...");
@@ -94,8 +94,8 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
                  "std::chrono::duration_cast<std::chrono::milliseconds>(tok - tic).count() << \" ms;\\n\";\\\n"
                  "  tic = clock::now();\n\n";
 
-    if (config.nthreads > 1)
-        hFile << "#include <array>\n"
+    if (config.multiThreaded)
+        hFile << "#include <vector>\n"
                  "#include <thread>\n"
                  "#define MULTI_THREAD_SIMULATION_KERNEL\n\n";
 

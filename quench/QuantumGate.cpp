@@ -331,9 +331,9 @@ int QuantumGate::opCount(double thres) const {
 
     int count = 0;
     for (const auto& data : gateMatrix.cMatrix().data) {
-        if (std::abs(data.real()) < thres)
+        if (std::abs(data.real()) >= thres)
             count++;
-        if (std::abs(data.imag()) < thres)
+        if (std::abs(data.imag()) >= thres)
             count++;
     }
     return count;

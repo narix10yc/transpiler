@@ -417,6 +417,20 @@ std::ostream& GateBlock::displayInfo(std::ostream& os) const {
     return os << "]\n";
 }
 
+std::vector<int> CircuitGraph::getBlockSizes() const {
+    std::vector<int> sizes(nqubits + 1, 0);
+    const auto allBlocks = getAllBlocks();
+    int largestSize = 0;
+    for (const auto& b : allBlocks) {
+        sizes[b->nqubits]++;
+        if (b->nqubits > largestSize)
+            largestSize = b->nqubits;
+    }
+    
+    sizes.resize(largestSize+1);
+    return sizes;
+}
+
 std::ostream& CircuitGraph::displayInfo(std::ostream& os, int verbose) const {
     os << CYAN_FG << "=== CircuitGraph Info (verbose " << verbose << ") ===\n" << RESET;
 
@@ -424,24 +438,19 @@ std::ostream& CircuitGraph::displayInfo(std::ostream& os, int verbose) const {
     const auto allBlocks = getAllBlocks();
     auto nBlocks = allBlocks.size();
     os << "Number of Blocks: " << nBlocks << "\n";
-    auto opCount = countOps();
-    os << "Op Count Total:   " << opCount << "\n";
-    os << "Op Count Average: " << std::fixed << std::setprecision(1)
-       << static_cast<double>(opCount) / nBlocks << "\n";
+    auto totalOp = countTotalOps();
+    os << "Total Op Count:   " << totalOp << "\n";
+    os << "Avergae Op Count: " << std::fixed << std::setprecision(1)
+       << static_cast<double>(totalOp) / nBlocks << "\n";
     os << "Circuit Depth:    " << tile.size() << "\n";
 
     if (verbose > 1) {
-        os << "Block Statistics:\n";
-        std::map<unsigned, unsigned> map;
-        for (const auto& block : allBlocks) {
-            const auto& nqubits = block->nqubits;
-            if (map.find(nqubits) == map.end())
-                map[nqubits] = 1;
-            else
-                map[nqubits] ++;
+        os << "Block Sizes Count:\n";
+        const auto sizes = getBlockSizes();
+        for (unsigned i = 1; i < sizes.size(); i++) {
+            if (sizes[i] > 0)
+                os << "  " << i << "-qubit: " << sizes[i] << "\n";
         }
-        for (const auto& pair : map)
-            os << "  " << pair.first << "-qubit: " << pair.second << "\n";
     }
 
     os << CYAN_FG << "=====================================\n" << RESET;

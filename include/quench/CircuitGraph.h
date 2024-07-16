@@ -241,6 +241,11 @@ public:
     /// @return ordered vector of blocks
     std::vector<GateBlock*> getAllBlocks() const;
 
+    /// @brief Get the number of blocks with each size.
+    /// @return ret[i] is the number of blocks with size i. Therefore, ret[0] is 
+    /// always 0, and ret.size() == largest_size + 1.
+    std::vector<int> getBlockSizes() const;
+
     size_t countBlocks() const {
         return getAllBlocks().size();
     }
@@ -253,7 +258,7 @@ public:
         return sum;
     }
 
-    size_t countOps() const {
+    size_t countTotalOps() const {
         const auto allBlocks = getAllBlocks();
         size_t sum = 0;
         for (const auto& block : allBlocks) {
