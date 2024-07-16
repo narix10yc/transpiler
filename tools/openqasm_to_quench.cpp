@@ -44,8 +44,11 @@ int main(int argc, char** argv) {
             "0 (disable), 1 (two-qubit only), 2 (default), and 3 (aggresive)"),
             cl::init(2));
 
+    cl::opt<bool>
+    MultiThreaded("multi-thread", cl::desc("enable multi-threading"), cl::init(true));
+
     cl::opt<unsigned>
-    NThreads("nthreads", cl::desc("number of threads"), cl::init(1));
+    NThreads("nthreads", cl::desc("number of threads"), cl::init(0));
 
     cl::ParseCommandLineOptions(argc, argv);
 
@@ -101,7 +104,9 @@ int main(int argc, char** argv) {
     CodeGeneratorCPU codeGenerator(outputFilename);
     codeGenerator.config_s(SimdS);
     codeGenerator.config_timer(InstallTimer);
-    codeGenerator.config_nthreads(NThreads);
+    codeGenerator.config_multiThreaded(MultiThreaded);
+    if (NThreads > 1)
+        codeGenerator.config_nthreads(NThreads);
     codeGenerator.displayConfig(std::cerr);
 
     codeGenerator.generate(graph);
