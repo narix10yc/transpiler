@@ -8,23 +8,20 @@ set(CMAKE_CXX_STANDARD_REQUIRED on)
 message("########### Custom Setups ###########")
 message(STATUS "PROJECT SOURCE DIR: ${PROJECT_SOURCE_DIR}")
 
-if(APPLE)
-    # Apple has a system LLVM. We need to use a specific version
-    # specified by enviroment variable 'LLVM_ROOT' or 'llvm_root'
-    if(DEFINED ENV{llvm_root})
-        set(LLVM_ROOT "$ENV{llvm_root}")
-    elseif(DEFINED ENV{LLVM_ROOT})
-        set(LLVM_ROOT "$ENV{LLVM_ROOT}")
-    else()
-        message(FATAL_ERROR "Missing enviroment variable 'LLVM_ROOT' or 'llvm_root'")
-    endif()
-
-    set(CMAKE_C_COMPILER "${LLVM_ROOT}/bin/clang")
-    set(CMAKE_CXX_COMPILER "${LLVM_ROOT}/bin/clang++")
-
-    set(LLVM_DIR "${LLVM_ROOT}/lib/cmake/llvm")
+# Apple has a system LLVM. We need to use a specific version
+# specified by enviroment variable 'LLVM_ROOT' or 'llvm_root'
+if(DEFINED ENV{llvm_root})
+    set(LLVM_ROOT "$ENV{llvm_root}")
+elseif(DEFINED ENV{LLVM_ROOT})
+    set(LLVM_ROOT "$ENV{LLVM_ROOT}")
 else()
+    message(FATAL_ERROR "Missing enviroment variable 'LLVM_ROOT' or 'llvm_root'")
 endif()
+
+set(CMAKE_C_COMPILER "${LLVM_ROOT}/bin/clang")
+set(CMAKE_CXX_COMPILER "${LLVM_ROOT}/bin/clang++")
+
+set(LLVM_DIR "${LLVM_ROOT}/lib/cmake/llvm")
 
 message("STATUS C Compiler: ${CMAKE_C_COMPILER}")
 message("STATUS C++ Compiler: ${CMAKE_CXX_COMPILER}")
