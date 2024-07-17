@@ -230,7 +230,14 @@ private:
     void updateTileUpward();
     void updateTileDownward();
 
-    GateBlock* tryFuse(tile_iter_t tileLHS, size_t q);
+    GateBlock* fusionCandidate(GateBlock* lhs, GateBlock* rhs);
+
+    tile_iter_t insertBlock(tile_iter_t it, GateBlock* block);
+
+    GateBlock* tryFuseConnectedConsecutive(tile_iter_t tileLHS, size_t q);
+
+    GateBlock* tryFuseSameRow(tile_iter_t tileIt, size_t q);
+
 public:
     unsigned nqubits;
 
@@ -284,6 +291,8 @@ public:
     std::ostream& displayInfo(std::ostream& os = std::cerr, int verbose = 1) const;
 
     std::ostream& displayFusionConfig(std::ostream& os = std::cerr) const;
+
+    FusionConfig& getFusionConfig() { return fusionConfig; }
 
     void dependencyAnalysis();
 

@@ -19,7 +19,7 @@ int main(int argc, char** argv) {
     inputFilename(cl::desc("input file name"), cl::Positional, cl::Required);
     
     cl::opt<std::string>
-    outputFilename("o", cl::desc("output file name"), cl::Required);
+    outputFilename("o", cl::desc("output file name"), cl::init(""));
 
     cl::opt<std::string>
     Precision("p", cl::desc("precision (f64 or f32)"), cl::init("f64"));
@@ -103,7 +103,11 @@ int main(int argc, char** argv) {
     if (Verbose > 0)
         graph.displayFusionConfig(std::cerr);
 
-    graph.greedyGateFusion();
+    unsigned maxK0 = graph.getFusionConfig().maxNQubits;
+    for (unsigned maxK = 2; maxK <= maxK0; maxK++) {
+        graph.getFusionConfig().maxNQubits = maxK;
+        graph.greedyGateFusion();
+    }
     tok = clock::now();
     std::cerr << msg_start() << "Greedy gate fusion complete\n";
 
@@ -116,22 +120,23 @@ int main(int argc, char** argv) {
         graph.displayInfo(std::cerr, 2);
     }
 
-    tic = clock::now();
-    CodeGeneratorCPU codeGenerator(outputFilename);
-    codeGenerator.config_s(SimdS);
-    codeGenerator.config_timer(InstallTimer);
-    codeGenerator.config_multiThreaded(MultiThreaded);
-    if (UseF32 || Precision == "f32")
-        codeGenerator.config_precision(32);
-    else
-        codeGenerator.config_precision(64);
-    
-    if (Verbose > 0)
-        codeGenerator.displayConfig(std::cerr);
+    if (outputFilename != "") {
+        tic = clock::now();
+        CodeGeneratorCPU codeGenerator(outputFilename);
+        codeGenerator.config_s(SimdS);
+        codeGenerator.config_timer(InstallTimer);
+        codeGenerator.config_multiThreaded(MultiThreaded);
+        if (UseF32 || Precision == "f32")
+            codeGenerator.config_precision(32);
+        else
+            codeGenerator.config_precision(64);
+        
+        if (Verbose > 0)
+            codeGenerator.displayConfig(std::cerr);
 
-    codeGenerator.generate(graph);
-    tok = clock::now();
-    std::cerr << msg_start() << "Code generation done\n";
-
+        codeGenerator.generate(graph);
+        tok = clock::now();
+        std::cerr << msg_start() << "Code generation done\n";
+    }
     return 0;
 }
