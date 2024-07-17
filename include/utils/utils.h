@@ -46,6 +46,18 @@ print_complex(std::ostream& os, std::complex<double> c, int precision=3) {
     return os << "i";
 }
 
+
+template<typename T>
+static std::ostream& printVector(const std::vector<T>& v, std::ostream& os = std::cerr) {
+    if (v.empty())
+        return os << "[]";
+    os << "[";
+    for (unsigned i = 0; i < v.size() - 1; i++)
+        os << v[i] << ",";
+    os << v.back() << "]";
+    return os;
+}
+
 } // namespace utils
 
 #endif // UTILS_UTILS_H

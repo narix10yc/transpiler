@@ -1,5 +1,6 @@
 #include "quench/cpu.h"
 #include "simulation/ir_generator.h"
+#include "utils/utils.h"
 #include <fstream>
 #include <sstream>
 #include <iomanip>
@@ -83,8 +84,16 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
             kernelSS << " " << kernelName << "(re, im, 0, "
                      << idxMax << "ULL, " << "_mPtr + " << matrixPosition << ");\n";
         
-        if (config.installTimer)
-            kernelSS << " PRINT_BLOCK_TIME(" << block->id << ")\n";
+        if (config.installTimer) {
+            std::stringstream infoSS;
+            infoSS << block->id << " ["
+                   << "opCount " << block->quantumGate->opCount() << ", "
+                   << "qubits ";
+            utils::printVector(block->getQubits(), infoSS);
+            infoSS << "]";
+
+            kernelSS << " PRINT_BLOCK_TIME(\"" << infoSS.str() << "\")\n";
+        }
 
         auto matrixSize = gate.gateMatrix.matrix.getSize();
         matrixPosition += 2 * matrixSize * matrixSize;
@@ -101,9 +110,9 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
         hFile << "#include <chrono>\n"
                  "#include <iostream>\n"
                  
-                 "#define PRINT_BLOCK_TIME(BLOCK)\\\n"
+                 "#define PRINT_BLOCK_TIME(INFO)\\\n"
                  "  tok = clock::now();\\\n"
-                 "  std::cerr << \" Block \" << BLOCK << \" takes \" << "
+                 "  std::cerr << \" Block \" INFO \" takes \" << "
                  "std::chrono::duration_cast<std::chrono::milliseconds>(tok - tic).count() << \" ms;\\n\";\\\n"
                  "  tic = clock::now();\n\n";
 

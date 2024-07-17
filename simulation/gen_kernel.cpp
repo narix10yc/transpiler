@@ -4,6 +4,7 @@
 
 #include <bitset>
 
+using namespace utils;
 using namespace llvm;
 using namespace Color;
 using namespace simulation;
@@ -16,17 +17,6 @@ namespace {
         int realFlag;
         int imagFlag;
     };
-
-    template<typename T>
-    std::ostream& printVector(const std::vector<T>& v, std::ostream& os = std::cerr) {
-        if (v.empty())
-            return os << "[]";
-        os << "[";
-        for (unsigned i = 0; i < v.size() - 1; i++)
-            os << v[i] << ",";
-        os << v.back() << "]";
-        return os;
-    }
 
     /// @return (mask, vec)
     std::pair<std::vector<int>, std::vector<int>>

@@ -87,7 +87,7 @@ public:
         GateNode* rhsEntry;
     };
 
-    const int id;
+    int id;
     unsigned nqubits;
     std::vector<block_data> dataVector;
     std::unique_ptr<QuantumGate> quantumGate;
@@ -142,6 +142,13 @@ public:
                 return false;
         }
         return true;
+    }
+
+    std::vector<int> getQubits() const {
+        std::vector<int> vec(dataVector.size());
+        for (unsigned i = 0; i < dataVector.size(); i++)
+            vec[i] = dataVector[i].qubit;
+        return vec;
     }
 };
 
@@ -267,6 +274,8 @@ public:
         }
         return sum;
     }
+
+    void relabelBlocks();
 
     /// @brief Console print the tile.
     /// @param verbose If > 1, also print the address of each row in front

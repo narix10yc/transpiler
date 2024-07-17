@@ -10,7 +10,7 @@
 using namespace timeit;
 
 int main(int argc, char** argv) {
-    Statevector sv(34);
+    Statevector sv(30);
 
     Timer timer;
     timer.setReplication(1);

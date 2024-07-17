@@ -1,5 +1,6 @@
 #include "quench/CircuitGraph.h"
 #include "utils/iocolor.h"
+#include "utils/utils.h"
 
 #include <iomanip>
 #include <thread>
@@ -444,12 +445,26 @@ std::ostream& CircuitGraph::displayInfo(std::ostream& os, int verbose) const {
        << static_cast<double>(totalOp) / nBlocks << "\n";
     os << "Circuit Depth:    " << tile.size() << "\n";
 
-    if (verbose > 1) {
+    if (verbose > 2) {
+        os << "Block Sizes Count:\n";
+        std::vector<std::vector<int>> vec(nqubits + 1);
+        const auto allBlocks = getAllBlocks();
+        for (const auto* block : allBlocks)
+            vec[block->nqubits].push_back(block->id);
+        
+        for (unsigned q = 1; q < vec.size(); q++) {
+            if (vec[q].empty())
+                continue;
+            os << "  " << q << "-qubit: count " << vec[q].size() << " ";
+            utils::printVector(vec[q], os) << "\n";
+        }
+    }
+    else if (verbose > 1) {
         os << "Block Sizes Count:\n";
         const auto sizes = getBlockSizes();
-        for (unsigned i = 1; i < sizes.size(); i++) {
-            if (sizes[i] > 0)
-                os << "  " << i << "-qubit: " << sizes[i] << "\n";
+        for (unsigned q = 1; q < sizes.size(); q++) {
+            if (sizes[q] > 0)
+                os << "  " << q << "-qubit: " << sizes[q] << "\n";
         }
     }
 
@@ -550,4 +565,9 @@ std::vector<GateNode*> GateBlock::getOrderedGates() const {
     return gates;
 }
 
-
+void CircuitGraph::relabelBlocks() {
+    currentBlockId = 0;
+    auto allBlocks = getAllBlocks();
+    for (auto* block : allBlocks)
+        block->id = (currentBlockId++);
+}

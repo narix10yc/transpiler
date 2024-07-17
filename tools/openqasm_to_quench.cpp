@@ -24,6 +24,9 @@ int main(int argc, char** argv) {
     cl::opt<std::string>
     Precision("p", cl::desc("precision (f64 or f32)"), cl::init("f64"));
 
+    cl::opt<unsigned>
+    Verbose("verbose", cl::desc("verbose level"), cl::init(1));
+
     cl::opt<bool>
     UseF32("f32", cl::desc("use f32 (override -p)"), cl::init(false));
 
@@ -63,8 +66,10 @@ int main(int argc, char** argv) {
         return ss.str();
     };
 
-    std::cerr << "-- Input file:  " << inputFilename << "\n";
-    std::cerr << "-- Output file: " << outputFilename << "\n";
+    if (Verbose > 0) {
+        std::cerr << "-- Input file:  " << inputFilename << "\n";
+        std::cerr << "-- Output file: " << outputFilename << "\n";
+    }
 
     openqasm::Parser parser(inputFilename, 0);
 
@@ -75,7 +80,8 @@ int main(int argc, char** argv) {
     auto graph = qasmRoot->toCircuitGraph();
     tok = clock::now();
     std::cerr << msg_start() << "Parsed to CircuitGraph\n";
-    graph.displayInfo(std::cerr, 2);
+    if (Verbose > 0)
+        graph.displayInfo(std::cerr, 2);
 
     tic = clock::now();
     if (MaxNQubits > 0 || MaxOpCount > 0) {
@@ -94,11 +100,21 @@ int main(int argc, char** argv) {
         graph.updateFusionConfig(FusionConfig::Preset(FusionLevel));
     }
 
-    graph.displayFusionConfig(std::cerr);
+    if (Verbose > 0)
+        graph.displayFusionConfig(std::cerr);
+
     graph.greedyGateFusion();
     tok = clock::now();
     std::cerr << msg_start() << "Greedy gate fusion complete\n";
-    graph.displayInfo(std::cerr, 2);
+
+    if (Verbose > 1) {
+        graph.relabelBlocks();
+        graph.displayInfo(std::cerr, 3);
+        graph.print(std::cerr);
+    }
+    else if (Verbose > 0) {
+        graph.displayInfo(std::cerr, 2);
+    }
 
     tic = clock::now();
     CodeGeneratorCPU codeGenerator(outputFilename);
@@ -110,7 +126,8 @@ int main(int argc, char** argv) {
     else
         codeGenerator.config_precision(64);
     
-    codeGenerator.displayConfig(std::cerr);
+    if (Verbose > 0)
+        codeGenerator.displayConfig(std::cerr);
 
     codeGenerator.generate(graph);
     tok = clock::now();
