@@ -14,13 +14,25 @@ int main(int argc, char** argv) {
 
     Timer timer;
     timer.setReplication(1);
+    TimingResult rst;
 
     #ifdef MULTI_THREAD_SIMULATION_KERNEL
     std::cerr << "Multi-threading enabled.\n";
-    // for (int nthread : {2,4,6,8,10,12,16,20,24,28,32,36}) {
-    for (int nthread : {18, 36}) {
-        std::cerr << "nthreads = " << nthread << "\n";
-        auto rst = timer.timeit(
+    
+    const std::vector<int> nthreads {36};
+
+    int warmUpNThread = nthreads[nthreads.size()-1];
+    std::cerr << "Warm up run (" << warmUpNThread << "-thread):\n";
+    rst = timer.timeit(
+        [&]() {
+            simulation_kernel(sv.real, sv.imag, warmUpNThread);
+        }
+    );
+    rst.display();
+
+    for (const int nthread : nthreads) {
+        std::cerr << nthread << "-thread:\n";
+        rst = timer.timeit(
             [&]() {
                 simulation_kernel(sv.real, sv.imag, nthread);
             }
@@ -29,7 +41,7 @@ int main(int argc, char** argv) {
     }
 
     #else
-    auto rst = timer.timeit(
+    rst = timer.timeit(
         [&]() {
             simulation_kernel(sv.real, sv.imag);
         }
