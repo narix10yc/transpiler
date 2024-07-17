@@ -24,6 +24,9 @@ int main(int argc, char** argv) {
     cl::opt<std::string>
     Precision("p", cl::desc("precision (f64 or f32)"), cl::init("f64"));
 
+    cl::opt<bool>
+    UseF32("f32", cl::desc("use f32 (override -p)"), cl::init(false));
+
     cl::opt<unsigned>
     SimdS("S", cl::desc("vector size (s value)"), cl::Prefix, cl::init(1));
 
@@ -102,6 +105,11 @@ int main(int argc, char** argv) {
     codeGenerator.config_s(SimdS);
     codeGenerator.config_timer(InstallTimer);
     codeGenerator.config_multiThreaded(MultiThreaded);
+    if (UseF32 || Precision == "f32")
+        codeGenerator.config_precision(32);
+    else
+        codeGenerator.config_precision(64);
+    
     codeGenerator.displayConfig(std::cerr);
 
     codeGenerator.generate(graph);

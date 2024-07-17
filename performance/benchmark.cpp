@@ -2,7 +2,11 @@
 #include "utils/statevector.h"
 #include "timeit/timeit.h"
 
-using Statevector = utils::statevector::StatevectorSep<double>;
+#ifdef USING_F32
+    using Statevector = utils::statevector::StatevectorSep<float>;
+#else 
+    using Statevector = utils::statevector::StatevectorSep<double>;
+#endif
 using namespace timeit;
 
 int main(int argc, char** argv) {

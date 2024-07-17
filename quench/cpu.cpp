@@ -11,6 +11,17 @@ using CircuitGraph = quench::circuit_graph::CircuitGraph;
 void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
     IRGenerator irGenerator(config.s);
     irGenerator.setVerbose(verbose);
+    std::string realTy;
+    if (config.precision == 32) {
+        irGenerator.setRealTy(IRGenerator::RealTy::Float);
+        realTy = "float";
+    }
+    else {
+        assert(config.precision == 64);
+        irGenerator.setRealTy(IRGenerator::RealTy::Double);
+        realTy = "double";
+    }
+    
     const auto allBlocks = graph.getAllBlocks();
 
     std::stringstream externSS;
@@ -18,13 +29,17 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
     std::stringstream kernelSS;
 
     externSS << "extern \"C\" {\n";
-    matrixSS << "const static double _mPtr[] = {\n";
+    matrixSS << "const static " << realTy << " _mPtr[] = {\n";
 
     if (config.multiThreaded)
-        kernelSS << "void simulation_kernel(double* re, double* im, "
-                    "const int nthreads) {\n";
+        kernelSS << "void simulation_kernel("
+                 << realTy << "* re, "
+                 << realTy << "* im, "
+                 << "const int nthreads) {\n";
     else
-        kernelSS << "void simulation_kernel(double* re, double* im) {\n";
+        kernelSS << "void simulation_kernel("
+                 << realTy << "* re, "
+                 << realTy << "* im) {\n";
 
     if (config.multiThreaded)
         kernelSS << " std::vector<std::thread> threads(nthreads);\n"
@@ -41,7 +56,9 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
         std::string kernelName = "kernel_block_" + std::to_string(block->id);
         irGenerator.generateKernel(gate, kernelName);
 
-        externSS << " void " << kernelName << "(double*, double*, uint64_t, uint64_t, const void*);\n";
+        externSS << " void " << kernelName << "("
+                 << realTy << "*, " << realTy << "*, "
+                 << "uint64_t, uint64_t, const void*);\n";
 
         matrixSS << " ";
         for (const auto& elem : gate.gateMatrix.matrix.constantMatrix.data) {
@@ -89,6 +106,10 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
                  "  std::cerr << \" Block \" << BLOCK << \" takes \" << "
                  "std::chrono::duration_cast<std::chrono::milliseconds>(tok - tic).count() << \" ms;\\n\";\\\n"
                  "  tic = clock::now();\n\n";
+
+    if (config.precision == 32)
+        hFile << "#define USING_F32\n\n";
+
 
     if (config.multiThreaded)
         hFile << "#include <vector>\n"
