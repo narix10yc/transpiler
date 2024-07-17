@@ -6,3 +6,4 @@ examples/complex.qasm
 build/*
 tmp/*
 */gen_file*
+performance/obj
