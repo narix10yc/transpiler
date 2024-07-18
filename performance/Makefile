@@ -12,6 +12,7 @@ LDFLAGS = -L$(BUILD_DIR)/timeit -ltimeit -lpthread
 IR_DIR = $(CURDIR)
 OBJ_DIR = $(CURDIR)/obj
 SRC_FILE = $(CURDIR)/benchmark.cpp
+HEADER_FILE =$(wildcard $(CURDIR)/*.h)
 
 # Files
 IR_FILES = $(wildcard $(IR_DIR)/*.ll)
@@ -31,8 +32,8 @@ benchmark : $(EXEC)
 $(OBJ_DIR)/%.ll.o: $(IR_DIR)/%.ll | $(OBJ_DIR)
 	$(CLANG) -c -Ofast -march=native -o $@ $<
 
-$(SRC_OBJ): $(SRC_FILE) | $(OBJ_DIR)
-	$(CLANGXX) $(CFLAGS) -c -o $@ $<
+$(SRC_OBJ): $(SRC_FILE) $(HEADER_FILE) | $(OBJ_DIR)
+	$(CLANGXX) $(CFLAGS) -c -o $@ $(SRC_FILE)
 
 # Link all object files
 $(EXEC): $(OBJ_FILES) $(SRC_OBJ)

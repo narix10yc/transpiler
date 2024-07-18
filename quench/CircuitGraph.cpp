@@ -579,7 +579,7 @@ void CircuitGraph::greedyGateFusion() {
                     q++;
                 else
                     hasChange = true;
-                
+
                 // print(std::cerr, 2) << "\n\n";
             }
             q = 0;

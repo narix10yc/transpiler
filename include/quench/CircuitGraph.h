@@ -165,14 +165,6 @@ public:
         };
     }
 
-    static FusionConfig Default() {
-        return {
-            .maxNQubits = 4,
-            .maxOpCount = 128, // 3-qubit dense
-            .zeroSkippingThreshold = 1e-8
-        };
-    }
-
     static FusionConfig TwoQubitOnly() {
         return {
             .maxNQubits = 2,
@@ -181,10 +173,18 @@ public:
         };
     }
 
-    static FusionConfig Aggressive() {
+    static FusionConfig Default() {
         return {
             .maxNQubits = 5,
-            .maxOpCount = 1024, // 4-qubit dense takes 512 op
+            .maxOpCount = 128, // 3-qubit dense
+            .zeroSkippingThreshold = 1e-8
+        };
+    }
+    
+    static FusionConfig Aggressive() {
+        return {
+            .maxNQubits = 7,
+            .maxOpCount = 2048, // 5-qubit dense
             .zeroSkippingThreshold = 1e-8
         };
     }
