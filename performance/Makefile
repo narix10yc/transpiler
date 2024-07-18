@@ -18,15 +18,12 @@ HEADER_FILE =$(wildcard $(CURDIR)/*.h)
 IR_FILES = $(wildcard $(IR_DIR)/*.ll)
 OBJ_FILES = $(patsubst $(IR_DIR)/%.ll, $(OBJ_DIR)/%.ll.o, $(IR_FILES))
 SRC_OBJ = $(OBJ_DIR)/benchmark.cpp.o
-EXEC = $(BUILD_DIR)/benchmark
 
 # Default target
-all: $(OBJ_DIR) benchmark
+all: $(OBJ_DIR) benchmark single_gate
 
 $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
-	
-benchmark : $(EXEC)
 
 # Compile LLVM IR files to object files
 $(OBJ_DIR)/%.ll.o: $(IR_DIR)/%.ll | $(OBJ_DIR)
@@ -35,9 +32,11 @@ $(OBJ_DIR)/%.ll.o: $(IR_DIR)/%.ll | $(OBJ_DIR)
 $(SRC_OBJ): $(SRC_FILE) $(HEADER_FILE) | $(OBJ_DIR)
 	$(CLANGXX) $(CFLAGS) -c -o $@ $(SRC_FILE)
 
-# Link all object files
-$(EXEC): $(OBJ_FILES) $(SRC_OBJ)
-	$(CLANGXX) $^ $(LDFLAGS) -o $@ 
+benchmark: $(OBJ_FILES) $(SRC_OBJ)
+	$(CLANGXX) $^ $(LDFLAGS) -o $(BUILD_DIR)/benchmark
+
+single_gate: $(OBJ_FILES) $(CURDIR)/single_gate.cpp
+	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -o $(BUILD_DIR)/single_gate
 
 # Clean up
 clean:
