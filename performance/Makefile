@@ -35,8 +35,11 @@ $(SRC_OBJ): $(SRC_FILE) $(HEADER_FILE) | $(OBJ_DIR)
 benchmark: $(OBJ_FILES) $(SRC_OBJ)
 	$(CLANGXX) $^ $(LDFLAGS) -o $(BUILD_DIR)/benchmark
 
-single_gate: $(OBJ_FILES) $(CURDIR)/single_gate.cpp
-	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -o $(BUILD_DIR)/single_gate
+ir_benchmark_gcc: $(OBJ_FILES) $(CURDIR)/ir_benchmark.cpp
+	g++ $^ $(LDFLAGS) $(CFLAGS) -o $(BUILD_DIR)/ir_benchmark_gcc
+
+ir_benchmark_clang: $(OBJ_FILES) $(CURDIR)/ir_benchmark.cpp
+	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -o $(BUILD_DIR)/ir_benchmark_gcc
 
 # Clean up
 clean:

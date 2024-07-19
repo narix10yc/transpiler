@@ -12,7 +12,7 @@
 #endif
 using Statevector = utils::statevector::StatevectorSep<real_t>;
 
-#define Q0_VALUE 4
+#define Q0_VALUE 3
 #define S_VALUE 3
 
 using namespace Color;
