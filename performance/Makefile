@@ -35,6 +35,9 @@ $(SRC_OBJ): $(SRC_FILE) $(HEADER_FILE) | $(OBJ_DIR)
 benchmark: $(OBJ_FILES) $(SRC_OBJ)
 	$(CLANGXX) $^ $(LDFLAGS) -o $(BUILD_DIR)/benchmark
 
+gate_benchmark : $(OBJ_FILES) $(CURDIR)/gate_benchmark.cpp
+	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -o $(BUILD_DIR)/gate_benchmark
+
 ir_benchmark : ir_benchmark_gcc ir_benchmark_clang
 
 ir_benchmark_gcc: $(OBJ_FILES) $(CURDIR)/ir_benchmark.cpp

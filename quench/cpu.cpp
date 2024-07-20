@@ -26,32 +26,67 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
     const auto allBlocks = graph.getAllBlocks();
 
     std::stringstream externSS;
-    std::stringstream matrixSS;
     std::stringstream kernelSS;
+    std::stringstream metaDataSS;
 
     externSS << "extern \"C\" {\n";
-    matrixSS << "const static " << realTy << " _mPtr[] = {\n";
 
+    // simulation kernel declearation
     if (config.multiThreaded)
         kernelSS << "void simulation_kernel("
                  << realTy << "* re, "
                  << realTy << "* im, "
+                 << "const int nqubits, "
                  << "const int nthreads) {\n";
     else
         kernelSS << "void simulation_kernel("
                  << realTy << "* re, "
-                 << realTy << "* im) {\n";
+                 << realTy << "* im, "
+                 << "const int nqubits) {\n";
+
+    if (config.installTimer)
+        kernelSS << "  using clock = std::chrono::high_resolution_clock;\n"
+                    "  auto tic = clock::now();\n"
+                    "  auto tok = clock::now();\n";
 
     if (config.multiThreaded)
         kernelSS << " std::vector<std::thread> threads(nthreads);\n"
-                 << " size_t chunkSize;\n";
+                 << " uint64_t chunkSize;\n";
 
+    kernelSS << "  uint64_t idxMax;\n";
+
+    // apply each gate kernel
+    kernelSS << "  for (const auto& data : _metaData) {\n"
+             << "    idxMax = 1ULL << (nqubits - data.nqubits - S_VALUE);\n";
+
+
+    if (config.multiThreaded)
+        kernelSS << "    chunkSize = idxMax / nthreads;\n"
+                 << "    for (unsigned i = 0; i < nthreads; i++)\n"
+                 << "      threads[i] = std::thread(data.func, re, im, i*chunkSize, (i+1)*chunkSize, data.mPtr);\n"
+                 << "    for (unsigned i = 0; i < nthreads; i++)\n"
+                 << "      threads[i].join();\n";
+    else 
+        kernelSS << "    data.func(re, im, 0, idxMax, data.mPtr);\n";
+
+    if (config.installTimer) {
+        kernelSS << "    tok = clock::now();\n"
+                    << "    std::cerr << std::chrono::duration_cast<std::chrono::milliseconds>(tok - tic).count() << \" ms: \" << data.info << \"\\n\";\n"
+                    << "    tic = clock::now();\n";
+    }
+
+    // meta data data type
+    metaDataSS << "struct _meta_data_t_ {\n"
+               << "  void (*func)(" << realTy << "*, " << realTy << "*, "
+               << "uint64_t, uint64_t, const void*);\n"
+               << "  unsigned opCount;\n"
+               << "  unsigned nqubits;\n";
     if (config.installTimer)
-        kernelSS << "using clock = std::chrono::high_resolution_clock;\n"
-                    "auto tic = clock::now();\n"
-                    "auto tok = clock::now();\n";
-
-    unsigned matrixPosition = 0;
+        metaDataSS << "  const char* info;\n";
+    metaDataSS << "  const " << realTy << "* mPtr;\n"
+               << "};\n"
+               << "const static _meta_data_t_ _metaData[] = {\n";
+    
     for (const auto& block : allBlocks) {
         const auto& gate = *(block->quantumGate);
         std::string kernelName = "kernel_block_" + std::to_string(block->id);
@@ -60,65 +95,40 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
         externSS << " void " << kernelName << "("
                  << realTy << "*, " << realTy << "*, "
                  << "uint64_t, uint64_t, const void*);\n";
-
-        matrixSS << " ";
-        for (const auto& elem : gate.gateMatrix.matrix.constantMatrix.data) {
-            matrixSS << std::setprecision(16) << elem.real() << ","
-                     << std::setprecision(16) << elem.imag() << ", ";
-        }
-        matrixSS << "\n";
-
-        size_t idxMax = (1 << (graph.nqubits - gate.qubits.size() - config.s));
-        if (config.multiThreaded) {
-            kernelSS << " chunkSize = " << idxMax << "ULL / nthreads;\n"
-
-                     << " for (unsigned i = 0; i < nthreads; i++)\n"
-                     << "  threads[i] = std::thread(" << kernelName << ", re, im, "
-                     << "i*chunkSize, (i+1)*chunkSize, "
-                     << "_mPtr + " << matrixPosition << ");\n"
-            
-                     << " for (unsigned i = 0; i < nthreads; i++)\n"
-                     << "  threads[i].join();\n";
-        }
-        else 
-            kernelSS << " " << kernelName << "(re, im, 0, "
-                     << idxMax << "ULL, " << "_mPtr + " << matrixPosition << ");\n";
         
+        // metaData
+        metaDataSS << " { "
+                   << "&" << kernelName << ", "
+                   << block->quantumGate->opCount() << ", "
+                   << block->nqubits << ", ";
+
         if (config.installTimer) {
             std::stringstream infoSS;
-            infoSS << block->id << " ["
-                   << "opCount " << block->quantumGate->opCount() << ", "
-                   << "qubits ";
+            infoSS << "block " << block->id << " ";
             utils::printVector(block->getQubits(), infoSS);
-            infoSS << "]";
-
-            kernelSS << " PRINT_BLOCK_TIME(\"" << infoSS.str() << "\")\n";
+            metaDataSS << "\"" << infoSS.str() << "\", ";
         }
-
-        auto matrixSize = gate.gateMatrix.matrix.getSize();
-        matrixPosition += 2 * matrixSize * matrixSize;
+        
+        metaDataSS << "(" << realTy << "[]){";
+        for (const auto& elem : block->quantumGate->getCMatrix().data)
+            metaDataSS << std::setprecision(16) << elem.real() << ","
+                       << std::setprecision(16) << elem.imag() << ", ";
+        metaDataSS << "} },\n";
     }
     
     externSS << "};\n";
-    matrixSS << "};\n";
-    kernelSS << "};\n";
+    kernelSS << "  }\n}\n";
+    metaDataSS << "};\n";
 
     std::ofstream hFile(fileName + ".h");
     assert(hFile.is_open());
 
     if (config.installTimer)
         hFile << "#include <chrono>\n"
-                 "#include <iostream>\n"
-                 
-                 "#define PRINT_BLOCK_TIME(INFO)\\\n"
-                 "  tok = clock::now();\\\n"
-                 "  std::cerr << \" Block \" INFO \" takes \" << "
-                 "std::chrono::duration_cast<std::chrono::milliseconds>(tok - tic).count() << \" ms;\\n\";\\\n"
-                 "  tic = clock::now();\n\n";
+                 "#include <iostream>\n";
 
     if (config.precision == 32)
         hFile << "#define USING_F32\n\n";
-
 
     if (config.multiThreaded)
         hFile << "#include <vector>\n"
@@ -126,8 +136,9 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
                  "#define MULTI_THREAD_SIMULATION_KERNEL\n\n";
 
     hFile << "#include <cstdint>\n"
+          << "#define S_VALUE " << config.s << "\n"
           << externSS.str() << "\n"
-          << matrixSS.str() << "\n"
+          << metaDataSS.str() << "\n"
           << kernelSS.str() << "\n";
     hFile.close();
 

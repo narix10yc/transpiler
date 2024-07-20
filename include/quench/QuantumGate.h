@@ -251,6 +251,11 @@ public:
 
     int opCount(double zeroSkippingThres = 1e-8);
 
+    matrix_t::c_matrix_t& getCMatrix() {
+        assert(gateMatrix.isConstantMatrix());
+        return gateMatrix.cMatrix();
+    }
+
 };
 
 } // namespace quench::quantum_gate

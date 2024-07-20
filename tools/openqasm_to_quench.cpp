@@ -121,13 +121,10 @@ int main(int argc, char** argv) {
     if (outputFilename != "") {
         tic = clock::now();
         CodeGeneratorCPU codeGenerator(outputFilename);
-        codeGenerator.config_s(SimdS);
-        codeGenerator.config_timer(InstallTimer);
-        codeGenerator.config_multiThreaded(MultiThreaded);
-        if (UseF32 || Precision == "f32")
-            codeGenerator.config_precision(32);
-        else
-            codeGenerator.config_precision(64);
+        codeGenerator.config.s = SimdS;
+        codeGenerator.config.installTimer = InstallTimer;
+        codeGenerator.config.multiThreaded = MultiThreaded;
+        codeGenerator.config.precision = (UseF32 || Precision == "f32") ? 32 : 64;
         
         if (Verbose > 0)
             codeGenerator.displayConfig(std::cerr);

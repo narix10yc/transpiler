@@ -11,7 +11,7 @@
 using namespace timeit;
 
 int main(int argc, char** argv) {
-    Statevector sv(30);
+    Statevector sv(24);
 
     Timer timer;
     timer.setReplication(1);
@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
     // const std::vector<int> nthreads {16,24,32,36,48,64,68,72};
     // const std::vector<int> nthreads {16,20,24,28,32,34,36};
 
-    const std::vector<int> nthreads {70};
+    const std::vector<int> nthreads {2,4};
 
     std::vector<double> tarr(nthreads.size());
 
@@ -32,7 +32,7 @@ int main(int argc, char** argv) {
     std::cerr << "Warm up run (" << warmUpNThread << "-thread):\n";
     rst = timer.timeit(
         [&]() {
-            simulation_kernel(sv.real, sv.imag, warmUpNThread);
+            simulation_kernel(sv.real, sv.imag, sv.nqubits, warmUpNThread);
         }
     );
     rst.display();
@@ -42,7 +42,7 @@ int main(int argc, char** argv) {
         std::cerr << nthread << "-thread:\n";
         rst = timer.timeit(
             [&]() {
-                simulation_kernel(sv.real, sv.imag, nthread);
+                simulation_kernel(sv.real, sv.imag, sv.nqubits, nthread);
             }
         );
         rst.display();
@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
     #else
     rst = timer.timeit(
         [&]() {
-            simulation_kernel(sv.real, sv.imag);
+            simulation_kernel(sv.real, sv.imag, sv.nqubits);
         }
     );
     rst.display();
