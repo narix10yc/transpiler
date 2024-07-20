@@ -326,8 +326,10 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
     return {newCMatrix, allQubits};
 }
 
-int QuantumGate::opCount(double thres) const {
+int QuantumGate::opCount(double thres) {
     assert(gateMatrix.isConstantMatrix());
+    if (opCountCache >= 0)
+        return opCountCache;
 
     int count = 0;
     for (const auto& data : gateMatrix.cMatrix().data) {
@@ -336,5 +338,6 @@ int QuantumGate::opCount(double thres) const {
         if (std::abs(data.imag()) >= thres)
             count++;
     }
+    opCountCache = count;
     return count;
 }

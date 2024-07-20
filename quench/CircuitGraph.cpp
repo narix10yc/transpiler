@@ -7,6 +7,7 @@
 #include <chrono>
 #include <map>
 #include <deque>
+#include <numeric>
 
 using namespace Color;
 using namespace quench::circuit_graph;
@@ -476,7 +477,7 @@ std::vector<int> CircuitGraph::getBlockSizes() const {
     std::vector<int> sizes(nqubits + 1, 0);
     const auto allBlocks = getAllBlocks();
     int largestSize = 0;
-    for (const auto& b : allBlocks) {
+    for (const auto* b : allBlocks) {
         sizes[b->nqubits]++;
         if (b->nqubits > largestSize)
             largestSize = b->nqubits;
@@ -485,6 +486,32 @@ std::vector<int> CircuitGraph::getBlockSizes() const {
     sizes.resize(largestSize+1);
     return sizes;
 }
+
+
+std::vector<std::vector<int>> CircuitGraph::getBlockOpCountHistogram() const {
+    const auto allBlocks = getAllBlocks();
+    int largestSize = 0;
+    for (const auto* b : allBlocks) {
+        if (b->nqubits > largestSize)
+            largestSize = b->nqubits;
+    }
+    std::vector<std::vector<int>> hist(largestSize+1);
+    for (unsigned q = 1; q < largestSize+1; q++)
+        hist[q].resize(q, 0);
+    
+    for (const auto* b : allBlocks) {
+        const int q = b->nqubits;
+        int catagory = 0;
+        int opCount = b->quantumGate->opCount();
+        while ((1 << (2 * catagory + 3)) < opCount)
+            catagory++;
+        
+        hist[q][catagory]++;
+    }
+    return hist;
+    
+}
+
 
 std::ostream& CircuitGraph::displayInfo(std::ostream& os, int verbose) const {
     os << CYAN_FG << "=== CircuitGraph Info (verbose " << verbose << ") ===\n" << RESET;
@@ -499,7 +526,7 @@ std::ostream& CircuitGraph::displayInfo(std::ostream& os, int verbose) const {
        << static_cast<double>(totalOp) / nBlocks << "\n";
     os << "Circuit Depth:    " << tile.size() << "\n";
 
-    if (verbose > 2) {
+    if (verbose > 3) {
         os << "Block Sizes Count:\n";
         std::vector<std::vector<int>> vec(nqubits + 1);
         const auto allBlocks = getAllBlocks();
@@ -513,12 +540,24 @@ std::ostream& CircuitGraph::displayInfo(std::ostream& os, int verbose) const {
             utils::printVector(vec[q], os) << "\n";
         }
     }
+    else if (verbose > 2) {
+        os << "Block Statistics:\n";
+        const auto hist = getBlockOpCountHistogram();
+        for (unsigned q = 1; q < hist.size(); q++) {
+            auto count = std::reduce(hist[q].begin(), hist[q].end());
+            if (count == 0)
+                continue;
+            os << "  " << q << "-qubit count = " << count << "; hist: ";
+            utils::printVector(hist[q], os) << "\n";
+        }
+    }
     else if (verbose > 1) {
         os << "Block Sizes Count:\n";
         const auto sizes = getBlockSizes();
         for (unsigned q = 1; q < sizes.size(); q++) {
-            if (sizes[q] > 0)
-                os << "  " << q << "-qubit: " << sizes[q] << "\n";
+            if (sizes[q] <= 0)
+                continue;
+            os << "  " << q << "-qubit: " << sizes[q] << "\n";
         }
     }
 

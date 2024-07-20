@@ -192,6 +192,8 @@ public:
 };
 
 class QuantumGate {
+private:
+    int opCountCache = -1;
 public:
     /// The canonical form of qubits is in ascending order
     std::vector<unsigned> qubits;
@@ -247,7 +249,7 @@ public:
     /// @brief A.lmatmul(B) will return BA 
     QuantumGate lmatmul(const QuantumGate& other) const;
 
-    int opCount(double zeroSkippingThres = 1e-8) const;
+    int opCount(double zeroSkippingThres = 1e-8);
 
 };
 

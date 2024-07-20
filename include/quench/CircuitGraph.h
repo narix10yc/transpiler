@@ -260,6 +260,8 @@ public:
     /// always 0, and ret.size() == largest_size + 1.
     std::vector<int> getBlockSizes() const;
 
+    std::vector<std::vector<int>> getBlockOpCountHistogram() const;
+
     size_t countBlocks() const {
         return getAllBlocks().size();
     }

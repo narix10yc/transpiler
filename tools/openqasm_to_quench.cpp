@@ -111,14 +111,12 @@ int main(int argc, char** argv) {
     tok = clock::now();
     std::cerr << msg_start() << "Greedy gate fusion complete\n";
 
-    if (Verbose > 1) {
+    if (Verbose > 0)
         graph.relabelBlocks();
-        graph.displayInfo(std::cerr, 3);
+    if (Verbose > 2)
         graph.print(std::cerr);
-    }
-    else if (Verbose > 0) {
-        graph.displayInfo(std::cerr, 2);
-    }
+    
+    graph.displayInfo(std::cerr, Verbose + 1);
 
     if (outputFilename != "") {
         tic = clock::now();
