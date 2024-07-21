@@ -120,6 +120,7 @@ TimingResult Timer::timeit(
 
     // main loop
     repeat = static_cast<double>(repeat) * runTime / dur + 1;
+    tarr[0] *= repeat;
     for (unsigned r = r0; r < replication; ++r)
     {   
         tic = Clock::now();

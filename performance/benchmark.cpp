@@ -11,10 +11,11 @@
 using namespace timeit;
 
 int main(int argc, char** argv) {
-    Statevector sv(24);
+    Statevector sv(20);
 
     Timer timer;
-    timer.setReplication(1);
+    timer.setRunTime(1.5);
+    timer.setReplication(5);
     TimingResult rst;
 
     #ifdef MULTI_THREAD_SIMULATION_KERNEL
@@ -24,18 +25,18 @@ int main(int argc, char** argv) {
     // const std::vector<int> nthreads {16,24,32,36,48,64,68,72};
     // const std::vector<int> nthreads {16,20,24,28,32,34,36};
 
-    const std::vector<int> nthreads {2,4};
+    const std::vector<int> nthreads {32, 64};
 
     std::vector<double> tarr(nthreads.size());
 
-    int warmUpNThread = nthreads[nthreads.size()-1];
-    std::cerr << "Warm up run (" << warmUpNThread << "-thread):\n";
-    rst = timer.timeit(
-        [&]() {
-            simulation_kernel(sv.real, sv.imag, sv.nqubits, warmUpNThread);
-        }
-    );
-    rst.display();
+    // int warmUpNThread = nthreads[nthreads.size()-1];
+    // std::cerr << "Warm up run (" << warmUpNThread << "-thread):\n";
+    // rst = timer.timeit(
+    //     [&]() {
+    //         simulation_kernel(sv.real, sv.imag, sv.nqubits, warmUpNThread);
+    //     }
+    // );
+    // rst.display();
 
     for (unsigned i = 0; i < nthreads.size(); i++) {
         int nthread = nthreads[i];
