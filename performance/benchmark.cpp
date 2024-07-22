@@ -11,11 +11,11 @@
 using namespace timeit;
 
 int main(int argc, char** argv) {
-    Statevector sv(30);
+    Statevector sv(DEFAULT_NQUBITS);
 
     Timer timer;
     // timer.setRunTime(1.5);
-    timer.setReplication(1);
+    timer.setReplication(15);
     TimingResult rst;
 
     #ifdef MULTI_THREAD_SIMULATION_KERNEL

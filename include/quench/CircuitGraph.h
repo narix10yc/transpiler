@@ -249,6 +249,10 @@ public:
         fusionConfig = newConfig;
     }
 
+    void addGate(const quantum_gate::QuantumGate& gate) {
+        return addGate(gate.gateMatrix, gate.qubits);
+    }
+
     void addGate(const quantum_gate::GateMatrix& matrix,
                  const std::vector<unsigned>& qubits);
 

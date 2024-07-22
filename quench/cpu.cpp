@@ -136,6 +136,7 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
                  "#define MULTI_THREAD_SIMULATION_KERNEL\n\n";
 
     hFile << "#include <cstdint>\n"
+          << "#define DEFAULT_NQUBITS " << graph.nqubits << "\n"
           << "#define S_VALUE " << config.s << "\n"
           << externSS.str() << "\n"
           << metaDataSS.str() << "\n"
