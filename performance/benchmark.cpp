@@ -11,11 +11,11 @@
 using namespace timeit;
 
 int main(int argc, char** argv) {
-    Statevector sv(DEFAULT_NQUBITS);
+    Statevector sv(30);
 
     Timer timer;
     // timer.setRunTime(1.5);
-    timer.setReplication(15);
+    timer.setReplication(3);
     TimingResult rst;
 
     #ifdef MULTI_THREAD_SIMULATION_KERNEL
@@ -55,12 +55,26 @@ int main(int argc, char** argv) {
     std::cerr << "\n";
 
     #else
-    rst = timer.timeit(
-        [&]() {
-            simulation_kernel(sv.real, sv.imag, sv.nqubits);
-        }
-    );
-    rst.display();
+    for (int nqubits : {8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30}) {
+    // for (int nqubits : {26}) {
+        if (nqubits < 20)
+            timer.setReplication(21);
+        else if (nqubits < 26)
+            timer.setReplication(11);
+        else if (nqubits < 28)
+            timer.setReplication(5);
+        else
+            timer.setReplication(3); 
+        uint64_t idxMax = 1ULL << (nqubits - S_VALUE - 3);
+        rst = timer.timeit(
+            [&]() {
+                for (unsigned i = 0; i < nqubits; ++i)
+                    _metaData[i].func(sv.real, sv.imag, 0, idxMax, _metaData[i].mPtr);
+            }
+        );
+        std::cerr << "ours,u3," << nqubits << ",f64,"
+                  << std::scientific << std::setprecision(4) << (rst.min / nqubits) << "\n";
+    }
     #endif
 
     return 0;

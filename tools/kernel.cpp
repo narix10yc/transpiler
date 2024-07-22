@@ -59,9 +59,9 @@ static CircuitGraph getCircuitH2(int nqubits, int repeat) {
 
     auto mat = GateMatrix::FromName("h");
     for (unsigned r = 0; r < repeat; r++) {
-        for (unsigned q = 0; q < nqubits - 1; q++) {
+        for (unsigned q = 0; q < nqubits; q++) {
             QuantumGate gate(mat, {q});
-            gate = gate.lmatmul(QuantumGate(mat, {q+1}));
+            gate = gate.lmatmul(QuantumGate(mat, {(q+1) % nqubits}));
             graph.addGate(gate);
         }
     }
@@ -79,14 +79,56 @@ static CircuitGraph getCircuitU2(int nqubits, int repeat) {
 
     auto mat = GateMatrix::FromName("u3", {0.92, 0.46, 0.22});
     for (unsigned r = 0; r < repeat; r++) {
-        for (unsigned q = 0; q < nqubits - 1; q++) {
+        for (unsigned q = 0; q < nqubits; q++) {
             QuantumGate gate(mat, {q});
-            gate = gate.lmatmul(QuantumGate(mat, {q+1}));
+            gate = gate.lmatmul(QuantumGate(mat, {(q+1) % nqubits}));
             graph.addGate(gate);
         }
     }
     return graph;
 } 
+
+static CircuitGraph getCircuitH3(int nqubits, int repeat) {
+    CircuitGraph graph;
+    graph.updateFusionConfig({
+            .maxNQubits = 1,
+            .maxOpCount = 1,
+            .zeroSkippingThreshold = 1e-8
+    });
+
+    auto mat = GateMatrix::FromName("h");
+    for (unsigned r = 0; r < repeat; r++) {
+        for (unsigned q = 0; q < nqubits; q++) {
+            QuantumGate gate(mat, {q});
+            gate = gate.lmatmul(QuantumGate(mat, {(q+1) % nqubits}));
+            gate = gate.lmatmul(QuantumGate(mat, {(q+2) % nqubits}));
+            graph.addGate(gate);
+        }
+    }
+    
+    return graph;
+} 
+
+static CircuitGraph getCircuitU3(int nqubits, int repeat) {
+    CircuitGraph graph;
+    graph.updateFusionConfig({
+            .maxNQubits = 1,
+            .maxOpCount = 1,
+            .zeroSkippingThreshold = 1e-8
+    });
+
+    auto mat = GateMatrix::FromName("u3", {0.92, 0.46, 0.22});
+    for (unsigned r = 0; r < repeat; r++) {
+        for (unsigned q = 0; q < nqubits; q++) {
+            QuantumGate gate(mat, {q});
+            gate = gate.lmatmul(QuantumGate(mat, {(q+1) % nqubits}));
+            gate = gate.lmatmul(QuantumGate(mat, {(q+2) % nqubits}));
+            graph.addGate(gate);
+        }
+    }
+    return graph;
+} 
+
 
 
 int main(int argc, char** argv) {
@@ -120,9 +162,13 @@ int main(int argc, char** argv) {
     else if (WhichGate == "u1")
         graph = getCircuitU1(NQubits, 1);
     else if (WhichGate == "h2")
-        graph = getCircuitU2(NQubits, 1);
+        graph = getCircuitH2(NQubits, 1);
     else if (WhichGate == "u2")
         graph = getCircuitU2(NQubits, 1);
+    else if (WhichGate == "h3")
+        graph = getCircuitH3(NQubits, 1);
+    else if (WhichGate == "u3")
+        graph = getCircuitU3(NQubits, 1);
     else {
         std::cerr << RED_FG << "Error: " << RESET
                   << "Unknown gate '" << WhichGate << "'\n";
@@ -130,6 +176,9 @@ int main(int argc, char** argv) {
     }
 
     CodeGeneratorCPU codeGenerator(outputFilename);
+    codeGenerator.config.s = SimdS;
+    if (UseF32)
+        codeGenerator.config.precision = 32;
     codeGenerator.generate(graph);
     
     return 0;
