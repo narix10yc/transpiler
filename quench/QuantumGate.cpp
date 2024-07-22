@@ -338,6 +338,6 @@ int QuantumGate::opCount(double thres) {
         if (std::abs(data.imag()) >= thres)
             count++;
     }
-    opCountCache = count;
-    return count;
+    opCountCache = 2 * count;
+    return opCountCache;
 }
