@@ -11,7 +11,7 @@
 using namespace timeit;
 
 int main(int argc, char** argv) {
-    Statevector sv(30);
+    Statevector sv(20);
 
     Timer timer;
     // timer.setRunTime(1.5);
@@ -55,8 +55,8 @@ int main(int argc, char** argv) {
     std::cerr << "\n";
 
     #else
-    for (int nqubits : {8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30}) {
-    // for (int nqubits : {26}) {
+    // for (int nqubits : {8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30}) {
+    for (int nqubits : {20}) {
         if (nqubits < 20)
             timer.setReplication(21);
         else if (nqubits < 26)
@@ -66,12 +66,13 @@ int main(int argc, char** argv) {
         else
             timer.setReplication(3); 
         uint64_t idxMax = 1ULL << (nqubits - S_VALUE - 3);
-        rst = timer.timeit(
-            [&]() {
-                for (unsigned i = 0; i < nqubits; ++i)
-                    _metaData[i].func(sv.real, sv.imag, 0, idxMax, _metaData[i].mPtr);
-            }
-        );
+        for (unsigned i = 0; i < nqubits; ++i) {
+            rst = timer.timeit(
+                [&]() {
+                        _metaData[i].func(sv.real, sv.imag, 0, idxMax, _metaData[i].mPtr);
+                });
+            rst.display();
+        }
         std::cerr << "ours,u3," << nqubits << ",f64,"
                   << std::scientific << std::setprecision(4) << (rst.min / nqubits) << "\n";
     }
