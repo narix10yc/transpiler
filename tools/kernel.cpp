@@ -130,7 +130,6 @@ static CircuitGraph getCircuitU3(int nqubits, int repeat) {
 } 
 
 
-
 int main(int argc, char** argv) {
     cl::opt<std::string>
     outputFilename("o", cl::desc("output file name"), cl::init(""));

@@ -58,8 +58,9 @@ int main(int argc, char** argv) {
     std::cerr << "\n";
 
     #else
-    for (int nqubits : {8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30}) {
-    // for (int nqubits : {18}) {
+    // for (int nqubits : {8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30}) {
+    // for (int nqubits : {16, 18, 20, 22, 24, 26, 28, 30}) {
+    for (int nqubits : {24}) {
         // if (nqubits < 20)
             // timer.setReplication(21);
         // else if (nqubits < 26)
@@ -74,16 +75,15 @@ int main(int argc, char** argv) {
         real = (real_t*) std::aligned_alloc(64, (1 << nqubits) * sizeof(real_t));
         imag = (real_t*) std::aligned_alloc(64, (1 << nqubits) * sizeof(real_t));
 
-        for (unsigned i = 0; i < nqubits; ++i) {
             rst = timer.timeit(
             [&]() {
+        for (unsigned i = 0; i < nqubits; ++i) {
                     _metaData[i].func(real, imag, 0, idxMax, _metaData[i].mPtr);
-            });
-            rst.display();
         }
+            });
+            // rst.display();
         
         std::free(real); std::free(imag);
-
         
         std::cerr << "ours,u3," << nqubits << ",f64,"
                   << std::scientific << std::setprecision(4) << (rst.min / nqubits) << "\n";

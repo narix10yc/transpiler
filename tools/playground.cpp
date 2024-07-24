@@ -21,11 +21,11 @@ int main(int argc, char** argv) {
     cl::opt<std::string>
     outputFilename("o", cl::desc("output file name"), cl::init(""));
 
-    cl::opt<unsigned>
-    TargetQubit1("Q", cl::desc("target qubit 1"), cl::Prefix, cl::Required);
+    // cl::opt<unsigned>
+    // TargetQubit1("Q", cl::desc("target qubit 1"), cl::Prefix, cl::Required);
 
-    cl::opt<unsigned>
-    TargetQubit2("R", cl::desc("target qubit 2"), cl::Prefix, cl::Required);
+    // cl::opt<unsigned>
+    // TargetQubit2("R", cl::desc("target qubit 2"), cl::Prefix, cl::Required);
 
     cl::opt<bool>
     UseF32("f32", cl::desc("use f32 (override -p)"), cl::init(false));
@@ -44,8 +44,9 @@ int main(int argc, char** argv) {
 
     CodeGeneratorCPU codeGenerator(outputFilename);
     auto mat = GateMatrix::FromName("u3", {0.92, 0.46, 0.22});
-    auto gate = QuantumGate(mat, { TargetQubit1 });
-    gate = gate.lmatmul({ mat , {TargetQubit2}});
+    auto gate = QuantumGate(mat, { 7 });
+    gate = gate.lmatmul({ mat , {8}});
+    gate = gate.lmatmul({ mat , {9}});
     graph.addGate(gate);
 
     codeGenerator.config.s = SimdS;

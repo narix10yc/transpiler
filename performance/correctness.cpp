@@ -20,12 +20,14 @@ using namespace quench::quantum_gate;
 
 
 int main(int argc, char** argv) {
-    const int nqubits = 5;
-    const std::vector<unsigned> targetQubits = { 0, 1 };
+    const int nqubits = 12;
+    // const std::vector<unsigned> targetQubits = { 6, 7 };
 
-    auto mat = GateMatrix::FromName("u3", {0.92, 0.46, 0.22});
-    auto gate = QuantumGate(mat, { targetQubits[0] });
-    gate = gate.lmatmul({ mat , { targetQubits[1] }});    
+   auto mat = GateMatrix::FromName("u3", {0.92, 0.46, 0.22});
+    auto gate = QuantumGate(mat, { 7 });
+    gate = gate.lmatmul({ mat , {8}});
+    gate = gate.lmatmul({ mat , {9}});
+
 
     StatevectorComp<real_t> sv_c(nqubits);
     StatevectorSep<real_t> sv_s(nqubits);
@@ -41,7 +43,7 @@ int main(int argc, char** argv) {
     applyGeneral(sv_c.data, gate.gateMatrix, gate.qubits, nqubits);
     sv_c.print(std::cerr);
     
-    uint64_t idxMax = 1ULL << (sv_s.nqubits - S_VALUE - 2);
+    uint64_t idxMax = 1ULL << (sv_s.nqubits - S_VALUE - 3);
     // uint64_t idxMax = 1;
     _metaData[0].func(sv_s.real, sv_s.imag, 0, idxMax, _metaData[0].mPtr);
 
