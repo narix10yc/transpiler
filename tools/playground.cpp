@@ -1,66 +1,57 @@
 #include "openqasm/parser.h"
-#include "quench/Polynomial.h"
-#include "quench/simulate.h"
-#include "quench/QuantumGate.h"
+#include "quench/CircuitGraph.h"
 #include "quench/cpu.h"
-
 #include "utils/iocolor.h"
-#include "utils/statevector.h"
 
+#include "llvm/Support/CommandLine.h"
+
+#include <chrono>
+#include <sstream>
+
+using QuantumGate = quench::quantum_gate::QuantumGate;
+using GateMatrix = quench::quantum_gate::GateMatrix;
+using FusionConfig = quench::circuit_graph::FusionConfig;
+using CircuitGraph = quench::circuit_graph::CircuitGraph;
+using CodeGeneratorCPU = quench::cpu::CodeGeneratorCPU;
+using namespace llvm;
 using namespace Color;
-using namespace quench::simulate;
-using namespace quench::circuit_graph;
-using namespace quench::quantum_gate;
-using namespace quench::cpu;
 
-using namespace utils::statevector;
 
 int main(int argc, char** argv) {
-    assert(argc > 1);
+    cl::opt<std::string>
+    outputFilename("o", cl::desc("output file name"), cl::init(""));
 
-    openqasm::Parser parser(argv[1], 0);
-    auto qasmRoot = parser.parse();
-    std::cerr << "qasm AST built\n";
-    auto graph = qasmRoot->toCircuitGraph();
+    cl::opt<unsigned>
+    TargetQubit1("Q", cl::desc("target qubit 1"), cl::Prefix, cl::Required);
 
-    // graph.updateFusionConfig(FusionConfig::Aggressive());
-    // graph.updateFusionConfig({
-        // .maxNQubits = 2,
-        // .maxOpCount = 128,
-        // .zeroSkippingThreshold = 1e-8,
-    // });
+    cl::opt<unsigned>
+    TargetQubit2("R", cl::desc("target qubit 2"), cl::Prefix, cl::Required);
 
-    std::cerr << "CircuitGraph built\n";
+    cl::opt<bool>
+    UseF32("f32", cl::desc("use f32 (override -p)"), cl::init(false));
 
-    // StatevectorComp<double> sv1(graph.nqubits);
-    // sv1.zeroState();
-    // sv1.randomize();
-    // auto sv2 = sv1;
+    cl::opt<unsigned>
+    SimdS("S", cl::desc("vector size (s value)"), cl::Prefix, cl::init(1));
 
-    graph.print(std::cerr);
-    graph.displayInfo(std::cerr, 2);
-    CodeGeneratorCPU gen("gen_file");
-    gen.generate(graph, 999);
+    cl::ParseCommandLineOptions(argc, argv);
 
+    CircuitGraph graph;
+    graph.updateFusionConfig({
+            .maxNQubits = 1,
+            .maxOpCount = 1,
+            .zeroSkippingThreshold = 1e-8
+    });
+
+    CodeGeneratorCPU codeGenerator(outputFilename);
+    auto mat = GateMatrix::FromName("u3", {0.92, 0.46, 0.22});
+    auto gate = QuantumGate(mat, { TargetQubit1 });
+    gate = gate.lmatmul({ mat , {TargetQubit2}});
+    graph.addGate(gate);
+
+    codeGenerator.config.s = SimdS;
+    if (UseF32)
+        codeGenerator.config.precision = 32;
+    codeGenerator.generate(graph, 100);
     
-    // for (const auto& block : graph.getAllBlocks()) {
-    //     auto gate = block->toQuantumGate();
-    //     gate.displayInfo(std::cerr);
-
-    //     applyGeneral(sv1.data, gate.matrix, gate.qubits, sv1.nqubits);
-    // }
-    // sv1.print(std::cerr) << "\n";
-
-    // graph.greedyGateFusion();
-    // graph.print(std::cerr);
-    // graph.displayInfo(std::cerr, 2);
-    // for (const auto& block : graph.getAllBlocks()) {
-    //     auto gate = block->toQuantumGate();
-    //     gate.displayInfo(std::cerr);
-
-    //     applyGeneral(sv2.data, gate.matrix, gate.qubits, sv2.nqubits);
-    // }
-    // sv2.print(std::cerr) << "\n";
-
     return 0;
 }

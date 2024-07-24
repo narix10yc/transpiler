@@ -42,6 +42,7 @@ public:
 public:
     unsigned vecSizeInBits;
     bool useFMA;
+    bool useFMS;
     int verbose;
     RealTy realTy;
 
@@ -51,6 +52,7 @@ public:
         mod(std::make_unique<llvm::Module>("myModule", llvmContext)),
         vecSizeInBits(vecSizeInBits),
         useFMA(true),
+        useFMS(true),
         realTy(RealTy::Double),
         verbose(0) {}
 

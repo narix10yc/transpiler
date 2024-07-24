@@ -2,16 +2,19 @@
 #include "utils/statevector.h"
 #include "timeit/timeit.h"
 #include <iomanip>
+#include <iostream>
 
 #ifdef USING_F32
     using Statevector = utils::statevector::StatevectorSep<float>;
+    using real_t = float;
 #else 
     using Statevector = utils::statevector::StatevectorSep<double>;
+    using real_t = double;
 #endif
 using namespace timeit;
 
 int main(int argc, char** argv) {
-    Statevector sv(20);
+    real_t *real, *imag;
 
     Timer timer;
     // timer.setRunTime(1.5);
@@ -55,24 +58,33 @@ int main(int argc, char** argv) {
     std::cerr << "\n";
 
     #else
-    // for (int nqubits : {8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30}) {
-    for (int nqubits : {20}) {
-        if (nqubits < 20)
-            timer.setReplication(21);
-        else if (nqubits < 26)
+    for (int nqubits : {8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30}) {
+    // for (int nqubits : {18}) {
+        // if (nqubits < 20)
+            // timer.setReplication(21);
+        // else if (nqubits < 26)
             timer.setReplication(11);
-        else if (nqubits < 28)
-            timer.setReplication(5);
-        else
-            timer.setReplication(3); 
+        // else if (nqubits < 28)
+            // timer.setReplication(5);
+        // else
+            // timer.setReplication(3); 
         uint64_t idxMax = 1ULL << (nqubits - S_VALUE - 3);
+        std::cerr << "nqubits = " << nqubits << "\n";
+
+        real = (real_t*) std::aligned_alloc(64, (1 << nqubits) * sizeof(real_t));
+        imag = (real_t*) std::aligned_alloc(64, (1 << nqubits) * sizeof(real_t));
+
         for (unsigned i = 0; i < nqubits; ++i) {
             rst = timer.timeit(
-                [&]() {
-                        _metaData[i].func(sv.real, sv.imag, 0, idxMax, _metaData[i].mPtr);
-                });
+            [&]() {
+                    _metaData[i].func(real, imag, 0, idxMax, _metaData[i].mPtr);
+            });
             rst.display();
         }
+        
+        std::free(real); std::free(imag);
+
+        
         std::cerr << "ours,u3," << nqubits << ",f64,"
                   << std::scientific << std::setprecision(4) << (rst.min / nqubits) << "\n";
     }

@@ -118,6 +118,13 @@ IRGenerator::generateKernel(const QuantumGate& gate,
     auto* matV = builder.CreateLoad(VectorType::get(scalarTy, 2 * K * K, false),
                                     pMatArg, "matrix");
     for (unsigned i = 0; i < matrix.size(); i++) {
+        // auto* pReVal = builder.CreateConstGEP1_64(scalarTy, pMatArg, static_cast<uint64_t>(2*i), "pmRe_" + std::to_string(i));
+        // auto* mReVal = builder.CreateLoad(scalarTy, pReVal, "smRe_" + std::to_string(i));
+        // matrix[i].realVal = builder.CreateVectorSplat(S, mReVal, "mRe_" + std::to_string(i));
+
+        // auto* pImVal = builder.CreateConstGEP1_64(scalarTy, pMatArg, static_cast<uint64_t>(2*i+1), "pmIm_" + std::to_string(i));
+        // auto* mImVal = builder.CreateLoad(scalarTy, pReVal, "smIm_" + std::to_string(i));
+        // matrix[i].imagVal = builder.CreateVectorSplat(S, mReVal, "mIm_" + std::to_string(i));
         matrix[i].realVal = builder.CreateShuffleVector(
             matV, std::vector<int>(S, 2*i), "mRe_" + std::to_string(i));
         matrix[i].imagVal = builder.CreateShuffleVector(
@@ -239,12 +246,15 @@ IRGenerator::generateKernel(const QuantumGate& gate,
         }
         mask = ~((1ULL << (higherQubits.back() - sepBit - higherQubits.size() + 1)) - 1);
         if (verbose > 2) {
-            std::cerr << "                mask = " << mask << " 0b"
+            std::cerr << "i = " << hk << "           mask = " << mask << " 0b"
                       << std::bitset<12>(mask) << "\n";
         }
         tmpCounterV = builder.CreateAnd(counterV, mask, "tmpCounter");
         tmpCounterV = builder.CreateShl(tmpCounterV, higherQubits.size(), "tmpCounter");
         idxStartV = builder.CreateAdd(idxStartV, tmpCounterV, "idxStart");
+    }
+    else {
+        idxStartV = counterV;
     }
 
     // split masks, to be used in loading amplitude registers
@@ -305,21 +315,33 @@ IRGenerator::generateKernel(const QuantumGate& gate,
         std::string name0 = "newRe0_" + std::to_string(r) + "_";
         std::string name1 = "newRe1_" + std::to_string(r) + "_";
 
-        Value *newRe0 = nullptr, *newRe1 = nullptr;
-        for (unsigned c = 0; c < K; c++) {
-            newRe0 = genMulAdd(newRe0, matrix[r * K + c].realVal, real[c],
-                               matrix[r * K + c].realFlag, "", name0);
-            newRe1 = genMulAdd(newRe1, matrix[r * K + c].imagVal, imag[c],
-                               matrix[r * K + c].imagFlag, "", name1);  
+        if (useFMS) {
+            for (unsigned c = 0; c < K; c++)
+                newReal[r] = genMulAdd(newReal[r], matrix[r * K + c].realVal, real[c],
+                                matrix[r * K + c].realFlag, "", name0);
+            for (unsigned c = 0; c < K; c++) {
+                auto* neg_imag = builder.CreateFNeg(imag[c], "neg_imag_" + std::to_string(r));
+                newReal[r] = genMulAdd(newReal[r], matrix[r * K + c].imagVal, neg_imag,
+                                matrix[r * K + c].imagFlag, "", name0);
+            }
+        } else {
+            Value *newRe0 = nullptr, *newRe1 = nullptr;
+            for (unsigned c = 0; c < K; c++) {
+                newRe0 = genMulAdd(newRe0, matrix[r * K + c].realVal, real[c],
+                                matrix[r * K + c].realFlag, "", name0);
+                newRe1 = genMulAdd(newRe1, matrix[r * K + c].imagVal, imag[c],
+                                matrix[r * K + c].imagFlag, "", name1);  
+            }
+            if (newRe0 != nullptr && newRe1 != nullptr)
+                newReal[r] = builder.CreateFSub(newRe0, newRe1, "newRe" + std::to_string(r) + "_");
+            else if (newRe0 == nullptr)
+                newReal[r] = builder.CreateFNeg(newRe1, "newRe" + std::to_string(r) + "_");
+            else if (newRe1 == nullptr)
+                newReal[r] = newRe0;
+            else
+                assert(false && "newReal is null");
         }
-        if (newRe0 != nullptr && newRe1 != nullptr)
-            newReal[r] = builder.CreateFSub(newRe0, newRe1, "newRe" + std::to_string(r) + "_");
-        else if (newRe0 == nullptr)
-            newReal[r] = builder.CreateFNeg(newRe1, "newRe" + std::to_string(r) + "_");
-        else if (newRe1 == nullptr)
-            newReal[r] = newRe0;
-        else
-            assert(false && "newReal is null");
+
     }
 
     std::vector<Value*> newImag(K, nullptr);

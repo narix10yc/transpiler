@@ -30,8 +30,8 @@ public:
     StatevectorSep(int nqubits, bool initialize=false)
             : nqubits(static_cast<unsigned>(nqubits)), N(1ULL << nqubits) {
         assert(nqubits > 0);
-        real = (real_t*) aligned_alloc(64, N * sizeof(real_t));
-        imag = (real_t*) aligned_alloc(64, N * sizeof(real_t));
+        real = (real_t*) std::aligned_alloc(64, N * sizeof(real_t));
+        imag = (real_t*) std::aligned_alloc(64, N * sizeof(real_t));
         if (initialize) {
             for (size_t i = 0; i < (1 << nqubits); i++) {
                 real[i] = 0;
@@ -39,6 +39,8 @@ public:
             }
             real[0] = 1.0;
         }
+        std::cerr << "StatevectorSep(int)\n";
+
     }
 
     StatevectorSep(const StatevectorSep& that) : nqubits(that.nqubits), N(that.N) {
@@ -47,12 +49,21 @@ public:
         for (size_t i = 0; i < that.N; i++) {
             real[i] = that.real[i];
             imag[i] = that.imag[i];
+            std::cerr << "StatevectorSep(const StatevectorSep&)\n";
+
         }
     }
 
-    StatevectorSep(StatevectorSep&&) = delete;
+    StatevectorSep(StatevectorSep&& that)
+        : nqubits(that.nqubits), N(that.N), real(that.real), imag(that.imag) {
+            that.real = nullptr;
+            that.imag = nullptr;
+            std::cerr << "StatevectorSep(StatevectorSep&&)\n";
 
-    ~StatevectorSep() { free(real); free(imag); }
+        }
+
+    ~StatevectorSep() { std::free(real); std::free(imag);
+        std::cerr << "~StatevectorSep\n";}
 
     StatevectorSep& operator=(const StatevectorSep& that) {
         if (this != &that) {
@@ -61,10 +72,25 @@ public:
                 imag[i] = that.imag[i];
             }   
         }
+        std::cerr << "=(const StatevectorSep&)\n";
+
         return *this;
     }
 
-    StatevectorSep& operator=(StatevectorSep&&) = delete;
+    StatevectorSep& operator=(StatevectorSep&& that) {
+        this->~StatevectorSep();
+        real = that.real;
+        imag = that.imag;
+        nqubits = that.nqubits;
+        N = that.N;
+
+        that.real = nullptr;
+        that.imag = nullptr;
+
+        std::cerr << "=(StatevectorSep&&)\n";
+
+        return *this;
+    }
 
     void copyValueFrom(const StatevectorAlt<real_t>&);
 
@@ -139,7 +165,7 @@ public:
 
     StatevectorAlt(StatevectorAlt&&) = delete;
 
-    ~StatevectorAlt() { free(data); }
+    ~StatevectorAlt() { std::free(data); }
 
     StatevectorAlt& operator=(const StatevectorAlt& that) {
         if (this != &that) {

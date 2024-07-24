@@ -15,7 +15,7 @@ SRC_FILE = $(CURDIR)/benchmark.cpp
 HEADER_FILE =$(wildcard $(CURDIR)/*.h)
 
 # Files
-IR_FILES = $(wildcard $(IR_DIR)/*.ll)
+IR_FILES = $(wildcard $(IR_DIR)/gen_file.ll)
 OBJ_FILES = $(patsubst $(IR_DIR)/%.ll, $(OBJ_DIR)/%.ll.o, $(IR_FILES))
 SRC_OBJ = $(OBJ_DIR)/benchmark.cpp.o
 
@@ -37,6 +37,9 @@ benchmark: $(OBJ_FILES) $(SRC_OBJ)
 
 gate_benchmark : $(OBJ_FILES) $(CURDIR)/gate_benchmark.cpp
 	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -o $(BUILD_DIR)/gate_benchmark
+
+correctness: $(OBJ_FILES) $(CURDIR)/correctness.cpp
+	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -L$(BUILD_DIR)/quench -lquench -o $(BUILD_DIR)/correctness
 
 ir_benchmark : ir_benchmark_gcc ir_benchmark_clang
 
