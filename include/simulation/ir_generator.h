@@ -43,6 +43,8 @@ public:
     unsigned vecSizeInBits;
     bool useFMA;
     bool useFMS;
+    bool loadMatrixInEntry;
+    bool loadVectorMatrix;
     int verbose;
     RealTy realTy;
 
@@ -53,6 +55,8 @@ public:
         vecSizeInBits(vecSizeInBits),
         useFMA(true),
         useFMS(true),
+        loadMatrixInEntry(true),
+        loadVectorMatrix(true),
         realTy(RealTy::Double),
         verbose(0) {}
 

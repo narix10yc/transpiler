@@ -45,8 +45,8 @@ int main(int argc, char** argv) {
     CodeGeneratorCPU codeGenerator(outputFilename);
     auto mat = GateMatrix::FromName("u3", {0.92, 0.46, 0.22});
     auto gate = QuantumGate(mat, { 7 });
-    gate = gate.lmatmul({ mat , {8}});
-    gate = gate.lmatmul({ mat , {9}});
+    gate = gate.lmatmul({ mat , { 8 }});
+    gate = gate.lmatmul({ mat , { 9 }});
     graph.addGate(gate);
 
     codeGenerator.config.s = SimdS;

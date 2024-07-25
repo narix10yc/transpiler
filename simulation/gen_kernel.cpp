@@ -111,25 +111,35 @@ IRGenerator::generateKernel(const QuantumGate& gate,
     BasicBlock* loopBodyBB = BasicBlock::Create(llvmContext, "loopBody", func);
     BasicBlock* retBB = BasicBlock::Create(llvmContext, "ret", func);
 
-    builder.SetInsertPoint(entryBB);
-
-    // load matrix
     std::vector<matrix_data_t> matrix(K * K);
-    auto* matV = builder.CreateLoad(VectorType::get(scalarTy, 2 * K * K, false),
+
+    const auto loadMatrixF = [&]() {
+        Value* matV = nullptr;
+        if (loadMatrixInEntry && loadVectorMatrix) {
+            matV = builder.CreateLoad(VectorType::get(scalarTy, 2*K*K, false),
                                     pMatArg, "matrix");
+        }
+        for (unsigned i = 0; i < matrix.size(); i++) {
+            if (loadVectorMatrix) {
+                matrix[i].realVal = builder.CreateShuffleVector(
+                    matV, std::vector<int>(S, 2*i), "mRe_" + std::to_string(i));
+                matrix[i].imagVal = builder.CreateShuffleVector(
+                    matV, std::vector<int>(S, 2*i+1), "mIm_" + std::to_string(i));
+            } else {
+                auto* pReVal = builder.CreateConstGEP1_64(scalarTy, pMatArg, static_cast<uint64_t>(2*i), "pmRe_" + std::to_string(i));
+                auto* mReVal = builder.CreateLoad(scalarTy, pReVal, "smRe_" + std::to_string(i));
+                matrix[i].realVal = builder.CreateVectorSplat(S, mReVal, "mRe_" + std::to_string(i));
+
+                auto* pImVal = builder.CreateConstGEP1_64(scalarTy, pMatArg, static_cast<uint64_t>(2*i+1), "pmIm_" + std::to_string(i));
+                auto* mImVal = builder.CreateLoad(scalarTy, pReVal, "smIm_" + std::to_string(i));
+                matrix[i].imagVal = builder.CreateVectorSplat(S, mReVal, "mIm_" + std::to_string(i));
+            }
+        }
+    };
+
+    builder.SetInsertPoint(entryBB);
+    // set up matrix flags
     for (unsigned i = 0; i < matrix.size(); i++) {
-        // auto* pReVal = builder.CreateConstGEP1_64(scalarTy, pMatArg, static_cast<uint64_t>(2*i), "pmRe_" + std::to_string(i));
-        // auto* mReVal = builder.CreateLoad(scalarTy, pReVal, "smRe_" + std::to_string(i));
-        // matrix[i].realVal = builder.CreateVectorSplat(S, mReVal, "mRe_" + std::to_string(i));
-
-        // auto* pImVal = builder.CreateConstGEP1_64(scalarTy, pMatArg, static_cast<uint64_t>(2*i+1), "pmIm_" + std::to_string(i));
-        // auto* mImVal = builder.CreateLoad(scalarTy, pReVal, "smIm_" + std::to_string(i));
-        // matrix[i].imagVal = builder.CreateVectorSplat(S, mReVal, "mIm_" + std::to_string(i));
-        matrix[i].realVal = builder.CreateShuffleVector(
-            matV, std::vector<int>(S, 2*i), "mRe_" + std::to_string(i));
-        matrix[i].imagVal = builder.CreateShuffleVector(
-            matV, std::vector<int>(S, 2*i+1), "mIm_" + std::to_string(i));
-
         auto real = gate.gateMatrix.matrix.constantMatrix.data.at(i).real();
         auto imag = gate.gateMatrix.matrix.constantMatrix.data.at(i).imag();
 
@@ -153,6 +163,9 @@ IRGenerator::generateKernel(const QuantumGate& gate,
             matrix[i].imagFlag = 2;
     }
     
+    if (loadMatrixInEntry)
+        loadMatrixF();
+
     // debug print matrix
     if (verbose > 1) {
         std::cerr << "IRMatrix:\n[";
@@ -206,7 +219,7 @@ IRGenerator::generateKernel(const QuantumGate& gate,
         printVector(lowerQubits) << "\n";
         std::cerr << "higherQubits: ";
         printVector(higherQubits) << "\n";
-        std::cerr << "sepBit: " << sepBit << "\n";
+        std::cerr << "sepBit:  " << sepBit << "\n";
         std::cerr << "vecSize: " << vecSize << "\n";
     }
 
@@ -221,14 +234,16 @@ IRGenerator::generateKernel(const QuantumGate& gate,
 
     // loop body
     builder.SetInsertPoint(loopBodyBB);
+    if (!loadMatrixInEntry)
+        loadMatrixF();
 
     // find start pointer
-    if (verbose > 2) {
-        std::cerr << "finding masks... sum of ((counter & mask) << i)\n";
-    }
     Value* idxStartV = builder.getInt64(0ULL);
     if (!higherQubits.empty()) {
         // idx = insert 0 to every bit in higherQubits to counter
+        if (verbose > 2)
+            std::cerr << "finding masks... idxStart = sum of ((counter & mask) << i)\n";
+        
         uint64_t mask = 0ULL;
         uint64_t maskSum = 0ULL;
         Value* tmpCounterV = counterV;
@@ -278,6 +293,8 @@ IRGenerator::generateKernel(const QuantumGate& gate,
     }
     
     // load amplitude registers
+    // We load a total of 2*K registers, each with size S * LK (== vecSize)
+    // Each register is loaded from HK different places, 
     std::vector<Value*> real(K, nullptr), imag(K, nullptr);
     std::vector<Value*> pReal(HK, nullptr), pImag(HK, nullptr);
     Value *realFull, *imagFull;
@@ -309,53 +326,8 @@ IRGenerator::generateKernel(const QuantumGate& gate,
         }
     }
     
-    // matrix-vector multiplication
-    std::vector<Value*> newReal(K, nullptr);
-    for (unsigned r = 0; r < K; r++) {
-        std::string name0 = "newRe0_" + std::to_string(r) + "_";
-        std::string name1 = "newRe1_" + std::to_string(r) + "_";
 
-        if (useFMS) {
-            for (unsigned c = 0; c < K; c++)
-                newReal[r] = genMulAdd(newReal[r], matrix[r * K + c].realVal, real[c],
-                                matrix[r * K + c].realFlag, "", name0);
-            for (unsigned c = 0; c < K; c++) {
-                auto* neg_imag = builder.CreateFNeg(imag[c], "neg_imag_" + std::to_string(r));
-                newReal[r] = genMulAdd(newReal[r], matrix[r * K + c].imagVal, neg_imag,
-                                matrix[r * K + c].imagFlag, "", name0);
-            }
-        } else {
-            Value *newRe0 = nullptr, *newRe1 = nullptr;
-            for (unsigned c = 0; c < K; c++) {
-                newRe0 = genMulAdd(newRe0, matrix[r * K + c].realVal, real[c],
-                                matrix[r * K + c].realFlag, "", name0);
-                newRe1 = genMulAdd(newRe1, matrix[r * K + c].imagVal, imag[c],
-                                matrix[r * K + c].imagFlag, "", name1);  
-            }
-            if (newRe0 != nullptr && newRe1 != nullptr)
-                newReal[r] = builder.CreateFSub(newRe0, newRe1, "newRe" + std::to_string(r) + "_");
-            else if (newRe0 == nullptr)
-                newReal[r] = builder.CreateFNeg(newRe1, "newRe" + std::to_string(r) + "_");
-            else if (newRe1 == nullptr)
-                newReal[r] = newRe0;
-            else
-                assert(false && "newReal is null");
-        }
-
-    }
-
-    std::vector<Value*> newImag(K, nullptr);
-    for (unsigned r = 0; r < K; r++) {
-        std::string name = "newIm" + std::to_string(r) + "_";
-        for (unsigned c = 0; c < K; c++) {
-            newImag[r] = genMulAdd(newImag[r], matrix[r * K + c].realVal, imag[c],
-                               matrix[r * K + c].realFlag, "", name);
-            newImag[r] = genMulAdd(newImag[r], matrix[r * K + c].imagVal, real[c],
-                               matrix[r * K + c].imagFlag, "", name);
-        }
-    }
-
-    // merge updated amplitudes
+    // prepare merge masks
     std::vector<std::vector<int>> mergeMasks;
     for (unsigned round = 0; round < lk; round++) {
         for (unsigned pairI = 0; pairI < (1 << (lk - round - 1)); pairI++) {
@@ -369,21 +341,64 @@ IRGenerator::generateKernel(const QuantumGate& gate,
         // printVector(vec) << "\n";
     // std::cerr << "\n";
 
-    // merge and store back
+    
+    // matrix-vector multiplication
     for (unsigned hi = 0; hi < HK; hi++) {
-        unsigned mergeBegin = hi << lk;
+        std::vector<Value*> newReal(LK, nullptr);
+        std::vector<Value*> newImag(LK, nullptr);
+        for (unsigned li = 0; li < LK; li++) {
+            unsigned r = hi * LK + li; // row
+
+            // real part
+            std::string nameRe = "newRe_" + std::to_string(r) + "_";
+            if (useFMS) {
+                for (unsigned c = 0; c < K; c++)
+                    newReal[li] = genMulAdd(newReal[li], matrix[r * K + c].realVal, real[c],
+                                    matrix[r * K + c].realFlag, "", nameRe);
+                for (unsigned c = 0; c < K; c++) {
+                    auto* neg_imag = builder.CreateFNeg(imag[c], "neg_imag_" + std::to_string(r));
+                    newReal[li] = genMulAdd(newReal[li], matrix[r * K + c].imagVal, neg_imag,
+                                    matrix[r * K + c].imagFlag, "", nameRe);
+                }
+            } else {
+                Value *newRe0 = nullptr, *newRe1 = nullptr;
+                for (unsigned c = 0; c < K; c++) {
+                    newRe0 = genMulAdd(newRe0, matrix[r * K + c].realVal, real[c],
+                                    matrix[r * K + c].realFlag, "", nameRe);
+                    newRe1 = genMulAdd(newRe1, matrix[r * K + c].imagVal, imag[c],
+                                    matrix[r * K + c].imagFlag, "", nameRe);  
+                }
+                if (newRe0 != nullptr && newRe1 != nullptr)
+                    newReal[li] = builder.CreateFSub(newRe0, newRe1, "newRe" + std::to_string(r) + "_");
+                else if (newRe0 == nullptr)
+                    newReal[li] = builder.CreateFNeg(newRe1, "newRe" + std::to_string(r) + "_");
+                else if (newRe1 == nullptr)
+                    newReal[li] = newRe0;
+                else
+                    assert(false && "newReal is null");
+            }
+            // imag part
+            std::string nameIm = "newIm_" + std::to_string(r) + "_";
+            for (unsigned c = 0; c < K; c++) {
+                newImag[li] = genMulAdd(newImag[li], matrix[r * K + c].realVal, imag[c],
+                                matrix[r * K + c].realFlag, "", nameIm);
+                newImag[li] = genMulAdd(newImag[li], matrix[r * K + c].imagVal, real[c],
+                                matrix[r * K + c].imagFlag, "", nameIm);
+            }
+        }
+        // merge
+        if (verbose > 2)
+            std::cerr << "Ready to merge. hi = " << hi << "\n";
         auto maskIt = mergeMasks.cbegin();
-        // std::cerr << "hi = " << hi << ", "
-                //   << "mergeBegin = " << mergeBegin << "\n";
         for (unsigned round = 0; round < lk; round++) {
-            // std::cerr << " round " << round
-                    //   << ", there are " << (1 << (lk - round - 1)) << " pairs\n";
+            std::cerr << " round " << round
+                      << ", there are " << (1 << (lk - round - 1)) << " pairs\n";
             for (unsigned pairI = 0; pairI < (1 << (lk - round - 1)); pairI++) {
-                unsigned mergeIdx = mergeBegin + 2*pairI;
-                unsigned storeIdx = mergeBegin + pairI;
-                // std::cerr << "  pairI = " << pairI << ", "
-                        //   << "pair = (" << mergeIdx << "," << mergeIdx + 1 << ")"
-                        //   << " => " << storeIdx << "\n";
+                unsigned mergeIdx = 2 * pairI;
+                unsigned storeIdx = pairI;
+                std::cerr << "  pairI = " << pairI << ", "
+                          << "pair (" << mergeIdx << "," << mergeIdx + 1 << ")"
+                          << " => " << storeIdx << "\n";
                 newReal[storeIdx] = builder.CreateShuffleVector(
                         newReal[mergeIdx], newReal[mergeIdx + 1],
                         *maskIt, "mergeRe");
@@ -393,10 +408,11 @@ IRGenerator::generateKernel(const QuantumGate& gate,
                 maskIt++;
             }
         }
-        // std::cerr << "store " << mergeBegin << " to pReal " << hi << "\n";
-        builder.CreateStore(newReal[mergeBegin], pReal[hi], false);
-        builder.CreateStore(newImag[mergeBegin], pImag[hi], false);
+        // store
+        builder.CreateStore(newReal[0], pReal[hi], false);
+        builder.CreateStore(newImag[0], pImag[hi], false);
     }
+
 
     // increment counter and return 
     auto* counterNextV = builder.CreateAdd(counterV, builder.getInt64(1), "counterNext");
