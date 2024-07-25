@@ -22,7 +22,6 @@ public:
     unsigned s;
 };
 
-
 /// @brief IR Generator.
 /// @param vecSizeInBits: Required; default 2; the value of s.
 /// @param useFMA: default true; whether use fused multiplication-addition.
@@ -43,6 +42,7 @@ public:
     unsigned vecSizeInBits;
     bool useFMA;
     bool useFMS;
+    bool usePDEP; // parallel bits deposite from BMI2
     bool loadMatrixInEntry;
     bool loadVectorMatrix;
     int verbose;
@@ -55,6 +55,7 @@ public:
         vecSizeInBits(vecSizeInBits),
         useFMA(true),
         useFMS(true),
+        usePDEP(true),
         loadMatrixInEntry(true),
         loadVectorMatrix(true),
         realTy(RealTy::Double),

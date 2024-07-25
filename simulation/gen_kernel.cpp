@@ -238,12 +238,16 @@ IRGenerator::generateKernel(const QuantumGate& gate,
         loadMatrixF();
 
     // find start pointer
-    Value* idxStartV = builder.getInt64(0ULL);
-    if (!higherQubits.empty()) {
+    Value* idxStartV = counterV;
+    if (usePDEP) {
+        idxStartV = builder.CreateIntrinsic
+    }
+    else if (!higherQubits.empty()) {
         // idx = insert 0 to every bit in higherQubits to counter
         if (verbose > 2)
             std::cerr << "finding masks... idxStart = sum of ((counter & mask) << i)\n";
         
+        idxStartV = builder.getInt64(0ULL);
         uint64_t mask = 0ULL;
         uint64_t maskSum = 0ULL;
         Value* tmpCounterV = counterV;
@@ -267,9 +271,6 @@ IRGenerator::generateKernel(const QuantumGate& gate,
         tmpCounterV = builder.CreateAnd(counterV, mask, "tmpCounter");
         tmpCounterV = builder.CreateShl(tmpCounterV, higherQubits.size(), "tmpCounter");
         idxStartV = builder.CreateAdd(idxStartV, tmpCounterV, "idxStart");
-    }
-    else {
-        idxStartV = counterV;
     }
 
     // split masks, to be used in loading amplitude registers

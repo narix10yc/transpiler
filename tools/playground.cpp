@@ -16,6 +16,7 @@ using CodeGeneratorCPU = quench::cpu::CodeGeneratorCPU;
 using namespace llvm;
 using namespace Color;
 
+#include <immintrin.h>
 
 int main(int argc, char** argv) {
     cl::opt<std::string>
@@ -53,6 +54,9 @@ int main(int argc, char** argv) {
     if (UseF32)
         codeGenerator.config.precision = 32;
     codeGenerator.generate(graph, 100);
+
+
+
     
     return 0;
 }
