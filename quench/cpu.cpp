@@ -14,6 +14,7 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
     irGenerator.setVerbose(verbose);
     irGenerator.loadMatrixInEntry = config.loadMatrixInEntry;
     irGenerator.loadVectorMatrix = config.loadVectorMatrix;
+    irGenerator.usePDEP = config.usePDEP;
     std::string realTy;
     if (config.precision == 32) {
         irGenerator.setRealTy(IRGenerator::RealTy::Float);

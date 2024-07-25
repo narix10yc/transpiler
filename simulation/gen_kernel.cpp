@@ -245,9 +245,9 @@ IRGenerator::generateKernel(const QuantumGate& gate,
         uint64_t pdepMask = ~static_cast<uint64_t>(0ULL);
         for (unsigned hi = 0; hi < hk; hi++) {
             auto bit = higherQubits[hi];
-            pdepMask |= (1 << (bit - sepBit));
+            pdepMask ^= (1 << (bit - sepBit));
         }
-        if (verbose > 2)
+        // if (verbose > 2)
             std::cerr << "pdepMask = " << std::bitset<12>(pdepMask) << "\n";
         idxStartV = builder.CreateIntrinsic(idxStartV->getType(), Intrinsic::x86_bmi_pdep_64,
                         {counterV, builder.getInt64(pdepMask)}, nullptr, "idxStart");

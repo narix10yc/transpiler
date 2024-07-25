@@ -14,6 +14,7 @@ struct CodeGeneratorCPUConfig {
     int overrideNqubits;
     bool loadMatrixInEntry;
     bool loadVectorMatrix;
+    bool usePDEP; // parallel bit deposite
 };
 
 class CodeGeneratorCPU {
@@ -26,7 +27,8 @@ public:
                   .installTimer=false,
                   .overrideNqubits=-1,
                   .loadMatrixInEntry=true,
-                  .loadVectorMatrix=true}) {}
+                  .loadVectorMatrix=true,
+                  .usePDEP=true}) {}
 
     CodeGeneratorCPUConfig config;
 

@@ -20,11 +20,9 @@ using namespace timeit;
 int main(int argc, char** argv) {
     real_t *real, *imag;
 
-        real = (real_t*) std::aligned_alloc(64, 2 * (1ULL << 30) * sizeof(real_t));
-        imag = real + (1ULL << 30);
 
     Timer timer;
-    timer.setRunTime(1.5);
+    timer.setRunTime(0.5);
     // timer.setReplication(3);
     TimingResult rst;
 
@@ -65,9 +63,9 @@ int main(int argc, char** argv) {
     std::cerr << "\n";
 
     #else
-    for (int nqubits : {8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30}) {
+    // for (int nqubits : {8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30}) {
     // for (int nqubits : {16, 18, 20, 22, 24, 26, 28, 30}) {
-    // for (int nqubits : {14, 14, 14}) {
+    for (int nqubits : {14, 14, 14}) {
         if (nqubits < 20)
             timer.setReplication(7);
         else if (nqubits < 26)
@@ -81,6 +79,8 @@ int main(int argc, char** argv) {
         // real = (real_t*) std::aligned_alloc(64, 2 * (1ULL << nqubits) * sizeof(real_t));
         // imag = real + (1ULL << nqubits);
 
+        real = (real_t*) std::aligned_alloc(64, 2 * (1ULL << 14) * sizeof(real_t));
+        imag = real + (1ULL << 14);
         double t_min = 999999;
         for (unsigned rep = 0; rep < 3; rep++) {
             rst = timer.timeit(
@@ -89,7 +89,7 @@ int main(int argc, char** argv) {
                     _metaData[i].func(real, imag, 0, idxMax, _metaData[i].mPtr);
                 }
             });
-            // rst.display();  
+            rst.display();  
             if (t_min > rst.min)
                 t_min = rst.min;
         }
@@ -97,8 +97,8 @@ int main(int argc, char** argv) {
         std::cerr << "ours,u2," << nqubits << "," REAL_T ","
                   << std::scientific << std::setprecision(4) << (t_min / nqubits) << "\n";
         
-    }
         std::free(real);
+    }
     #endif
 
     return 0;
