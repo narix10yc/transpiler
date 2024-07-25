@@ -63,6 +63,12 @@ public:
                         std::function<void()> setup=[](){},
                         std::function<void()> teardown=[](){});
 
+    TimingResult timeitFixedRepeat(
+        std::function<void()> method,
+        int _repeat,
+        std::function<void()> setup=[](){},
+        std::function<void()> teardown=[](){});
+
 };
 
 } // end namespace timeit

@@ -135,3 +135,35 @@ TimingResult Timer::timeit(
 
     return TimingResult(repeat, replication, tarr);
 }
+
+
+TimingResult Timer::timeitFixedRepeat(
+        std::function<void()> method,
+        int _repeat,
+        std::function<void()> setup,
+        std::function<void()> teardown)
+{
+    using Clock = std::chrono::high_resolution_clock;
+    using TimePoint = std::chrono::time_point<Clock>;
+    using Duration = std::chrono::duration<double>;
+
+    std::vector<double> tarr(replication);
+    TimePoint tic, toc;
+    double dur;
+    
+    setup();
+    // main loop
+    for (unsigned r = 0; r < replication; ++r)
+    {   
+        tic = Clock::now();
+        for (unsigned i = 0; i < _repeat; ++i)
+            method();
+        toc = Clock::now();
+        dur = Duration(toc - tic).count();
+        tarr[r] = dur;
+    }
+
+    teardown();
+
+    return TimingResult(_repeat, replication, tarr);
+}

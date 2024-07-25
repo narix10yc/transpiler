@@ -20,7 +20,6 @@ using namespace timeit;
 int main(int argc, char** argv) {
     real_t *real, *imag;
 
-
     Timer timer;
     timer.setRunTime(0.5);
     // timer.setReplication(3);
@@ -83,11 +82,12 @@ int main(int argc, char** argv) {
         imag = real + (1ULL << 14);
         double t_min = 999999;
         for (unsigned rep = 0; rep < 3; rep++) {
-            rst = timer.timeit(
+            rst = timer.timeitFixedRepeat(
             [&]() {
                 for (unsigned i = 0; i < nqubits; ++i) {
                     _metaData[i].func(real, imag, 0, idxMax, _metaData[i].mPtr);
-                }
+                },
+                5000
             });
             rst.display();  
             if (t_min > rst.min)
