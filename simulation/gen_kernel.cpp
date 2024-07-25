@@ -115,7 +115,7 @@ IRGenerator::generateKernel(const QuantumGate& gate,
 
     const auto loadMatrixF = [&]() {
         Value* matV = nullptr;
-        if (loadMatrixInEntry && loadVectorMatrix) {
+        if (loadVectorMatrix) {
             matV = builder.CreateLoad(VectorType::get(scalarTy, 2*K*K, false),
                                     pMatArg, "matrix");
         }

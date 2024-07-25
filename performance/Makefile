@@ -17,7 +17,6 @@ HEADER_FILE =$(wildcard $(CURDIR)/*.h)
 # Files
 IR_FILES = $(wildcard $(IR_DIR)/gen_file.ll)
 OBJ_FILES = $(patsubst $(IR_DIR)/%.ll, $(OBJ_DIR)/%.ll.o, $(IR_FILES))
-SRC_OBJ = $(OBJ_DIR)/benchmark.cpp.o
 
 # Default target
 all: $(OBJ_DIR) benchmark single_gate
@@ -29,11 +28,8 @@ $(OBJ_DIR):
 $(OBJ_DIR)/%.ll.o: $(IR_DIR)/%.ll | $(OBJ_DIR)
 	$(CLANG) -c -Ofast -march=native -o $@ $<
 
-$(SRC_OBJ): $(SRC_FILE) $(HEADER_FILE) | $(OBJ_DIR)
-	$(CLANGXX) $(CFLAGS) -c -o $@ $(SRC_FILE)
-
-benchmark: $(OBJ_FILES) $(SRC_OBJ)
-	$(CLANGXX) $^ $(LDFLAGS) -o $(BUILD_DIR)/benchmark
+benchmark: $(OBJ_FILES) $(CURDIR)/benchmark.cpp
+	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -o $(BUILD_DIR)/benchmark
 
 gate_benchmark : $(OBJ_FILES) $(CURDIR)/gate_benchmark.cpp
 	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -o $(BUILD_DIR)/gate_benchmark

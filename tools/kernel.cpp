@@ -143,6 +143,12 @@ int main(int argc, char** argv) {
     cl::opt<bool>
     UseF32("f32", cl::desc("use f32 (override -p)"), cl::init(false));
 
+    cl::opt<bool>
+    LoadMatrixInEntry("load-matrix-in-entry", cl::desc(""), cl::init(true));
+
+    cl::opt<bool>
+    LoadVectorMatrix("load-vector-matrix", cl::desc(""), cl::init(true));
+
     cl::opt<unsigned>
     SimdS("S", cl::desc("vector size (s value)"), cl::Prefix, cl::init(1));
  
@@ -176,6 +182,8 @@ int main(int argc, char** argv) {
 
     CodeGeneratorCPU codeGenerator(outputFilename);
     codeGenerator.config.s = SimdS;
+    codeGenerator.config.loadMatrixInEntry = LoadMatrixInEntry;
+    codeGenerator.config.loadVectorMatrix = LoadVectorMatrix;
     if (UseF32)
         codeGenerator.config.precision = 32;
     codeGenerator.generate(graph);

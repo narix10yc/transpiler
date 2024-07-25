@@ -12,6 +12,8 @@ struct CodeGeneratorCPUConfig {
     bool multiThreaded;
     bool installTimer;
     int overrideNqubits;
+    bool loadMatrixInEntry;
+    bool loadVectorMatrix;
 };
 
 class CodeGeneratorCPU {
@@ -22,7 +24,9 @@ public:
         : fileName(fileName), 
           config({.s=1, .precision=64, .multiThreaded=false,
                   .installTimer=false,
-                  .overrideNqubits=-1}) {}
+                  .overrideNqubits=-1,
+                  .loadMatrixInEntry=true,
+                  .loadVectorMatrix=true}) {}
 
     CodeGeneratorCPUConfig config;
 

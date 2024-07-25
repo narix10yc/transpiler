@@ -12,6 +12,8 @@ using CircuitGraph = quench::circuit_graph::CircuitGraph;
 void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
     IRGenerator irGenerator(config.s);
     irGenerator.setVerbose(verbose);
+    irGenerator.loadMatrixInEntry = config.loadMatrixInEntry;
+    irGenerator.loadVectorMatrix = config.loadVectorMatrix;
     std::string realTy;
     if (config.precision == 32) {
         irGenerator.setRealTy(IRGenerator::RealTy::Float);
