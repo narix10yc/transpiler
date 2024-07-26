@@ -18,7 +18,6 @@
 
 cmake -S llvm-project-17.0.6.src/llvm -G Ninja \
 -B llvm-build \
--DCMAKE_INSTALL_PREFIX="$pwd/llvm-install" \
 -DCMAKE_BUILD_TYPE=Release \
 -DLLVM_ENABLE_RTTI=ON \
 -DLLVM_ENABLE_PROJECTS="clang" \
