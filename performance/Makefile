@@ -28,6 +28,9 @@ $(OBJ_DIR):
 $(OBJ_DIR)/%.ll.o: $(IR_DIR)/%.ll | $(OBJ_DIR)
 	$(CLANG) -c -Ofast -march=native -o $@ $<
 
+fidelity: $(CURDIR)/gen_file.ll $(CURDIR)/fidelity.cpp
+	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -o $(BUILD_DIR)/fidelity
+
 benchmark: $(OBJ_FILES) $(CURDIR)/benchmark.cpp
 	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -o $(BUILD_DIR)/benchmark
 

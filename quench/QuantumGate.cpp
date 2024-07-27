@@ -148,6 +148,9 @@ GateMatrix GateMatrix::FromName(const std::string& name,
                                 const std::vector<double>& params)
 {
     if (name == "u3") {
+        if (params.size() != 3) {
+            std::cerr << "Got " << params.size() << " params\n";
+        }
         assert(params.size() == 3);
         const double theta = 0.5 * params[0];
         const auto& phi = params[1];
@@ -185,6 +188,16 @@ GateMatrix GateMatrix::FromName(const std::string& name,
             {0,0}, {1,0}, {0,0}, {0,0},
             {0,0}, {0,0}, {1,0}, {0,0},
             {0,0}, {0,0}, {0,0}, {-1,0}
+        }};
+    }
+
+    if (name == "cp") {
+        assert(params.size() == 1);
+        return {{
+            {1,0}, {0,0}, {0,0}, {0,0},
+            {0,0}, {1,0}, {0,0}, {0,0},
+            {0,0}, {0,0}, {1,0}, {0,0},
+            {0,0}, {0,0}, {0,0}, {std::cos(params[0]), std::sin(params[0])}
         }};
     }
 

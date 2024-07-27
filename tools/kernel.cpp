@@ -181,7 +181,7 @@ int main(int argc, char** argv) {
     }
 
     CodeGeneratorCPU codeGenerator(outputFilename);
-    codeGenerator.config.s = SimdS;
+    codeGenerator.config.simd_s = SimdS;
     codeGenerator.config.loadMatrixInEntry = LoadMatrixInEntry;
     codeGenerator.config.loadVectorMatrix = LoadVectorMatrix;
     if (UseF32)

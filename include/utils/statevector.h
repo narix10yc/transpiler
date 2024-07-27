@@ -7,6 +7,8 @@
 #include <random>
 #include <iostream>
 #include <bitset>
+#include <thread>
+#include <functional>
 
 #include "utils/iocolor.h"
 #include "utils/utils.h"
@@ -94,35 +96,96 @@ public:
 
     void copyValueFrom(const StatevectorAlt<real_t>&);
 
-    double normSquared() const {
-        double s = 0;
-        for (size_t i = 0; i < N; i++) {
-            s += real[i] * real[i];
-            s += imag[i] * imag[i];
-        } 
-        return s;
-    }
+    double normSquared(int nthreads = 1) const {
 
-    double norm() const { return sqrt(normSquared()); }
+        const auto f = [&](uint64_t i0, uint64_t i1, double& rst) {
+            double sum = 0.0;
+            for (uint64_t i = i0; i < i1; i++) {
+                sum += real[i] * real[i];
+                sum += imag[i] * imag[i];
+            } 
+            rst = sum;
+        };
 
-    void normalize() {
-        double n = norm();
-        for (size_t i = 0; i < N; i++) {
-            real[i] /= n;
-            imag[i] /= n;
-        } 
-    }
-
-    void randomize() {
-        std::random_device rd;
-        std::mt19937 gen { rd() };
-        std::normal_distribution<real_t> d { 0, 1 };
-        
-        for (size_t i = 0; i < N; i++) {
-            real[i] = d(gen);
-            imag[i] = d(gen);
+        if (nthreads == 1) {
+            double s;
+            f(0, N, s);
+            return s;
         }
-        normalize();
+
+        std::vector<std::thread> threads(nthreads);
+        std::vector<double> sums(nthreads);
+        uint64_t blockSize = N / nthreads;
+        for (uint64_t i = 0; i < nthreads; i++) {
+            uint64_t i0 = i * blockSize;
+            uint64_t i1 = (i == nthreads-1) ? N : ((i+1) * blockSize);
+            threads[i] = std::thread(f, i0, i1, std::ref(sums[i]));
+        }
+
+        for (auto& thread : threads)
+            thread.join();
+        
+        double sum = 0.0;
+        for (const auto& s : sums)
+            sum += s;
+        return sum;
+    }
+
+    double norm(int nthreads = 1) const { return std::sqrt(normSquared(nthreads)); }
+
+    void normalize(int nthreads = 1) {
+        double n = norm(nthreads);
+        const auto f = [&](uint64_t i0, uint64_t i1) {
+            for (uint64_t i = i0; i < i1; i++) {
+                real[i] /= n;
+                imag[i] /= n;
+            }
+        };
+
+        if (nthreads == 1) {
+            f(0, N);
+            return;
+        }
+        std::vector<std::thread> threads(nthreads);
+        uint64_t blockSize = N / nthreads;
+        for (uint64_t i = 0; i < nthreads; i++) {
+            uint64_t i0 = i * blockSize;
+            uint64_t i1 = (i == nthreads-1) ? N : ((i+1) * blockSize);
+            threads[i] = std::thread(f, i0, i1);
+        }
+
+        for (auto& thread : threads)
+            thread.join();
+    }
+
+    void randomize(int nthreads = 1) {
+        const auto f = [&](uint64_t i0, uint64_t i1) {
+            std::random_device rd;
+            std::mt19937 gen { rd() };
+            std::normal_distribution<real_t> d { 0, 1 };
+            for (uint64_t i = i0; i < i1; i++) {
+                real[i] = d(gen);
+                imag[i] = d(gen);
+            }
+        };
+
+        if (nthreads == 1) {
+            f(0, N);
+            normalize(nthreads);
+            return;
+        }
+
+        std::vector<std::thread> threads(nthreads);
+        uint64_t blockSize = N / nthreads;
+        for (uint64_t i = 0; i < nthreads; i++) {
+            uint64_t i0 = i * blockSize;
+            uint64_t i1 = (i == nthreads-1) ? N : ((i+1) * blockSize);
+            threads[i] = std::thread(f, i0, i1);
+        }
+
+        for (auto& thread : threads)
+            thread.join();
+        normalize(nthreads);
     }
 
     std::ostream& print(std::ostream& os) const {

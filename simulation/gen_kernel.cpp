@@ -402,14 +402,16 @@ IRGenerator::generateKernel(const QuantumGate& gate,
             std::cerr << "Ready to merge. hi = " << hi << "\n";
         auto maskIt = mergeMasks.cbegin();
         for (unsigned round = 0; round < lk; round++) {
-            std::cerr << " round " << round
-                      << ", there are " << (1 << (lk - round - 1)) << " pairs\n";
+            if (verbose > 2)
+                std::cerr << " round " << round
+                        << ", there are " << (1 << (lk - round - 1)) << " pairs\n";
             for (unsigned pairI = 0; pairI < (1 << (lk - round - 1)); pairI++) {
                 unsigned mergeIdx = 2 * pairI;
                 unsigned storeIdx = pairI;
-                std::cerr << "  pairI = " << pairI << ", "
-                          << "pair (" << mergeIdx << "," << mergeIdx + 1 << ")"
-                          << " => " << storeIdx << "\n";
+                if (verbose > 2)
+                    std::cerr << "  pairI = " << pairI << ", "
+                            << "pair (" << mergeIdx << "," << mergeIdx + 1 << ")"
+                            << " => " << storeIdx << "\n";
                 newReal[storeIdx] = builder.CreateShuffleVector(
                         newReal[mergeIdx], newReal[mergeIdx + 1],
                         *maskIt, "mergeRe");

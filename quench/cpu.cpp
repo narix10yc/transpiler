@@ -10,7 +10,7 @@ using IRGenerator = simulation::IRGenerator;
 using CircuitGraph = quench::circuit_graph::CircuitGraph;
 
 void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
-    IRGenerator irGenerator(config.s);
+    IRGenerator irGenerator(config.simd_s);
     irGenerator.setVerbose(verbose);
     irGenerator.loadMatrixInEntry = config.loadMatrixInEntry;
     irGenerator.loadVectorMatrix = config.loadVectorMatrix;
@@ -140,7 +140,7 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
 
     hFile << "#include <cstdint>\n"
           << "#define DEFAULT_NQUBITS " << graph.nqubits << "\n"
-          << "#define S_VALUE " << config.s << "\n"
+          << "#define S_VALUE " << config.simd_s << "\n"
           << externSS.str() << "\n"
           << metaDataSS.str() << "\n"
           << kernelSS.str() << "\n";

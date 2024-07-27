@@ -1,18 +1,21 @@
 #include "openqasm/parser.h"
 #include "quench/CircuitGraph.h"
 #include "quench/cpu.h"
+#include "quench/simulate.h"
 #include "utils/iocolor.h"
+#include "utils/statevector.h"
+// #include "utils/half.h"
 
 #include "llvm/Support/CommandLine.h"
 
 #include <chrono>
 #include <sstream>
+#include <cmath>
 
+using namespace utils::statevector;
+using namespace quench::simulate;
 using QuantumGate = quench::quantum_gate::QuantumGate;
 using GateMatrix = quench::quantum_gate::GateMatrix;
-using FusionConfig = quench::circuit_graph::FusionConfig;
-using CircuitGraph = quench::circuit_graph::CircuitGraph;
-using CodeGeneratorCPU = quench::cpu::CodeGeneratorCPU;
 using namespace llvm;
 using namespace Color;
 
@@ -20,43 +23,64 @@ using namespace Color;
 
 int main(int argc, char** argv) {
     cl::opt<std::string>
-    outputFilename("o", cl::desc("output file name"), cl::init(""));
-
-    // cl::opt<unsigned>
-    // TargetQubit1("Q", cl::desc("target qubit 1"), cl::Prefix, cl::Required);
-
-    // cl::opt<unsigned>
-    // TargetQubit2("R", cl::desc("target qubit 2"), cl::Prefix, cl::Required);
-
-    cl::opt<bool>
-    UseF32("f32", cl::desc("use f32 (override -p)"), cl::init(false));
+    inputFilename(cl::desc("input file name"), cl::Positional);
 
     cl::opt<unsigned>
-    SimdS("S", cl::desc("vector size (s value)"), cl::Prefix, cl::init(1));
+    NQubits("N", cl::desc("number of qubits"), cl::Prefix, cl::Required);
 
     cl::ParseCommandLineOptions(argc, argv);
 
-    CircuitGraph graph;
-    graph.updateFusionConfig({
-            .maxNQubits = 1,
-            .maxOpCount = 1,
-            .zeroSkippingThreshold = 1e-8
-    });
+    StatevectorComp<double> sv64(NQubits);
+    StatevectorComp<float> sv32(NQubits);
 
-    CodeGeneratorCPU codeGenerator(outputFilename);
-    auto mat = GateMatrix::FromName("u3", {0.92, 0.46, 0.22});
-    auto gate = QuantumGate(mat, { 7 });
-    gate = gate.lmatmul({ mat , { 8 }});
-    gate = gate.lmatmul({ mat , { 9 }});
-    graph.addGate(gate);
+    sv64.randomize();
+    for (unsigned i = 0; i < sv64.N; i++)
+        sv32.data[i] = sv64.data[i];
 
-    codeGenerator.config.s = SimdS;
-    if (UseF32)
-        codeGenerator.config.precision = 32;
-    codeGenerator.generate(graph, 100);
+    std::cerr << "Norm of f64 before: " << sv64.norm() << "\n";
+    std::cerr << "Norm of f32 before: " << sv32.norm() << "\n\n";
+
+    openqasm::Parser parser(inputFilename, 0);
+
+    // parse and write ast
+    // auto qasmRoot = parser.parse();
+    // std::cerr << "-- qasm AST built\n";
+    // auto graph = qasmRoot->toCircuitGraph();
+
+    // graph.greedyGateFusion();
+
+    // const auto allBlocks = graph.getAllBlocks();
+    // for (const auto* block : allBlocks) {
+    //     const auto& gate = block->quantumGate;
+    //     applyGeneral<double>(sv64.data, gate->gateMatrix, gate->qubits, NQubits);
+    //     applyGeneral<float>(sv32.data, gate->gateMatrix, gate->qubits, NQubits);
+    // }
 
 
+    const auto matH = GateMatrix::FromName("h"); 
 
-    
+    for (unsigned q = 0; q < NQubits; q++) {
+        applyGeneral<double>(sv64.data, matH, { q }, NQubits);
+        applyGeneral<float>(sv32.data, matH, { q }, NQubits);
+        for (unsigned qq = q+1; qq < NQubits; qq++) {
+            double lambd = M_PI / static_cast<double>(1 << (qq - q));
+            const auto matCP = GateMatrix::FromName("cp", {lambd});
+            applyGeneral<double>(sv64.data, matCP, {q, qq}, NQubits);
+            applyGeneral<float>(sv32.data, matCP, {q, qq}, NQubits);
+        }
+    }
+
+    std::cerr << "Norm of f64 after: " << sv64.norm() << "\n";
+    std::cerr << "Norm of f32 after: " << sv32.norm() << "\n";
+
+    double infidality = 0.0;
+    for (uint64_t i = 0; i < sv64.N; i++) {
+        double dif_re = sv64.data[i].real() - sv32.data[i].real();
+        double dif_im = sv64.data[i].imag() - sv32.data[i].imag();
+
+        infidality += dif_re * dif_re + dif_im * dif_im;
+    }
+    std::cerr << "infidality = " << infidality << "\n";
+
     return 0;
 }

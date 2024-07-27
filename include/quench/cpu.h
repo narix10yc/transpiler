@@ -7,7 +7,7 @@
 namespace quench::cpu {
 
 struct CodeGeneratorCPUConfig {
-    int s;
+    int simd_s;
     int precision;
     bool multiThreaded;
     bool installTimer;
@@ -15,6 +15,30 @@ struct CodeGeneratorCPUConfig {
     bool loadMatrixInEntry;
     bool loadVectorMatrix;
     bool usePDEP; // parallel bit deposite
+
+    std::ostream& display(std::ostream& os = std::cerr) const {
+        os << Color::CYAN_FG << "== CodeGen Configuration ==\n" << Color::RESET
+           << "SIMD s:      " << simd_s << "\n"
+           << "Precision:   " << "f" << precision << "\n";
+        
+        os << "Multi-threading "
+           << ((multiThreaded) ? "enabled" : "disabled")
+           << ".\n";
+        
+        if (installTimer)
+            os << "Timer installed\n";
+        if (overrideNqubits > 0)
+            os << "Override nqubits = " << overrideNqubits << "\n";
+        
+        os << "Detailed IR settings:\n"
+           << "  load matrix in entry: " << ((loadMatrixInEntry) ? "true" : "false") << "\n"
+           << "  load vector matrix:   " << ((loadVectorMatrix) ? "true" : "false") << "\n"
+           << "  use PDEP:             " << ((usePDEP) ? "true" : "false") << "\n";
+
+        os << Color::CYAN_FG << "===========================\n" << Color::RESET;
+        return os;
+    }
+
 };
 
 class CodeGeneratorCPU {
@@ -23,7 +47,7 @@ private:
 public:
     CodeGeneratorCPU(const std::string& fileName = "gen_file")
         : fileName(fileName), 
-          config({.s=1, .precision=64, .multiThreaded=false,
+          config({.simd_s=1, .precision=64, .multiThreaded=false,
                   .installTimer=false,
                   .overrideNqubits=-1,
                   .loadMatrixInEntry=true,
@@ -35,22 +59,7 @@ public:
     void generate(const circuit_graph::CircuitGraph& graph, int verbose=0);
 
     std::ostream& displayConfig(std::ostream& os = std::cerr) const {
-        os << Color::CYAN_FG << "== CodeGen Configuration ==\n" << Color::RESET
-           << "SIMD s:       " << config.s << "\n"
-           << "Precision:    " << "f" << config.precision << "\n";
-        
-        os << "Multi-threading "
-           << ((config.multiThreaded) ? "enabled" : "disabled")
-           << ".\n";
-        
-        if (config.installTimer)
-            os << "Timer installed\n";
-        
-        if (config.overrideNqubits > 0)
-            os << "Override nqubits = " << config.overrideNqubits << "\n";
-        
-        os << Color::CYAN_FG << "===========================\n" << Color::RESET;
-        return os;
+        return config.display(os);
     }
     
 };
