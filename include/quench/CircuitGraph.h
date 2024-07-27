@@ -168,7 +168,7 @@ public:
     static FusionConfig TwoQubitOnly() {
         return {
             .maxNQubits = 2,
-            .maxOpCount = 32, // 2-qubit dense
+            .maxOpCount = 64, // 2-qubit dense
             .zeroSkippingThreshold = 1e-8
         };
     }
@@ -176,7 +176,7 @@ public:
     static FusionConfig Default() {
         return {
             .maxNQubits = 5,
-            .maxOpCount = 128, // 3-qubit dense
+            .maxOpCount = 256, // 3-qubit dense
             .zeroSkippingThreshold = 1e-8
         };
     }
@@ -184,7 +184,7 @@ public:
     static FusionConfig Aggressive() {
         return {
             .maxNQubits = 7,
-            .maxOpCount = 2048, // 5-qubit dense
+            .maxOpCount = 4096, // 5-qubit dense
             .zeroSkippingThreshold = 1e-8
         };
     }

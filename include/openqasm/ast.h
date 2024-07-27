@@ -296,7 +296,6 @@ public:
         CircuitGraph graph;
         std::vector<unsigned> qubits;
         std::vector<double> params;
-        int count = 0;
         for (const auto& s : stmts) {
             auto gateApply = dynamic_cast<GateApplyStmt*>(s.get());
             if (gateApply == nullptr) {
@@ -315,11 +314,6 @@ public:
             }
             auto matrix = GateMatrix::FromName(gateApply->name, params);
             graph.addGate(matrix, qubits);
-            std::cerr << "added gate " << count++;
-            utils::printVector(qubits);
-            utils::printVector(params);
-            std::cerr << "\n";
-
         }
 
         return graph;
