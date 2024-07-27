@@ -54,6 +54,15 @@ int main(int argc, char** argv) {
     MultiThreaded("multi-thread", cl::desc("enable multi-threading"), cl::init(true));
 
     cl::opt<bool>
+    LoadMatrixInEntry("load-matrix-in-entry", cl::desc("load matrix in entry"), cl::init(true));
+
+    cl::opt<bool>
+    LoadVectorMatrix("load-vector-matrix", cl::desc("load vector matrix"), cl::init(true));
+
+    cl::opt<bool>
+    UsePDEP("use-pdep", cl::desc("use pdep (parallel bit deposite)"), cl::init(true));
+
+    cl::opt<bool>
     DumpIRToMultipleFiles("dump-ir-to-multiple-files",
             cl::desc("dump ir to multiple files"), cl::init(false));
 
@@ -128,6 +137,9 @@ int main(int argc, char** argv) {
         codeGenerator.config.simd_s = SimdS;
         codeGenerator.config.installTimer = InstallTimer;
         codeGenerator.config.multiThreaded = MultiThreaded;
+        codeGenerator.config.loadMatrixInEntry = LoadMatrixInEntry;
+        codeGenerator.config.loadVectorMatrix = LoadVectorMatrix;
+        codeGenerator.config.usePDEP = UsePDEP;
         codeGenerator.config.dumpIRToMultipleFiles = DumpIRToMultipleFiles;
         codeGenerator.config.precision = (UseF32 || Precision == "f32") ? 32 : 64;
         

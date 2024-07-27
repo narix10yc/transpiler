@@ -64,24 +64,24 @@ int main(int argc, char** argv) {
 
     #else
     std::cerr << "\n============ New Run ============\n";
-    for (int nqubits : {8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28}) {
+    // for (int nqubits : {8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28}) {
     // for (int nqubits : {16, 18, 20, 22, 24, 26, 28, 30}) {
-    // for (const int nqubits : {14}) {
-        if (nqubits < 20)
-            timer.setReplication(15);
-        else if (nqubits < 26)
-            timer.setReplication(5); 
+    for (const int nqubits : { DEFAULT_NQUBITS, DEFAULT_NQUBITS }) {
+        // if (nqubits < 20)
+            // timer.setReplication(15);
+        // else if (nqubits < 26)
+        timer.setReplication(5); 
         uint64_t idxMax = 1ULL << (nqubits - S_VALUE - _metaData[0].nqubits);
         // std::cerr << "nqubits = " << nqubits << "\n";
         real = (real_t*) std::aligned_alloc(64, 2 * (1ULL << nqubits) * sizeof(real_t));
         imag = real + (1ULL << nqubits);
-            rst = timer.timeit(
-            [&]() {
-                for (unsigned i = 0; i < nqubits; ++i) {
-                    _metaData[i].func(real, imag, 0, idxMax, _metaData[i].mPtr);
-                }
-            });
-            // rst.display();  
+        rst = timer.timeit(
+        [&]() {
+            for (unsigned i = 0; i < nqubits; ++i) {
+                _metaData[i].func(real, imag, 0, idxMax, _metaData[i].mPtr);
+            }
+        });
+        rst.display();  
             // if (t_min > rst.min)
                 // t_min = rst.min;
         // }

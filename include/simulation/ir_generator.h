@@ -49,9 +49,9 @@ public:
     RealTy realTy;
 
 public:
-    IRGenerator(unsigned vecSizeInBits=2) : 
+    IRGenerator(unsigned vecSizeInBits=2, const std::string& moduleName = "myModule") : 
         builder(llvmContext), 
-        mod(std::make_unique<llvm::Module>("myModule", llvmContext)),
+        mod(std::make_unique<llvm::Module>(moduleName, llvmContext)),
         vecSizeInBits(vecSizeInBits),
         useFMA(true),
         useFMS(true),
@@ -62,6 +62,7 @@ public:
         verbose(0) {}
 
     const llvm::Module& getModule() const { return *mod; }
+    llvm::Module& getModule() { return *mod; }
 
     void setUseFMA(bool b) { useFMA = b; }
     void setRealTy(RealTy ty) { realTy = ty; }

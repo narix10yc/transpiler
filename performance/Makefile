@@ -34,7 +34,7 @@ fidelity: $(CURDIR)/gen_file.ll $(CURDIR)/fidelity.cpp
 benchmark: $(OBJ_FILES) $(CURDIR)/benchmark.cpp
 	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -o $(BUILD_DIR)/benchmark
 
-gate_benchmark : $(OBJ_FILES) $(CURDIR)/gate_benchmark.cpp
+gate_benchmark : $(CURDIR)/gen_file.ll $(CURDIR)/gate_benchmark.cpp
 	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -o $(BUILD_DIR)/gate_benchmark
 
 correctness: $(OBJ_FILES) $(CURDIR)/correctness.cpp

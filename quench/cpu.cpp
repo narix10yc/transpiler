@@ -101,6 +101,8 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
         if (config.dumpIRToMultipleFiles) {
             std::error_code ec;
             llvm::raw_fd_ostream irFile(fileName + "_ir/" + kernelName + ".ll", ec);
+            irGenerator.getModule().setModuleIdentifier(kernelName + "_module");
+            irGenerator.getModule().setSourceFileName(kernelName + ".ll");
             irGenerator.getModule().print(irFile, nullptr);
             irFile.close();
             irGenerator.~IRGenerator();
@@ -164,6 +166,8 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
     if (!config.dumpIRToMultipleFiles) {
         std::error_code ec;
         llvm::raw_fd_ostream irFile(fileName + ".ll", ec);
+        irGenerator.getModule().setModuleIdentifier(fileName + "_module");
+        irGenerator.getModule().setSourceFileName(fileName + ".ll");
         irGenerator.getModule().print(irFile, nullptr);
         irFile.close();
     }
