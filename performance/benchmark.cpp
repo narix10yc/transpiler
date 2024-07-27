@@ -18,12 +18,10 @@ using namespace timeit;
 // #include <immintrin.h>
 
 int main(int argc, char** argv) {
-    real_t *real, *imag;
-        // real = (real_t*) std::aligned_alloc(64, 2 * (1ULL << DEFAULT_NQUBITS) * sizeof(real_t));
-        // imag = real + (1ULL << DEFAULT_NQUBITS);
+    Statevector sv(DEFAULT_NQUBITS);
     Timer timer;
     timer.setRunTime(0.5);
-    // timer.setReplication(3);
+    timer.setReplication(1);
     TimingResult rst;
 
     #ifdef MULTI_THREAD_SIMULATION_KERNEL
@@ -31,12 +29,9 @@ int main(int argc, char** argv) {
     
     // const std::vector<int> nthreads {2,4,8,12,16,20,24,28,32,36};
     // const std::vector<int> nthreads {16,24,32,36,48,64,68,72};
-    const std::vector<int> nthreads {4, 8, 16, 24, 32};
-
-    // const std::vector<int> nthreads {32, 64};
-
+    const std::vector<int> nthreads {64};
+    
     std::vector<double> tarr(nthreads.size());
-
     int warmUpNThread = nthreads[nthreads.size()-1];
     std::cerr << "Warm up run (" << warmUpNThread << "-thread):\n";
     rst = timer.timeit(
@@ -63,34 +58,13 @@ int main(int argc, char** argv) {
     std::cerr << "\n";
 
     #else
-    std::cerr << "\n============ New Run ============\n";
-    for (int nqubits : {8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28}) {
-    // for (int nqubits : {16, 18, 20, 22, 24, 26, 28, 30}) {
-    // for (const int nqubits : {14}) {
-        if (nqubits < 20)
-            timer.setReplication(15);
-        else if (nqubits < 26)
-            timer.setReplication(5); 
-        uint64_t idxMax = 1ULL << (nqubits - S_VALUE - _metaData[0].nqubits);
-        // std::cerr << "nqubits = " << nqubits << "\n";
-        real = (real_t*) std::aligned_alloc(64, 2 * (1ULL << nqubits) * sizeof(real_t));
-        imag = real + (1ULL << nqubits);
-            rst = timer.timeit(
-            [&]() {
-                for (unsigned i = 0; i < nqubits; ++i) {
-                    _metaData[i].func(real, imag, 0, idxMax, _metaData[i].mPtr);
-                }
-            });
-            // rst.display();  
-            // if (t_min > rst.min)
-                // t_min = rst.min;
-        // }
-            
-        std::cerr << "ours,u2," << nqubits << "," REAL_T ","
-                  << std::scientific << std::setprecision(4) << (rst.min / nqubits) << "\n";
-        std::free(real);
-    }
-    // std::free(real);
+    rst = timer.timeit(
+        [&]() {
+            simulation_kernel(sv.real, sv.imag, sv.nqubits);
+        }
+    );
+    rst.display();
+
     #endif
 
     return 0;

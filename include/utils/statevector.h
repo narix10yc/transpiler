@@ -41,8 +41,7 @@ public:
             }
             real[0] = 1.0;
         }
-        std::cerr << "StatevectorSep(int)\n";
-
+        // std::cerr << "StatevectorSep(int)\n";
     }
 
     StatevectorSep(const StatevectorSep& that) : nqubits(that.nqubits), N(that.N) {
@@ -51,8 +50,7 @@ public:
         for (size_t i = 0; i < that.N; i++) {
             real[i] = that.real[i];
             imag[i] = that.imag[i];
-            std::cerr << "StatevectorSep(const StatevectorSep&)\n";
-
+            // std::cerr << "StatevectorSep(const StatevectorSep&)\n";
         }
     }
 
@@ -60,8 +58,7 @@ public:
         : nqubits(that.nqubits), N(that.N), real(that.real), imag(that.imag) {
             that.real = nullptr;
             that.imag = nullptr;
-            std::cerr << "StatevectorSep(StatevectorSep&&)\n";
-
+            // std::cerr << "StatevectorSep(StatevectorSep&&)\n";
         }
 
     ~StatevectorSep() { std::free(real); std::free(imag);
@@ -74,8 +71,7 @@ public:
                 imag[i] = that.imag[i];
             }   
         }
-        std::cerr << "=(const StatevectorSep&)\n";
-
+        // std::cerr << "=(const StatevectorSep&)\n";
         return *this;
     }
 
@@ -88,9 +84,7 @@ public:
 
         that.real = nullptr;
         that.imag = nullptr;
-
-        std::cerr << "=(StatevectorSep&&)\n";
-
+        // std::cerr << "=(StatevectorSep&&)\n";
         return *this;
     }
 

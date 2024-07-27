@@ -1,79 +1,96 @@
 #include "gen_file.h"
 #include "utils/statevector.h"
-#include "utils/iocolor.h"
 #include "timeit/timeit.h"
 #include <iomanip>
-#include <fstream>
+#include <iostream>
 
 #ifdef USING_F32
     using Statevector = utils::statevector::StatevectorSep<float>;
+    using real_t = float;
+    #define REAL_T "f32"
 #else 
     using Statevector = utils::statevector::StatevectorSep<double>;
+    using real_t = double;
+    #define REAL_T "f64"
 #endif
-
 using namespace timeit;
-using namespace Color;
+
+// #include <immintrin.h>
 
 int main(int argc, char** argv) {
-    Statevector sv(30);
-
+    real_t *real, *imag;
+        // real = (real_t*) std::aligned_alloc(64, 2 * (1ULL << DEFAULT_NQUBITS) * sizeof(real_t));
+        // imag = real + (1ULL << DEFAULT_NQUBITS);
     Timer timer;
-    timer.setReplication(15);
+    timer.setRunTime(0.5);
+    // timer.setReplication(3);
     TimingResult rst;
-
-    if (argc <= 1) {
-        std::cerr << RED_FG << "Error: " << RESET << "Need to provide output file\n";
-        return 1;
-    }
-    std::cerr << "-- Output file: " << argv[1] << "\n";
-
-    std::ofstream file(argv[1]);
 
     #ifdef MULTI_THREAD_SIMULATION_KERNEL
     std::cerr << "Multi-threading enabled.\n";
     
-    // const std::vector<int> nthreadsVec {2,4,8,12,16,20,24,28,32,36};
-    // const std::vector<int> nthreadsVec {16,24,32,36,48,64,68,72};
-    // const std::vector<int> nthreadsVec {16,20,24,28,32,34,36};
+    // const std::vector<int> nthreads {2,4,8,12,16,20,24,28,32,36};
+    // const std::vector<int> nthreads {16,24,32,36,48,64,68,72};
+    const std::vector<int> nthreads {4, 8, 16, 24, 32};
 
-    const std::vector<int> nthreadsVec {8, 16};
+    // const std::vector<int> nthreads {32, 64};
 
-    uint64_t idxMax;
-    uint64_t chunkSize;
-    for (const auto& data : _metaData) {
-        if ((1ULL << static_cast<int>(std::log2(data.opCount))) != data.opCount)
-            continue;
-        std::cerr << "OpCount " << data.opCount << "; nqubits " << data.nqubits << "\n";
-        file << data.opCount << ",";
-        for (unsigned i = 0; i < nthreadsVec.size(); i++) {
-            int nthreads = nthreadsVec[i];
-            std::vector<std::thread> threads(nthreads);
-            rst = timer.timeit(
-                [&]() {
-                        idxMax = 1ULL << (sv.nqubits - data.nqubits - S_VALUE);
-                        chunkSize = idxMax / nthreads;
-                        for (unsigned i = 0; i < nthreads; i++)
-                            threads[i] = std::thread(data.func, sv.real, sv.imag, i*chunkSize, (i+1)*chunkSize, data.mPtr);
-                        for (unsigned i = 0; i < nthreads; i++)
-                            threads[i].join();
-                    });
-            std::cerr << rst.timeToString(rst.min, 4) << " ";
-            file << std::scientific << std::setprecision(4) << rst.min;
-            if (i < nthreadsVec.size() - 1)
-                file << ",";
-        }
-        file << "\n";
-        std::cerr << "\n";
+    std::vector<double> tarr(nthreads.size());
 
-    }
-
-    #else
+    int warmUpNThread = nthreads[nthreads.size()-1];
+    std::cerr << "Warm up run (" << warmUpNThread << "-thread):\n";
     rst = timer.timeit(
         [&]() {
-            simulation_kernel(sv.real, sv.imag, sv.nqubits);
+            simulation_kernel(sv.real, sv.imag, sv.nqubits, warmUpNThread);
         }
     );
     rst.display();
+
+    for (unsigned i = 0; i < nthreads.size(); i++) {
+        int nthread = nthreads[i];
+        std::cerr << nthread << "-thread:\n";
+        rst = timer.timeit(
+            [&]() {
+                simulation_kernel(sv.real, sv.imag, sv.nqubits, nthread);
+            }
+        );
+        rst.display();
+        tarr[i] = rst.min;
+    }
+    // easy to copy paste
+    for (const auto& t : tarr)
+        std::cerr << std::fixed << std::setprecision(4) << t << ",";
+    std::cerr << "\n";
+
+    #else
+    std::cerr << "\n============ New Run ============\n";
+    for (int nqubits : {8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28}) {
+    // for (int nqubits : {16, 18, 20, 22, 24, 26, 28, 30}) {
+    // for (const int nqubits : {14}) {
+        if (nqubits < 20)
+            timer.setReplication(15);
+        else if (nqubits < 26)
+            timer.setReplication(5); 
+        uint64_t idxMax = 1ULL << (nqubits - S_VALUE - _metaData[0].nqubits);
+        // std::cerr << "nqubits = " << nqubits << "\n";
+        real = (real_t*) std::aligned_alloc(64, 2 * (1ULL << nqubits) * sizeof(real_t));
+        imag = real + (1ULL << nqubits);
+            rst = timer.timeit(
+            [&]() {
+                for (unsigned i = 0; i < nqubits; ++i) {
+                    _metaData[i].func(real, imag, 0, idxMax, _metaData[i].mPtr);
+                }
+            });
+            // rst.display();  
+            // if (t_min > rst.min)
+                // t_min = rst.min;
+        // }
+            
+        std::cerr << "ours,u2," << nqubits << "," REAL_T ","
+                  << std::scientific << std::setprecision(4) << (rst.min / nqubits) << "\n";
+        std::free(real);
+    }
+    // std::free(real);
     #endif
 
     return 0;

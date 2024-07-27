@@ -53,6 +53,10 @@ int main(int argc, char** argv) {
     cl::opt<bool>
     MultiThreaded("multi-thread", cl::desc("enable multi-threading"), cl::init(true));
 
+    cl::opt<bool>
+    DumpIRToMultipleFiles("dump-ir-to-multiple-files",
+            cl::desc("dump ir to multiple files"), cl::init(false));
+
     cl::ParseCommandLineOptions(argc, argv);
 
     using clock = std::chrono::high_resolution_clock;
@@ -124,6 +128,7 @@ int main(int argc, char** argv) {
         codeGenerator.config.simd_s = SimdS;
         codeGenerator.config.installTimer = InstallTimer;
         codeGenerator.config.multiThreaded = MultiThreaded;
+        codeGenerator.config.dumpIRToMultipleFiles = DumpIRToMultipleFiles;
         codeGenerator.config.precision = (UseF32 || Precision == "f32") ? 32 : 64;
         
         if (Verbose > 0)

@@ -10,11 +10,15 @@ using IRGenerator = simulation::IRGenerator;
 using CircuitGraph = quench::circuit_graph::CircuitGraph;
 
 void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
-    IRGenerator irGenerator(config.simd_s);
-    irGenerator.setVerbose(verbose);
-    irGenerator.loadMatrixInEntry = config.loadMatrixInEntry;
-    irGenerator.loadVectorMatrix = config.loadVectorMatrix;
-    irGenerator.usePDEP = config.usePDEP;
+    IRGenerator irGenerator;
+    const auto syncIRGeneratorConfig = [&]() {
+        irGenerator.vecSizeInBits = config.simd_s;
+        irGenerator.verbose = verbose;
+        irGenerator.loadMatrixInEntry = config.loadMatrixInEntry;
+        irGenerator.loadVectorMatrix = config.loadVectorMatrix;
+        irGenerator.usePDEP = config.usePDEP;
+    };
+    syncIRGeneratorConfig();
     std::string realTy;
     if (config.precision == 32) {
         irGenerator.setRealTy(IRGenerator::RealTy::Float);
@@ -25,8 +29,6 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
         irGenerator.setRealTy(IRGenerator::RealTy::Double);
         realTy = "double";
     }
-    
-    const auto allBlocks = graph.getAllBlocks();
 
     std::stringstream externSS;
     std::stringstream kernelSS;
@@ -90,10 +92,22 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
                << "};\n"
                << "const static _meta_data_t_ _metaData[] = {\n";
     
+        
+    const auto allBlocks = graph.getAllBlocks();
     for (const auto& block : allBlocks) {
         const auto& gate = *(block->quantumGate);
         std::string kernelName = "kernel_block_" + std::to_string(block->id);
         irGenerator.generateKernel(gate, kernelName);
+        if (config.dumpIRToMultipleFiles) {
+            std::error_code ec;
+            llvm::raw_fd_ostream irFile(fileName + "_ir/" + kernelName + ".ll", ec);
+            irGenerator.getModule().print(irFile, nullptr);
+            irFile.close();
+            irGenerator.~IRGenerator();
+
+            new (&irGenerator) IRGenerator();
+            syncIRGeneratorConfig();
+        }
 
         externSS << " void " << kernelName << "("
                  << realTy << "*, " << realTy << "*, "
@@ -144,11 +158,15 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
           << externSS.str() << "\n"
           << metaDataSS.str() << "\n"
           << kernelSS.str() << "\n";
+
     hFile.close();
 
-    std::error_code ec;
-    llvm::raw_fd_ostream irFile(fileName + ".ll", ec);
-    irGenerator.getModule().print(irFile, nullptr);
+    if (!config.dumpIRToMultipleFiles) {
+        std::error_code ec;
+        llvm::raw_fd_ostream irFile(fileName + ".ll", ec);
+        irGenerator.getModule().print(irFile, nullptr);
+        irFile.close();
+    }
 
-    irFile.close();
+
 }

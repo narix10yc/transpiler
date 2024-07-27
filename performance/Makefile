@@ -9,13 +9,13 @@ CFLAGS = -std=c++17 -I$(INCLUDE_DIR) -Ofast -march=native
 LDFLAGS = -L$(BUILD_DIR)/timeit -ltimeit -lpthread
 
 # Directories
-IR_DIR = $(CURDIR)
+IR_DIR = $(CURDIR)/gen_file_ir
 OBJ_DIR = $(CURDIR)/obj
 SRC_FILE = $(CURDIR)/benchmark.cpp
 HEADER_FILE =$(wildcard $(CURDIR)/*.h)
 
 # Files
-IR_FILES = $(wildcard $(IR_DIR)/gen_file.ll)
+IR_FILES = $(wildcard $(IR_DIR)/*.ll)
 OBJ_FILES = $(patsubst $(IR_DIR)/%.ll, $(OBJ_DIR)/%.ll.o, $(IR_FILES))
 
 # Default target

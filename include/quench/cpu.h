@@ -15,6 +15,7 @@ struct CodeGeneratorCPUConfig {
     bool loadMatrixInEntry;
     bool loadVectorMatrix;
     bool usePDEP; // parallel bit deposite
+    bool dumpIRToMultipleFiles;
 
     std::ostream& display(std::ostream& os = std::cerr) const {
         os << Color::CYAN_FG << "== CodeGen Configuration ==\n" << Color::RESET
@@ -52,7 +53,8 @@ public:
                   .overrideNqubits=-1,
                   .loadMatrixInEntry=true,
                   .loadVectorMatrix=true,
-                  .usePDEP=true}) {}
+                  .usePDEP=true,
+                  .dumpIRToMultipleFiles=false}) {}
 
     CodeGeneratorCPUConfig config;
 
