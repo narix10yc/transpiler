@@ -251,6 +251,22 @@ IRGenerator::generateKernel(const QuantumGate& gate,
             std::cerr << "pdepMask = " << std::bitset<12>(pdepMask) << "\n";
         idxStartV = builder.CreateIntrinsic(idxStartV->getType(), Intrinsic::x86_bmi_pdep_64,
                         {counterV, builder.getInt64(pdepMask)}, nullptr, "idxStart");
+
+        if (prefetchConfig.enable) {
+            std::cerr << "RUA\n";
+            auto* pfCounterV = builder.CreateAdd(counterV,
+                    builder.getInt64(prefetchConfig.distance), "pf_counter");
+            auto* pfIdxStartV = builder.CreateIntrinsic(idxStartV->getType(), Intrinsic::x86_bmi_pdep_64,
+                    {pfCounterV, builder.getInt64(pdepMask)}, nullptr, "pf_idxStart");
+            auto* pfAddRe = builder.CreateGEP(vecType, pRealArg, pfIdxStartV, "pf_addRe");
+            auto* pfAddIm = builder.CreateGEP(vecType, pImagArg, pfIdxStartV, "pf_addIm");
+
+            // prefetch(add, read_or_write, locality, data_or_instr_cache)
+            builder.CreateIntrinsic(builder.getVoidTy(), Intrinsic::prefetch,
+                    { pfAddRe, builder.getInt32(0), builder.getInt32(2), builder.getInt32(0)}, nullptr);
+            builder.CreateIntrinsic(builder.getVoidTy(), Intrinsic::prefetch,
+                    { pfAddIm, builder.getInt32(0), builder.getInt32(2), builder.getInt32(0)}, nullptr);
+        }
     }
     else if (!higherQubits.empty()) {
         // idx = insert 0 to every bit in higherQubits to counter

@@ -19,7 +19,7 @@ using GateMatrix = quench::quantum_gate::GateMatrix;
 using namespace llvm;
 using namespace Color;
 
-#include <immintrin.h>
+// #include <immintrin.h>
 
 int main(int argc, char** argv) {
     cl::opt<std::string>

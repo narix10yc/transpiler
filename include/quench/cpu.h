@@ -16,6 +16,7 @@ struct CodeGeneratorCPUConfig {
     bool loadVectorMatrix;
     bool usePDEP; // parallel bit deposite
     bool dumpIRToMultipleFiles;
+    bool enablePrefetch;
 
     std::ostream& display(std::ostream& os = std::cerr) const {
         os << Color::CYAN_FG << "== CodeGen Configuration ==\n" << Color::RESET
@@ -54,7 +55,8 @@ public:
                   .loadMatrixInEntry=true,
                   .loadVectorMatrix=true,
                   .usePDEP=true,
-                  .dumpIRToMultipleFiles=false}) {}
+                  .dumpIRToMultipleFiles=false,
+                  .enablePrefetch=false}) {}
 
     CodeGeneratorCPUConfig config;
 

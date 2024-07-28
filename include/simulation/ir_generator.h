@@ -22,6 +22,11 @@ public:
     unsigned s;
 };
 
+struct PrefetchConfiguration {
+    bool enable;
+    int distance;
+};
+
 /// @brief IR Generator.
 /// @param vecSizeInBits: Required; default 2; the value of s.
 /// @param useFMA: default true; whether use fused multiplication-addition.
@@ -47,6 +52,7 @@ public:
     bool loadVectorMatrix;
     int verbose;
     RealTy realTy;
+    PrefetchConfiguration prefetchConfig;
 
 public:
     IRGenerator(unsigned vecSizeInBits=2, const std::string& moduleName = "myModule") : 
@@ -58,8 +64,9 @@ public:
         usePDEP(true),
         loadMatrixInEntry(true),
         loadVectorMatrix(true),
+        verbose(0),
         realTy(RealTy::Double),
-        verbose(0) {}
+        prefetchConfig({.enable=false, .distance = 1}) {}
 
     const llvm::Module& getModule() const { return *mod; }
     llvm::Module& getModule() { return *mod; }

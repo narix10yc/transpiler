@@ -6,3 +6,6 @@ target_link_libraries(kernel quench simulation)
 
 add_executable(playground "playground.cpp")
 target_link_libraries(playground quench qasm simulation)
+
+add_executable(prefetch "prefetch.cpp")
+target_link_libraries(prefetch quench simulation)

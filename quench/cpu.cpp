@@ -17,6 +17,7 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
         irGenerator.loadMatrixInEntry = config.loadMatrixInEntry;
         irGenerator.loadVectorMatrix = config.loadVectorMatrix;
         irGenerator.usePDEP = config.usePDEP;
+        irGenerator.prefetchConfig.enable = config.enablePrefetch;
     };
     syncIRGeneratorConfig();
     std::string realTy;

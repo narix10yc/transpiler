@@ -155,6 +155,12 @@ int main(int argc, char** argv) {
     cl::opt<bool>
     MultiThreaded("multi-thread", cl::desc("enable multi-threading"), cl::init(true));
 
+    cl::opt<bool>
+    UsePDEP("use-pdep", cl::desc("use pdep"), cl::init(true));
+
+    cl::opt<bool>
+    EnablePrefetch("enable-prefetch", cl::desc("enable prefetch"), cl::init(true));
+
     cl::opt<std::string>
     WhichGate("gate", cl::desc("which gate"));
 
@@ -184,6 +190,8 @@ int main(int argc, char** argv) {
     codeGenerator.config.simd_s = SimdS;
     codeGenerator.config.loadMatrixInEntry = LoadMatrixInEntry;
     codeGenerator.config.loadVectorMatrix = LoadVectorMatrix;
+    codeGenerator.config.usePDEP = UsePDEP;
+    codeGenerator.config.enablePrefetch = EnablePrefetch;
     if (UseF32)
         codeGenerator.config.precision = 32;
     codeGenerator.generate(graph);
