@@ -33,14 +33,18 @@ int main(int argc, char** argv) {
     
     // const std::vector<int> nthreads {2,4,8,12,16,20,24,28,32,36};
     // const std::vector<int> nthreads {16,24,32,36,48,64,68,72};
-    const std::vector<int> nthreads {64};
+    const std::vector<int> nthreads {70};
     
     std::vector<double> tarr(nthreads.size());
     int warmUpNThread = nthreads[nthreads.size()-1];
     std::cerr << "Warm up run (" << warmUpNThread << "-thread):\n";
     rst = timer.timeit(
         [&]() {
-            simulation_kernel(sv.real, sv.imag, sv.nqubits, warmUpNThread);
+            #ifdef USING_ALT_KERNEL
+                simulation_kernel(sv.data, sv.nqubits, warmUpNThread);
+            #else
+                simulation_kernel(sv.real, sv.imag, sv.nqubits, warmUpNThread);
+            #endif
         }
     );
     rst.display();
@@ -50,7 +54,11 @@ int main(int argc, char** argv) {
         std::cerr << nthread << "-thread:\n";
         rst = timer.timeit(
             [&]() {
-                simulation_kernel(sv.real, sv.imag, sv.nqubits, nthread);
+                #ifdef USING_ALT_KERNEL
+                    simulation_kernel(sv.data, sv.nqubits, nthread);
+                #else
+                    simulation_kernel(sv.real, sv.imag, sv.nqubits, nthread);
+                #endif
             }
         );
         rst.display();
