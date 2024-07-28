@@ -2,6 +2,7 @@
 #include "quench/CircuitGraph.h"
 #include "quench/cpu.h"
 #include "utils/iocolor.h"
+#include <functional>
 
 #include "llvm/Support/CommandLine.h"
 
@@ -17,115 +18,65 @@ using namespace llvm;
 using namespace Color;
 
 
-static CircuitGraph getCircuitH1(int nqubits, int repeat) {
-    CircuitGraph graph;
-    graph.updateFusionConfig({
-            .maxNQubits = 1,
-            .maxOpCount = 1,
-            .zeroSkippingThreshold = 1e-8
-    });
-
+static CircuitGraph& getCircuitH1(CircuitGraph& graph, int nqubits) {
     auto mat = GateMatrix::FromName("h");
-    for (unsigned r = 0; r < repeat; r++)
-        for (unsigned q = 0; q < nqubits; q++)
-            graph.addGate(mat, {q});
+    for (unsigned q = 0; q < nqubits; q++)
+        graph.addGate(mat, {q});
     
     return graph;
 } 
 
-static CircuitGraph getCircuitU1(int nqubits, int repeat) {
-    CircuitGraph graph;
-    graph.updateFusionConfig({
-            .maxNQubits = 1,
-            .maxOpCount = 1,
-            .zeroSkippingThreshold = 1e-8
-    });
-
+static CircuitGraph& getCircuitU1(CircuitGraph& graph, int nqubits) {
     auto mat = GateMatrix::FromName("u3", {0.92, 0.46, 0.22});
-    for (unsigned r = 0; r < repeat; r++)
-        for (unsigned q = 0; q < nqubits; q++)
-            graph.addGate(mat, {q});
+    for (unsigned q = 0; q < nqubits; q++)
+        graph.addGate(mat, {q});
     
     return graph;
 } 
 
-static CircuitGraph getCircuitH2(int nqubits, int repeat) {
-    CircuitGraph graph;
-    graph.updateFusionConfig({
-            .maxNQubits = 1,
-            .maxOpCount = 1,
-            .zeroSkippingThreshold = 1e-8
-    });
-
+static CircuitGraph& getCircuitH2(CircuitGraph& graph, int nqubits) {
     auto mat = GateMatrix::FromName("h");
-    for (unsigned r = 0; r < repeat; r++) {
-        for (unsigned q = 0; q < nqubits; q++) {
-            QuantumGate gate(mat, {q});
-            gate = gate.lmatmul(QuantumGate(mat, {(q+1) % nqubits}));
-            graph.addGate(gate);
-        }
+    for (unsigned q = 0; q < nqubits; q++) {
+        QuantumGate gate(mat, {q});
+        gate = gate.lmatmul(QuantumGate(mat, {(q+1) % nqubits}));
+        graph.addGate(gate);
     }
     
     return graph;
 } 
 
-static CircuitGraph getCircuitU2(int nqubits, int repeat) {
-    CircuitGraph graph;
-    graph.updateFusionConfig({
-            .maxNQubits = 1,
-            .maxOpCount = 1,
-            .zeroSkippingThreshold = 1e-8
-    });
-
+static CircuitGraph& getCircuitU2(CircuitGraph& graph, int nqubits) {
     auto mat = GateMatrix::FromName("u3", {0.92, 0.46, 0.22});
-    for (unsigned r = 0; r < repeat; r++) {
-        for (unsigned q = 0; q < nqubits; q++) {
-            QuantumGate gate(mat, {q});
-            gate = gate.lmatmul(QuantumGate(mat, {(q+1) % nqubits}));
-            graph.addGate(gate);
-        }
+    for (unsigned q = 0; q < nqubits; q++) {
+        QuantumGate gate(mat, {q});
+        gate = gate.lmatmul(QuantumGate(mat, {(q+1) % nqubits}));
+        graph.addGate(gate);
     }
+    
     return graph;
 } 
 
-static CircuitGraph getCircuitH3(int nqubits, int repeat) {
-    CircuitGraph graph;
-    graph.updateFusionConfig({
-            .maxNQubits = 1,
-            .maxOpCount = 1,
-            .zeroSkippingThreshold = 1e-8
-    });
-
+static CircuitGraph& getCircuitH3(CircuitGraph& graph, int nqubits) {
     auto mat = GateMatrix::FromName("h");
-    for (unsigned r = 0; r < repeat; r++) {
-        for (unsigned q = 0; q < nqubits; q++) {
-            QuantumGate gate(mat, {q});
-            gate = gate.lmatmul(QuantumGate(mat, {(q+1) % nqubits}));
-            gate = gate.lmatmul(QuantumGate(mat, {(q+2) % nqubits}));
-            graph.addGate(gate);
-        }
+    for (unsigned q = 0; q < nqubits; q++) {
+        QuantumGate gate(mat, {q});
+        gate = gate.lmatmul(QuantumGate(mat, {(q+1) % nqubits}));
+        gate = gate.lmatmul(QuantumGate(mat, {(q+2) % nqubits}));
+        graph.addGate(gate);
     }
     
     return graph;
 } 
 
-static CircuitGraph getCircuitU3(int nqubits, int repeat) {
-    CircuitGraph graph;
-    graph.updateFusionConfig({
-            .maxNQubits = 1,
-            .maxOpCount = 1,
-            .zeroSkippingThreshold = 1e-8
-    });
-
+static CircuitGraph& getCircuitU3(CircuitGraph& graph, int nqubits) {
     auto mat = GateMatrix::FromName("u3", {0.92, 0.46, 0.22});
-    for (unsigned r = 0; r < repeat; r++) {
-        for (unsigned q = 0; q < nqubits; q++) {
-            QuantumGate gate(mat, {q});
-            gate = gate.lmatmul(QuantumGate(mat, {(q+1) % nqubits}));
-            gate = gate.lmatmul(QuantumGate(mat, {(q+2) % nqubits}));
-            graph.addGate(gate);
-        }
+    for (unsigned q = 0; q < nqubits; q++) {
+        QuantumGate gate(mat, {q});
+        gate = gate.lmatmul(QuantumGate(mat, {(q+1) % nqubits}));
+        gate = gate.lmatmul(QuantumGate(mat, {(q+2) % nqubits}));
+        graph.addGate(gate);
     }
+
     return graph;
 } 
 
@@ -164,25 +115,38 @@ int main(int argc, char** argv) {
     cl::opt<bool>
     AltKernel("alt-format", cl::desc("generate alt kernel"), cl::init(false));
 
+    cl::opt<bool>
+    FullKernel("full", cl::desc("generate alt kernel"), cl::init(false));
+
     cl::opt<std::string>
     WhichGate("gate", cl::desc("which gate"));
 
     cl::ParseCommandLineOptions(argc, argv);
 
     CircuitGraph graph;
+    graph.updateFusionConfig(FusionConfig::Disable());
+
+    const auto wrapper = [&](CircuitGraph& (*f)(CircuitGraph&, int)) {
+        if (FullKernel) {
+            for (int nqubits = 8; nqubits <= NQubits; nqubits += 2)
+                f(graph, nqubits);
+        } else {
+            f(graph, NQubits);
+        }
+    };
 
     if (WhichGate == "h1")
-        graph = getCircuitH1(NQubits, 1);
+        wrapper(getCircuitH1);
     else if (WhichGate == "u1")
-        graph = getCircuitU1(NQubits, 1);
+        wrapper(getCircuitU1);
     else if (WhichGate == "h2")
-        graph = getCircuitH2(NQubits, 1);
+        wrapper(getCircuitH2);
     else if (WhichGate == "u2")
-        graph = getCircuitU2(NQubits, 1);
+        wrapper(getCircuitU2);
     else if (WhichGate == "h3")
-        graph = getCircuitH3(NQubits, 1);
+        wrapper(getCircuitH3);
     else if (WhichGate == "u3")
-        graph = getCircuitU3(NQubits, 1);
+        wrapper(getCircuitU3);
     else {
         std::cerr << RED_FG << "Error: " << RESET
                   << "Unknown gate '" << WhichGate << "'\n";

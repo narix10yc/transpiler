@@ -38,6 +38,9 @@ benchmark: $(OBJ_FILES) $(CURDIR)/benchmark.cpp
 gate_benchmark : $(CURDIR)/gen_file.ll $(CURDIR)/gate_benchmark.cpp
 	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -o $(BUILD_DIR)/gate_benchmark
 
+full_gate_bcmk : $(CURDIR)/gen_file.ll $(CURDIR)/full_gate_bcmk.cpp
+	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -o $(BUILD_DIR)/full_gate_bcmk
+
 single_gate : $(CURDIR)/gen_file.ll $(CURDIR)/single_gate.cpp
 	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -o $(BUILD_DIR)/single_gate
 
