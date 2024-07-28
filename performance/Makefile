@@ -5,7 +5,7 @@ CLANGXX = $(llvm_root)/bin/clang++
 BUILD_DIR = $(CURDIR)/../build
 INCLUDE_DIR = $(CURDIR)/../include
 
-CFLAGS = -std=c++17 -I$(INCLUDE_DIR) -Ofast -march=native
+CFLAGS = -std=c++17 -I$(INCLUDE_DIR) -Ofast -march=native --gcc-install-dir=/mnt/ccnas2/bdp/yl5619/opt/miniconda/envs/cccad5-venv/lib/gcc/x86_64-conda-linux-gnu/12.4.0/
 LDFLAGS = -L$(BUILD_DIR)/timeit -ltimeit -lpthread
 
 # Directories

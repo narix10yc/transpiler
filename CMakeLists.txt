@@ -22,6 +22,8 @@ set(LLVM_DIR "${LLVM_ROOT}/lib/cmake/llvm")
 if(DEFINED ENV{SELECT_GCC_TOOLCHAIN})
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --gcc-install-dir=$ENV{SELECT_GCC_TOOLCHAIN}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --gcc-install-dir=$ENV{SELECT_GCC_TOOLCHAIN}")
+
+    message(WARNING "Selected gcc toolchain $ENV{SELECT_GCC_TOOLCHAIN}")
 endif()
 
 project(simulation)
