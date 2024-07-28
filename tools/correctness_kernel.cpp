@@ -151,9 +151,6 @@ int main(int argc, char** argv) {
 
     cl::opt<unsigned>
     SimdS("S", cl::desc("vector size (s value)"), cl::Prefix, cl::init(1));
- 
-    cl::opt<bool>
-    MultiThreaded("multi-thread", cl::desc("enable multi-threading"), cl::init(true));
 
     cl::opt<bool>
     UsePDEP("use-pdep", cl::desc("use pdep"), cl::init(true));

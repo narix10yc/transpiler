@@ -107,7 +107,11 @@ public:
 
     llvm::Function*
     generateKernel(const quench::quantum_gate::QuantumGate& gate,
-                   const std::string& funName = "");
+                   const std::string& funcName = "");
+
+    llvm::Function*
+    generateAlternatingKernel(const quench::quantum_gate::QuantumGate& gate,
+                              const std::string& funcName = "");
 };
 
 

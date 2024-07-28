@@ -18,7 +18,7 @@ namespace utils::statevector {
 template<typename real_t>
 class StatevectorSep;
 
-template<typename real_t>
+template<typename real_t, unsigned simd_s>
 class StatevectorAlt;
 
 template<typename real_t>
@@ -88,7 +88,7 @@ public:
         return *this;
     }
 
-    void copyValueFrom(const StatevectorAlt<real_t>&);
+    // void copyValueFrom(const StatevectorAlt<real_t>&);
 
     double normSquared(int nthreads = 1) const {
 
@@ -190,14 +190,14 @@ public:
         }
         for (size_t i = 0; i < ((N > 32) ? 32 : N); i++) {
             os << i << ": ";
-            print_complex(os, {real[i], imag[i]});
+            utils::print_complex(os, {real[i], imag[i]});
             os << "\n";
         }
         return os;
     }
 };
 
-template<typename real_t>
+template<typename real_t, unsigned simd_s>
 class StatevectorAlt {
 public:
     unsigned nqubits;
@@ -234,7 +234,7 @@ public:
 
     StatevectorAlt& operator=(StatevectorAlt&&) = delete;
 
-    void copyValueFrom(const StatevectorSep<real_t>&);
+    // void copyValueFrom(const StatevectorSep<real_t>&);
 
     double normSquared() const {
         double s = 0;
@@ -243,7 +243,7 @@ public:
         return s;
     }
 
-    double norm() const { return sqrt(normSquared()); }
+    double norm() const { return std::sqrt(normSquared()); }
 
     void normalize() {
         double n = norm();
@@ -260,29 +260,34 @@ public:
         normalize();
     }
 
-    void print(std::ostream& os) const {
-        // const char* red = "\033[31m";
-        const char* cyan = "\033[36m";
-        const char* bold = "\033[1m";
-        const char* reset = "\033[0m";
-        const auto print_number = [&](size_t idx) {
-            if (data[2*idx] >= 0)
-                os << " ";
-            os << data[2*idx] << "+";
-            if (data[2*idx+1] >= 0)
-                os << " ";
-            os << "i" << data[2*idx+1];
-        };
+    real_t& real(size_t idx) {
+        return data[utils::insertZeroToBit(idx, simd_s)];
+    }
 
+    real_t& imag(size_t idx) {
+        return data[utils::insertOneToBit(idx, simd_s)];
+    }
+    
+    const real_t& real(size_t idx) const {
+        return data[utils::insertZeroToBit(idx, simd_s)];
+    }
+
+    const real_t& imag(size_t idx) const {
+        return data[utils::insertOneToBit(idx, simd_s)];
+    }
+
+    std::ostream& print(std::ostream& os) const {
         if (N > 32) {
-            os << bold << cyan << "Warning: " << reset << "statevector has more "
-                "than 5 qubits, only the first 32 entries are shown.\n";
+            os << Color::BOLD << Color::CYAN_FG << "Warning: " << Color::RESET
+               << "statevector has more than 5 qubits, "
+                    "only the first 32 entries are shown.\n";
         }
         for (size_t i = 0; i < ((N > 32) ? 32 : N); i++) {
             os << i << ": ";
-            print_number(i);
+            utils::print_complex(os, {real(i), imag(i)});
             os << "\n";
-        }   
+        }
+        return os; 
     }
 };
 
@@ -381,43 +386,43 @@ static double fidelity(const StatevectorSep<real_t>& sv1, const StatevectorSep<r
     return re * re + im * im;
 }
 
-template<typename real_t>
-static double fidelity(const StatevectorSep<real_t>& sep, const StatevectorAlt<real_t>& alt) {
-    assert(sep.nqubits == alt.nqubits);
+// template<typename real_t>
+// static double fidelity(const StatevectorSep<real_t>& sep, const StatevectorAlt<real_t>& alt) {
+//     assert(sep.nqubits == alt.nqubits);
 
-    double re = 0.0, im = 0.0;
-    for (size_t i = 0; i < sep.N; i++) {
-        re += ( sep.real[i] * alt.data[2*i] + sep.imag[i] * alt.data[2*i+1]);
-        im += (-sep.real[i] * alt.data[2*i+1] + sep.imag[i] * alt.data[2*i]);
-    }
-    return re * re + im * im;
-}
+//     double re = 0.0, im = 0.0;
+//     for (size_t i = 0; i < sep.N; i++) {
+//         re += ( sep.real[i] * alt.data[2*i] + sep.imag[i] * alt.data[2*i+1]);
+//         im += (-sep.real[i] * alt.data[2*i+1] + sep.imag[i] * alt.data[2*i]);
+//     }
+//     return re * re + im * im;
+// }
 
-template<typename real_t>
-double fidelity(const StatevectorAlt<real_t>& alt, const StatevectorSep<real_t>& sep) {
-    return fidelity(sep, alt);
-}
+// template<typename real_t>
+// double fidelity(const StatevectorAlt<real_t>& alt, const StatevectorSep<real_t>& sep) {
+//     return fidelity(sep, alt);
+// }
 
 
-template<typename real_t>
-void StatevectorSep<real_t>::copyValueFrom(const StatevectorAlt<real_t>& alt) {
-    assert(nqubits == alt.nqubits);
+// template<typename real_t>
+// void StatevectorSep<real_t>::copyValueFrom(const StatevectorAlt<real_t>& alt) {
+//     assert(nqubits == alt.nqubits);
 
-    for (size_t i = 0; i < N; i++) {
-        real[i] = alt.data[2*i];
-        imag[i] = alt.data[2*i+1];
-    }
-}
+//     for (size_t i = 0; i < N; i++) {
+//         real[i] = alt.data[2*i];
+//         imag[i] = alt.data[2*i+1];
+//     }
+// }
 
-template<typename real_t>
-void StatevectorAlt<real_t>::copyValueFrom(const StatevectorSep<real_t>& sep) {
-    assert(nqubits == sep.nqubits);
+// template<typename real_t>
+// void StatevectorAlt<real_t>::copyValueFrom(const StatevectorSep<real_t>& sep) {
+//     assert(nqubits == sep.nqubits);
     
-    for (size_t i = 0; i < N; i++) {
-        data[2*i] = sep.real[i];
-        data[2*i+1] = sep.imag[i];
-    }
-}
+//     for (size_t i = 0; i < N; i++) {
+//         data[2*i] = sep.real[i];
+//         data[2*i+1] = sep.imag[i];
+//     }
+// }
 
 } // namespace utils::statevector
 

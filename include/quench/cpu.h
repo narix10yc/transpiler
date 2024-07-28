@@ -17,6 +17,7 @@ struct CodeGeneratorCPUConfig {
     bool usePDEP; // parallel bit deposite
     bool dumpIRToMultipleFiles;
     bool enablePrefetch;
+    bool generateAltKernel;
 
     std::ostream& display(std::ostream& os = std::cerr) const {
         os << Color::CYAN_FG << "== CodeGen Configuration ==\n" << Color::RESET
@@ -33,9 +34,12 @@ struct CodeGeneratorCPUConfig {
             os << "Override nqubits = " << overrideNqubits << "\n";
         
         os << "Detailed IR settings:\n"
-           << "  load matrix in entry: " << ((loadMatrixInEntry) ? "true" : "false") << "\n"
-           << "  load vector matrix:   " << ((loadVectorMatrix) ? "true" : "false") << "\n"
-           << "  use PDEP:             " << ((usePDEP) ? "true" : "false") << "\n";
+           << "  load matrix in entry:   " << ((loadMatrixInEntry) ? "true" : "false") << "\n"
+           << "  load vector matrix:     " << ((loadVectorMatrix) ? "true" : "false") << "\n"
+           << "  use PDEP:               " << ((usePDEP) ? "true" : "false") << "\n"
+           << "  dump IR to multi files: " << ((dumpIRToMultipleFiles) ? "true" : "false") << "\n"
+           << "  enable prefetch:        " << ((enablePrefetch) ? "true" : "false") << "\n"
+           << "  generate alt kernel:    " << ((generateAltKernel) ? "true" : "false") << "\n";
 
         os << Color::CYAN_FG << "===========================\n" << Color::RESET;
         return os;
@@ -56,7 +60,8 @@ public:
                   .loadVectorMatrix=true,
                   .usePDEP=true,
                   .dumpIRToMultipleFiles=false,
-                  .enablePrefetch=false}) {}
+                  .enablePrefetch=false,
+                  .generateAltKernel=false}) {}
 
     CodeGeneratorCPUConfig config;
 

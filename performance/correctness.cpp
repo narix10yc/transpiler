@@ -20,41 +20,66 @@ using namespace quench::quantum_gate;
 
 
 int main(int argc, char** argv) {
-    const int nqubits = 12;
+    assert(argc > 1);
+    unsigned targetQ = std::stoi(argv[1]);
+
+    const int nqubits = 4;
     // const std::vector<unsigned> targetQubits = { 6, 7 };
 
-   auto mat = GateMatrix::FromName("u3", {0.92, 0.46, 0.22});
-    auto gate = QuantumGate(mat, { 7 });
-    gate = gate.lmatmul({ mat , {8}});
-    gate = gate.lmatmul({ mat , {9}});
+    auto mat = GateMatrix::FromName("u3", {0.92, 0.46, 0.22});
+    auto gate = QuantumGate(mat, { targetQ });
+    // gate = gate.lmatmul({ mat , {8}});
+    // gate = gate.lmatmul({ mat , {9}});
 
 
-    StatevectorComp<real_t> sv_c(nqubits);
-    StatevectorSep<real_t> sv_s(nqubits);
+    StatevectorComp<real_t> sv_ref(nqubits);
+    #ifdef USING_ALT_KERNEL
+        StatevectorAlt<real_t, S_VALUE> sv_test(nqubits);
+    #else
+        StatevectorSep<real_t> sv_test(nqubits);
+    #endif
 
-    sv_c.randomize();
+    // sv_ref.randomize();
+    for (unsigned i = 0; i < sv_ref.N; i++) {
+        sv_ref.data[i] = {1.0, 1.0};
+    }
     
-    for (unsigned i = 0; i < sv_c.N; i++) {
-        // sv_c.data[i] = { 1.0, 1.0 };
-        sv_s.real[i] = sv_c.data[i].real();
-        sv_s.imag[i] = sv_c.data[i].imag();
+    for (unsigned i = 0; i < sv_ref.N; i++) {
+        #ifdef USING_ALT_KERNEL
+            sv_test.real(i) = sv_ref.data[i].real();
+            sv_test.imag(i) = sv_ref.data[i].imag();
+        #else
+            sv_test.real[i] = sv_ref.data[i].real();
+            sv_test.imag[i] = sv_ref.data[i].imag();
+        #endif
     }
 
-    applyGeneral(sv_c.data, gate.gateMatrix, gate.qubits, nqubits);
-    sv_c.print(std::cerr);
+    applyGeneral(sv_ref.data, gate.gateMatrix, gate.qubits, nqubits);
+    sv_ref.print(std::cerr);
     
-    uint64_t idxMax = 1ULL << (sv_s.nqubits - S_VALUE - 3);
+    uint64_t idxMax = 1ULL << (sv_test.nqubits - S_VALUE - 1);
     // uint64_t idxMax = 1;
-    _metaData[0].func(sv_s.real, sv_s.imag, 0, idxMax, _metaData[0].mPtr);
+    #ifdef USING_ALT_KERNEL
+        _metaData[targetQ].func(sv_test.data, 0, idxMax, _metaData[targetQ].mPtr);
+    #else
+        _metaData[targetQ].func(sv_test.real, sv_test.imag, 0, idxMax, _metaData[targetQ].mPtr);
+    #endif
 
-    sv_s.print(std::cerr);
 
-    for (unsigned i = 0; i < sv_s.N; i++) {
-        if (std::abs(sv_s.real[i] - sv_c.data[i].real()) > 1e-8)
-            std::cerr << RED_FG << "Unmatch: " << RESET << "position " << i << " real\n";
-        
-        if (std::abs(sv_s.imag[i] - sv_c.data[i].imag()) > 1e-8)
-            std::cerr << RED_FG << "Unmatch: " << RESET << "position " << i << " imag\n";
+    sv_test.print(std::cerr);
+
+    for (unsigned i = 0; i < sv_test.N; i++) {
+        #ifdef USING_ALT_KERNEL
+            // if (std::abs(sv_test.real(i) - sv_ref.data[i].real()) > 1e-8)
+            //     std::cerr << RED_FG << "Unmatch: " << RESET << "position " << i << " real\n";
+            // if (std::abs(sv_test.imag(i) - sv_ref.data[i].imag()) > 1e-8)
+            //     std::cerr << RED_FG << "Unmatch: " << RESET << "position " << i << " imag\n";
+        #else
+            if (std::abs(sv_test.real[i] - sv_ref.data[i].real()) > 1e-8)
+                std::cerr << RED_FG << "Unmatch: " << RESET << "position " << i << " real\n";
+            if (std::abs(sv_test.imag[i] - sv_ref.data[i].imag()) > 1e-8)
+                std::cerr << RED_FG << "Unmatch: " << RESET << "position " << i << " imag\n";
+        #endif
     }
 
     return 0;

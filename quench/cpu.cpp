@@ -38,17 +38,16 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
     externSS << "extern \"C\" {\n";
 
     // simulation kernel declearation
-    if (config.multiThreaded)
-        kernelSS << "void simulation_kernel("
-                 << realTy << "* re, "
-                 << realTy << "* im, "
-                 << "const int nqubits, "
-                 << "const int nthreads) {\n";
+    kernelSS << "void simulation_kernel(";
+    if (config.generateAltKernel)
+        kernelSS << realTy << "* sv, ";
     else
-        kernelSS << "void simulation_kernel("
-                 << realTy << "* re, "
-                 << realTy << "* im, "
-                 << "const int nqubits) {\n";
+        kernelSS << realTy << "* re, "
+                 << realTy << "* im, ";
+    kernelSS << "const int nqubits";
+    if (config.multiThreaded)
+        kernelSS << ", const int nthreads";
+    kernelSS << ") {\n";
 
     if (config.installTimer)
         kernelSS << "  using clock = std::chrono::high_resolution_clock;\n"
@@ -65,15 +64,15 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
     kernelSS << "  for (const auto& data : _metaData) {\n"
              << "    idxMax = 1ULL << (nqubits - data.nqubits - S_VALUE);\n";
 
-
+    std::string sv_arg = (config.generateAltKernel) ? "sv" : "re, im";
     if (config.multiThreaded)
         kernelSS << "    chunkSize = idxMax / nthreads;\n"
                  << "    for (unsigned i = 0; i < nthreads; i++)\n"
-                 << "      threads[i] = std::thread(data.func, re, im, i*chunkSize, (i+1)*chunkSize, data.mPtr);\n"
+                 << "      threads[i] = std::thread(data.func, " << sv_arg << ", i*chunkSize, (i+1)*chunkSize, data.mPtr);\n"
                  << "    for (unsigned i = 0; i < nthreads; i++)\n"
                  << "      threads[i].join();\n";
     else 
-        kernelSS << "    data.func(re, im, 0, idxMax, data.mPtr);\n";
+        kernelSS << "    data.func(" << sv_arg << ", 0, idxMax, data.mPtr);\n";
 
     if (config.installTimer) {
         kernelSS << "    tok = clock::now();\n"
@@ -83,8 +82,10 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
 
     // meta data data type
     metaDataSS << "struct _meta_data_t_ {\n"
-               << "  void (*func)(" << realTy << "*, " << realTy << "*, "
-               << "uint64_t, uint64_t, const void*);\n"
+               << "  void (*func)(" << realTy << "*, " ;
+    if (!config.generateAltKernel)           
+        metaDataSS << realTy << "*, ";
+    metaDataSS << "uint64_t, uint64_t, const void*);\n"
                << "  unsigned opCount;\n"
                << "  unsigned nqubits;\n";
     if (config.installTimer)
@@ -98,7 +99,10 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
     for (const auto& block : allBlocks) {
         const auto& gate = *(block->quantumGate);
         std::string kernelName = "kernel_block_" + std::to_string(block->id);
-        irGenerator.generateKernel(gate, kernelName);
+        if (config.generateAltKernel)
+            irGenerator.generateAlternatingKernel(gate, kernelName);
+        else
+            irGenerator.generateKernel(gate, kernelName);
         if (config.dumpIRToMultipleFiles) {
             std::error_code ec;
             llvm::raw_fd_ostream irFile(fileName + "_ir/" + kernelName + ".ll", ec);
@@ -113,8 +117,10 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
         }
 
         externSS << " void " << kernelName << "("
-                 << realTy << "*, " << realTy << "*, "
-                 << "uint64_t, uint64_t, const void*);\n";
+                 << realTy << "*, ";
+        if (!config.generateAltKernel)
+            externSS << realTy << "*, ";
+        externSS << "uint64_t, uint64_t, const void*);\n";
         
         // metaData
         metaDataSS << " { "
@@ -148,7 +154,9 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
                  "#include <iostream>\n";
 
     if (config.precision == 32)
-        hFile << "#define USING_F32\n\n";
+        hFile << "#define USING_F32\n";
+    if (config.generateAltKernel)
+        hFile << "#define USING_ALT_KERNEL\n";
 
     if (config.multiThreaded)
         hFile << "#include <vector>\n"

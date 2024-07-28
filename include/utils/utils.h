@@ -58,6 +58,22 @@ static std::ostream& printVector(const std::vector<T>& v, std::ostream& os = std
     return os;
 }
 
+template<typename T = uint64_t>
+static T insertZeroToBit(T x, int bit) {
+    T maskLo = (1 << bit) - 1;
+    T maskHi = ~maskLo;
+    return (x & maskLo) + ((x & maskHi) << 1);
+}
+
+template<typename T = uint64_t>
+static T insertOneToBit(T x, int bit) {
+    T maskLo = (1 << bit) - 1;
+    T maskHi = ~maskLo;
+    return (x & maskLo) | ((x & maskHi) << 1) | (1 << bit);
+}
+
+
+
 } // namespace utils
 
 #endif // UTILS_UTILS_H

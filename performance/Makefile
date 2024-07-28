@@ -37,7 +37,7 @@ benchmark: $(OBJ_FILES) $(CURDIR)/benchmark.cpp
 gate_benchmark : $(CURDIR)/gen_file.ll $(CURDIR)/gate_benchmark.cpp
 	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -o $(BUILD_DIR)/gate_benchmark
 
-correctness: $(OBJ_FILES) $(CURDIR)/correctness.cpp
+correctness: $(CURDIR)/gen_file.ll $(CURDIR)/correctness.cpp
 	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -L$(BUILD_DIR)/quench -lquench -o $(BUILD_DIR)/correctness
 
 ir_benchmark : ir_benchmark_gcc ir_benchmark_clang

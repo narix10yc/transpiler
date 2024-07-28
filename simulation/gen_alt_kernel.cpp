@@ -64,8 +64,8 @@ namespace {
 /// @param funcName 
 /// @return 
 Function*
-IRGenerator::generateKernel(const QuantumGate& gate,
-                            const std::string& funcName)
+IRGenerator::generateAlternatingKernel(const QuantumGate& gate,
+                                       const std::string& funcName)
 {
     const uint64_t s = vecSizeInBits;
     const uint64_t S = 1ULL << s;
@@ -85,8 +85,7 @@ IRGenerator::generateKernel(const QuantumGate& gate,
                                                : builder.getDoubleTy();
     Type* retTy = builder.getVoidTy();
     SmallVector<Type*> argTy;
-    argTy.push_back(builder.getPtrTy()); // ptr to real amp
-    argTy.push_back(builder.getPtrTy()); // ptr to imag amp
+    argTy.push_back(builder.getPtrTy()); // ptr to statevector
     argTy.push_back(builder.getInt64Ty()); // counter_start
     argTy.push_back(builder.getInt64Ty()); // counter_end
     argTy.push_back(builder.getPtrTy()); // ptr to matrix
@@ -95,16 +94,15 @@ IRGenerator::generateKernel(const QuantumGate& gate,
     Function* func = Function::Create(funcTy, Function::ExternalLinkage, funcName, mod.get());
 
     SmallVector<StringRef> argNames
-        { "preal", "pimag", "counter_start", "counter_end", "pmat"};
+        { "psv", "counter_start", "counter_end", "pmat"};
     unsigned i = 0;
     for (auto& arg : func->args())
         arg.setName(argNames[i++]);
 
-    auto* pRealArg = func->getArg(0);
-    auto* pImagArg = func->getArg(1);
-    auto* counterStartArg = func->getArg(2);
-    auto* counterEndArg = func->getArg(3);
-    auto* pMatArg = func->getArg(4);
+    auto* pSvArg = func->getArg(0);
+    auto* counterStartArg = func->getArg(1);
+    auto* counterEndArg = func->getArg(2);
+    auto* pMatArg = func->getArg(3);
 
     // init basic blocks
     BasicBlock* entryBB = BasicBlock::Create(llvmContext, "entry", func);
@@ -205,7 +203,9 @@ IRGenerator::generateKernel(const QuantumGate& gate,
         sepBit = lowerQubits.back();
     sepBit++; // separation bit = lk + s
     unsigned vecSize = 1U << sepBit;
+    unsigned vecSizex2 = vecSize << 1;
     auto* vecType = VectorType::get(scalarTy, vecSize, false);
+    auto* vecTypex2 = VectorType::get(scalarTy, vecSizex2, false);
 
     const unsigned lk = lowerQubits.size();
     const unsigned LK = 1 << lk;
@@ -251,21 +251,21 @@ IRGenerator::generateKernel(const QuantumGate& gate,
         idxStartV = builder.CreateIntrinsic(idxStartV->getType(), Intrinsic::x86_bmi_pdep_64,
                         {counterV, builder.getInt64(pdepMask)}, nullptr, "idxStart");
 
-        if (prefetchConfig.enable) {
-            std::cerr << "RUA\n";
-            auto* pfCounterV = builder.CreateAdd(counterV,
-                    builder.getInt64(prefetchConfig.distance), "pf_counter");
-            auto* pfIdxStartV = builder.CreateIntrinsic(idxStartV->getType(), Intrinsic::x86_bmi_pdep_64,
-                    {pfCounterV, builder.getInt64(pdepMask)}, nullptr, "pf_idxStart");
-            auto* pfAddRe = builder.CreateGEP(vecType, pRealArg, pfIdxStartV, "pf_addRe");
-            auto* pfAddIm = builder.CreateGEP(vecType, pImagArg, pfIdxStartV, "pf_addIm");
+        // if (prefetchConfig.enable) {
+        //     std::cerr << "RUA\n";
+        //     auto* pfCounterV = builder.CreateAdd(counterV,
+        //             builder.getInt64(prefetchConfig.distance), "pf_counter");
+        //     auto* pfIdxStartV = builder.CreateIntrinsic(idxStartV->getType(), Intrinsic::x86_bmi_pdep_64,
+        //             {pfCounterV, builder.getInt64(pdepMask)}, nullptr, "pf_idxStart");
+        //     auto* pfAddRe = builder.CreateGEP(vecType, pRealArg, pfIdxStartV, "pf_addRe");
+        //     auto* pfAddIm = builder.CreateGEP(vecType, pImagArg, pfIdxStartV, "pf_addIm");
 
-            // prefetch(add, read_or_write, locality, data_or_instr_cache)
-            builder.CreateIntrinsic(builder.getVoidTy(), Intrinsic::prefetch,
-                    { pfAddRe, builder.getInt32(0), builder.getInt32(2), builder.getInt32(0)}, nullptr);
-            builder.CreateIntrinsic(builder.getVoidTy(), Intrinsic::prefetch,
-                    { pfAddIm, builder.getInt32(0), builder.getInt32(2), builder.getInt32(0)}, nullptr);
-        }
+        //     // prefetch(add, read_or_write, locality, data_or_instr_cache)
+        //     builder.CreateIntrinsic(builder.getVoidTy(), Intrinsic::prefetch,
+        //             { pfAddRe, builder.getInt32(0), builder.getInt32(2), builder.getInt32(0)}, nullptr);
+        //     builder.CreateIntrinsic(builder.getVoidTy(), Intrinsic::prefetch,
+        //             { pfAddIm, builder.getInt32(0), builder.getInt32(2), builder.getInt32(0)}, nullptr);
+        // }
     }
     else if (!higherQubits.empty()) {
         // idx = insert 0 to every bit in higherQubits to counter
@@ -319,11 +319,12 @@ IRGenerator::generateKernel(const QuantumGate& gate,
     }
     
     // load amplitude registers
-    // We load a total of 2*K registers, each with size S * LK (== vecSize)
-    // Each register is loaded from HK different places, 
+    // There are a total of 2K registers, among which K are real and K are imag
+    // In Alt Format, we load HK size-(2*S*LK) LLVM registers.
+    // Each size-(2*S*LK) reg is shuffled into 2 size-(S*LK) regs for real and imag parts
     std::vector<Value*> real(K, nullptr), imag(K, nullptr);
-    std::vector<Value*> pReal(HK, nullptr), pImag(HK, nullptr);
-    Value *realFull, *imagFull;
+    std::vector<Value*> pSv(HK, nullptr);
+    Value *svFull;
     for (unsigned hi = 0; hi < HK; hi++) {
         unsigned keyStart = 0;
         uint64_t idxShift = 0ULL;
@@ -339,16 +340,22 @@ IRGenerator::generateKernel(const QuantumGate& gate,
                       << "keyStart = " << keyStart << "\n";
         }
         auto* _idxV = builder.CreateAdd(idxStartV, builder.getInt64(idxShift), "idx_" + std::to_string(hi));
-        pReal[hi] = builder.CreateGEP(vecType, pRealArg, _idxV, "pReal_" + std::to_string(hi));
-        pImag[hi] = builder.CreateGEP(vecType, pImagArg, _idxV, "pImag_" + std::to_string(hi));
-        realFull = builder.CreateLoad(vecType, pReal[hi], "reFull_" + std::to_string(hi));
-        imagFull = builder.CreateLoad(vecType, pImag[hi], "imFull_" + std::to_string(hi));
+        pSv[hi] = builder.CreateGEP(vecTypex2, pSvArg, _idxV, "pSV_" + std::to_string(hi));
+        svFull = builder.CreateLoad(vecTypex2, pSv[hi], "svFull_" + std::to_string(hi));
         for (unsigned i = 0; i < LK; i++) {
             unsigned key = keyStart + i;
+            int maskLo = S - 1;
+            int maskHi = ~maskLo;
+            // update real split mask
+            for (auto& split : splits[i])
+                split = (split & maskLo) + ((split & maskHi) << 1);
             real[key] = builder.CreateShuffleVector(
-                realFull, splits[i], "real_" + std::to_string(key));
+                svFull, splits[i], "real_" + std::to_string(key));
+            // update imag split mask
+            for (auto& split : splits[i])
+                split |= S;
             imag[key] = builder.CreateShuffleVector(
-                imagFull, splits[i], "imag_" + std::to_string(key));
+                svFull, splits[i], "imag_" + std::to_string(key));
         }
     }
     
@@ -362,6 +369,17 @@ IRGenerator::generateKernel(const QuantumGate& gate,
             splits[pairI] = std::move(pair.second);
         }
     }
+
+    std::vector<int> svMargeMask(vecSizex2); // mask to merge real and imag parts together
+    int reCount = 0, imCount = 0;
+    for (unsigned i = 0; i < vecSizex2; i++) {
+        if (i & S)
+            svMargeMask[i] = (imCount++) + vecSize;
+        else
+            svMargeMask[i] = reCount++;
+        
+    }
+    
     // std::cerr << "mergeMasks:\n";
     // for (const auto& vec : mergeMasks)
         // printVector(vec) << "\n";
@@ -437,8 +455,8 @@ IRGenerator::generateKernel(const QuantumGate& gate,
             }
         }
         // store
-        builder.CreateStore(newReal[0], pReal[hi], false);
-        builder.CreateStore(newImag[0], pImag[hi], false);
+        auto* newSv = builder.CreateShuffleVector(newReal[0], newImag[0], svMargeMask, "newSV");
+        builder.CreateStore(newSv, pSv[hi], false);
     }
 
 
