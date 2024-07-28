@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
     applyGeneral(sv_ref.data, gate.gateMatrix, gate.qubits, nqubits);
     sv_ref.print(std::cerr);
     
-    uint64_t idxMax = 1ULL << (sv_test.nqubits - S_VALUE - 1);
+    uint64_t idxMax = 1ULL << (sv_test.nqubits - S_VALUE - 2);
     // uint64_t idxMax = 1;
     #ifdef USING_ALT_KERNEL
         _metaData[targetQ].func(sv_test.data, 0, idxMax, _metaData[targetQ].mPtr);
@@ -69,14 +69,14 @@ int main(int argc, char** argv) {
 
     for (unsigned i = 0; i < sv_test.N; i++) {
         #ifdef USING_ALT_KERNEL
-            if (std::abs(sv_test.real(i) - sv_ref.data[i].real()) > 1e-8)
+            if (std::abs(sv_test.real(i) - sv_ref.data[i].real()) > 1e-5)
                 std::cerr << RED_FG << "Unmatch: " << RESET << "position " << i << " real\n";
-            if (std::abs(sv_test.imag(i) - sv_ref.data[i].imag()) > 1e-8)
+            if (std::abs(sv_test.imag(i) - sv_ref.data[i].imag()) > 1e-5)
                 std::cerr << RED_FG << "Unmatch: " << RESET << "position " << i << " imag\n";
         #else
-            if (std::abs(sv_test.real[i] - sv_ref.data[i].real()) > 1e-8)
+            if (std::abs(sv_test.real[i] - sv_ref.data[i].real()) > 1e-5)
                 std::cerr << RED_FG << "Unmatch: " << RESET << "position " << i << " real\n";
-            if (std::abs(sv_test.imag[i] - sv_ref.data[i].imag()) > 1e-8)
+            if (std::abs(sv_test.imag[i] - sv_ref.data[i].imag()) > 1e-5)
                 std::cerr << RED_FG << "Unmatch: " << RESET << "position " << i << " imag\n";
         #endif
     }

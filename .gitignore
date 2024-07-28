@@ -7,3 +7,4 @@ build/*
 tmp/*
 */gen_file*
 performance/obj
+python_perf_tests/*

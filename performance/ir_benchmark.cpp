@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
         const uint64_t idxMax = 1ULL << (nqubits - S_VALUE - 1);
         rst = timer.timeit(
             [&]() {
-                kernel_block_0(sv.real, sv.imag, 0, idxMax, _metaData[0].mPtr);
+                _metaData[0].func(sv.real, sv.imag, 0, idxMax, _metaData[0].mPtr);
             }
         );
         // rst.display();

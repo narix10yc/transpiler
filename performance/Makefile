@@ -9,7 +9,8 @@ CFLAGS = -std=c++17 -I$(INCLUDE_DIR) -Ofast -march=native --gcc-install-dir=$(SE
 LDFLAGS = -L$(BUILD_DIR)/timeit -ltimeit -lpthread
 
 # Directories
-IR_DIR = $(CURDIR)/gen_file_ir
+# IR_DIR = $(CURDIR)/gen_file_ir
+IR_DIR = $(CURDIR)
 OBJ_DIR = $(CURDIR)/obj
 SRC_FILE = $(CURDIR)/benchmark.cpp
 HEADER_FILE =$(wildcard $(CURDIR)/*.h)
@@ -30,15 +31,15 @@ $(OBJ_DIR)/%.ll.o: $(IR_DIR)/%.ll | $(OBJ_DIR)
 
 fidelity: $(CURDIR)/gen_file.ll $(CURDIR)/fidelity.cpp
 	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -o $(BUILD_DIR)/fidelity
-
-benchmark_multi_files: $(OBJ_FILES) $(CURDIR)/benchmark.cpp
-	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -o $(BUILD_DIR)/benchmark
-
-benchmark: $(CURDIR)/gen_file.ll $(CURDIR)/benchmark.cpp
+	
+benchmark: $(OBJ_FILES) $(CURDIR)/benchmark.cpp
 	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -o $(BUILD_DIR)/benchmark
 
 gate_benchmark : $(CURDIR)/gen_file.ll $(CURDIR)/gate_benchmark.cpp
 	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -o $(BUILD_DIR)/gate_benchmark
+
+single_gate : $(CURDIR)/gen_file.ll $(CURDIR)/single_gate.cpp
+	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -o $(BUILD_DIR)/single_gate
 
 correctness: $(CURDIR)/gen_file.ll $(CURDIR)/correctness.cpp
 	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -L$(BUILD_DIR)/quench -lquench -o $(BUILD_DIR)/correctness

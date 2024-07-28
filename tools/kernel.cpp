@@ -162,7 +162,7 @@ int main(int argc, char** argv) {
     EnablePrefetch("enable-prefetch", cl::desc("enable prefetch"), cl::init(false));
 
     cl::opt<bool>
-    AltKernel("alt-kernel", cl::desc("generate alt kernel"), cl::init(false));
+    AltKernel("alt-format", cl::desc("generate alt kernel"), cl::init(false));
 
     cl::opt<std::string>
     WhichGate("gate", cl::desc("which gate"));

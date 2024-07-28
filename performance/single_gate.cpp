@@ -19,13 +19,14 @@ using namespace timeit;
     using Statevector = utils::statevector::StatevectorSep<real_t>;
 #endif
 
-// #include <immintrin.h>
-
 int main(int argc, char** argv) {
+    assert(argc > 1);
+    unsigned targetQ = std::stoi(argv[1]);
+
     Statevector sv(DEFAULT_NQUBITS);
     Timer timer;
     timer.setRunTime(0.5);
-    timer.setReplication(1);
+    timer.setReplication(5);
     TimingResult rst;
 
     #ifdef MULTI_THREAD_SIMULATION_KERNEL
@@ -33,9 +34,12 @@ int main(int argc, char** argv) {
     
     // const std::vector<int> nthreads {2,4,8,12,16,20,24,28,32,36};
     // const std::vector<int> nthreads {16,24,32,36,48,64,68,72};
-    const std::vector<int> nthreads {64};
-    
+    const std::vector<int> nthreads {4, 8, 16, 24, 32};
+
+    // const std::vector<int> nthreads {32, 64};
+
     std::vector<double> tarr(nthreads.size());
+
     int warmUpNThread = nthreads[nthreads.size()-1];
     std::cerr << "Warm up run (" << warmUpNThread << "-thread):\n";
     rst = timer.timeit(
@@ -62,17 +66,18 @@ int main(int argc, char** argv) {
     std::cerr << "\n";
 
     #else
+    const uint64_t idxMax = 1ULL << (DEFAULT_NQUBITS - S_VALUE - _metaData[targetQ].nqubits);
+
     rst = timer.timeit(
         [&]() {
             #ifdef USING_ALT_KERNEL
-                simulation_kernel(sv.data, sv.nqubits);
+                _metaData[targetQ].func(sv.data, 0ULL, idxMax, _metaData[targetQ].mPtr);
             #else
-                simulation_kernel(sv.real, sv.imag, sv.nqubits);
+                _metaData[targetQ].func(sv.real, sv.imag, 0ULL, idxMax, _metaData[targetQ].mPtr);
             #endif
         }
     );
     rst.display();
-
     #endif
 
     return 0;
