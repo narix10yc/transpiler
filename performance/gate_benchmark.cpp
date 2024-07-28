@@ -19,13 +19,13 @@ using namespace timeit;
 
 int main(int argc, char** argv) {
     real_t *real, *imag;
-        // real = (real_t*) std::aligned_alloc(64, 2 * (1ULL << DEFAULT_NQUBITS) * sizeof(real_t));
-        // imag = real + (1ULL << DEFAULT_NQUBITS);
     Timer timer;
     timer.setRunTime(0.5);
     // timer.setReplication(3);
     TimingResult rst;
-
+        real = (real_t*) std::aligned_alloc(64, 2 * (1ULL << DEFAULT_NQUBITS) * sizeof(real_t));
+        imag = real + (1ULL << DEFAULT_NQUBITS);
+        
     #ifdef MULTI_THREAD_SIMULATION_KERNEL
     std::cerr << "Multi-threading enabled.\n";
     
@@ -64,17 +64,14 @@ int main(int argc, char** argv) {
 
     #else
     std::cerr << "\n============ New Run ============\n";
-    // for (int nqubits : {8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28}) {
-    // for (int nqubits : {16, 18, 20, 22, 24, 26, 28, 30}) {
-    for (const int nqubits : { DEFAULT_NQUBITS, DEFAULT_NQUBITS }) {
-        // if (nqubits < 20)
-            // timer.setReplication(15);
-        // else if (nqubits < 26)
-        timer.setReplication(5); 
+    for (int nqubits : {8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28}) {
+    // for (const int nqubits : { DEFAULT_NQUBITS, DEFAULT_NQUBITS }) {
+        if (nqubits < 20)
+            timer.setReplication(7);
+        else
+            timer.setReplication(3); 
         uint64_t idxMax = 1ULL << (nqubits - S_VALUE - _metaData[0].nqubits);
-        // std::cerr << "nqubits = " << nqubits << "\n";
-        real = (real_t*) std::aligned_alloc(64, 2 * (1ULL << nqubits) * sizeof(real_t));
-        imag = real + (1ULL << nqubits);
+
         rst = timer.timeit(
         [&]() {
             for (unsigned i = 0; i < nqubits; ++i) {
@@ -85,16 +82,11 @@ int main(int argc, char** argv) {
                 #endif
             }
         });
-        rst.display();  
-            // if (t_min > rst.min)
-                // t_min = rst.min;
-        // }
+        // rst.display();  
             
         std::cerr << "ours,u2," << nqubits << "," REAL_T ","
                   << std::scientific << std::setprecision(4) << (rst.min / nqubits) << "\n";
-        std::free(real);
     }
-    // std::free(real);
     #endif
 
     return 0;
