@@ -5,7 +5,7 @@ CLANGXX = $(llvm_root)/bin/clang++
 BUILD_DIR = $(CURDIR)/../build
 INCLUDE_DIR = $(CURDIR)/../include
 
-CFLAGS = -std=c++17 -I$(INCLUDE_DIR) -Ofast -march=native --gcc-install-dir=/mnt/ccnas2/bdp/yl5619/opt/miniconda/envs/cccad5-venv/lib/gcc/x86_64-conda-linux-gnu/12.4.0/
+CFLAGS = -std=c++17 -I$(INCLUDE_DIR) -Ofast -march=native --gcc-install-dir=$(SELECT_GCC_TOOLCHAIN)
 LDFLAGS = -L$(BUILD_DIR)/timeit -ltimeit -lpthread
 
 # Directories
@@ -31,7 +31,10 @@ $(OBJ_DIR)/%.ll.o: $(IR_DIR)/%.ll | $(OBJ_DIR)
 fidelity: $(CURDIR)/gen_file.ll $(CURDIR)/fidelity.cpp
 	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -o $(BUILD_DIR)/fidelity
 
-benchmark: $(OBJ_FILES) $(CURDIR)/benchmark.cpp
+benchmark_multi_files: $(OBJ_FILES) $(CURDIR)/benchmark.cpp
+	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -o $(BUILD_DIR)/benchmark
+
+benchmark: $(CURDIR)/gen_file.ll $(CURDIR)/benchmark.cpp
 	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -o $(BUILD_DIR)/benchmark
 
 gate_benchmark : $(CURDIR)/gen_file.ll $(CURDIR)/gate_benchmark.cpp

@@ -78,7 +78,11 @@ int main(int argc, char** argv) {
         rst = timer.timeit(
         [&]() {
             for (unsigned i = 0; i < nqubits; ++i) {
-                _metaData[i].func(real, imag, 0, idxMax, _metaData[i].mPtr);
+                #ifdef USING_ALT_KERNEL
+                    _metaData[i].func(real, 0, idxMax, _metaData[i].mPtr);
+                #else
+                    _metaData[i].func(real, imag, 0, idxMax, _metaData[i].mPtr);
+                #endif
             }
         });
         rst.display();  
