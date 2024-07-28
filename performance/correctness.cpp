@@ -23,12 +23,12 @@ int main(int argc, char** argv) {
     assert(argc > 1);
     unsigned targetQ = std::stoi(argv[1]);
 
-    const int nqubits = 4;
+    const int nqubits = 6;
     // const std::vector<unsigned> targetQubits = { 6, 7 };
 
     auto mat = GateMatrix::FromName("u3", {0.92, 0.46, 0.22});
     auto gate = QuantumGate(mat, { targetQ });
-    // gate = gate.lmatmul({ mat , {8}});
+    gate = gate.lmatmul({ mat , { targetQ + 1 }});
     // gate = gate.lmatmul({ mat , {9}});
 
 
@@ -39,10 +39,9 @@ int main(int argc, char** argv) {
         StatevectorSep<real_t> sv_test(nqubits);
     #endif
 
-    // sv_ref.randomize();
-    for (unsigned i = 0; i < sv_ref.N; i++) {
-        sv_ref.data[i] = {1.0, 1.0};
-    }
+    sv_ref.randomize();
+    // for (unsigned i = 0; i < sv_ref.N; i++)
+        // sv_ref.data[i] = {1.0, 1.0};
     
     for (unsigned i = 0; i < sv_ref.N; i++) {
         #ifdef USING_ALT_KERNEL
@@ -70,10 +69,10 @@ int main(int argc, char** argv) {
 
     for (unsigned i = 0; i < sv_test.N; i++) {
         #ifdef USING_ALT_KERNEL
-            // if (std::abs(sv_test.real(i) - sv_ref.data[i].real()) > 1e-8)
-            //     std::cerr << RED_FG << "Unmatch: " << RESET << "position " << i << " real\n";
-            // if (std::abs(sv_test.imag(i) - sv_ref.data[i].imag()) > 1e-8)
-            //     std::cerr << RED_FG << "Unmatch: " << RESET << "position " << i << " imag\n";
+            if (std::abs(sv_test.real(i) - sv_ref.data[i].real()) > 1e-8)
+                std::cerr << RED_FG << "Unmatch: " << RESET << "position " << i << " real\n";
+            if (std::abs(sv_test.imag(i) - sv_ref.data[i].imag()) > 1e-8)
+                std::cerr << RED_FG << "Unmatch: " << RESET << "position " << i << " imag\n";
         #else
             if (std::abs(sv_test.real[i] - sv_ref.data[i].real()) > 1e-8)
                 std::cerr << RED_FG << "Unmatch: " << RESET << "position " << i << " real\n";

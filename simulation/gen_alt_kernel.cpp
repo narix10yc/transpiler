@@ -308,6 +308,15 @@ IRGenerator::generateAlternatingKernel(const QuantumGate& gate,
         }
         splits[key].push_back(i);
     }
+
+    std::vector<int> reSplitMask, imSplitMask;
+    for (unsigned i = 0; i < vecSizex2; i++) {
+        if (i & S)
+            imSplitMask.push_back(i);
+        else
+            reSplitMask.push_back(i);
+    }
+
     // debug print splits
     if (verbose > 1) {
         std::cerr << "splits: [";
@@ -321,10 +330,14 @@ IRGenerator::generateAlternatingKernel(const QuantumGate& gate,
     // load amplitude registers
     // There are a total of 2K registers, among which K are real and K are imag
     // In Alt Format, we load HK size-(2*S*LK) LLVM registers.
-    // Each size-(2*S*LK) reg is shuffled into 2 size-(S*LK) regs for real and imag parts
+    // There are two stages of shuffling (splits)
+    // Stage 1:
+    // Each size-(2*S*LK) reg is shuffled into 2 size-(S*LK) regs, the real and imag parts
+    // Stage 2:
+    // Each size-(S*LK) res is shuffled into LK size-S regs, the amplitude vectors.
     std::vector<Value*> real(K, nullptr), imag(K, nullptr);
     std::vector<Value*> pSv(HK, nullptr);
-    Value *svFull;
+    Value *svFull, *reFull, *imFull;
     for (unsigned hi = 0; hi < HK; hi++) {
         unsigned keyStart = 0;
         uint64_t idxShift = 0ULL;
@@ -342,20 +355,14 @@ IRGenerator::generateAlternatingKernel(const QuantumGate& gate,
         auto* _idxV = builder.CreateAdd(idxStartV, builder.getInt64(idxShift), "idx_" + std::to_string(hi));
         pSv[hi] = builder.CreateGEP(vecTypex2, pSvArg, _idxV, "pSV_" + std::to_string(hi));
         svFull = builder.CreateLoad(vecTypex2, pSv[hi], "svFull_" + std::to_string(hi));
+        reFull = builder.CreateShuffleVector(svFull, reSplitMask, "reFull_" + std::to_string(hi));
+        imFull = builder.CreateShuffleVector(svFull, imSplitMask, "imFull_" + std::to_string(hi));
         for (unsigned i = 0; i < LK; i++) {
             unsigned key = keyStart + i;
-            int maskLo = S - 1;
-            int maskHi = ~maskLo;
-            // update real split mask
-            for (auto& split : splits[i])
-                split = (split & maskLo) + ((split & maskHi) << 1);
             real[key] = builder.CreateShuffleVector(
-                svFull, splits[i], "real_" + std::to_string(key));
-            // update imag split mask
-            for (auto& split : splits[i])
-                split |= S;
+                reFull, splits[i], "real_" + std::to_string(key));
             imag[key] = builder.CreateShuffleVector(
-                svFull, splits[i], "imag_" + std::to_string(key));
+                imFull, splits[i], "imag_" + std::to_string(key));
         }
     }
     
@@ -371,13 +378,13 @@ IRGenerator::generateAlternatingKernel(const QuantumGate& gate,
     }
 
     std::vector<int> svMargeMask(vecSizex2); // mask to merge real and imag parts together
-    int reCount = 0, imCount = 0;
+    int reCount = 0;
+    int imCount = 0;
     for (unsigned i = 0; i < vecSizex2; i++) {
         if (i & S)
             svMargeMask[i] = (imCount++) + vecSize;
         else
-            svMargeMask[i] = reCount++;
-        
+            svMargeMask[i] = reCount++;   
     }
     
     // std::cerr << "mergeMasks:\n";
