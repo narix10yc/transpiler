@@ -34,36 +34,56 @@ int main(int argc, char** argv) {
     SimdS("S", cl::desc("vector size (s value)"), cl::Prefix, cl::init(1));
 
     cl::opt<bool>
-    InstallTimer("timer", cl::desc("install timer"), cl::init(false));
-
-    cl::opt<unsigned>
-    MaxNQubits("max-k", cl::desc("maximum number of qubits of gates"), cl::init(0));
-
-    cl::opt<unsigned>
-    MaxOpCount("max-op", cl::desc("maximum operation count"), cl::init(0));
-
-    cl::opt<double>
-    ZeroSkipThreshold("zero-thres", cl::desc("zero skipping threshold"), cl::init(1e-8));
-
-    cl::opt<int>
-    FusionLevel("fusion", cl::desc("fusion level. Presets are "
-            "0 (disable), 1 (two-qubit only), 2 (default), and 3 (aggresive)"),
-            cl::init(2));
-
-    cl::opt<bool>
     MultiThreaded("multi-thread", cl::desc("enable multi-threading"), cl::init(true));
 
     cl::opt<bool>
-    LoadMatrixInEntry("load-matrix-in-entry", cl::desc("load matrix in entry"), cl::init(true));
+    InstallTimer("timer", cl::desc("install timer"), cl::init(false));
+
+    // Gate Fusion Category
+    cl::OptionCategory GateFusionConfigCategory("Gate Fusion Options", "");
+
+    cl::opt<int>
+    FusionLevel("fusion", cl::cat(GateFusionConfigCategory),
+            cl::desc("fusion level presets 0 (disable), 1 (two-qubit only), 2 (default), and 3 (aggresive)"),
+            cl::init(2));
+
+    cl::opt<unsigned>
+    MaxNQubits("max-k", cl::cat(GateFusionConfigCategory),
+            cl::desc("maximum number of qubits of gates"), cl::init(0));
+
+    cl::opt<unsigned>
+    MaxOpCount("max-op", cl::cat(GateFusionConfigCategory),
+            cl::desc("maximum operation count"), cl::init(0));
+
+    cl::opt<double>
+    ZeroSkipThreshold("zero-thres", cl::cat(GateFusionConfigCategory),
+            cl::desc("zero skipping threshold"), cl::init(1e-8));
+
+    // IR Generation Category
+    cl::OptionCategory IRGenerationConfigCategory("IR Generation Options", "");
 
     cl::opt<bool>
-    LoadVectorMatrix("load-vector-matrix", cl::desc("load vector matrix"), cl::init(true));
+    LoadMatrixInEntry("load-matrix-in-entry", cl::cat(IRGenerationConfigCategory),
+            cl::desc("load matrix in entry"), cl::init(true));
 
     cl::opt<bool>
-    UsePDEP("use-pdep", cl::desc("use pdep (parallel bit deposite)"), cl::init(true));
+    LoadVectorMatrix("load-vector-matrix", cl::cat(IRGenerationConfigCategory),
+            cl::desc("load vector matrix"), cl::init(true));
 
     cl::opt<bool>
-    DumpIRToMultipleFiles("dump-ir-to-multiple-files",
+    UsePDEP("use-pdep", cl::cat(IRGenerationConfigCategory),
+            cl::desc("use pdep (parallel bit deposite)"), cl::init(true));
+
+    cl::opt<bool>
+    EnablePrefetch("enable-prefetch", cl::cat(IRGenerationConfigCategory),
+            cl::desc("enable prefetch (not tested, recommend off)"), cl::init(false));
+
+    cl::opt<bool>
+    AltFormat("alt-format", cl::cat(IRGenerationConfigCategory),
+            cl::desc("generate alternating format kernels"), cl::init(false));
+
+    cl::opt<bool>
+    DumpIRToMultipleFiles("dump-ir-to-multiple-files", cl::cat(IRGenerationConfigCategory),
             cl::desc("dump ir to multiple files"), cl::init(false));
 
     cl::ParseCommandLineOptions(argc, argv);
@@ -140,6 +160,8 @@ int main(int argc, char** argv) {
         codeGenerator.config.loadMatrixInEntry = LoadMatrixInEntry;
         codeGenerator.config.loadVectorMatrix = LoadVectorMatrix;
         codeGenerator.config.usePDEP = UsePDEP;
+        codeGenerator.config.enablePrefetch = EnablePrefetch;
+        codeGenerator.config.generateAltKernel = AltFormat;
         codeGenerator.config.dumpIRToMultipleFiles = DumpIRToMultipleFiles;
         codeGenerator.config.precision = (UseF32 || Precision == "f32") ? 32 : 64;
         

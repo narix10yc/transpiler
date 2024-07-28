@@ -29,7 +29,6 @@ project(simulation)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED on)
 
-
 message("STATUS C Compiler: ${CMAKE_C_COMPILER}")
 message("STATUS C++ Compiler: ${CMAKE_CXX_COMPILER}")
 
