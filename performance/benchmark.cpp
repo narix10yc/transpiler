@@ -24,16 +24,16 @@ using namespace timeit;
 int main(int argc, char** argv) {
     Statevector sv(DEFAULT_NQUBITS);
     Timer timer;
-    timer.setRunTime(0.5);
-    timer.setReplication(1);
+    // timer.setRunTime(0.5);
     TimingResult rst;
 
     #ifdef MULTI_THREAD_SIMULATION_KERNEL
     std::cerr << "Multi-threading enabled.\n";
-    
+    timer.setReplication(3);
+
     // const std::vector<int> nthreads {2,4,8,12,16,20,24,28,32,36};
     // const std::vector<int> nthreads {16,24,32,36,48,64,68,72};
-    const std::vector<int> nthreads {70};
+    const std::vector<int> nthreads {32, 64, 96, 192};
     
     std::vector<double> tarr(nthreads.size());
     int warmUpNThread = nthreads[nthreads.size()-1];
@@ -70,6 +70,7 @@ int main(int argc, char** argv) {
     std::cerr << "\n";
 
     #else
+    timer.setReplication(15);
     rst = timer.timeit(
         [&]() {
             #ifdef USING_ALT_KERNEL

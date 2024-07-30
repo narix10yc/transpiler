@@ -113,6 +113,7 @@ public:
     bool loadMatrixInEntry;
     bool loadVectorMatrix;
     int verbose;
+    bool forceDenseKernel;
     RealTy realTy;
     PrefetchConfiguration prefetchConfig;
 
@@ -130,6 +131,7 @@ public:
         loadMatrixInEntry(true),
         loadVectorMatrix(true),
         verbose(0),
+        forceDenseKernel(false),
         realTy(RealTy::Double),
         prefetchConfig({.enable=false, .distance = 1}) {}
 

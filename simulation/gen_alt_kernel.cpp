@@ -139,6 +139,11 @@ IRGenerator::generateAlternatingKernel(const QuantumGate& gate,
     builder.SetInsertPoint(entryBB);
     // set up matrix flags
     for (unsigned i = 0; i < matrix.size(); i++) {
+        if (forceDenseKernel) {
+            matrix[i].realFlag = 2;
+            matrix[i].imagFlag = 2;
+            continue;
+        }
         auto real = gate.gateMatrix.matrix.constantMatrix.data.at(i).real();
         auto imag = gate.gateMatrix.matrix.constantMatrix.data.at(i).imag();
 
@@ -198,10 +203,16 @@ IRGenerator::generateAlternatingKernel(const QuantumGate& gate,
         higherQubits.push_back(*qubitsIt);
         qubitsIt++;
     }
-    unsigned sepBit = simdQubits.back();
-    if (!lowerQubits.empty() && lowerQubits.back() > sepBit)
-        sepBit = lowerQubits.back();
-    sepBit++; // separation bit = lk + s
+    unsigned sepBit;
+    if (s == 0)
+        sepBit = 0;
+    else {
+        sepBit = simdQubits.back();
+        if (!lowerQubits.empty() && lowerQubits.back() > sepBit)
+            sepBit = lowerQubits.back();
+        sepBit++; // separation bit = lk + s
+    }
+
     unsigned vecSize = 1U << sepBit;
     unsigned vecSizex2 = vecSize << 1;
     auto* vecType = VectorType::get(scalarTy, vecSize, false);

@@ -61,8 +61,10 @@ public:
             // std::cerr << "StatevectorSep(StatevectorSep&&)\n";
         }
 
-    ~StatevectorSep() { std::free(real); std::free(imag);
-        std::cerr << "~StatevectorSep\n";}
+    ~StatevectorSep() {
+        std::free(real); std::free(imag);
+        // std::cerr << "~StatevectorSep\n";
+    }
 
     StatevectorSep& operator=(const StatevectorSep& that) {
         if (this != &that) {

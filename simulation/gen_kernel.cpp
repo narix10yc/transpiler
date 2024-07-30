@@ -141,6 +141,11 @@ IRGenerator::generateKernel(const QuantumGate& gate,
     builder.SetInsertPoint(entryBB);
     // set up matrix flags
     for (unsigned i = 0; i < matrix.size(); i++) {
+        if (forceDenseKernel) {
+            matrix[i].realFlag = 2;
+            matrix[i].imagFlag = 2;
+            continue;
+        }
         auto real = gate.gateMatrix.matrix.constantMatrix.data.at(i).real();
         auto imag = gate.gateMatrix.matrix.constantMatrix.data.at(i).imag();
 
@@ -204,7 +209,7 @@ IRGenerator::generateKernel(const QuantumGate& gate,
     if (s == 0)
         sepBit = 0;
     else {
-        unsigned sepBit = simdQubits.back();
+        sepBit = simdQubits.back();
         if (!lowerQubits.empty() && lowerQubits.back() > sepBit)
             sepBit = lowerQubits.back();
         sepBit++; // separation bit = lk + s
@@ -213,7 +218,6 @@ IRGenerator::generateKernel(const QuantumGate& gate,
     unsigned vecSize = 1U << sepBit;
 
     auto* vecType = VectorType::get(scalarTy, vecSize, false);
-
 
     const unsigned lk = lowerQubits.size();
     const unsigned LK = 1 << lk;

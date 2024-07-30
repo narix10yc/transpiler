@@ -19,6 +19,7 @@ struct CodeGeneratorCPUConfig {
     bool dumpIRToMultipleFiles;
     bool enablePrefetch;
     bool generateAltKernel;
+    bool forceDenseKernel;
 
     std::ostream& display(std::ostream& os = std::cerr) const {
         os << Color::CYAN_FG << "== CodeGen Configuration ==\n" << Color::RESET
@@ -41,7 +42,8 @@ struct CodeGeneratorCPUConfig {
            << "  use PDEP:               " << ((usePDEP) ? "true" : "false") << "\n"
            << "  dump IR to multi files: " << ((dumpIRToMultipleFiles) ? "true" : "false") << "\n"
            << "  enable prefetch:        " << ((enablePrefetch) ? "true" : "false") << "\n"
-           << "  generate alt kernel:    " << ((generateAltKernel) ? "true" : "false") << "\n";
+           << "  generate alt kernel:    " << ((generateAltKernel) ? "true" : "false") << "\n"
+           << "  force dense kernel:     " << ((forceDenseKernel) ? "true" : "false") << "\n";
 
         os << Color::CYAN_FG << "===========================\n" << Color::RESET;
         return os;
@@ -66,7 +68,8 @@ public:
                   .usePDEP=true,
                   .dumpIRToMultipleFiles=false,
                   .enablePrefetch=false,
-                  .generateAltKernel=false}) {}
+                  .generateAltKernel=false,
+                  .forceDenseKernel=false}) {}
 
     CodeGeneratorCPUConfig config;
 

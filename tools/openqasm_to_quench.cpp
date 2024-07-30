@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
 
     cl::opt<bool>
     LoadVectorMatrix("load-vector-matrix", cl::cat(IRGenerationConfigCategory),
-            cl::desc("load vector matrix"), cl::init(true));
+            cl::desc("load vector matrix"), cl::init(false));
 
     cl::opt<bool>
     UsePDEP("use-pdep", cl::cat(IRGenerationConfigCategory),
@@ -81,6 +81,10 @@ int main(int argc, char** argv) {
     cl::opt<bool>
     AltFormat("alt-format", cl::cat(IRGenerationConfigCategory),
             cl::desc("generate alternating format kernels"), cl::init(false));
+
+    cl::opt<bool>
+    ForceDenseKernel("force-dense-kernel", cl::cat(IRGenerationConfigCategory),
+            cl::desc("force all kernels to be dense"), cl::init(false));
 
     cl::opt<bool>
     DumpIRToMultipleFiles("dump-ir-to-multiple-files", cl::cat(IRGenerationConfigCategory),
@@ -163,6 +167,7 @@ int main(int argc, char** argv) {
         codeGenerator.config.usePDEP = UsePDEP;
         codeGenerator.config.enablePrefetch = EnablePrefetch;
         codeGenerator.config.generateAltKernel = AltFormat;
+        codeGenerator.config.forceDenseKernel = ForceDenseKernel;
         codeGenerator.config.dumpIRToMultipleFiles = DumpIRToMultipleFiles;
         codeGenerator.config.precision = (UseF32 || Precision == "f32") ? 32 : 64;
         
