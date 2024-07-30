@@ -17,10 +17,71 @@
 
 namespace simulation {
 
-class GeneratorConfiguration {
-public:
-    unsigned s;
+struct IRGeneratorConfig {
+    int simdS;
+    int realTy;
+    bool useFMA;
+    bool useFMS;
+    bool usePDEP; // parallel bits deposite from BMI2
+    bool loadMatrixInEntry;
+    bool loadVectorMatrix;
+    int verbose;
+    
+    // bool prefetchEnable;
+    // int prefetchDistance;
+    static IRGeneratorConfig DefaultX86F64() {
+        return {
+            .simdS = 2,
+            .realTy = 64,
+            .useFMA = true,
+            .useFMS = true,
+            .usePDEP = true,
+            .loadMatrixInEntry = true,
+            .loadVectorMatrix = false,
+            .verbose = 0,
+        };
+    }
+
+    static IRGeneratorConfig DefaultX86F32() {
+        return {
+            .simdS = 3,
+            .realTy = 32,
+            .useFMA = true,
+            .useFMS = true,
+            .usePDEP = true,
+            .loadMatrixInEntry = true,
+            .loadVectorMatrix = false,
+            .verbose = 0,
+        };
+    }
+
+    static IRGeneratorConfig DefaultARMF64() {
+        return {
+            .simdS = 1,
+            .realTy = 64,
+            .useFMA = true,
+            .useFMS = true,
+            .usePDEP = false,
+            .loadMatrixInEntry = true,
+            .loadVectorMatrix = false,
+            .verbose = 0,
+        };
+    }
+
+    static IRGeneratorConfig DefaultARMF32() {
+        return {
+            .simdS = 2,
+            .realTy = 32,
+            .useFMA = true,
+            .useFMS = true,
+            .usePDEP = false,
+            .loadMatrixInEntry = true,
+            .loadVectorMatrix = false,
+            .verbose = 0,
+        };
+    }
 };
+
 
 struct PrefetchConfiguration {
     bool enable;
@@ -45,6 +106,7 @@ public:
 
 public:
     unsigned vecSizeInBits;
+    int chunkC; // Not Implemented
     bool useFMA;
     bool useFMS;
     bool usePDEP; // parallel bits deposite from BMI2
@@ -54,11 +116,14 @@ public:
     RealTy realTy;
     PrefetchConfiguration prefetchConfig;
 
+    // IRGeneratorConfig config;
+
 public:
     IRGenerator(unsigned vecSizeInBits=2, const std::string& moduleName = "myModule") : 
         builder(llvmContext), 
         mod(std::make_unique<llvm::Module>(moduleName, llvmContext)),
         vecSizeInBits(vecSizeInBits),
+        chunkC(-1),
         useFMA(true),
         useFMS(true),
         usePDEP(true),
@@ -70,10 +135,6 @@ public:
 
     const llvm::Module& getModule() const { return *mod; }
     llvm::Module& getModule() { return *mod; }
-
-    void setUseFMA(bool b) { useFMA = b; }
-    void setRealTy(RealTy ty) { realTy = ty; }
-    void setVerbose(int v) { verbose = v; }
 
     void loadFromFile(const std::string& fileName);
     

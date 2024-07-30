@@ -22,12 +22,12 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, bool forceInOrder) {
     syncIRGeneratorConfig();
     std::string realTy;
     if (config.precision == 32) {
-        irGenerator.setRealTy(IRGenerator::RealTy::Float);
+        irGenerator.realTy = IRGenerator::RealTy::Float;
         realTy = "float";
     }
     else {
         assert(config.precision == 64);
-        irGenerator.setRealTy(IRGenerator::RealTy::Double);
+        irGenerator.realTy = IRGenerator::RealTy::Double;
         realTy = "double";
     }
 
