@@ -162,7 +162,7 @@ int main(int argc, char** argv) {
     codeGenerator.config.generateAltKernel = AltKernel;
     if (UseF32)
         codeGenerator.config.precision = 32;
-    codeGenerator.generate(graph);
+    codeGenerator.generate(graph, true); // force in order
     
     return 0;
 }

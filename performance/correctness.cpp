@@ -23,12 +23,12 @@ int main(int argc, char** argv) {
     assert(argc > 1);
     unsigned targetQ = std::stoi(argv[1]);
 
-    const int nqubits = 6;
+    const int nqubits = 12;
     // const std::vector<unsigned> targetQubits = { 6, 7 };
 
     auto mat = GateMatrix::FromName("u3", {0.92, 0.46, 0.22});
     auto gate = QuantumGate(mat, { targetQ });
-    gate = gate.lmatmul({ mat , { targetQ + 1 }});
+    // gate = gate.lmatmul({ mat , { targetQ + 1 }});
     // gate = gate.lmatmul({ mat , {9}});
 
 
@@ -54,9 +54,9 @@ int main(int argc, char** argv) {
     }
 
     applyGeneral(sv_ref.data, gate.gateMatrix, gate.qubits, nqubits);
-    sv_ref.print(std::cerr);
+    // sv_ref.print(std::cerr);
     
-    uint64_t idxMax = 1ULL << (sv_test.nqubits - S_VALUE - 2);
+    uint64_t idxMax = 1ULL << (sv_test.nqubits - S_VALUE - _metaData[targetQ].nqubits);
     // uint64_t idxMax = 1;
     #ifdef USING_ALT_KERNEL
         _metaData[targetQ].func(sv_test.data, 0, idxMax, _metaData[targetQ].mPtr);
@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
     #endif
 
 
-    sv_test.print(std::cerr);
+    // sv_test.print(std::cerr);
 
     for (unsigned i = 0; i < sv_test.N; i++) {
         #ifdef USING_ALT_KERNEL
@@ -80,6 +80,7 @@ int main(int argc, char** argv) {
                 std::cerr << RED_FG << "Unmatch: " << RESET << "position " << i << " imag\n";
         #endif
     }
+    std::cerr << GREEN_FG << "All done\n" << RESET << "\n";
 
     return 0;
 }

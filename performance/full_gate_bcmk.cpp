@@ -40,11 +40,11 @@ int main(int argc, char** argv) {
 
         rst = timer.timeit(
         [&]() {
-            for (unsigned i = 0; i < nqubits; ++i) {
+            for (unsigned i = count; i < count+nqubits; ++i) {
                 #ifdef USING_ALT_KERNEL
                     _metaData[i].func(real, 0, idxMax, _metaData[i].mPtr);
                 #else
-                    _metaData[count + i].func(real, imag, 0, idxMax, _metaData[count + i].mPtr);
+                    _metaData[i].func(real, imag, 0, idxMax, _metaData[i].mPtr);
                 #endif
             }
         });
@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
         // rst.display();  
         std::free(real);
 
-        std::cerr << "ours,u2," << nqubits << "," REAL_T ","
+        std::cerr << "ours-alt,u1," << nqubits << "," REAL_T ","
                   << std::scientific << std::setprecision(4) << (rst.min / nqubits) << "\n";
     }
     #endif

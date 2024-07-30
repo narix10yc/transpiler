@@ -6,14 +6,14 @@
 #include <iomanip>
 
 using namespace quench::cpu;
+using namespace quench::circuit_graph;
 using IRGenerator = simulation::IRGenerator;
-using CircuitGraph = quench::circuit_graph::CircuitGraph;
 
-void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
+void CodeGeneratorCPU::generate(const CircuitGraph& graph, bool forceInOrder) {
     IRGenerator irGenerator;
     const auto syncIRGeneratorConfig = [&]() {
         irGenerator.vecSizeInBits = config.simd_s;
-        irGenerator.verbose = verbose;
+        irGenerator.verbose = config.verbose;
         irGenerator.loadMatrixInEntry = config.loadMatrixInEntry;
         irGenerator.loadVectorMatrix = config.loadVectorMatrix;
         irGenerator.usePDEP = config.usePDEP;
@@ -95,7 +95,11 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int verbose) {
                << "const static _meta_data_t_ _metaData[] = {\n";
     
         
-    const auto allBlocks = graph.getAllBlocks();
+    auto allBlocks = graph.getAllBlocks();
+    if (forceInOrder)
+        std::sort(allBlocks.begin(), allBlocks.end(),
+                [](GateBlock* a, GateBlock* b) { return a->id < b->id; });
+
     for (const auto& block : allBlocks) {
         const auto& gate = *(block->quantumGate);
         std::string kernelName = "kernel_block_" + std::to_string(block->id);

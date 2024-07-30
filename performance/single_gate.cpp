@@ -25,8 +25,8 @@ int main(int argc, char** argv) {
 
     Statevector sv(DEFAULT_NQUBITS);
     Timer timer;
-    timer.setRunTime(0.5);
-    timer.setReplication(5);
+    // timer.setRunTime(0.5);
+    timer.setReplication(7);
     TimingResult rst;
 
     #ifdef MULTI_THREAD_SIMULATION_KERNEL

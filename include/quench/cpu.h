@@ -9,6 +9,7 @@ namespace quench::cpu {
 struct CodeGeneratorCPUConfig {
     int simd_s;
     int precision;
+    int verbose;
     bool multiThreaded;
     bool installTimer;
     int overrideNqubits;
@@ -22,7 +23,8 @@ struct CodeGeneratorCPUConfig {
     std::ostream& display(std::ostream& os = std::cerr) const {
         os << Color::CYAN_FG << "== CodeGen Configuration ==\n" << Color::RESET
            << "SIMD s:      " << simd_s << "\n"
-           << "Precision:   " << "f" << precision << "\n";
+           << "Precision:   " << "f" << precision << "\n"
+           << "Verbose:     " << verbose << "\n";
         
         os << "Multi-threading "
            << ((multiThreaded) ? "enabled" : "disabled")
@@ -53,7 +55,10 @@ private:
 public:
     CodeGeneratorCPU(const std::string& fileName = "gen_file")
         : fileName(fileName), 
-          config({.simd_s=1, .precision=64, .multiThreaded=false,
+          config({.simd_s=1,
+                  .precision=64,
+                  .verbose=0,
+                  .multiThreaded=false,
                   .installTimer=false,
                   .overrideNqubits=-1,
                   .loadMatrixInEntry=true,
@@ -65,7 +70,9 @@ public:
 
     CodeGeneratorCPUConfig config;
 
-    void generate(const circuit_graph::CircuitGraph& graph, int verbose=0);
+    /// @brief Generate IR
+    /// @param forceInOrder: force generate IR according to block id 
+    void generate(const circuit_graph::CircuitGraph& graph, bool forceInOrder=false);
 
     std::ostream& displayConfig(std::ostream& os = std::cerr) const {
         return config.display(os);
