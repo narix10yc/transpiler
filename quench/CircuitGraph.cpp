@@ -603,13 +603,13 @@ void CircuitGraph::greedyGateFusion() {
                 }
                 if ((*std::next(tileIt))[q] == nullptr) {
                     auto downIt = repositionBlockDownward(tileIt, q);
-                    if (downIt == tile.rbegin()) {
-                        auto upIt = repositionBlockUpward(downIt, q);
-                        if (upIt != tile.begin()) {
-                            if (tryFuseConnectedConsecutive(std::prev(upIt), q))
-                                hasChange = true;
-                        }
-                    }
+                    // if (downIt == tile.rbegin()) {
+                    //     auto upIt = repositionBlockUpward(downIt, q);
+                    //     if (upIt != tile.begin()) {
+                    //         if (tryFuseConnectedConsecutive(std::prev(upIt), q))
+                    //             hasChange = true;
+                    //     }
+                    // }
                     q++;
                     continue;
                 }
@@ -632,6 +632,7 @@ void CircuitGraph::greedyGateFusion() {
         eraseEmptyRows();
         updateTileUpward();
     }
+    // break;
 }
 
 std::vector<GateNode*> GateBlock::getOrderedGates() const {
