@@ -154,6 +154,7 @@ int main(int argc, char** argv) {
     if (outputFilename != "") {
         tic = clock::now();
         CodeGeneratorCPU codeGenerator(outputFilename);
+        // codeGenerator.config.verbose = 3;
         codeGenerator.config.simd_s = SimdS;
         codeGenerator.config.installTimer = InstallTimer;
         codeGenerator.config.multiThreaded = MultiThreaded;

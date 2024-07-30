@@ -200,12 +200,20 @@ IRGenerator::generateKernel(const QuantumGate& gate,
         higherQubits.push_back(*qubitsIt);
         qubitsIt++;
     }
-    unsigned sepBit = simdQubits.back();
-    if (!lowerQubits.empty() && lowerQubits.back() > sepBit)
-        sepBit = lowerQubits.back();
-    sepBit++; // separation bit = lk + s
+    unsigned sepBit;
+    if (s == 0)
+        sepBit = 0;
+    else {
+        unsigned sepBit = simdQubits.back();
+        if (!lowerQubits.empty() && lowerQubits.back() > sepBit)
+            sepBit = lowerQubits.back();
+        sepBit++; // separation bit = lk + s
+    }
+
     unsigned vecSize = 1U << sepBit;
+
     auto* vecType = VectorType::get(scalarTy, vecSize, false);
+
 
     const unsigned lk = lowerQubits.size();
     const unsigned LK = 1 << lk;
@@ -351,7 +359,6 @@ IRGenerator::generateKernel(const QuantumGate& gate,
                 imagFull, splits[i], "imag_" + std::to_string(key));
         }
     }
-    
 
     // prepare merge masks
     std::vector<std::vector<int>> mergeMasks;
