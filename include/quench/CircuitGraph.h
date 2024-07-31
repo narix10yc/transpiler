@@ -11,6 +11,7 @@
 
 namespace quench::circuit_graph {
 
+using GateMatrix = quench::quantum_gate::GateMatrix;
 using QuantumGate = quench::quantum_gate::QuantumGate;
 
 class GateNode {
@@ -22,11 +23,11 @@ public:
     };
     const int id;
     unsigned nqubits;
-    quantum_gate::GateMatrix gateMatrix;
+    GateMatrix gateMatrix;
     std::vector<gate_data> dataVector;
 
     GateNode(int id,
-             const quantum_gate::GateMatrix& gateMatrix,
+             const GateMatrix& gateMatrix,
              const std::vector<unsigned>& qubits)
         : id(id),
           nqubits(gateMatrix.nqubits),
@@ -74,7 +75,7 @@ public:
         return qubits;
     }
 
-    quantum_gate::QuantumGate toQuantumGate() const {
+    QuantumGate toQuantumGate() const {
         return QuantumGate(gateMatrix, getQubits());
     }
 };
@@ -156,12 +157,16 @@ struct FusionConfig {
     int maxNQubits;
     int maxOpCount;
     double zeroSkippingThreshold;
+    bool allowMultipleTraverse;
+    bool incrementScheme;
 public:
     static FusionConfig Disable() {
         return {
             .maxNQubits = 0,
             .maxOpCount = 0, 
-            .zeroSkippingThreshold = 0.0
+            .zeroSkippingThreshold = 0.0,
+            .allowMultipleTraverse = true,
+            .incrementScheme = true
         };
     }
 
@@ -169,7 +174,9 @@ public:
         return {
             .maxNQubits = 2,
             .maxOpCount = 64, // 2-qubit dense
-            .zeroSkippingThreshold = 1e-8
+            .zeroSkippingThreshold = 1e-8,
+            .allowMultipleTraverse = true,
+            .incrementScheme = true
         };
     }
 
@@ -177,7 +184,9 @@ public:
         return {
             .maxNQubits = 5,
             .maxOpCount = 256, // 3-qubit dense
-            .zeroSkippingThreshold = 1e-8
+            .zeroSkippingThreshold = 1e-8,
+            .allowMultipleTraverse = true,
+            .incrementScheme = true
         };
     }
     
@@ -185,7 +194,9 @@ public:
         return {
             .maxNQubits = 7,
             .maxOpCount = 4096, // 5-qubit dense
-            .zeroSkippingThreshold = 1e-8
+            .zeroSkippingThreshold = 1e-8,
+            .allowMultipleTraverse = true,
+            .incrementScheme = true
         };
     }
 
@@ -199,7 +210,7 @@ public:
         if (level == 3)
             return FusionConfig::Aggressive();
         assert(false && "Unsupported FusionConfig preset");
-        return FusionConfig::Disable();
+        return FusionConfig::Default();
     }
 };
 

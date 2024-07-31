@@ -168,8 +168,8 @@ GateBlock* CircuitGraph::fusionCandidate(GateBlock* lhs, GateBlock* rhs) {
     }
     
     auto blockQuantumGate = rhs->quantumGate->lmatmul(*(lhs->quantumGate));
-    auto opCount = blockQuantumGate.opCount(fusionConfig.zeroSkippingThreshold);
-    if (opCount > fusionConfig.maxOpCount) {
+    if (fusionConfig.maxOpCount >= 0 && 
+            blockQuantumGate.opCount(fusionConfig.zeroSkippingThreshold) > fusionConfig.maxOpCount) {
         // std::cerr << CYAN_FG << "Rejected due to OpCount\n" << RESET;
         delete(block);
         return nullptr;
@@ -566,12 +566,16 @@ std::ostream& CircuitGraph::displayInfo(std::ostream& os, int verbose) const {
 }
 
 std::ostream& CircuitGraph::displayFusionConfig(std::ostream& os) const {
-    os << CYAN_FG << "=== Fusion Config: ===\n" << RESET;
-    os << "max nqubits:     " << fusionConfig.maxNQubits << "\n";
-    os << "max op count:    " << fusionConfig.maxOpCount << "\n";
-    os << "zero skip thres: " << std::scientific << fusionConfig.zeroSkippingThreshold << "\n";
-
-    os << CYAN_FG << "======================\n" << RESET;
+    os << CYAN_FG << "======== Fusion Config: ========\n" << RESET;
+    os << "max nqubits:          " << fusionConfig.maxNQubits << "\n";
+    os << "max op count:         " << fusionConfig.maxOpCount;
+    if (fusionConfig.maxOpCount < 0)
+        os << " (infinite)";
+    os << "\n";
+    os << "zero skip thres:      " << std::scientific << fusionConfig.zeroSkippingThreshold << "\n";
+    os << "allow multi traverse: " << ((fusionConfig.allowMultipleTraverse) ? "true" : "false") << "\n";
+    os << "increment scheme:     " << ((fusionConfig.incrementScheme) ? "true" : "false") << "\n";
+    os << CYAN_FG << "================================\n" << RESET;
     return os;
 }
 
@@ -587,52 +591,50 @@ void CircuitGraph::greedyGateFusion() {
     GateBlock* rhsBlock;
 
     // print(std::cerr, 2) << "\n\n";
-    bool hasChange = true;
-    auto tileIt = tile.begin();
-    unsigned q = 0;
-    // tryFuseConnectedConsecutive
-    while (hasChange) {
-        tileIt = tile.begin();
-        hasChange = false;
-        while (std::next(tileIt) != tile.end()) {
-            q = 0;
-            while (q < nqubits) {
-                if ((*tileIt)[q] == nullptr) {
-                    q++;
-                    continue;
+    int maxK = fusionConfig.maxNQubits;
+    for (int currentK = (fusionConfig.incrementScheme) ? 2 : maxK;
+                currentK <= maxK; currentK++) {
+        fusionConfig.maxNQubits = currentK;
+        bool hasChange = true;
+        auto tileIt = tile.begin();
+        unsigned q = 0;
+        while (hasChange) {
+            tileIt = tile.begin();
+            hasChange = false;
+            while (std::next(tileIt) != tile.end()) {
+                // consecutive fuse
+                q = 0;
+                while (q < nqubits) {
+                    if ((*tileIt)[q] == nullptr) {
+                        q++;
+                        continue;
+                    }
+                    if ((*std::next(tileIt))[q] == nullptr) {
+                        auto downIt = repositionBlockDownward(tileIt, q);
+                        q++;
+                        continue;
+                    }
+                    auto* fusedBlock = tryFuseConnectedConsecutive(tileIt, q);
+                    if (fusedBlock == nullptr)
+                        q++;
+                    else
+                        hasChange = true;
                 }
-                if ((*std::next(tileIt))[q] == nullptr) {
-                    auto downIt = repositionBlockDownward(tileIt, q);
-                    // if (downIt == tile.rbegin()) {
-                    //     auto upIt = repositionBlockUpward(downIt, q);
-                    //     if (upIt != tile.begin()) {
-                    //         if (tryFuseConnectedConsecutive(std::prev(upIt), q))
-                    //             hasChange = true;
-                    //     }
-                    // }
-                    q++;
-                    continue;
+                // same row fuse
+                q = 0;
+                while (q < nqubits) {
+                    auto* fusedBlock = tryFuseSameRow(tileIt, q);
+                    if (fusedBlock == nullptr)
+                        q++;
                 }
-                auto* fusedBlock = tryFuseConnectedConsecutive(tileIt, q);
-                if (fusedBlock == nullptr)
-                    q++;
-                else
-                    hasChange = true;
-
-                // print(std::cerr, 2) << "\n\n";
+                tileIt++;
             }
-            q = 0;
-            while (q < nqubits) {
-                auto* fusedBlock = tryFuseSameRow(tileIt, q);
-                if (fusedBlock == nullptr)
-                    q++;
-            }
-            tileIt++;
+            eraseEmptyRows();
+            updateTileUpward();
+            if (!fusionConfig.allowMultipleTraverse)
+                break;
         }
-        eraseEmptyRows();
-        updateTileUpward();
     }
-    // break;
 }
 
 std::vector<GateNode*> GateBlock::getOrderedGates() const {

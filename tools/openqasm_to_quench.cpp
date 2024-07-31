@@ -17,75 +17,63 @@ using namespace Color;
 int main(int argc, char** argv) {
     cl::opt<std::string>
     inputFilename(cl::desc("input file name"), cl::Positional, cl::Required);
-    
     cl::opt<std::string>
     outputFilename("o", cl::desc("output file name"), cl::init(""));
-
     cl::opt<std::string>
     Precision("p", cl::desc("precision (f64 or f32)"), cl::init("f64"));
-
     cl::opt<unsigned>
     Verbose("verbose", cl::desc("verbose level"), cl::init(1));
-
     cl::opt<bool>
     UseF32("f32", cl::desc("use f32 (override -p)"), cl::init(false));
-
     cl::opt<unsigned>
     SimdS("S", cl::desc("vector size (s value)"), cl::Prefix, cl::init(1));
-
     cl::opt<bool>
     MultiThreaded("multi-thread", cl::desc("enable multi-threading"), cl::init(true));
-
     cl::opt<bool>
     InstallTimer("timer", cl::desc("install timer"), cl::init(false));
 
     // Gate Fusion Category
     cl::OptionCategory GateFusionConfigCategory("Gate Fusion Options", "");
-
     cl::opt<int>
     FusionLevel("fusion", cl::cat(GateFusionConfigCategory),
             cl::desc("fusion level presets 0 (disable), 1 (two-qubit only), 2 (default), and 3 (aggresive)"),
             cl::init(2));
-
-    cl::opt<unsigned>
+    cl::opt<int>
     MaxNQubits("max-k", cl::cat(GateFusionConfigCategory),
             cl::desc("maximum number of qubits of gates"), cl::init(0));
-
-    cl::opt<unsigned>
+    cl::opt<int>
     MaxOpCount("max-op", cl::cat(GateFusionConfigCategory),
             cl::desc("maximum operation count"), cl::init(0));
-
     cl::opt<double>
     ZeroSkipThreshold("zero-thres", cl::cat(GateFusionConfigCategory),
             cl::desc("zero skipping threshold"), cl::init(1e-8));
+    cl::opt<bool>
+    AllowMultipleTraverse("allow-multi-traverse", cl::cat(GateFusionConfigCategory),
+            cl::desc("allow multiple tile traverse in gate fusion"), cl::init(true));
+    cl::opt<bool>
+    EnableIncreamentScheme("increment-scheme", cl::cat(GateFusionConfigCategory),
+            cl::desc("enable increment fusion scheme"), cl::init(true));
 
     // IR Generation Category
     cl::OptionCategory IRGenerationConfigCategory("IR Generation Options", "");
-
     cl::opt<bool>
     LoadMatrixInEntry("load-matrix-in-entry", cl::cat(IRGenerationConfigCategory),
             cl::desc("load matrix in entry"), cl::init(true));
-
     cl::opt<bool>
     LoadVectorMatrix("load-vector-matrix", cl::cat(IRGenerationConfigCategory),
             cl::desc("load vector matrix"), cl::init(false));
-
     cl::opt<bool>
     UsePDEP("use-pdep", cl::cat(IRGenerationConfigCategory),
             cl::desc("use pdep (parallel bit deposite)"), cl::init(true));
-
     cl::opt<bool>
     EnablePrefetch("enable-prefetch", cl::cat(IRGenerationConfigCategory),
             cl::desc("enable prefetch (not tested, recommend off)"), cl::init(false));
-
     cl::opt<bool>
     AltFormat("alt-format", cl::cat(IRGenerationConfigCategory),
             cl::desc("generate alternating format kernels"), cl::init(false));
-
     cl::opt<bool>
     ForceDenseKernel("force-dense-kernel", cl::cat(IRGenerationConfigCategory),
             cl::desc("force all kernels to be dense"), cl::init(false));
-
     cl::opt<bool>
     DumpIRToMultipleFiles("dump-ir-to-multiple-files", cl::cat(IRGenerationConfigCategory),
             cl::desc("dump ir to multiple files"), cl::init(false));
@@ -128,23 +116,21 @@ int main(int argc, char** argv) {
             return 1;
         }
         graph.updateFusionConfig({
-                .maxNQubits = static_cast<int>(MaxNQubits),
-                .maxOpCount = static_cast<int>(MaxOpCount),
-                .zeroSkippingThreshold = ZeroSkipThreshold
+                .maxNQubits = MaxNQubits,
+                .maxOpCount = MaxOpCount,
+                .zeroSkippingThreshold = ZeroSkipThreshold,
             });
     }
-    else {
+    else
         graph.updateFusionConfig(FusionConfig::Preset(FusionLevel));
-    }
+    graph.getFusionConfig().allowMultipleTraverse = AllowMultipleTraverse;
+    graph.getFusionConfig().incrementScheme = EnableIncreamentScheme;
 
     if (Verbose > 0)
         graph.displayFusionConfig(std::cerr);
 
-    unsigned maxK0 = graph.getFusionConfig().maxNQubits;
-    for (unsigned maxK = 2; maxK <= maxK0; maxK++) {
-        graph.getFusionConfig().maxNQubits = maxK;
-        graph.greedyGateFusion();
-    }
+    graph.greedyGateFusion();
+
     tok = clock::now();
     std::cerr << msg_start() << "Greedy gate fusion complete\n";
 
