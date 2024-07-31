@@ -118,6 +118,9 @@ int main(int argc, char** argv) {
     cl::opt<bool>
     FullKernel("full", cl::desc("generate alt kernel"), cl::init(false));
 
+    cl::opt<bool>
+    ForceDenseKernel("force-dense-kernel", cl::desc("force all kernels to be dense"), cl::init(false));
+
     cl::opt<std::string>
     WhichGate("gate", cl::desc("which gate"));
 
@@ -160,6 +163,7 @@ int main(int argc, char** argv) {
     codeGenerator.config.usePDEP = UsePDEP;
     codeGenerator.config.enablePrefetch = EnablePrefetch;
     codeGenerator.config.generateAltKernel = AltKernel;
+    codeGenerator.config.forceDenseKernel = ForceDenseKernel;
     if (UseF32)
         codeGenerator.config.precision = 32;
     codeGenerator.generate(graph, true); // force in order
