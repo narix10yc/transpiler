@@ -166,6 +166,7 @@ int main(int argc, char** argv) {
     codeGenerator.config.forceDenseKernel = ForceDenseKernel;
     if (UseF32)
         codeGenerator.config.precision = 32;
+    codeGenerator.displayConfig(std::cerr);
     codeGenerator.generate(graph, true); // force in order
     
     return 0;
