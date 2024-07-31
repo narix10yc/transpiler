@@ -98,7 +98,7 @@ int main(int argc, char** argv) {
     LoadMatrixInEntry("load-matrix-in-entry", cl::desc(""), cl::init(true));
 
     cl::opt<bool>
-    LoadVectorMatrix("load-vector-matrix", cl::desc(""), cl::init(true));
+    LoadVectorMatrix("load-vector-matrix", cl::desc(""), cl::init(false));
 
     cl::opt<unsigned>
     SimdS("S", cl::desc("vector size (s value)"), cl::Prefix, cl::init(1));

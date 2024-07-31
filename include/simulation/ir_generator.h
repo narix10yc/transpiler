@@ -112,6 +112,7 @@ public:
     bool usePDEP; // parallel bits deposite from BMI2
     bool loadMatrixInEntry;
     bool loadVectorMatrix;
+    bool allocaMatrixInStack;
     int verbose;
     bool forceDenseKernel;
     RealTy realTy;
@@ -130,6 +131,7 @@ public:
         usePDEP(true),
         loadMatrixInEntry(true),
         loadVectorMatrix(true),
+        allocaMatrixInStack(true),
         verbose(0),
         forceDenseKernel(false),
         realTy(RealTy::Double),

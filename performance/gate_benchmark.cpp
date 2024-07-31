@@ -27,8 +27,8 @@ int main(int argc, char** argv) {
     #ifdef MULTI_THREAD_SIMULATION_KERNEL
     #else
     std::cerr << "\n============ New Run ============\n";
-    for (int nqubits : {8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28}) {
-    // for (const int nqubits : { DEFAULT_NQUBITS, DEFAULT_NQUBITS }) {
+    // for (int nqubits : {8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28}) {
+    for (const int nqubits : { DEFAULT_NQUBITS, DEFAULT_NQUBITS }) {
         if (nqubits < 20)
             timer.setReplication(7);
         else
