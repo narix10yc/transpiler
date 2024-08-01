@@ -13,6 +13,8 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, bool forceInOrder) {
     IRGenerator irGenerator;
     const auto syncIRGeneratorConfig = [&]() {
         irGenerator.vecSizeInBits = config.simd_s;
+        irGenerator.zeroSkipThreshold = config.zeroSkipThreshold;
+        irGenerator.closeMatrixEntryThres = config.closeMatrixEntryThres;
         irGenerator.verbose = config.verbose;
         irGenerator.loadMatrixInEntry = config.loadMatrixInEntry;
         irGenerator.loadVectorMatrix = config.loadVectorMatrix;
@@ -20,6 +22,7 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, bool forceInOrder) {
         irGenerator.prefetchConfig.enable = config.enablePrefetch;
         irGenerator.forceDenseKernel = config.forceDenseKernel;
     };
+    
     syncIRGeneratorConfig();
     std::string realTy;
     if (config.precision == 32) {

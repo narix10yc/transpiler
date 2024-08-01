@@ -113,7 +113,10 @@ int main(int argc, char** argv) {
     EnablePrefetch("enable-prefetch", cl::desc("enable prefetch"), cl::init(false));
 
     cl::opt<bool>
-    AltKernel("alt-format", cl::desc("generate alt kernel"), cl::init(false));
+    AltKernel("alt-format", cl::desc("generate alt kernel"), cl::init(true));
+
+    cl::opt<double>
+    CloseMatrixEntryThreshold("close-matrix-entry-thres", cl::desc("close matrix entry threshold (<0 to turn off)"), cl::init(-1.0));
 
     cl::opt<bool>
     FullKernel("full", cl::desc("generate alt kernel"), cl::init(false));
@@ -160,10 +163,12 @@ int main(int argc, char** argv) {
     codeGenerator.config.simd_s = SimdS;
     codeGenerator.config.loadMatrixInEntry = LoadMatrixInEntry;
     codeGenerator.config.loadVectorMatrix = LoadVectorMatrix;
+    codeGenerator.config.closeMatrixEntryThres = CloseMatrixEntryThreshold;
     codeGenerator.config.usePDEP = UsePDEP;
     codeGenerator.config.enablePrefetch = EnablePrefetch;
     codeGenerator.config.generateAltKernel = AltKernel;
     codeGenerator.config.forceDenseKernel = ForceDenseKernel;
+    codeGenerator.config.verbose = 2;
     if (UseF32)
         codeGenerator.config.precision = 32;
     codeGenerator.displayConfig(std::cerr);

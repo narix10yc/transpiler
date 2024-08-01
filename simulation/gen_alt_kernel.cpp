@@ -5,6 +5,7 @@
 #include "llvm/IR/IntrinsicsX86.h"
 
 #include <bitset>
+#include <algorithm>
 
 using namespace utils;
 using namespace llvm;
@@ -18,8 +19,10 @@ namespace {
         Value* imagVal;
         int realFlag;
         int imagFlag;
+        bool realLoadNeg;
+        bool imagLoadNeg;
     };
-
+    
     /// @return (mask, vec)
     std::pair<std::vector<int>, std::vector<int>>
     getMaskToMerge(const std::vector<int>& v0, const std::vector<int>& v1) {
@@ -77,7 +80,8 @@ IRGenerator::generateAlternatingKernel(const QuantumGate& gate,
                   << funcName << "' ==" <<  RESET << "\n"
                   << "s = " << s << "; S = " << S << "\n"
                   << "k = " << k << "; K = " << K << "\n"
-                  << "qubits = ";
+                  << "qubits = "
+                  << "zeroSkipThres = " << zeroSkipThreshold << "\n";
         printVector(gate.qubits) << "\n";
     }
 
@@ -111,80 +115,98 @@ IRGenerator::generateAlternatingKernel(const QuantumGate& gate,
     BasicBlock* retBB = BasicBlock::Create(llvmContext, "ret", func);
 
     std::vector<matrix_data_t> matrix(K * K);
+    for (auto& m : matrix) {
+        m.realLoadNeg = false;
+        m.imagLoadNeg = false;
+    }
 
     const auto loadMatrixF = [&]() {
+        // set up matrix flags
+        std::vector<std::pair<double, int>> uniqueEntries;
+        std::vector<int> uniqueEntryIndices(2 * matrix.size());
+        for (unsigned i = 0; i < matrix.size(); i++) {
+            if (forceDenseKernel) {
+                matrix[i].realFlag = 2;
+                matrix[i].imagFlag = 2;
+                continue;
+            }
+            auto real = gate.gateMatrix.matrix.constantMatrix.data.at(i).real();
+            auto imag = gate.gateMatrix.matrix.constantMatrix.data.at(i).imag();
+
+            if (std::abs(real) < zeroSkipThreshold)
+                matrix[i].realFlag = 0;
+            else if (std::abs(real - 1.0) < zeroSkipThreshold)
+                matrix[i].realFlag = 1;
+            else if (std::abs(real + 1.0) < zeroSkipThreshold)
+                matrix[i].realFlag = -1;
+            else 
+                matrix[i].realFlag = 2;
+
+            if (std::abs(imag) < zeroSkipThreshold)
+                matrix[i].imagFlag = 0;
+            else if (std::abs(imag - 1.0) < zeroSkipThreshold)
+                matrix[i].imagFlag = 1;
+            else if (std::abs(imag + 1.0) < zeroSkipThreshold)
+                matrix[i].imagFlag = -1;
+            else 
+                matrix[i].imagFlag = 2;
+            
+            if (closeMatrixEntryThres >= 0.0) {
+                auto realIt = std::find_if(uniqueEntries.begin(), uniqueEntries.end(),
+                        [thres=closeMatrixEntryThres, real=real](const std::pair<double, int> pair)
+                            { return std::abs(pair.first - real) <= thres || std::abs(pair.first + real) <= thres; });
+                if (realIt == uniqueEntries.end()) {
+                    uniqueEntries.push_back(std::make_pair(real, 2*i));
+                    uniqueEntryIndices[2*i] = 2*i;
+                } else {
+                    uniqueEntryIndices[2*i] = realIt->second;
+                    if (std::abs(realIt->first + real) <= closeMatrixEntryThres)
+                        matrix[i].realLoadNeg = true;
+                }
+                auto imagIt = std::find_if(uniqueEntries.begin(), uniqueEntries.end(),
+                        [thres=closeMatrixEntryThres, imag=imag](const std::pair<double, int> pair)
+                            { return std::abs(pair.first - imag) <= thres; });
+                if (imagIt == uniqueEntries.end()) {
+                    uniqueEntries.push_back(std::make_pair(imag, 2*i + 1));
+                    uniqueEntryIndices[2*i + 1] = 2*i + 1;
+                } else {
+                    uniqueEntryIndices[2*i + 1] = realIt->second;
+                    if (std::abs(imagIt->first + imag) <= closeMatrixEntryThres)
+                        matrix[i].imagLoadNeg = true;
+                }
+            }
+
+        }
+
         Value* matV = nullptr;
         if (loadVectorMatrix) {
             matV = builder.CreateLoad(VectorType::get(scalarTy, 2*K*K, false),
                                     pMatArg, "matrix");
-        }
-        for (unsigned i = 0; i < matrix.size(); i++) {
-            if (loadVectorMatrix) {
+            for (unsigned i = 0; i < matrix.size(); i++) {
                 matrix[i].realVal = builder.CreateShuffleVector(
                     matV, std::vector<int>(S, 2*i), "mRe_" + std::to_string(i));
                 matrix[i].imagVal = builder.CreateShuffleVector(
                     matV, std::vector<int>(S, 2*i+1), "mIm_" + std::to_string(i));
-            } else {
-                auto* pReVal = builder.CreateConstGEP1_64(scalarTy, pMatArg, static_cast<uint64_t>(2*i), "pmRe_" + std::to_string(i));
-                auto* mReVal = builder.CreateLoad(scalarTy, pReVal, "smRe_" + std::to_string(i));
-                matrix[i].realVal = builder.CreateVectorSplat(S, mReVal, "mRe_" + std::to_string(i));
-
-                auto* pImVal = builder.CreateConstGEP1_64(scalarTy, pMatArg, static_cast<uint64_t>(2*i+1), "pmIm_" + std::to_string(i));
-                auto* mImVal = builder.CreateLoad(scalarTy, pReVal, "smIm_" + std::to_string(i));
-                matrix[i].imagVal = builder.CreateVectorSplat(S, mReVal, "mIm_" + std::to_string(i));
             }
+            return;
         }
+
+        // not loading vector matrix
+        for (unsigned i = 0; i < matrix.size(); i++) {
+            uint64_t reLoadPosition = (closeMatrixEntryThres < 0.0) ? 2ULL * i : uniqueEntryIndices[2*i];
+            auto* pReVal = builder.CreateConstGEP1_64(scalarTy, pMatArg, reLoadPosition, "pmRe_" + std::to_string(i));
+            auto* mReVal = builder.CreateLoad(scalarTy, pReVal, "smRe_" + std::to_string(i));
+            matrix[i].realVal = builder.CreateVectorSplat(S, mReVal, "mRe_" + std::to_string(i));
+            
+            uint64_t imLoadPosition = (closeMatrixEntryThres < 0.0) ? 2ULL * i + 1 : uniqueEntryIndices[2*i+1];
+            auto* pImVal = builder.CreateConstGEP1_64(scalarTy, pMatArg, imLoadPosition, "pmIm_" + std::to_string(i));
+            auto* mImVal = builder.CreateLoad(scalarTy, pImVal, "smIm_" + std::to_string(i));
+            matrix[i].imagVal = builder.CreateVectorSplat(S, mImVal, "mIm_" + std::to_string(i));
+        }
+
     };
 
     builder.SetInsertPoint(entryBB);
-    // set up matrix flags
-    for (unsigned i = 0; i < matrix.size(); i++) {
-        if (forceDenseKernel) {
-            matrix[i].realFlag = 2;
-            matrix[i].imagFlag = 2;
-            continue;
-        }
-        auto real = gate.gateMatrix.matrix.constantMatrix.data.at(i).real();
-        auto imag = gate.gateMatrix.matrix.constantMatrix.data.at(i).imag();
-
-        double thres = 1e-8;
-        if (std::abs(real) < thres)
-            matrix[i].realFlag = 0;
-        else if (std::abs(real - 1.0) < thres)
-            matrix[i].realFlag = 1;
-        else if (std::abs(real + 1.0) < thres)
-            matrix[i].realFlag = -1;
-        else 
-            matrix[i].realFlag = 2;
-
-        if (std::abs(imag) < thres)
-            matrix[i].imagFlag = 0;
-        else if (std::abs(imag - 1.0) < thres)
-            matrix[i].imagFlag = 1;
-        else if (std::abs(imag + 1.0) < thres)
-            matrix[i].imagFlag = -1;
-        else 
-            matrix[i].imagFlag = 2;
-    }
-    
-    if (loadMatrixInEntry)
-        loadMatrixF();
-
-    // debug print matrix
-    if (verbose > 1) {
-        std::cerr << "IRMatrix:\n[";
-        for (unsigned r = 0; r < K; r++) {
-            for (unsigned c = 0; c < K; c++) {
-                int realFlag = matrix[r*K + c].realFlag;
-                int imagFlag = matrix[r*K + c].imagFlag;
-                std::cerr << "(" << realFlag << "," << imagFlag << "),";
-            }
-            if (r < K - 1)
-                std::cerr << "\n ";
-            else
-                std::cerr << "]\n";
-        }
-    }
 
     // split qubits
     unsigned _q = 0;
@@ -235,6 +257,8 @@ IRGenerator::generateAlternatingKernel(const QuantumGate& gate,
         std::cerr << "vecSize: " << vecSize << "\n";
     }
 
+    if (loadMatrixInEntry)
+        loadMatrixF();
     builder.CreateBr(loopBB);
 
     // loop entry
@@ -249,6 +273,22 @@ IRGenerator::generateAlternatingKernel(const QuantumGate& gate,
     if (!loadMatrixInEntry)
         loadMatrixF();
 
+    // debug print matrix
+    if (verbose > 1) {
+        std::cerr << "IRMatrix:\n[";
+        for (unsigned r = 0; r < K; r++) {
+            for (unsigned c = 0; c < K; c++) {
+                int realFlag = matrix[r*K + c].realFlag;
+                int imagFlag = matrix[r*K + c].imagFlag;
+                std::cerr << "(" << realFlag << "," << imagFlag << "),";
+            }
+            if (r < K - 1)
+                std::cerr << "\n ";
+            else
+                std::cerr << "]\n";
+        }
+    }
+
     // find start pointer
     Value* idxStartV = counterV;
     if (usePDEP) {
@@ -261,22 +301,6 @@ IRGenerator::generateAlternatingKernel(const QuantumGate& gate,
             std::cerr << "pdepMask = " << std::bitset<12>(pdepMask) << "\n";
         idxStartV = builder.CreateIntrinsic(idxStartV->getType(), Intrinsic::x86_bmi_pdep_64,
                         {counterV, builder.getInt64(pdepMask)}, nullptr, "idxStart");
-
-        // if (prefetchConfig.enable) {
-        //     std::cerr << "RUA\n";
-        //     auto* pfCounterV = builder.CreateAdd(counterV,
-        //             builder.getInt64(prefetchConfig.distance), "pf_counter");
-        //     auto* pfIdxStartV = builder.CreateIntrinsic(idxStartV->getType(), Intrinsic::x86_bmi_pdep_64,
-        //             {pfCounterV, builder.getInt64(pdepMask)}, nullptr, "pf_idxStart");
-        //     auto* pfAddRe = builder.CreateGEP(vecType, pRealArg, pfIdxStartV, "pf_addRe");
-        //     auto* pfAddIm = builder.CreateGEP(vecType, pImagArg, pfIdxStartV, "pf_addIm");
-
-        //     // prefetch(add, read_or_write, locality, data_or_instr_cache)
-        //     builder.CreateIntrinsic(builder.getVoidTy(), Intrinsic::prefetch,
-        //             { pfAddRe, builder.getInt32(0), builder.getInt32(2), builder.getInt32(0)}, nullptr);
-        //     builder.CreateIntrinsic(builder.getVoidTy(), Intrinsic::prefetch,
-        //             { pfAddIm, builder.getInt32(0), builder.getInt32(2), builder.getInt32(0)}, nullptr);
-        // }
     }
     else if (!higherQubits.empty()) {
         // idx = insert 0 to every bit in higherQubits to counter
@@ -414,15 +438,24 @@ IRGenerator::generateAlternatingKernel(const QuantumGate& gate,
             // real part
             std::string nameRe = "newRe_" + std::to_string(r) + "_";
             if (useFMS) {
-                for (unsigned c = 0; c < K; c++)
-                    newReal[li] = genMulAdd(newReal[li], matrix[r * K + c].realVal, real[c],
-                                    matrix[r * K + c].realFlag, "", nameRe);
                 for (unsigned c = 0; c < K; c++) {
-                    auto* neg_imag = builder.CreateFNeg(imag[c], "neg_imag_" + std::to_string(r));
-                    newReal[li] = genMulAdd(newReal[li], matrix[r * K + c].imagVal, neg_imag,
-                                    matrix[r * K + c].imagFlag, "", nameRe);
+                    if (matrix[r*K + c].realLoadNeg)
+                        newReal[li] = genMulSub(newReal[li], matrix[r*K + c].realVal, real[c],
+                                        matrix[r * K + c].realFlag, "", nameRe);
+                    else 
+                        newReal[li] = genMulAdd(newReal[li], matrix[r*K + c].realVal, real[c],
+                                        matrix[r * K + c].realFlag, "", nameRe);
+                }
+                for (unsigned c = 0; c < K; c++) {
+                    if (matrix[r*K + c].imagLoadNeg)
+                        newReal[li] = genMulAdd(newReal[li], matrix[r*K + c].imagVal, imag[c],
+                                        matrix[r * K + c].imagFlag, "", nameRe);
+                    else
+                        newReal[li] = genMulSub(newReal[li], matrix[r*K + c].imagVal, imag[c],
+                                        matrix[r * K + c].imagFlag, "", nameRe);
                 }
             } else {
+                assert(closeMatrixEntryThres < 0 && "Not Implemented");
                 Value *newRe0 = nullptr, *newRe1 = nullptr;
                 for (unsigned c = 0; c < K; c++) {
                     newRe0 = genMulAdd(newRe0, matrix[r * K + c].realVal, real[c],
@@ -442,10 +475,18 @@ IRGenerator::generateAlternatingKernel(const QuantumGate& gate,
             // imag part
             std::string nameIm = "newIm_" + std::to_string(r) + "_";
             for (unsigned c = 0; c < K; c++) {
-                newImag[li] = genMulAdd(newImag[li], matrix[r * K + c].realVal, imag[c],
-                                matrix[r * K + c].realFlag, "", nameIm);
-                newImag[li] = genMulAdd(newImag[li], matrix[r * K + c].imagVal, real[c],
-                                matrix[r * K + c].imagFlag, "", nameIm);
+                if (matrix[r*K + c].realLoadNeg)
+                    newImag[li] = genMulSub(newImag[li], matrix[r*K + c].realVal, imag[c],
+                                    matrix[r * K + c].realFlag, "", nameIm);
+                else
+                    newImag[li] = genMulAdd(newImag[li], matrix[r*K + c].realVal, imag[c],
+                                    matrix[r * K + c].realFlag, "", nameIm);
+                if (matrix[r*K + c].imagLoadNeg)
+                    newImag[li] = genMulSub(newImag[li], matrix[r*K + c].imagVal, real[c],
+                                    matrix[r * K + c].imagFlag, "", nameIm);
+                else
+                    newImag[li] = genMulAdd(newImag[li], matrix[r*K + c].imagVal, real[c],
+                                    matrix[r * K + c].imagFlag, "", nameIm);
             }
         }
         // merge

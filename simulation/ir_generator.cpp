@@ -56,11 +56,12 @@ Value* IRGenerator::genMulSub(Value* aa, Value* bb, Value* cc,
                               const Twine& aaName) {
     if (bbFlag == 0) 
         return aa;
-    
+
+    auto* ccNeg = builder.CreateFNeg(cc, "ccNeg");
     // new_aa = aa - cc
     if (bbFlag == 1) {
         if (aa == nullptr)
-            return builder.CreateFNeg(cc, aaName);
+            return ccNeg;
         return builder.CreateFSub(aa, cc, aaName);
     }
 
@@ -71,9 +72,15 @@ Value* IRGenerator::genMulSub(Value* aa, Value* bb, Value* cc,
         return builder.CreateFAdd(aa, cc, aaName);
     }
 
+    // bb is non-special
     // new_aa = aa - bb * cc
-    auto* bbcc = builder.CreateFMul(bb, cc, bbccName);
     if (aa == nullptr)
-        return builder.CreateFNeg(bbcc, aaName);
-    return builder.CreateFSub(aa, bbcc, aaName);
+        return builder.CreateFMul(bb, ccNeg, aaName);
+
+    if (useFMS)
+        return builder.CreateIntrinsic(bb->getType(), Intrinsic::fmuladd,
+                                       {bb, ccNeg, aa}, nullptr, aaName);
+    // not use FMS
+    auto* bbccNeg = builder.CreateFMul(bb, ccNeg, bbccName + "Neg");
+    return builder.CreateFAdd(aa, bbccNeg, aaName);
 }

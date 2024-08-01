@@ -4,10 +4,14 @@
 #include "quench/CircuitGraph.h"
 #include "utils/iocolor.h"
 
+#include <iomanip>
+
 namespace quench::cpu {
 
 struct CodeGeneratorCPUConfig {
     int simd_s;
+    double zeroSkipThreshold;
+    double closeMatrixEntryThres;
     int precision;
     int verbose;
     bool multiThreaded;
@@ -37,13 +41,15 @@ struct CodeGeneratorCPUConfig {
             os << "Override nqubits = " << overrideNqubits << "\n";
         
         os << "Detailed IR settings:\n"
-           << "  load matrix in entry:   " << ((loadMatrixInEntry) ? "true" : "false") << "\n"
-           << "  load vector matrix:     " << ((loadVectorMatrix) ? "true" : "false") << "\n"
-           << "  use PDEP:               " << ((usePDEP) ? "true" : "false") << "\n"
-           << "  dump IR to multi files: " << ((dumpIRToMultipleFiles) ? "true" : "false") << "\n"
-           << "  enable prefetch:        " << ((enablePrefetch) ? "true" : "false") << "\n"
-           << "  generate alt kernel:    " << ((generateAltKernel) ? "true" : "false") << "\n"
-           << "  force dense kernel:     " << ((forceDenseKernel) ? "true" : "false") << "\n";
+           << "  zero skip threshold:      " << std::scientific << std::setprecision(4) << zeroSkipThreshold << "\n"
+           << "  close matrix entry thres: " << std::scientific << std::setprecision(4) << closeMatrixEntryThres << "\n"
+           << "  load matrix in entry:     " << ((loadMatrixInEntry) ? "true" : "false") << "\n"
+           << "  load vector matrix:       " << ((loadVectorMatrix) ? "true" : "false") << "\n"
+           << "  use PDEP:                 " << ((usePDEP) ? "true" : "false") << "\n"
+           << "  dump IR to multi files:   " << ((dumpIRToMultipleFiles) ? "true" : "false") << "\n"
+           << "  enable prefetch:          " << ((enablePrefetch) ? "true" : "false") << "\n"
+           << "  generate alt kernel:      " << ((generateAltKernel) ? "true" : "false") << "\n"
+           << "  force dense kernel:       " << ((forceDenseKernel) ? "true" : "false") << "\n";
 
         os << Color::CYAN_FG << "===========================\n" << Color::RESET;
         return os;
@@ -58,6 +64,8 @@ public:
     CodeGeneratorCPU(const std::string& fileName = "gen_file")
         : fileName(fileName), 
           config({.simd_s=1,
+                  .zeroSkipThreshold=1e-8,
+                  .closeMatrixEntryThres=-1.0,
                   .precision=64,
                   .verbose=0,
                   .multiThreaded=false,
@@ -69,7 +77,8 @@ public:
                   .dumpIRToMultipleFiles=false,
                   .enablePrefetch=false,
                   .generateAltKernel=false,
-                  .forceDenseKernel=false}) {}
+                  .forceDenseKernel=false
+                 }) {}
 
     CodeGeneratorCPUConfig config;
 

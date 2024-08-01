@@ -17,6 +17,7 @@
 
 namespace simulation {
 
+/// @brief  Not in use yet
 struct IRGeneratorConfig {
     int simdS;
     int realTy;
@@ -106,13 +107,14 @@ public:
 
 public:
     unsigned vecSizeInBits;
+    double zeroSkipThreshold;
     int chunkC; // Not Implemented
     bool useFMA;
     bool useFMS;
     bool usePDEP; // parallel bits deposite from BMI2
     bool loadMatrixInEntry;
     bool loadVectorMatrix;
-    bool allocaMatrixInStack;
+    double closeMatrixEntryThres;
     int verbose;
     bool forceDenseKernel;
     RealTy realTy;
@@ -125,13 +127,14 @@ public:
         builder(llvmContext), 
         mod(std::make_unique<llvm::Module>(moduleName, llvmContext)),
         vecSizeInBits(vecSizeInBits),
+        zeroSkipThreshold(1e-8),
         chunkC(-1),
         useFMA(true),
         useFMS(true),
         usePDEP(true),
         loadMatrixInEntry(true),
         loadVectorMatrix(true),
-        allocaMatrixInStack(true),
+        closeMatrixEntryThres(-1.0),
         verbose(0),
         forceDenseKernel(false),
         realTy(RealTy::Double),

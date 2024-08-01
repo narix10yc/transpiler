@@ -71,6 +71,9 @@ int main(int argc, char** argv) {
     cl::opt<bool>
     AltFormat("alt-format", cl::cat(IRGenerationConfigCategory),
             cl::desc("generate alternating format kernels"), cl::init(false));
+    cl::opt<double>
+    CloseMatrixEntryThreshold("close-matrix-entry-thres", cl::cat(IRGenerationConfigCategory),
+            cl::desc("close matrix entry threshold (<0 to turn off)"), cl::init(-1.0));
     cl::opt<bool>
     ForceDenseKernel("force-dense-kernel", cl::cat(IRGenerationConfigCategory),
             cl::desc("force all kernels to be dense"), cl::init(false));
@@ -153,6 +156,7 @@ int main(int argc, char** argv) {
         codeGenerator.config.usePDEP = UsePDEP;
         codeGenerator.config.enablePrefetch = EnablePrefetch;
         codeGenerator.config.generateAltKernel = AltFormat;
+        codeGenerator.config.closeMatrixEntryThres = CloseMatrixEntryThreshold;
         codeGenerator.config.forceDenseKernel = ForceDenseKernel;
         codeGenerator.config.dumpIRToMultipleFiles = DumpIRToMultipleFiles;
         codeGenerator.config.precision = (UseF32 || Precision == "f32") ? 32 : 64;

@@ -132,8 +132,8 @@ IRGenerator::generateKernel(const QuantumGate& gate,
                 matrix[i].realVal = builder.CreateVectorSplat(S, mReVal, "mRe_" + std::to_string(i));
 
                 auto* pImVal = builder.CreateConstGEP1_64(scalarTy, pMatArg, static_cast<uint64_t>(2*i+1), "pmIm_" + std::to_string(i));
-                auto* mImVal = builder.CreateLoad(scalarTy, pReVal, "smIm_" + std::to_string(i));
-                matrix[i].imagVal = builder.CreateVectorSplat(S, mReVal, "mIm_" + std::to_string(i));
+                auto* mImVal = builder.CreateLoad(scalarTy, pImVal, "smIm_" + std::to_string(i));
+                matrix[i].imagVal = builder.CreateVectorSplat(S, mImVal, "mIm_" + std::to_string(i));
             }
         }
     };
