@@ -207,7 +207,7 @@ public:
     real_t* data;
 
     StatevectorAlt(unsigned nqubits, bool initialize=false) 
-            : nqubits(nqubits), N(1 << nqubits) {
+            : nqubits(nqubits), N(1ULL << nqubits) {
         data = (real_t*) aligned_alloc(64, 2 * N * sizeof(real_t));
         if (initialize) {
             for (size_t i = 0; i < (1 << (nqubits+1)); i++)
