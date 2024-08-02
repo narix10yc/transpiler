@@ -193,7 +193,7 @@ public:
     static FusionConfig Aggressive() {
         return {
             .maxNQubits = 7,
-            .maxOpCount = 4096, // 5-qubit dense
+            .maxOpCount = 4096, // 5.5-qubit dense
             .zeroSkippingThreshold = 1e-8,
             .allowMultipleTraverse = true,
             .incrementScheme = true

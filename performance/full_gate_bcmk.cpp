@@ -3,6 +3,7 @@
 #include "timeit/timeit.h"
 #include <iomanip>
 #include <iostream>
+#include <string>
 
 #ifdef USING_F32
     using Statevector = utils::statevector::StatevectorSep<float>;
@@ -17,6 +18,9 @@ using namespace timeit;
 
 
 int main(int argc, char** argv) {
+    assert(argc > 1);
+    const std::string test_name = argv[1];
+    
     real_t *real, *imag;
     Timer timer;
     timer.setRunTime(0.5);
@@ -30,9 +34,9 @@ int main(int argc, char** argv) {
     for (int nqubits : {8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28}) {
     // for (const int nqubits : { DEFAULT_NQUBITS, DEFAULT_NQUBITS }) {
         if (nqubits < 20)
-            timer.setReplication(7);
+            timer.setReplication(11);
         else
-            timer.setReplication(3); 
+            timer.setReplication(5); 
         uint64_t idxMax = 1ULL << (nqubits - S_VALUE - _metaData[0].nqubits);
 
         real = (real_t*) std::aligned_alloc(64, 2 * (1ULL << nqubits) * sizeof(real_t));
@@ -52,7 +56,7 @@ int main(int argc, char** argv) {
         // rst.display();  
         std::free(real);
 
-        std::cerr << "ours-alt,u1," << nqubits << "," REAL_T ","
+        std::cerr << "ours-alt," << test_name << "," << nqubits << "," REAL_T ","
                   << std::scientific << std::setprecision(4) << (rst.min / nqubits) << "\n";
     }
     #endif

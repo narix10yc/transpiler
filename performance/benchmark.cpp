@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
 
     // const std::vector<int> nthreads {2,4,8,12,16,20,24,28,32,36};
     // const std::vector<int> nthreads {16,24,32,36,48,64,68,72};
-    const std::vector<int> nthreads {192, 384};
+    const std::vector<int> nthreads {32, 64};
     
     std::vector<double> tarr(nthreads.size());
     int warmUpNThread = nthreads[nthreads.size()-1];

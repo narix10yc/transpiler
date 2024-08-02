@@ -345,10 +345,11 @@ int QuantumGate::opCount(double thres) {
         return opCountCache;
 
     int count = 0;
+    double normalizedThres = thres / std::pow(2.0, gateMatrix.nqubits);
     for (const auto& data : gateMatrix.cMatrix().data) {
-        if (std::abs(data.real()) >= thres)
+        if (std::abs(data.real()) >= normalizedThres)
             count++;
-        if (std::abs(data.imag()) >= thres)
+        if (std::abs(data.imag()) >= normalizedThres)
             count++;
     }
     opCountCache = 2 * count;

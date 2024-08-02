@@ -42,8 +42,12 @@ struct CodeGeneratorCPUConfig {
         
         os << "Detailed IR settings:\n"
            << "  zero skip threshold:      " << std::scientific << std::setprecision(4) << zeroSkipThreshold << "\n"
-           << "  close matrix entry thres: " << std::scientific << std::setprecision(4) << closeMatrixEntryThres << "\n"
-           << "  load matrix in entry:     " << ((loadMatrixInEntry) ? "true" : "false") << "\n"
+           << "  close matrix entry thres: ";
+        if (closeMatrixEntryThres < 0)
+            os << " disabled\n";
+        else
+            os << std::scientific << std::setprecision(4) << closeMatrixEntryThres << "\n";
+        os << "  load matrix in entry:     " << ((loadMatrixInEntry) ? "true" : "false") << "\n"
            << "  load vector matrix:       " << ((loadVectorMatrix) ? "true" : "false") << "\n"
            << "  use PDEP:                 " << ((usePDEP) ? "true" : "false") << "\n"
            << "  dump IR to multi files:   " << ((dumpIRToMultipleFiles) ? "true" : "false") << "\n"

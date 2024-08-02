@@ -168,7 +168,7 @@ int main(int argc, char** argv) {
     codeGenerator.config.enablePrefetch = EnablePrefetch;
     codeGenerator.config.generateAltKernel = AltKernel;
     codeGenerator.config.forceDenseKernel = ForceDenseKernel;
-    codeGenerator.config.verbose = 2;
+    // codeGenerator.config.verbose = 2;
     if (UseF32)
         codeGenerator.config.precision = 32;
     codeGenerator.displayConfig(std::cerr);
