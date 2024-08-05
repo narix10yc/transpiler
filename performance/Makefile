@@ -32,7 +32,7 @@ $(OBJ_DIR)/%.ll.o: $(IR_DIR)/%.ll | $(OBJ_DIR)
 fidelity: $(CURDIR)/gen_file.ll $(CURDIR)/fidelity.cpp
 	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -o $(BUILD_DIR)/fidelity
 	
-benchmark: $(OBJ_FILES) $(CURDIR)/benchmark.cpp
+benchmark: $(CURDIR)/gen_file.ll $(CURDIR)/benchmark.cpp
 	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -o $(BUILD_DIR)/benchmark
 
 gate_benchmark : $(CURDIR)/gen_file.ll $(CURDIR)/gate_benchmark.cpp

@@ -34,9 +34,9 @@ int main(int argc, char** argv) {
     for (int nqubits : {8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28}) {
     // for (const int nqubits : { DEFAULT_NQUBITS, DEFAULT_NQUBITS }) {
         if (nqubits < 20)
-            timer.setReplication(11);
+            timer.setReplication(7);
         else
-            timer.setReplication(5); 
+            timer.setReplication(3); 
         uint64_t idxMax = 1ULL << (nqubits - S_VALUE - _metaData[0].nqubits);
 
         real = (real_t*) std::aligned_alloc(64, 2 * (1ULL << nqubits) * sizeof(real_t));
