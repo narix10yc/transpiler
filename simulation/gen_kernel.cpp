@@ -4,7 +4,9 @@
 
 #include "llvm/IR/IntrinsicsX86.h"
 
+#include <cmath>
 #include <bitset>
+#include <algorithm>
 
 using namespace utils;
 using namespace llvm;
@@ -12,14 +14,16 @@ using namespace Color;
 using namespace simulation;
 using namespace quench::quantum_gate;
 
-namespace {
+namespace { /* anonymous namespace */
     struct matrix_data_t {
         Value* realVal;
         Value* imagVal;
         int realFlag;
         int imagFlag;
+        bool realLoadNeg;
+        bool imagLoadNeg;
     };
-
+    
     /// @return (mask, vec)
     std::pair<std::vector<int>, std::vector<int>>
     getMaskToMerge(const std::vector<int>& v0, const std::vector<int>& v1) {
@@ -57,123 +61,228 @@ namespace {
         }
         return std::make_pair(mask, vec);
     }
-}
+} // anonymous namespace
 
-/// @brief 
-/// @param gate 
-/// @param funcName 
-/// @return 
 Function*
-IRGenerator::generateKernel(const QuantumGate& gate,
-                            const std::string& funcName)
-{
-    const uint64_t s = vecSizeInBits;
+IRGenerator::generateKernelDebug(
+        const QuantumGate& gate, int debugLevel, const std::string& funcName) {
+
+    if (debugLevel > 0)
+        std::cerr << CYAN_FG << BOLD << "[IR Generation Debug] " << RESET
+                  << funcName << "\n";
+
+    const uint64_t s = _config.simd_s;
     const uint64_t S = 1ULL << s;
     const uint64_t k = gate.qubits.size();
     const uint64_t K = 1ULL << k;
 
-    if (verbose > 0) {
-        std::cerr << CYAN_FG << "== Generating Kernel '"
-                  << funcName << "' ==" <<  RESET << "\n"
-                  << "s = " << s << "; S = " << S << "\n"
+    if (debugLevel > 0) {
+        std::cerr << "s = " << s << "; S = " << S << "\n"
                   << "k = " << k << "; K = " << K << "\n"
-                  << "qubits = ";
+                  << "target qubits: ";
         printVector(gate.qubits) << "\n";
     }
 
-    Type* scalarTy = (realTy == RealTy::Float) ? builder.getFloatTy()
+    Type* scalarTy = (_config.precision == 32) ? builder.getFloatTy()
                                                : builder.getDoubleTy();
-    Type* retTy = builder.getVoidTy();
-    SmallVector<Type*> argTy;
-    argTy.push_back(builder.getPtrTy()); // ptr to real amp
-    argTy.push_back(builder.getPtrTy()); // ptr to imag amp
-    argTy.push_back(builder.getInt64Ty()); // counter_start
-    argTy.push_back(builder.getInt64Ty()); // counter_end
-    argTy.push_back(builder.getPtrTy()); // ptr to matrix
+    Function* func;
+    { /* function declaration */
+    auto argType = (_config.ampFormat == AmpFormat::Sep)
+            ? SmallVector<Type*> { builder.getPtrTy(), builder.getPtrTy(),
+                builder.getInt64Ty(), builder.getInt64Ty(), builder.getPtrTy() }
+            : SmallVector<Type*> { builder.getPtrTy(), 
+                builder.getInt64Ty(), builder.getInt64Ty(), builder.getPtrTy() };
+    
+    auto* funcType = FunctionType::get(builder.getVoidTy(), argType, false);
 
-    FunctionType* funcTy = FunctionType::get(retTy, argTy, false);
-    Function* func = Function::Create(funcTy, Function::ExternalLinkage, funcName, mod.get());
+    func = Function::Create(funcType, Function::ExternalLinkage,
+                                      funcName, *mod);      
+    }
 
-    SmallVector<StringRef> argNames
-        { "preal", "pimag", "counter_start", "counter_end", "pmat"};
-    unsigned i = 0;
-    for (auto& arg : func->args())
-        arg.setName(argNames[i++]);
-
-    auto* pRealArg = func->getArg(0);
-    auto* pImagArg = func->getArg(1);
-    auto* counterStartArg = func->getArg(2);
-    auto* counterEndArg = func->getArg(3);
-    auto* pMatArg = func->getArg(4);
+    Argument *pSvArg, *pReArg, *pImArg, *ctrBeginArg, *ctrEndArg, *pMatArg;
+    if (_config.ampFormat == AmpFormat::Sep) {
+        pReArg = func->getArg(0);      pReArg->setName("pRe");
+        pImArg = func->getArg(1);      pImArg->setName("pIm");
+        ctrBeginArg = func->getArg(2); ctrBeginArg->setName("ctr.begin");
+        ctrEndArg = func->getArg(3);   ctrEndArg->setName("ctr.end");
+        pMatArg = func->getArg(4);     pMatArg->setName("pmat");
+    } else {
+        pSvArg = func->getArg(0);      pSvArg->setName("pSv");
+        ctrBeginArg = func->getArg(1); ctrBeginArg->setName("ctr.begin");
+        ctrEndArg = func->getArg(2);   ctrEndArg->setName("ctr.end");
+        pMatArg = func->getArg(3);     pMatArg->setName("pmat");
+    }
 
     // init basic blocks
     BasicBlock* entryBB = BasicBlock::Create(llvmContext, "entry", func);
     BasicBlock* loopBB = BasicBlock::Create(llvmContext, "loop", func);
-    BasicBlock* loopBodyBB = BasicBlock::Create(llvmContext, "loopBody", func);
+    BasicBlock* loopBodyBB = BasicBlock::Create(llvmContext, "loop.body", func);
     BasicBlock* retBB = BasicBlock::Create(llvmContext, "ret", func);
 
     std::vector<matrix_data_t> matrix(K * K);
-
     const auto loadMatrixF = [&]() {
-        Value* matV = nullptr;
-        if (loadVectorMatrix) {
-            matV = builder.CreateLoad(VectorType::get(scalarTy, 2*K*K, false),
-                                    pMatArg, "matrix");
+        // set up matrix flags
+        std::vector<std::pair<double, int>> uniqueEntries;
+        std::vector<int> uniqueEntryIndices(2 * matrix.size());
+        for (auto& m : matrix) {
+            m.realLoadNeg = false;
+            m.imagLoadNeg = false;
         }
-        for (unsigned i = 0; i < matrix.size(); i++) {
-            if (loadVectorMatrix) {
-                matrix[i].realVal = builder.CreateShuffleVector(
-                    matV, std::vector<int>(S, 2*i), "mRe_" + std::to_string(i));
-                matrix[i].imagVal = builder.CreateShuffleVector(
-                    matV, std::vector<int>(S, 2*i+1), "mIm_" + std::to_string(i));
-            } else {
-                auto* pReVal = builder.CreateConstGEP1_64(scalarTy, pMatArg, static_cast<uint64_t>(2*i), "pmRe_" + std::to_string(i));
-                auto* mReVal = builder.CreateLoad(scalarTy, pReVal, "smRe_" + std::to_string(i));
-                matrix[i].realVal = builder.CreateVectorSplat(S, mReVal, "mRe_" + std::to_string(i));
 
-                auto* pImVal = builder.CreateConstGEP1_64(scalarTy, pMatArg, static_cast<uint64_t>(2*i+1), "pmIm_" + std::to_string(i));
+        double zeroSkipThres = _config.zeroSkipThres / K;
+        double shareMatrixElemThres = _config.shareMatrixElemThres / K;
+        for (unsigned i = 0; i < matrix.size(); i++) {
+            if (_config.forceDenseKernel) {
+                matrix[i].realFlag = 2;
+                matrix[i].imagFlag = 2;
+                continue;
+            }
+            auto real = gate.gateMatrix.matrix.constantMatrix.data.at(i).real();
+            auto imag = gate.gateMatrix.matrix.constantMatrix.data.at(i).imag();
+
+            if (std::abs(real) < zeroSkipThres)
+                matrix[i].realFlag = 0;
+            else if (std::abs(real - 1.0) < zeroSkipThres)
+                matrix[i].realFlag = 1;
+            else if (std::abs(real + 1.0) < zeroSkipThres)
+                matrix[i].realFlag = -1;
+            else 
+                matrix[i].realFlag = 2;
+
+            if (std::abs(imag) < zeroSkipThres)
+                matrix[i].imagFlag = 0;
+            else if (std::abs(imag - 1.0) < zeroSkipThres)
+                matrix[i].imagFlag = 1;
+            else if (std::abs(imag + 1.0) < zeroSkipThres)
+                matrix[i].imagFlag = -1;
+            else 
+                matrix[i].imagFlag = 2;
+            
+            if (shareMatrixElemThres > 0.0) {
+                auto realIt = std::find_if(uniqueEntries.begin(), uniqueEntries.end(),
+                        [thres=shareMatrixElemThres, real=real](const std::pair<double, int> pair)
+                            { return std::abs(pair.first - real) < thres || std::abs(pair.first + real) < thres; });
+                if (realIt == uniqueEntries.end()) {
+                    uniqueEntries.push_back(std::make_pair(real, 2*i));
+                    uniqueEntryIndices[2*i] = 2*i;
+                } else {
+                    uniqueEntryIndices[2*i] = realIt->second;
+                    if (std::abs(realIt->first + real) < shareMatrixElemThres)
+                        matrix[i].realLoadNeg = true;
+                }
+                auto imagIt = std::find_if(uniqueEntries.begin(), uniqueEntries.end(),
+                        [thres=shareMatrixElemThres, imag=imag](const std::pair<double, int> pair)
+                            { return std::abs(pair.first - imag) < thres || std::abs(pair.first + imag) < thres; });
+                if (imagIt == uniqueEntries.end()) {
+                    uniqueEntries.push_back(std::make_pair(imag, 2*i + 1));
+                    uniqueEntryIndices[2*i + 1] = 2*i + 1;
+                } else {
+                    uniqueEntryIndices[2*i + 1] = realIt->second;
+                    if (std::abs(imagIt->first + imag) < shareMatrixElemThres)
+                        matrix[i].imagLoadNeg = true;
+                }
+            }
+        }
+
+        if (_config.loadVectorMatrix) {
+            auto* matV = builder.CreateLoad(
+                    VectorType::get(scalarTy, 2*K*K, false), pMatArg, "matrix");
+            for (unsigned i = 0; i < matrix.size(); i++) {
+                matrix[i].realVal = builder.CreateShuffleVector(
+                    matV, std::vector<int>(S, 2*i), "mRe." + std::to_string(i));
+                matrix[i].imagVal = builder.CreateShuffleVector(
+                    matV, std::vector<int>(S, 2*i+1), "mIm." + std::to_string(i));
+            }
+        }
+        else {
+            for (unsigned i = 0; i < matrix.size(); i++) {
+                uint64_t reLoadPosition = (shareMatrixElemThres > 0.0) ? uniqueEntryIndices[2*i] : 2ULL * i;
+                auto* pReVal = builder.CreateConstGEP1_64(scalarTy, pMatArg, reLoadPosition, "pm.re." + std::to_string(i));
+                auto* mReVal = builder.CreateLoad(scalarTy, pReVal, "m.re." + std::to_string(i) + ".tmp");
+                matrix[i].realVal = builder.CreateVectorSplat(S, mReVal, "m.re." + std::to_string(i));
+                
+                uint64_t imLoadPosition = (shareMatrixElemThres > 0.0) ? uniqueEntryIndices[2*i+1] : 2ULL * i + 1;
+                auto* pImVal = builder.CreateConstGEP1_64(scalarTy, pMatArg, imLoadPosition, "pmIm_" + std::to_string(i));
                 auto* mImVal = builder.CreateLoad(scalarTy, pImVal, "smIm_" + std::to_string(i));
                 matrix[i].imagVal = builder.CreateVectorSplat(S, mImVal, "mIm_" + std::to_string(i));
             }
         }
+
+        if (debugLevel > 1)
+            std::cerr << CYAN_FG << "-- matrix loading done\n" << RESET;
     };
 
-    builder.SetInsertPoint(entryBB);
-    // set up matrix flags
-    for (unsigned i = 0; i < matrix.size(); i++) {
-        if (forceDenseKernel) {
-            matrix[i].realFlag = 2;
-            matrix[i].imagFlag = 2;
-            continue;
+    // split qubits
+    unsigned sepBit;
+    std::vector<unsigned> simdQubits, higherQubits, lowerQubits;
+    { /* split qubits */
+    unsigned _q = 0;
+    auto qubitsIt = gate.qubits.cbegin();
+    while (simdQubits.size() != s) {
+        if (qubitsIt != gate.qubits.cend() && *qubitsIt == _q) {
+            lowerQubits.push_back(_q);
+            qubitsIt++;
+        } else {
+            simdQubits.push_back(_q);
         }
-        auto real = gate.gateMatrix.matrix.constantMatrix.data.at(i).real();
-        auto imag = gate.gateMatrix.matrix.constantMatrix.data.at(i).imag();
-
-        double thres = 1e-8;
-        if (std::abs(real) < thres)
-            matrix[i].realFlag = 0;
-        else if (std::abs(real - 1.0) < thres)
-            matrix[i].realFlag = 1;
-        else if (std::abs(real + 1.0) < thres)
-            matrix[i].realFlag = -1;
-        else 
-            matrix[i].realFlag = 2;
-
-        if (std::abs(imag) < thres)
-            matrix[i].imagFlag = 0;
-        else if (std::abs(imag - 1.0) < thres)
-            matrix[i].imagFlag = 1;
-        else if (std::abs(imag + 1.0) < thres)
-            matrix[i].imagFlag = -1;
-        else 
-            matrix[i].imagFlag = 2;
+        _q++;
     }
-    
-    if (loadMatrixInEntry)
+    while (qubitsIt != gate.qubits.cend()) {
+        higherQubits.push_back(*qubitsIt);
+        qubitsIt++;
+    }
+    if (s == 0)
+        sepBit = 0;
+    else {
+        sepBit = simdQubits.back();
+        if (!lowerQubits.empty() && lowerQubits.back() > sepBit)
+            sepBit = lowerQubits.back();
+        sepBit++; // separation bit = lk + s
+    }
+    }
+
+    unsigned vecSize = 1U << sepBit;
+    unsigned vecSizex2 = vecSize << 1;
+    auto* vecType = VectorType::get(scalarTy, vecSize, false);
+    auto* vecTypex2 = VectorType::get(scalarTy, vecSizex2, false);
+
+    const unsigned lk = lowerQubits.size();
+    const unsigned LK = 1 << lk;
+    const unsigned hk = higherQubits.size();
+    const unsigned HK = 1 << hk;
+
+    // debug print qubit splits
+    if (debugLevel > 1) {
+        std::cerr << CYAN_FG << "-- qubit split done\n" << RESET;
+        std::cerr << "simd qubits: ";
+        printVector(simdQubits) << "\n";
+        std::cerr << "lower qubits: ";
+        printVector(lowerQubits) << "\n";
+        std::cerr << "higher qubits: ";
+        printVector(higherQubits) << "\n";
+        std::cerr << "sepBit:  " << sepBit << "\n";
+        std::cerr << "vecSize: " << vecSize << "\n";
+    }
+
+    builder.SetInsertPoint(entryBB);
+    if (_config.loadMatrixInEntry)
+        loadMatrixF();
+    builder.CreateBr(loopBB);
+
+    // loop entry
+    builder.SetInsertPoint(loopBB);
+    PHINode* counterV = builder.CreatePHI(builder.getInt64Ty(), 2, "counter");
+    counterV->addIncoming(ctrBeginArg, entryBB);
+    Value* cond = builder.CreateICmpSLT(counterV, ctrEndArg, "cond");
+    builder.CreateCondBr(cond, loopBodyBB, retBB);
+
+    // loop body
+    builder.SetInsertPoint(loopBodyBB);
+    if (!_config.loadMatrixInEntry)
         loadMatrixF();
 
     // debug print matrix
-    if (verbose > 1) {
+    if (debugLevel > 1) {
         std::cerr << "IRMatrix:\n[";
         for (unsigned r = 0; r < K; r++) {
             for (unsigned c = 0; c < K; c++) {
@@ -188,100 +297,23 @@ IRGenerator::generateKernel(const QuantumGate& gate,
         }
     }
 
-    // split qubits
-    unsigned _q = 0;
-    auto qubitsIt = gate.qubits.cbegin();
-    std::vector<unsigned> simdQubits, higherQubits, lowerQubits;
-    while (simdQubits.size() != s) {
-        if (qubitsIt != gate.qubits.cend() && *qubitsIt == _q) {
-            lowerQubits.push_back(_q);
-            qubitsIt++;
-        } else {
-            simdQubits.push_back(_q);
-        }
-        _q++;
-    }
-    while (qubitsIt != gate.qubits.cend()) {
-        higherQubits.push_back(*qubitsIt);
-        qubitsIt++;
-    }
-    unsigned sepBit;
-    if (s == 0)
-        sepBit = 0;
-    else {
-        sepBit = simdQubits.back();
-        if (!lowerQubits.empty() && lowerQubits.back() > sepBit)
-            sepBit = lowerQubits.back();
-        sepBit++; // separation bit = lk + s
-    }
-
-    unsigned vecSize = 1U << sepBit;
-
-    auto* vecType = VectorType::get(scalarTy, vecSize, false);
-
-    const unsigned lk = lowerQubits.size();
-    const unsigned LK = 1 << lk;
-    const unsigned hk = higherQubits.size();
-    const unsigned HK = 1 << hk;
-
-    // debug print qubit splits
-    if (verbose > 1) {
-        std::cerr << "simdQubits: ";
-        printVector(simdQubits) << "\n";
-        std::cerr << "lowerQubits: ";
-        printVector(lowerQubits) << "\n";
-        std::cerr << "higherQubits: ";
-        printVector(higherQubits) << "\n";
-        std::cerr << "sepBit:  " << sepBit << "\n";
-        std::cerr << "vecSize: " << vecSize << "\n";
-    }
-
-    builder.CreateBr(loopBB);
-
-    // loop entry
-    builder.SetInsertPoint(loopBB);
-    PHINode* counterV = builder.CreatePHI(builder.getInt64Ty(), 2, "counter");
-    counterV->addIncoming(counterStartArg, entryBB);
-    Value* cond = builder.CreateICmpSLT(counterV, counterEndArg, "cond");
-    builder.CreateCondBr(cond, loopBodyBB, retBB);
-
-    // loop body
-    builder.SetInsertPoint(loopBodyBB);
-    if (!loadMatrixInEntry)
-        loadMatrixF();
-
     // find start pointer
     Value* idxStartV = counterV;
-    if (usePDEP) {
+    if (_config.usePDEP) {
         uint64_t pdepMask = ~static_cast<uint64_t>(0ULL);
         for (unsigned hi = 0; hi < hk; hi++) {
             auto bit = higherQubits[hi];
             pdepMask ^= (1 << (bit - sepBit));
         }
-        if (verbose > 2)
+        if (debugLevel > 2)
             std::cerr << "pdepMask = " << std::bitset<12>(pdepMask) << "\n";
-        idxStartV = builder.CreateIntrinsic(idxStartV->getType(), Intrinsic::x86_bmi_pdep_64,
-                        {counterV, builder.getInt64(pdepMask)}, nullptr, "idxStart");
-
-        if (prefetchConfig.enable) {
-            std::cerr << "RUA\n";
-            auto* pfCounterV = builder.CreateAdd(counterV,
-                    builder.getInt64(prefetchConfig.distance), "pf_counter");
-            auto* pfIdxStartV = builder.CreateIntrinsic(idxStartV->getType(), Intrinsic::x86_bmi_pdep_64,
-                    {pfCounterV, builder.getInt64(pdepMask)}, nullptr, "pf_idxStart");
-            auto* pfAddRe = builder.CreateGEP(vecType, pRealArg, pfIdxStartV, "pf_addRe");
-            auto* pfAddIm = builder.CreateGEP(vecType, pImagArg, pfIdxStartV, "pf_addIm");
-
-            // prefetch(add, read_or_write, locality, data_or_instr_cache)
-            builder.CreateIntrinsic(builder.getVoidTy(), Intrinsic::prefetch,
-                    { pfAddRe, builder.getInt32(0), builder.getInt32(2), builder.getInt32(0)}, nullptr);
-            builder.CreateIntrinsic(builder.getVoidTy(), Intrinsic::prefetch,
-                    { pfAddIm, builder.getInt32(0), builder.getInt32(2), builder.getInt32(0)}, nullptr);
-        }
+        idxStartV = builder.CreateIntrinsic(
+                idxStartV->getType(), Intrinsic::x86_bmi_pdep_64,
+                { counterV, builder.getInt64(pdepMask) }, nullptr, "idxStart");
     }
     else if (!higherQubits.empty()) {
         // idx = insert 0 to every bit in higherQubits to counter
-        if (verbose > 2)
+        if (debugLevel > 2)
             std::cerr << "finding masks... idxStart = sum of ((counter & mask) << i)\n";
         
         idxStartV = builder.getInt64(0ULL);
@@ -292,16 +324,16 @@ IRGenerator::generateKernel(const QuantumGate& gate,
             unsigned bit = higherQubits[i];
             mask = ((1ULL << (bit - sepBit - i)) - 1) - maskSum;
             maskSum = (1ULL << (bit - sepBit - i)) - 1;
-            if (verbose > 2) {
+            if (debugLevel > 2) {
                 std::cerr << "i = " << i << ", bit = " << bit
-                        << ", mask = " << mask << " 0b" << std::bitset<12>(mask) << "\n";
+                          << ", mask = " << mask << " 0b" << std::bitset<12>(mask) << "\n";
             }
             tmpCounterV = builder.CreateAnd(counterV, mask, "tmpCounter");
             tmpCounterV = builder.CreateShl(tmpCounterV, i, "tmpCounter");
             idxStartV = builder.CreateAdd(idxStartV, tmpCounterV, "tmpIdx");
         }
         mask = ~((1ULL << (higherQubits.back() - sepBit - higherQubits.size() + 1)) - 1);
-        if (verbose > 2) {
+        if (debugLevel > 2) {
             std::cerr << "i = " << hk << "           mask = " << mask << " 0b"
                       << std::bitset<12>(mask) << "\n";
         }
@@ -320,8 +352,18 @@ IRGenerator::generateKernel(const QuantumGate& gate,
         }
         splits[key].push_back(i);
     }
+
+    std::vector<int> reSplitMask, imSplitMask;
+    for (unsigned i = 0; i < vecSizex2; i++) {
+        if (i & S)
+            imSplitMask.push_back(i);
+        else
+            reSplitMask.push_back(i);
+    }
+
     // debug print splits
-    if (verbose > 1) {
+    if (debugLevel > 1) {
+        std::cerr << CYAN_FG << "-- split masks done\n" << RESET;
         std::cerr << "splits: [";
         for (const auto& split : splits) {
             std::cerr << "\n ";
@@ -331,11 +373,16 @@ IRGenerator::generateKernel(const QuantumGate& gate,
     }
     
     // load amplitude registers
-    // We load a total of 2*K registers, each with size S * LK (== vecSize)
-    // Each register is loaded from HK different places, 
+    // There are a total of 2K registers, among which K are real and K are imag
+    // In Alt Format, we load HK size-(2*S*LK) LLVM registers.
+    // There are two stages of shuffling (splits)
+    // Stage 1:
+    // Each size-(2*S*LK) reg is shuffled into 2 size-(S*LK) regs, the real and imag parts
+    // Stage 2:
+    // Each size-(S*LK) res is shuffled into LK size-S regs, the amplitude vectors.
     std::vector<Value*> real(K, nullptr), imag(K, nullptr);
-    std::vector<Value*> pReal(HK, nullptr), pImag(HK, nullptr);
-    Value *realFull, *imagFull;
+    std::vector<Value*> pSv(HK, nullptr), pRe(HK, nullptr), pIm(HK, nullptr);
+    Value *svFull, *reFull, *imFull;
     for (unsigned hi = 0; hi < HK; hi++) {
         unsigned keyStart = 0;
         uint64_t idxShift = 0ULL;
@@ -345,22 +392,29 @@ IRGenerator::generateKernel(const QuantumGate& gate,
                 keyStart += 1 << (higherI + lowerQubits.size());
             }
         }
-        if (verbose > 2) {
+        if (debugLevel > 2)
             std::cerr << "hi = " << hi << ", "
                       << "idxShift = " << std::bitset<12>(idxShift) << ", "
                       << "keyStart = " << keyStart << "\n";
-        }
+        
         auto* _idxV = builder.CreateAdd(idxStartV, builder.getInt64(idxShift), "idx_" + std::to_string(hi));
-        pReal[hi] = builder.CreateGEP(vecType, pRealArg, _idxV, "pReal_" + std::to_string(hi));
-        pImag[hi] = builder.CreateGEP(vecType, pImagArg, _idxV, "pImag_" + std::to_string(hi));
-        realFull = builder.CreateLoad(vecType, pReal[hi], "reFull_" + std::to_string(hi));
-        imagFull = builder.CreateLoad(vecType, pImag[hi], "imFull_" + std::to_string(hi));
+        if (_config.ampFormat == AmpFormat::Sep) {
+            pRe[hi] = builder.CreateGEP(vecType, pReArg, _idxV, "pRe." + std::to_string(hi));
+            pIm[hi] = builder.CreateGEP(vecType, pImArg, _idxV, "pIm." + std::to_string(hi));
+            reFull = builder.CreateLoad(vecType, pRe[hi], "re.full." + std::to_string(hi));
+            imFull = builder.CreateLoad(vecType, pIm[hi], "im.full." + std::to_string(hi));
+        } else {
+            pSv[hi] = builder.CreateGEP(vecTypex2, pSvArg, _idxV, "pSv." + std::to_string(hi));
+            svFull = builder.CreateLoad(vecTypex2, pSv[hi], "sv.full." + std::to_string(hi));
+            reFull = builder.CreateShuffleVector(svFull, reSplitMask, "re.full." + std::to_string(hi));
+            imFull = builder.CreateShuffleVector(svFull, imSplitMask, "im.full." + std::to_string(hi));
+        }
         for (unsigned i = 0; i < LK; i++) {
             unsigned key = keyStart + i;
             real[key] = builder.CreateShuffleVector(
-                realFull, splits[i], "real_" + std::to_string(key));
+                reFull, splits[i], "real_" + std::to_string(key));
             imag[key] = builder.CreateShuffleVector(
-                imagFull, splits[i], "imag_" + std::to_string(key));
+                imFull, splits[i], "imag_" + std::to_string(key));
         }
     }
 
@@ -373,12 +427,20 @@ IRGenerator::generateKernel(const QuantumGate& gate,
             splits[pairI] = std::move(pair.second);
         }
     }
-    // std::cerr << "mergeMasks:\n";
-    // for (const auto& vec : mergeMasks)
-        // printVector(vec) << "\n";
-    // std::cerr << "\n";
 
-    
+    // mask to merge real and imag parts together
+    std::vector<int> svMargeMask(vecSizex2);
+    int reCount = 0;
+    int imCount = 0;
+    for (unsigned i = 0; i < vecSizex2; i++) {
+        if (i & S)
+            svMargeMask[i] = (imCount++) + vecSize;
+        else
+            svMargeMask[i] = reCount++;   
+    }
+    if (debugLevel > 1)
+        std::cerr << CYAN_FG << "-- merge masks done\n" << RESET;
+
     // matrix-vector multiplication
     for (unsigned hi = 0; hi < HK; hi++) {
         std::vector<Value*> newReal(LK, nullptr);
@@ -388,16 +450,25 @@ IRGenerator::generateKernel(const QuantumGate& gate,
 
             // real part
             std::string nameRe = "newRe_" + std::to_string(r) + "_";
-            if (useFMS) {
-                for (unsigned c = 0; c < K; c++)
-                    newReal[li] = genMulAdd(newReal[li], matrix[r * K + c].realVal, real[c],
-                                    matrix[r * K + c].realFlag, "", nameRe);
+            if (_config.useFMS) {
                 for (unsigned c = 0; c < K; c++) {
-                    auto* neg_imag = builder.CreateFNeg(imag[c], "neg_imag_" + std::to_string(r));
-                    newReal[li] = genMulAdd(newReal[li], matrix[r * K + c].imagVal, neg_imag,
-                                    matrix[r * K + c].imagFlag, "", nameRe);
+                    if (matrix[r*K + c].realLoadNeg)
+                        newReal[li] = genMulSub(newReal[li], matrix[r*K + c].realVal, real[c],
+                                        matrix[r * K + c].realFlag, "", nameRe);
+                    else 
+                        newReal[li] = genMulAdd(newReal[li], matrix[r*K + c].realVal, real[c],
+                                        matrix[r * K + c].realFlag, "", nameRe);
+                }
+                for (unsigned c = 0; c < K; c++) {
+                    if (matrix[r*K + c].imagLoadNeg)
+                        newReal[li] = genMulAdd(newReal[li], matrix[r*K + c].imagVal, imag[c],
+                                        matrix[r * K + c].imagFlag, "", nameRe);
+                    else
+                        newReal[li] = genMulSub(newReal[li], matrix[r*K + c].imagVal, imag[c],
+                                        matrix[r * K + c].imagFlag, "", nameRe);
                 }
             } else {
+                assert(_config.shareMatrixElemThres <= 0.0 && "Not Implemented");
                 Value *newRe0 = nullptr, *newRe1 = nullptr;
                 for (unsigned c = 0; c < K; c++) {
                     newRe0 = genMulAdd(newRe0, matrix[r * K + c].realVal, real[c],
@@ -417,41 +488,57 @@ IRGenerator::generateKernel(const QuantumGate& gate,
             // imag part
             std::string nameIm = "newIm_" + std::to_string(r) + "_";
             for (unsigned c = 0; c < K; c++) {
-                newImag[li] = genMulAdd(newImag[li], matrix[r * K + c].realVal, imag[c],
-                                matrix[r * K + c].realFlag, "", nameIm);
-                newImag[li] = genMulAdd(newImag[li], matrix[r * K + c].imagVal, real[c],
-                                matrix[r * K + c].imagFlag, "", nameIm);
+                if (matrix[r*K + c].realLoadNeg)
+                    newImag[li] = genMulSub(newImag[li], matrix[r*K + c].realVal, imag[c],
+                                    matrix[r * K + c].realFlag, "", nameIm);
+                else
+                    newImag[li] = genMulAdd(newImag[li], matrix[r*K + c].realVal, imag[c],
+                                    matrix[r * K + c].realFlag, "", nameIm);
+                if (matrix[r*K + c].imagLoadNeg)
+                    newImag[li] = genMulSub(newImag[li], matrix[r*K + c].imagVal, real[c],
+                                    matrix[r * K + c].imagFlag, "", nameIm);
+                else
+                    newImag[li] = genMulAdd(newImag[li], matrix[r*K + c].imagVal, real[c],
+                                    matrix[r * K + c].imagFlag, "", nameIm);
             }
         }
         // merge
-        if (verbose > 2)
+        if (debugLevel > 2)
             std::cerr << "Ready to merge. hi = " << hi << "\n";
         auto maskIt = mergeMasks.cbegin();
         for (unsigned round = 0; round < lk; round++) {
-            if (verbose > 2)
+            if (debugLevel > 2)
                 std::cerr << " round " << round
                         << ", there are " << (1 << (lk - round - 1)) << " pairs\n";
             for (unsigned pairI = 0; pairI < (1 << (lk - round - 1)); pairI++) {
                 unsigned mergeIdx = 2 * pairI;
                 unsigned storeIdx = pairI;
-                if (verbose > 2)
-                    std::cerr << "  pairI = " << pairI << ", "
-                            << "pair (" << mergeIdx << "," << mergeIdx + 1 << ")"
+                if (debugLevel > 2)
+                    std::cerr << "  pair " << pairI << ", "
+                            << "(" << mergeIdx << "," << mergeIdx + 1 << ")"
                             << " => " << storeIdx << "\n";
+
                 newReal[storeIdx] = builder.CreateShuffleVector(
                         newReal[mergeIdx], newReal[mergeIdx + 1],
-                        *maskIt, "mergeRe");
+                        *maskIt, "re.merge");
                 newImag[storeIdx] = builder.CreateShuffleVector(
                         newImag[mergeIdx], newImag[mergeIdx + 1],
-                        *maskIt, "mergeIm");
+                        *maskIt, "im.merge");
                 maskIt++;
             }
         }
         // store
-        builder.CreateStore(newReal[0], pReal[hi], false);
-        builder.CreateStore(newImag[0], pImag[hi], false);
+        if (debugLevel > 2)
+            std::cerr << "Merged hi = " << hi << "\n";
+        
+        if (_config.ampFormat == AmpFormat::Sep) {
+            builder.CreateStore(newReal[0], pRe[hi], false);
+            builder.CreateStore(newImag[0], pIm[hi], false);
+        } else {
+            auto* newSv = builder.CreateShuffleVector(newReal[0], newImag[0], svMargeMask, "sv.new");
+            builder.CreateStore(newSv, pSv[hi], false);
+        }
     }
-
 
     // increment counter and return 
     auto* counterNextV = builder.CreateAdd(counterV, builder.getInt64(1), "counterNext");

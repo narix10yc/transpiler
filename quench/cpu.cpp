@@ -1,39 +1,43 @@
 #include "quench/cpu.h"
-#include "simulation/ir_generator.h"
+
 #include "utils/utils.h"
+#include "utils/iocolor.h"
+
 #include <fstream>
 #include <sstream>
 #include <iomanip>
 
+using namespace Color;
 using namespace quench::cpu;
 using namespace quench::circuit_graph;
 using IRGenerator = simulation::IRGenerator;
+using AmpFormat = simulation::IRGeneratorConfig::AmpFormat;
 
-void CodeGeneratorCPU::generate(const CircuitGraph& graph, bool forceInOrder) {
-    IRGenerator irGenerator;
-    const auto syncIRGeneratorConfig = [&]() {
-        irGenerator.vecSizeInBits = config.simd_s;
-        irGenerator.zeroSkipThreshold = config.zeroSkipThreshold;
-        irGenerator.closeMatrixEntryThres = config.closeMatrixEntryThres;
-        irGenerator.verbose = config.verbose;
-        irGenerator.loadMatrixInEntry = config.loadMatrixInEntry;
-        irGenerator.loadVectorMatrix = config.loadVectorMatrix;
-        irGenerator.usePDEP = config.usePDEP;
-        irGenerator.prefetchConfig.enable = config.enablePrefetch;
-        irGenerator.forceDenseKernel = config.forceDenseKernel;
-    };
+std::ostream&
+CodeGeneratorCPUConfig::display(int verbose, std::ostream& os) const {
+    os << CYAN_FG << BOLD << "=== CodeGen Configuration ===\n" << RESET;
     
-    syncIRGeneratorConfig();
-    std::string realTy;
-    if (config.precision == 32) {
-        irGenerator.realTy = IRGenerator::RealTy::Float;
-        realTy = "float";
-    }
-    else {
-        assert(config.precision == 64);
-        irGenerator.realTy = IRGenerator::RealTy::Double;
-        realTy = "double";
-    }
+    os << "Multi-threading "
+        << ((multiThreaded) ? "enabled" : "disabled")
+        << ".\n";
+    
+    if (installTimer)
+        os << "Timer installed\n";
+    
+    os << CYAN_FG << "Detailed IR settings:\n" << RESET;
+    irConfig.display(verbose, false, os);
+
+    os << CYAN_FG << BOLD << "=============================\n" << RESET;
+    return os;
+}
+
+void CodeGeneratorCPU::generate(
+        const CircuitGraph& graph, int debugLevel, bool forceInOrder) {
+    IRGenerator irGenerator(config.irConfig);
+
+    bool isSepKernel = (config.irConfig.ampFormat == AmpFormat::Sep);
+
+    const std::string realTy = (config.irConfig.precision == 32) ? "float" : "double";
 
     std::stringstream externSS;
     std::stringstream kernelSS;
@@ -43,11 +47,11 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, bool forceInOrder) {
 
     // simulation kernel declearation
     kernelSS << "void simulation_kernel(";
-    if (config.generateAltKernel)
-        kernelSS << realTy << "* sv, ";
+    if (isSepKernel)
+        kernelSS << realTy << "* re, " << realTy << "* im, ";
     else
-        kernelSS << realTy << "* re, "
-                 << realTy << "* im, ";
+        kernelSS << realTy << "* sv, ";
+        
     kernelSS << "const int nqubits";
     if (config.multiThreaded)
         kernelSS << ", const int nthreads";
@@ -68,7 +72,7 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, bool forceInOrder) {
     kernelSS << "  for (const auto& data : _metaData) {\n"
              << "    idxMax = 1ULL << (nqubits - data.nqubits - S_VALUE);\n";
 
-    std::string sv_arg = (config.generateAltKernel) ? "sv" : "re, im";
+    std::string sv_arg = (isSepKernel) ? "re, im" : "sv";
     if (config.multiThreaded)
         kernelSS << "    chunkSize = idxMax / nthreads;\n"
                  << "    for (unsigned i = 0; i < nthreads; i++)\n"
@@ -87,7 +91,7 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, bool forceInOrder) {
     // meta data data type
     metaDataSS << "struct _meta_data_t_ {\n"
                << "  void (*func)(" << realTy << "*, " ;
-    if (!config.generateAltKernel)           
+    if (isSepKernel)     
         metaDataSS << realTy << "*, ";
     metaDataSS << "uint64_t, uint64_t, const void*);\n"
                << "  unsigned opCount;\n"
@@ -98,7 +102,6 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, bool forceInOrder) {
                << "};\n"
                << "const static _meta_data_t_ _metaData[] = {\n";
     
-        
     auto allBlocks = graph.getAllBlocks();
     if (forceInOrder)
         std::sort(allBlocks.begin(), allBlocks.end(),
@@ -107,26 +110,22 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, bool forceInOrder) {
     for (const auto& block : allBlocks) {
         const auto& gate = *(block->quantumGate);
         std::string kernelName = "kernel_block_" + std::to_string(block->id);
-        if (config.generateAltKernel)
-            irGenerator.generateAlternatingKernel(gate, kernelName);
-        else
-            irGenerator.generateKernel(gate, kernelName);
-        if (config.dumpIRToMultipleFiles) {
-            std::error_code ec;
-            llvm::raw_fd_ostream irFile(fileName + "_ir/" + kernelName + ".ll", ec);
-            irGenerator.getModule().setModuleIdentifier(kernelName + "_module");
-            irGenerator.getModule().setSourceFileName(kernelName + ".ll");
-            irGenerator.getModule().print(irFile, nullptr);
-            irFile.close();
-            irGenerator.~IRGenerator();
+        irGenerator.generateKernelDebug(gate, debugLevel, kernelName);
+        // if (config.dumpIRToMultipleFiles) {
+        //     std::error_code ec;
+        //     llvm::raw_fd_ostream irFile(fileName + "_ir/" + kernelName + ".ll", ec);
+        //     irGenerator.getModule().setModuleIdentifier(kernelName + "_module");
+        //     irGenerator.getModule().setSourceFileName(kernelName + ".ll");
+        //     irGenerator.getModule().print(irFile, nullptr);
+        //     irFile.close();
+        //     irGenerator.~IRGenerator();
 
-            new (&irGenerator) IRGenerator();
-            syncIRGeneratorConfig();
-        }
+        //     new (&irGenerator) IRGenerator(config.irConfig);
+        // }
 
         externSS << " void " << kernelName << "("
                  << realTy << "*, ";
-        if (!config.generateAltKernel)
+        if (isSepKernel)
             externSS << realTy << "*, ";
         externSS << "uint64_t, uint64_t, const void*);\n";
         
@@ -161,9 +160,9 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, bool forceInOrder) {
         hFile << "#include <chrono>\n"
                  "#include <iostream>\n";
 
-    if (config.precision == 32)
+    if (config.irConfig.precision == 32)
         hFile << "#define USING_F32\n";
-    if (config.generateAltKernel)
+    if (!isSepKernel)
         hFile << "#define USING_ALT_KERNEL\n";
 
     if (config.multiThreaded)
@@ -173,21 +172,21 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, bool forceInOrder) {
 
     hFile << "#include <cstdint>\n"
           << "#define DEFAULT_NQUBITS " << graph.nqubits << "\n"
-          << "#define S_VALUE " << config.simd_s << "\n"
+          << "#define SIMD_S " << config.irConfig.simd_s << "\n"
           << externSS.str() << "\n"
           << metaDataSS.str() << "\n"
           << kernelSS.str() << "\n";
 
     hFile.close();
 
-    if (!config.dumpIRToMultipleFiles) {
-        std::error_code ec;
-        llvm::raw_fd_ostream irFile(fileName + ".ll", ec);
-        irGenerator.getModule().setModuleIdentifier(fileName + "_module");
-        irGenerator.getModule().setSourceFileName(fileName + ".ll");
-        irGenerator.getModule().print(irFile, nullptr);
-        irFile.close();
-    }
+    // if (!config.dumpIRToMultipleFiles) {
+    //     std::error_code ec;
+    //     llvm::raw_fd_ostream irFile(fileName + ".ll", ec);
+    //     irGenerator.getModule().setModuleIdentifier(fileName + "_module");
+    //     irGenerator.getModule().setSourceFileName(fileName + ".ll");
+    //     irGenerator.getModule().print(irFile, nullptr);
+    //     irFile.close();
+    // }
 
 
 }

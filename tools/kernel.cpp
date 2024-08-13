@@ -13,7 +13,10 @@ using QuantumGate = quench::quantum_gate::QuantumGate;
 using GateMatrix = quench::quantum_gate::GateMatrix;
 using FusionConfig = quench::circuit_graph::FusionConfig;
 using CircuitGraph = quench::circuit_graph::CircuitGraph;
-using CodeGeneratorCPU = quench::cpu::CodeGeneratorCPU;
+using IRGeneratorConfig = simulation::IRGeneratorConfig;
+using AmpFormat = IRGeneratorConfig::AmpFormat;
+
+using namespace quench::cpu;
 using namespace llvm;
 using namespace Color;
 
@@ -82,47 +85,87 @@ static CircuitGraph& getCircuitU3(CircuitGraph& graph, int nqubits) {
 
 
 int main(int argc, char** argv) {
-    cl::opt<std::string>
-    outputFilename("o", cl::desc("output file name"), cl::init(""));
-
     cl::opt<unsigned>
     NQubits("N", cl::desc("number of qubits"), cl::Prefix, cl::Required);
-
+    cl::opt<std::string>
+    inputFilename(cl::desc("input file name"), cl::Positional, cl::Required);
+    cl::opt<std::string>
+    outputFilename("o", cl::desc("output file name"), cl::init(""));
     cl::opt<std::string>
     Precision("p", cl::desc("precision (f64 or f32)"), cl::init("f64"));
-
+    cl::opt<int>
+    Verbose("verbose", cl::desc("verbose level"), cl::init(1));
     cl::opt<bool>
     UseF32("f32", cl::desc("use f32 (override -p)"), cl::init(false));
-
-    cl::opt<bool>
-    LoadMatrixInEntry("load-matrix-in-entry", cl::desc(""), cl::init(true));
-
-    cl::opt<bool>
-    LoadVectorMatrix("load-vector-matrix", cl::desc(""), cl::init(false));
-
-    cl::opt<unsigned>
+    cl::opt<int>
     SimdS("S", cl::desc("vector size (s value)"), cl::Prefix, cl::init(1));
- 
     cl::opt<bool>
     MultiThreaded("multi-thread", cl::desc("enable multi-threading"), cl::init(true));
-
     cl::opt<bool>
-    UsePDEP("use-pdep", cl::desc("use pdep"), cl::init(true));
+    InstallTimer("timer", cl::desc("install timer"), cl::init(false));
+    cl::opt<int>
+    DebugLevel("debug", cl::desc("IR generation debug level"), cl::init(0));
 
-    cl::opt<bool>
-    EnablePrefetch("enable-prefetch", cl::desc("enable prefetch"), cl::init(false));
-
-    cl::opt<bool>
-    AltKernel("alt-format", cl::desc("generate alt kernel"), cl::init(true));
-
+    // Gate Fusion Category
+    cl::OptionCategory GateFusionConfigCategory("Gate Fusion Options", "");
+    cl::opt<int>
+    FusionLevel("fusion", cl::cat(GateFusionConfigCategory),
+            cl::desc("fusion level presets 0 (disable), 1 (two-qubit only), 2 (default), and 3 (aggresive)"),
+            cl::init(2));
+    cl::opt<int>
+    MaxNQubits("max-k", cl::cat(GateFusionConfigCategory),
+            cl::desc("maximum number of qubits of gates"), cl::init(0));
+    cl::opt<int>
+    MaxOpCount("max-op", cl::cat(GateFusionConfigCategory),
+            cl::desc("maximum operation count"), cl::init(0));
     cl::opt<double>
-    CloseMatrixEntryThreshold("close-matrix-entry-thres", cl::desc("close matrix entry threshold (<0 to turn off)"), cl::init(-1.0));
+    ZeroSkipThreshold("zero-thres", cl::cat(GateFusionConfigCategory),
+            cl::desc("zero skipping threshold"), cl::init(1e-8));
+    cl::opt<bool>
+    AllowMultipleTraverse("allow-multi-traverse", cl::cat(GateFusionConfigCategory),
+            cl::desc("allow multiple tile traverse in gate fusion"), cl::init(true));
+    cl::opt<bool>
+    EnableIncreamentScheme("increment-scheme", cl::cat(GateFusionConfigCategory),
+            cl::desc("enable increment fusion scheme"), cl::init(true));
+
+    // IR Generation Category
+    cl::OptionCategory IRGenerationConfigCategory("IR Generation Options", "");
+    cl::opt<bool>
+    LoadMatrixInEntry("load-matrix-in-entry", cl::cat(IRGenerationConfigCategory),
+            cl::desc("load matrix in entry"), cl::init(true));
+    cl::opt<bool>
+    LoadVectorMatrix("load-vector-matrix", cl::cat(IRGenerationConfigCategory),
+            cl::desc("load vector matrix"), cl::init(false));
+    cl::opt<bool>
+    UseFMA("use-fma", cl::cat(IRGenerationConfigCategory),
+            cl::desc("use fma (fused multiplicatio addition)"), cl::init(true));
+    cl::opt<bool>
+    UseFMS("use-fms", cl::cat(IRGenerationConfigCategory),
+            cl::desc("use fms (fused multiplicatio subtraction)"), cl::init(true));
+    cl::opt<bool>
+    UsePDEP("use-pdep", cl::cat(IRGenerationConfigCategory),
+            cl::desc("use pdep (parallel bit deposite)"), cl::init(true));
+    cl::opt<bool>
+    EnablePrefetch("enable-prefetch", cl::cat(IRGenerationConfigCategory),
+            cl::desc("enable prefetch (not tested, recommend off)"), cl::init(false));
+    cl::opt<std::string>
+    AmpFormat("amp-format", cl::cat(IRGenerationConfigCategory),
+            cl::desc("amplitude format"), cl::init("alt"));
+    cl::opt<double>
+    ShareMatrixElemThres("share-matrix-elem-thres", cl::cat(IRGenerationConfigCategory),
+            cl::desc("share matrix element threshold (set to 0.0 to turn off)"), cl::init(0.0));
+    cl::opt<bool>
+    ShareMatrixElemUseImmValue("share-matrix-elem-use-imm", cl::cat(IRGenerationConfigCategory),
+            cl::desc("use immediate value for shared matrix elements"), cl::init(false));
+    cl::opt<bool>
+    ForceDenseKernel("force-dense-kernel", cl::cat(IRGenerationConfigCategory),
+            cl::desc("force all kernels to be dense"), cl::init(false));
+    cl::opt<bool>
+    DumpIRToMultipleFiles("dump-ir-to-multiple-files", cl::cat(IRGenerationConfigCategory),
+            cl::desc("dump ir to multiple files"), cl::init(false));
 
     cl::opt<bool>
     FullKernel("full", cl::desc("generate alt kernel"), cl::init(false));
-
-    cl::opt<bool>
-    ForceDenseKernel("force-dense-kernel", cl::desc("force all kernels to be dense"), cl::init(false));
 
     cl::opt<std::string>
     WhichGate("gate", cl::desc("which gate"));
@@ -159,19 +202,26 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    CodeGeneratorCPU codeGenerator(outputFilename);
-    codeGenerator.config.simd_s = SimdS;
-    codeGenerator.config.loadMatrixInEntry = LoadMatrixInEntry;
-    codeGenerator.config.loadVectorMatrix = LoadVectorMatrix;
-    codeGenerator.config.closeMatrixEntryThres = CloseMatrixEntryThreshold;
-    codeGenerator.config.usePDEP = UsePDEP;
-    codeGenerator.config.enablePrefetch = EnablePrefetch;
-    codeGenerator.config.generateAltKernel = AltKernel;
-    codeGenerator.config.forceDenseKernel = ForceDenseKernel;
-    // codeGenerator.config.verbose = 2;
-    if (UseF32)
-        codeGenerator.config.precision = 32;
-    codeGenerator.displayConfig(std::cerr);
+    const auto config = CodeGeneratorCPUConfig {
+        .multiThreaded = MultiThreaded,
+        .installTimer = InstallTimer,
+        .irConfig = IRGeneratorConfig {
+            .simd_s = SimdS,
+            .precision = (UseF32 || Precision == "f32") ? 32 : 64,
+            .ampFormat = (AmpFormat == "sep") ? AmpFormat::Sep : AmpFormat::Alt,
+            .useFMA = UseFMA,
+            .useFMS = UseFMS,
+            .usePDEP = UsePDEP,
+            .loadMatrixInEntry = LoadMatrixInEntry,
+            .loadVectorMatrix = LoadVectorMatrix,
+            .forceDenseKernel = ForceDenseKernel,
+            .zeroSkipThres = ZeroSkipThreshold,
+            .shareMatrixElemThres = ShareMatrixElemThres,
+            .shareMatrixElemUseImmValue = ShareMatrixElemUseImmValue
+        }
+    };
+    CodeGeneratorCPU codeGenerator(config, outputFilename);
+
     codeGenerator.generate(graph, true); // force in order
     
     return 0;

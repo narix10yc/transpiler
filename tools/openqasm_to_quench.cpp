@@ -10,9 +10,11 @@
 
 using FusionConfig = quench::circuit_graph::FusionConfig;
 using CircuitGraph = quench::circuit_graph::CircuitGraph;
-using CodeGeneratorCPU = quench::cpu::CodeGeneratorCPU;
+using IRGeneratorConfig = simulation::IRGeneratorConfig;
+using AmpFormat = IRGeneratorConfig::AmpFormat;
 using namespace llvm;
 using namespace Color;
+using namespace quench::cpu;
 
 int main(int argc, char** argv) {
     cl::opt<std::string>
@@ -21,16 +23,18 @@ int main(int argc, char** argv) {
     outputFilename("o", cl::desc("output file name"), cl::init(""));
     cl::opt<std::string>
     Precision("p", cl::desc("precision (f64 or f32)"), cl::init("f64"));
-    cl::opt<unsigned>
+    cl::opt<int>
     Verbose("verbose", cl::desc("verbose level"), cl::init(1));
     cl::opt<bool>
     UseF32("f32", cl::desc("use f32 (override -p)"), cl::init(false));
-    cl::opt<unsigned>
+    cl::opt<int>
     SimdS("S", cl::desc("vector size (s value)"), cl::Prefix, cl::init(1));
     cl::opt<bool>
     MultiThreaded("multi-thread", cl::desc("enable multi-threading"), cl::init(true));
     cl::opt<bool>
     InstallTimer("timer", cl::desc("install timer"), cl::init(false));
+    cl::opt<int>
+    DebugLevel("debug", cl::desc("IR generation debug level"), cl::init(0));
 
     // Gate Fusion Category
     cl::OptionCategory GateFusionConfigCategory("Gate Fusion Options", "");
@@ -63,17 +67,26 @@ int main(int argc, char** argv) {
     LoadVectorMatrix("load-vector-matrix", cl::cat(IRGenerationConfigCategory),
             cl::desc("load vector matrix"), cl::init(false));
     cl::opt<bool>
+    UseFMA("use-fma", cl::cat(IRGenerationConfigCategory),
+            cl::desc("use fma (fused multiplicatio addition)"), cl::init(true));
+    cl::opt<bool>
+    UseFMS("use-fms", cl::cat(IRGenerationConfigCategory),
+            cl::desc("use fms (fused multiplicatio subtraction)"), cl::init(true));
+    cl::opt<bool>
     UsePDEP("use-pdep", cl::cat(IRGenerationConfigCategory),
             cl::desc("use pdep (parallel bit deposite)"), cl::init(true));
     cl::opt<bool>
     EnablePrefetch("enable-prefetch", cl::cat(IRGenerationConfigCategory),
             cl::desc("enable prefetch (not tested, recommend off)"), cl::init(false));
-    cl::opt<bool>
-    AltFormat("alt-format", cl::cat(IRGenerationConfigCategory),
-            cl::desc("generate alternating format kernels"), cl::init(false));
+    cl::opt<std::string>
+    AmpFormat("amp-format", cl::cat(IRGenerationConfigCategory),
+            cl::desc("amplitude format"), cl::init("alt"));
     cl::opt<double>
-    CloseMatrixEntryThreshold("close-matrix-entry-thres", cl::cat(IRGenerationConfigCategory),
-            cl::desc("close matrix entry threshold (<0 to turn off)"), cl::init(-1.0));
+    ShareMatrixElemThres("share-matrix-elem-thres", cl::cat(IRGenerationConfigCategory),
+            cl::desc("share matrix element threshold (set to 0.0 to turn off)"), cl::init(0.0));
+    cl::opt<bool>
+    ShareMatrixElemUseImmValue("share-matrix-elem-use-imm", cl::cat(IRGenerationConfigCategory),
+            cl::desc("use immediate value for shared matrix elements"), cl::init(false));
     cl::opt<bool>
     ForceDenseKernel("force-dense-kernel", cl::cat(IRGenerationConfigCategory),
             cl::desc("force all kernels to be dense"), cl::init(false));
@@ -86,12 +99,9 @@ int main(int argc, char** argv) {
     using clock = std::chrono::high_resolution_clock;
     auto tic = clock::now();
     auto tok = clock::now();
-    auto msg_start = [&]() -> std::string {
-        std::stringstream ss;
-        ss << "-- ("
-           << std::chrono::duration_cast<std::chrono::milliseconds>(tok - tic).count()
-           << " ms) ";
-        return ss.str();
+    auto log = [&]() -> std::ostream& {
+        const auto t_ms = std::chrono::duration_cast<std::chrono::milliseconds>(tok - tic).count();
+        return std::cerr << "-- (" << t_ms << " ms) ";
     };
 
     if (Verbose > 0) {
@@ -101,16 +111,17 @@ int main(int argc, char** argv) {
 
     openqasm::Parser parser(inputFilename, 0);
 
-    tic = clock::now();
     // parse and write ast
+    tic = clock::now();
     auto qasmRoot = parser.parse();
     std::cerr << "-- qasm AST built\n";
     auto graph = qasmRoot->toCircuitGraph();
     tok = clock::now();
-    std::cerr << msg_start() << "Parsed to CircuitGraph\n";
+    log() << "Parsed to CircuitGraph\n";
     if (Verbose > 0)
         graph.displayInfo(std::cerr, 2);
 
+    // gate fusion
     tic = clock::now();
     if (MaxNQubits > 0 || MaxOpCount > 0) {
         if (MaxNQubits == 0 || MaxOpCount == 0) {
@@ -135,7 +146,7 @@ int main(int argc, char** argv) {
     graph.greedyGateFusion();
 
     tok = clock::now();
-    std::cerr << msg_start() << "Greedy gate fusion complete\n";
+    log() << "Greedy gate fusion complete\n";
 
     if (Verbose > 0)
         graph.relabelBlocks();
@@ -144,29 +155,35 @@ int main(int argc, char** argv) {
     
     graph.displayInfo(std::cerr, Verbose + 1);
 
+    // write to file if provided
     if (outputFilename != "") {
         tic = clock::now();
-        CodeGeneratorCPU codeGenerator(outputFilename);
-        // codeGenerator.config.verbose = 3;
-        codeGenerator.config.simd_s = SimdS;
-        codeGenerator.config.installTimer = InstallTimer;
-        codeGenerator.config.multiThreaded = MultiThreaded;
-        codeGenerator.config.loadMatrixInEntry = LoadMatrixInEntry;
-        codeGenerator.config.loadVectorMatrix = LoadVectorMatrix;
-        codeGenerator.config.usePDEP = UsePDEP;
-        codeGenerator.config.enablePrefetch = EnablePrefetch;
-        codeGenerator.config.generateAltKernel = AltFormat;
-        codeGenerator.config.closeMatrixEntryThres = CloseMatrixEntryThreshold;
-        codeGenerator.config.forceDenseKernel = ForceDenseKernel;
-        codeGenerator.config.dumpIRToMultipleFiles = DumpIRToMultipleFiles;
-        codeGenerator.config.precision = (UseF32 || Precision == "f32") ? 32 : 64;
-        
-        if (Verbose > 0)
-            codeGenerator.displayConfig(std::cerr);
+        const auto config = CodeGeneratorCPUConfig {
+            .multiThreaded = MultiThreaded,
+            .installTimer = InstallTimer,
+            .irConfig = IRGeneratorConfig {
+                .simd_s = SimdS,
+                .precision = (UseF32 || Precision == "f32") ? 32 : 64,
+                .ampFormat = (AmpFormat == "sep") ? AmpFormat::Sep : AmpFormat::Alt,
+                .useFMA = UseFMA,
+                .useFMS = UseFMS,
+                .usePDEP = UsePDEP,
+                .loadMatrixInEntry = LoadMatrixInEntry,
+                .loadVectorMatrix = LoadVectorMatrix,
+                .forceDenseKernel = ForceDenseKernel,
+                .zeroSkipThres = ZeroSkipThreshold,
+                .shareMatrixElemThres = ShareMatrixElemThres,
+                .shareMatrixElemUseImmValue = ShareMatrixElemUseImmValue
+            }
+        };
+        CodeGeneratorCPU codeGenerator(config, outputFilename);
 
-        codeGenerator.generate(graph);
+        if (Verbose > 0)
+            codeGenerator.displayConfig(Verbose, std::cerr);
+
+        codeGenerator.generate(graph, DebugLevel);
         tok = clock::now();
-        std::cerr << msg_start() << "Code generation done\n";
+        log() << "Code generation done\n";
     }
     return 0;
 }
