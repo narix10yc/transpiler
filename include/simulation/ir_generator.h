@@ -32,8 +32,8 @@ struct IRGeneratorConfig {
 
     bool checkConfliction(std::ostream& os) const;
 
-    std::ostream&
-    display(int verbose = 1, bool title = true, std::ostream& os = std::cerr) const;
+    std::ostream& display(int verbose = 1, bool title = true,
+                          std::ostream& os = std::cerr) const;
 };
 
 /// @brief IR Generator.

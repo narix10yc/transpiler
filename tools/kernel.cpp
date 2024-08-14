@@ -88,8 +88,6 @@ int main(int argc, char** argv) {
     cl::opt<unsigned>
     NQubits("N", cl::desc("number of qubits"), cl::Prefix, cl::Required);
     cl::opt<std::string>
-    inputFilename(cl::desc("input file name"), cl::Positional, cl::Required);
-    cl::opt<std::string>
     outputFilename("o", cl::desc("output file name"), cl::init(""));
     cl::opt<std::string>
     Precision("p", cl::desc("precision (f64 or f32)"), cl::init("f64"));
@@ -222,7 +220,7 @@ int main(int argc, char** argv) {
     };
     CodeGeneratorCPU codeGenerator(config, outputFilename);
 
-    codeGenerator.generate(graph, true); // force in order
+    codeGenerator.generate(graph, DebugLevel, true); // force in order
     
     return 0;
 }

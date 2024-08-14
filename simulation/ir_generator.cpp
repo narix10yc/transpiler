@@ -14,19 +14,34 @@ using namespace simulation;
 bool IRGeneratorConfig::checkConfliction(std::ostream& os) const {
     bool check = true;
     const auto warn = [&os]() -> std::ostream& {
-        return os << YELLOW_FG << BOLD << "Warning: " << RESET;
+        return os << YELLOW_FG << BOLD << "Config warning: " << RESET;
     };
-    if (shareMatrixElemThres < 0.0) {
-        warn() << "Set 'shareMatrixElemThres' to a negative value has no effect\n";
+    const auto error = [&os, &check]() -> std::ostream& {
         check = false;
+        return os << RED_FG << BOLD << "Config error: " << RESET;
+    };
+
+    if (shareMatrixElemThres < 0.0)
+        warn() << "Set 'shareMatrixElemThres' to a negative value has no effect\n";
+
+    if (forceDenseKernel) {
+        if (zeroSkipThres > 0.0)
+            warn() << "'forceDenseKernel' is ON, 'zeroSkipThres' has no effect\n";
+        if (shareMatrixElemThres > 0.0)
+            warn() << "'forceDenseKernel' is ON, 'shareMatrixElemThres' has no effect\n";
     }
+
+    if (shareMatrixElemThres <= 0.0 && shareMatrixElemUseImmValue)
+        warn() << "'shareMatrixElemUseImmValue' is only effective when "
+                  "'shareMatrixElemThres' is positive (turned on)\n";
+
     return check;
 }
 
 std::ostream& IRGeneratorConfig::display(
         int verbose, bool title, std::ostream& os) const {
     if (title)
-        os << CYAN_FG << "=== IR Generator Config ===\n" << RESET;
+        os << CYAN_FG << "===== IR Generator Config =====\n" << RESET;
     
     const char* ON = "\033[32mon\033[0m";
     const char* OFF = "\033[31moff\033[0m";
@@ -40,12 +55,14 @@ std::ostream& IRGeneratorConfig::display(
        << "loadMatrixInEntry:    " << ((loadMatrixInEntry) ? "true" : "false") << "\n"
        << "loadVectorMatrix:     " << ((loadVectorMatrix) ? "true" : "false") << "\n"
        << "forceDenseKernel:     " << ((forceDenseKernel) ? "true" : "false") << '\n'
-       << "zeroSkipThres:        " << std::scientific << zeroSkipThres << "\n"
-       << "shareMatrixElemThres: " << std::scientific << shareMatrixElemThres << "\n"
-       << "shareMatrixElemUseImmValue " << ((shareMatrixElemUseImmValue) ? ON : OFF) << "\n";
+       << "zeroSkipThres:        " << std::scientific << zeroSkipThres << " "
+                                   << ((zeroSkipThres > 0.0) ? ON : OFF) << "\n"
+       << "shareMatrixElemThres: " << std::scientific << shareMatrixElemThres << " "
+                                   << ((shareMatrixElemThres > 0.0) ? ON : OFF) << "\n"
+       << "shareMatrixElemUseImmValue: " << ((shareMatrixElemUseImmValue) ? ON : OFF) << "\n";
 
     if (title)
-       os << CYAN_FG << "===========================\n" << RESET;
+       os << CYAN_FG << "===============================\n" << RESET;
     return os;
 }
 

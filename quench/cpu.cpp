@@ -70,7 +70,7 @@ void CodeGeneratorCPU::generate(
 
     // apply each gate kernel
     kernelSS << "  for (const auto& data : _metaData) {\n"
-             << "    idxMax = 1ULL << (nqubits - data.nqubits - S_VALUE);\n";
+             << "    idxMax = 1ULL << (nqubits - data.nqubits - SIMD_S);\n";
 
     std::string sv_arg = (isSepKernel) ? "re, im" : "sv";
     if (config.multiThreaded)
@@ -180,13 +180,11 @@ void CodeGeneratorCPU::generate(
     hFile.close();
 
     // if (!config.dumpIRToMultipleFiles) {
-    //     std::error_code ec;
-    //     llvm::raw_fd_ostream irFile(fileName + ".ll", ec);
-    //     irGenerator.getModule().setModuleIdentifier(fileName + "_module");
-    //     irGenerator.getModule().setSourceFileName(fileName + ".ll");
-    //     irGenerator.getModule().print(irFile, nullptr);
-    //     irFile.close();
+        std::error_code ec;
+        llvm::raw_fd_ostream irFile(fileName + ".ll", ec);
+        irGenerator.getModule().setModuleIdentifier(fileName + "_module");
+        irGenerator.getModule().setSourceFileName(fileName + ".ll");
+        irGenerator.getModule().print(irFile, nullptr);
+        irFile.close();
     // }
-
-
 }

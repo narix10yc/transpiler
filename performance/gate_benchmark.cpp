@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
             timer.setReplication(7);
         else
             timer.setReplication(3); 
-        uint64_t idxMax = 1ULL << (nqubits - S_VALUE - _metaData[0].nqubits);
+        uint64_t idxMax = 1ULL << (nqubits - SIMD_S - _metaData[0].nqubits);
 
         rst = timer.timeit(
         [&]() {

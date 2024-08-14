@@ -146,14 +146,14 @@ int main(int argc, char** argv) {
     graph.greedyGateFusion();
 
     tok = clock::now();
-    log() << "Greedy gate fusion complete\n";
+    log() << "Gate fusion complete\n";
 
     if (Verbose > 0)
+        graph.displayInfo(std::cerr, Verbose + 1);
+    if (Verbose > 2) {
         graph.relabelBlocks();
-    if (Verbose > 2)
         graph.print(std::cerr);
-    
-    graph.displayInfo(std::cerr, Verbose + 1);
+    }
 
     // write to file if provided
     if (outputFilename != "") {
@@ -176,12 +176,15 @@ int main(int argc, char** argv) {
                 .shareMatrixElemUseImmValue = ShareMatrixElemUseImmValue
             }
         };
-        CodeGeneratorCPU codeGenerator(config, outputFilename);
 
-        if (Verbose > 0)
+        CodeGeneratorCPU codeGenerator(config, outputFilename);
+        if (Verbose > 0) {
             codeGenerator.displayConfig(Verbose, std::cerr);
+            config.irConfig.checkConfliction(std::cerr);
+        }
 
         codeGenerator.generate(graph, DebugLevel);
+
         tok = clock::now();
         log() << "Code generation done\n";
     }

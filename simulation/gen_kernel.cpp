@@ -67,17 +67,15 @@ Function*
 IRGenerator::generateKernelDebug(
         const QuantumGate& gate, int debugLevel, const std::string& funcName) {
 
-    if (debugLevel > 0)
-        std::cerr << CYAN_FG << BOLD << "[IR Generation Debug] " << RESET
-                  << funcName << "\n";
-
     const uint64_t s = _config.simd_s;
     const uint64_t S = 1ULL << s;
     const uint64_t k = gate.qubits.size();
     const uint64_t K = 1ULL << k;
 
     if (debugLevel > 0) {
-        std::cerr << "s = " << s << "; S = " << S << "\n"
+        std::cerr << CYAN_FG << BOLD << "[IR Generation Debug] " << RESET
+                  << funcName << "\n"
+                  << "s = " << s << "; S = " << S << "\n"
                   << "k = " << k << "; K = " << K << "\n"
                   << "target qubits: ";
         printVector(gate.qubits) << "\n";
@@ -238,8 +236,8 @@ IRGenerator::generateKernelDebug(
     }
     }
 
-    unsigned vecSize = 1U << sepBit;
-    unsigned vecSizex2 = vecSize << 1;
+    const unsigned vecSize = 1U << sepBit;
+    const unsigned vecSizex2 = vecSize << 1;
     auto* vecType = VectorType::get(scalarTy, vecSize, false);
     auto* vecTypex2 = VectorType::get(scalarTy, vecSizex2, false);
 
@@ -294,8 +292,8 @@ IRGenerator::generateKernelDebug(
         }
     }
 
-    // find start pointer
     Value* idxStartV = counterV;
+    { /* locate start pointer */
     if (_config.usePDEP) {
         uint64_t pdepMask = ~static_cast<uint64_t>(0ULL);
         for (unsigned hi = 0; hi < hk; hi++) {
@@ -338,6 +336,7 @@ IRGenerator::generateKernelDebug(
         tmpCounterV = builder.CreateShl(tmpCounterV, higherQubits.size(), "tmpCounter");
         idxStartV = builder.CreateAdd(idxStartV, tmpCounterV, "idxStart");
     }
+    }
 
     std::vector<std::vector<int>> splits(LK);
     std::vector<int> reSplitMask, imSplitMask;
@@ -345,7 +344,7 @@ IRGenerator::generateKernelDebug(
     std::vector<int> svMargeMask(vecSizex2);
     { /* initialize loading and storing masks */
     // loading (split) masks
-    for (size_t i = 0; i < vecSize; i++) {
+    for (unsigned i = 0; i < vecSize; i++) {
         unsigned key = 0;
         for (unsigned lowerI = 0; lowerI < lk; lowerI++) {
             if (i & (1 << lowerQubits[lowerI]))
@@ -360,44 +359,30 @@ IRGenerator::generateKernelDebug(
             reSplitMask.push_back(i);
     }
     if (debugLevel > 1) {
-        std::cerr << CYAN_FG << "-- split masks done\n" << RESET;
+        std::cerr << CYAN_FG << "-- loading (split) masks prepared\n" << RESET;
         std::cerr << "splits: [";
         for (const auto& split : splits) {
             std::cerr << "\n ";
             printVector(split);
         }
-        std::cerr << "\n]\n";
+        std::cerr << " ]\n";
     }
-
-    // storing (merge) masks
-    for (unsigned round = 0; round < lk; round++) {
-        for (unsigned pairI = 0; pairI < (1 << (lk - round - 1)); pairI++) {
-            auto pair = getMaskToMerge(splits[2*pairI], splits[2*pairI + 1]);
-            mergeMasks.push_back(std::move(pair.first));
-            splits[pairI] = std::move(pair.second);
-        }
-    }
-    int reCount = 0, imCount = 0;
-    for (unsigned i = 0; i < vecSizex2; i++) {
-        if (i & S)
-            svMargeMask[i] = (imCount++) + vecSize;
-        else
-            svMargeMask[i] = reCount++;   
-    }
-    if (debugLevel > 1)
-        std::cerr << CYAN_FG << "-- merge masks done\n" << RESET;
     }
     
-    // load amplitude registers
-    // There are a total of 2K registers, among which K are real and K are imag
-    // In Alt Format, we load HK size-(2*S*LK) LLVM registers.
-    // There are two stages of shuffling (splits)
-    // Stage 1:
-    // Each size-(2*S*LK) reg is shuffled into 2 size-(S*LK) regs, the real and imag parts
-    // Stage 2:
-    // Each size-(S*LK) res is shuffled into LK size-S regs, the amplitude vectors.
+    /* load amplitude registers
+      There are a total of 2K registers, among which K are real and K are imag
+      In Alt Format, we load HK size-(2*S*LK) LLVM registers.
+      There are two stages of shuffling (splits)
+      - Stage 1:
+        Each size-(2*S*LK) reg is shuffled into 2 size-(S*LK) regs, the real and
+        imag parts.
+      - Stage 2:
+        Each size-(S*LK) res is shuffled into LK size-S regs, the amplitude
+        vectors.
+    */
     std::vector<Value*> real(K, nullptr), imag(K, nullptr);
     std::vector<Value*> pSv(HK, nullptr), pRe(HK, nullptr), pIm(HK, nullptr);
+    { /* load amplitude registers */
     Value *svFull, *reFull, *imFull;
     for (unsigned hi = 0; hi < HK; hi++) {
         unsigned keyStart = 0;
@@ -428,19 +413,40 @@ IRGenerator::generateKernelDebug(
         for (unsigned i = 0; i < LK; i++) {
             unsigned key = keyStart + i;
             real[key] = builder.CreateShuffleVector(
-                reFull, splits[i], "real_" + std::to_string(key));
+                reFull, splits[i], "real." + std::to_string(key));
             imag[key] = builder.CreateShuffleVector(
-                imFull, splits[i], "imag_" + std::to_string(key));
+                imFull, splits[i], "imag." + std::to_string(key));
         }
     }
+    }
 
-    // matrix-vector multiplication
+    { /* prepare merge masks (override 'splits' variable) */
+    // storing (merge) masks
+    for (unsigned round = 0; round < lk; round++) {
+        for (unsigned pairI = 0; pairI < (1 << (lk - round - 1)); pairI++) {
+            auto pair = getMaskToMerge(splits[2*pairI], splits[2*pairI + 1]);
+            mergeMasks.push_back(std::move(pair.first));
+            splits[pairI] = std::move(pair.second);
+        }
+    }
+    int reCount = 0, imCount = 0;
+    for (unsigned i = 0; i < vecSizex2; i++) {
+        if (i & S)
+            svMargeMask[i] = (imCount++) + vecSize;
+        else
+            svMargeMask[i] = reCount++;   
+    }
+    if (debugLevel > 1)
+        std::cerr << CYAN_FG << "-- merge masks done\n" << RESET;
+    }
+
+    // mat-vec mul and storing
     for (unsigned hi = 0; hi < HK; hi++) {
+        // matrix-vector multiplication
         std::vector<Value*> newReal(LK, nullptr);
         std::vector<Value*> newImag(LK, nullptr);
         for (unsigned li = 0; li < LK; li++) {
             unsigned r = hi * LK + li; // row
-
             // real part
             std::string nameRe = "re.new." + std::to_string(r) + ".";
             if (_config.useFMS) {

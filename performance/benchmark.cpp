@@ -14,7 +14,7 @@
 using namespace timeit;
 
 #ifdef USING_ALT_KERNEL
-    using Statevector = utils::statevector::StatevectorAlt<real_t, S_VALUE>;
+    using Statevector = utils::statevector::StatevectorAlt<real_t, SIMD_S>;
 #else
     using Statevector = utils::statevector::StatevectorSep<real_t>;
 #endif

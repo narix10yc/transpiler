@@ -25,8 +25,8 @@ int main(int argc, char** argv) {
 
     const int nqubits = 10;
 
-    // auto mat = GateMatrix::FromName("u3", {0.92, 0.46, 0.22});
-    auto mat = GateMatrix::FromName("h");
+    auto mat = GateMatrix::FromName("u3", {0.92, 0.46, 0.22});
+    // auto mat = GateMatrix::FromName("h");
     auto gate = QuantumGate(mat, { targetQ });
     gate = gate.lmatmul({ mat , { targetQ + 1 }});
     // gate = gate.lmatmul({ mat , {9}});
@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
 
     StatevectorComp<real_t> sv_ref(nqubits);
     #ifdef USING_ALT_KERNEL
-        StatevectorAlt<real_t, S_VALUE> sv_test(nqubits);
+        StatevectorAlt<real_t, SIMD_S> sv_test(nqubits);
     #else
         StatevectorSep<real_t> sv_test(nqubits);
     #endif
@@ -54,9 +54,9 @@ int main(int argc, char** argv) {
     }
 
     applyGeneral(sv_ref.data, gate.gateMatrix, gate.qubits, nqubits);
-    // sv_ref.print(std::cerr);
-    
-    uint64_t idxMax = 1ULL << (sv_test.nqubits - S_VALUE - _metaData[targetQ].nqubits);
+    // sv_ref.print(std::cerr) << "\n";
+
+    uint64_t idxMax = 1ULL << (sv_test.nqubits - SIMD_S - _metaData[targetQ].nqubits);
     // uint64_t idxMax = 1;
     #ifdef USING_ALT_KERNEL
         _metaData[targetQ].func(sv_test.data, 0, idxMax, _metaData[targetQ].mPtr);
@@ -64,8 +64,7 @@ int main(int argc, char** argv) {
         _metaData[targetQ].func(sv_test.real, sv_test.imag, 0, idxMax, _metaData[targetQ].mPtr);
     #endif
 
-
-    // sv_test.print(std::cerr);
+    // sv_test.print(std::cerr) << "\n";
 
     for (unsigned i = 0; i < sv_test.N; i++) {
         #ifdef USING_ALT_KERNEL
