@@ -86,6 +86,7 @@ IRGenerator::generateKernelDebug(
     Type* scalarTy = (_config.precision == 32) ? builder.getFloatTy()
                                                : builder.getDoubleTy();
     Function* func;
+    Argument *pSvArg, *pReArg, *pImArg, *ctrBeginArg, *ctrEndArg, *pMatArg;
     { /* function declaration */
     auto argType = (_config.ampFormat == AmpFormat::Sep)
             ? SmallVector<Type*> { builder.getPtrTy(), builder.getPtrTy(),
@@ -94,12 +95,8 @@ IRGenerator::generateKernelDebug(
                 builder.getInt64Ty(), builder.getInt64Ty(), builder.getPtrTy() };
     
     auto* funcType = FunctionType::get(builder.getVoidTy(), argType, false);
+    func = Function::Create(funcType, Function::ExternalLinkage, funcName, *mod);      
 
-    func = Function::Create(funcType, Function::ExternalLinkage,
-                                      funcName, *mod);      
-    }
-
-    Argument *pSvArg, *pReArg, *pImArg, *ctrBeginArg, *ctrEndArg, *pMatArg;
     if (_config.ampFormat == AmpFormat::Sep) {
         pReArg = func->getArg(0);      pReArg->setName("pRe");
         pImArg = func->getArg(1);      pImArg->setName("pIm");
@@ -111,6 +108,7 @@ IRGenerator::generateKernelDebug(
         ctrBeginArg = func->getArg(1); ctrBeginArg->setName("ctr.begin");
         ctrEndArg = func->getArg(2);   ctrEndArg->setName("ctr.end");
         pMatArg = func->getArg(3);     pMatArg->setName("pmat");
+    }
     }
 
     // init basic blocks
@@ -193,8 +191,7 @@ IRGenerator::generateKernelDebug(
                 matrix[i].imagVal = builder.CreateShuffleVector(
                     matV, std::vector<int>(S, 2*i+1), "mIm." + std::to_string(i));
             }
-        }
-        else {
+        } else {
             for (unsigned i = 0; i < matrix.size(); i++) {
                 uint64_t reLoadPosition = (shareMatrixElemThres > 0.0) ? uniqueEntryIndices[2*i] : 2ULL * i;
                 auto* pReVal = builder.CreateConstGEP1_64(scalarTy, pMatArg, reLoadPosition, "pm.re." + std::to_string(i));
@@ -203,8 +200,8 @@ IRGenerator::generateKernelDebug(
                 
                 uint64_t imLoadPosition = (shareMatrixElemThres > 0.0) ? uniqueEntryIndices[2*i+1] : 2ULL * i + 1;
                 auto* pImVal = builder.CreateConstGEP1_64(scalarTy, pMatArg, imLoadPosition, "pmIm_" + std::to_string(i));
-                auto* mImVal = builder.CreateLoad(scalarTy, pImVal, "smIm_" + std::to_string(i));
-                matrix[i].imagVal = builder.CreateVectorSplat(S, mImVal, "mIm_" + std::to_string(i));
+                auto* mImVal = builder.CreateLoad(scalarTy, pImVal, "m.re." + std::to_string(i) + ".tmp");
+                matrix[i].imagVal = builder.CreateVectorSplat(S, mImVal, "m.re." + std::to_string(i));
             }
         }
 
@@ -342,8 +339,12 @@ IRGenerator::generateKernelDebug(
         idxStartV = builder.CreateAdd(idxStartV, tmpCounterV, "idxStart");
     }
 
-    // split masks, to be used in loading amplitude registers
     std::vector<std::vector<int>> splits(LK);
+    std::vector<int> reSplitMask, imSplitMask;
+    std::vector<std::vector<int>> mergeMasks;
+    std::vector<int> svMargeMask(vecSizex2);
+    { /* initialize loading and storing masks */
+    // loading (split) masks
     for (size_t i = 0; i < vecSize; i++) {
         unsigned key = 0;
         for (unsigned lowerI = 0; lowerI < lk; lowerI++) {
@@ -352,16 +353,12 @@ IRGenerator::generateKernelDebug(
         }
         splits[key].push_back(i);
     }
-
-    std::vector<int> reSplitMask, imSplitMask;
     for (unsigned i = 0; i < vecSizex2; i++) {
         if (i & S)
             imSplitMask.push_back(i);
         else
             reSplitMask.push_back(i);
     }
-
-    // debug print splits
     if (debugLevel > 1) {
         std::cerr << CYAN_FG << "-- split masks done\n" << RESET;
         std::cerr << "splits: [";
@@ -370,6 +367,25 @@ IRGenerator::generateKernelDebug(
             printVector(split);
         }
         std::cerr << "\n]\n";
+    }
+
+    // storing (merge) masks
+    for (unsigned round = 0; round < lk; round++) {
+        for (unsigned pairI = 0; pairI < (1 << (lk - round - 1)); pairI++) {
+            auto pair = getMaskToMerge(splits[2*pairI], splits[2*pairI + 1]);
+            mergeMasks.push_back(std::move(pair.first));
+            splits[pairI] = std::move(pair.second);
+        }
+    }
+    int reCount = 0, imCount = 0;
+    for (unsigned i = 0; i < vecSizex2; i++) {
+        if (i & S)
+            svMargeMask[i] = (imCount++) + vecSize;
+        else
+            svMargeMask[i] = reCount++;   
+    }
+    if (debugLevel > 1)
+        std::cerr << CYAN_FG << "-- merge masks done\n" << RESET;
     }
     
     // load amplitude registers
@@ -418,29 +434,6 @@ IRGenerator::generateKernelDebug(
         }
     }
 
-    // prepare merge masks
-    std::vector<std::vector<int>> mergeMasks;
-    for (unsigned round = 0; round < lk; round++) {
-        for (unsigned pairI = 0; pairI < (1 << (lk - round - 1)); pairI++) {
-            auto pair = getMaskToMerge(splits[2*pairI], splits[2*pairI + 1]);
-            mergeMasks.push_back(std::move(pair.first));
-            splits[pairI] = std::move(pair.second);
-        }
-    }
-
-    // mask to merge real and imag parts together
-    std::vector<int> svMargeMask(vecSizex2);
-    int reCount = 0;
-    int imCount = 0;
-    for (unsigned i = 0; i < vecSizex2; i++) {
-        if (i & S)
-            svMargeMask[i] = (imCount++) + vecSize;
-        else
-            svMargeMask[i] = reCount++;   
-    }
-    if (debugLevel > 1)
-        std::cerr << CYAN_FG << "-- merge masks done\n" << RESET;
-
     // matrix-vector multiplication
     for (unsigned hi = 0; hi < HK; hi++) {
         std::vector<Value*> newReal(LK, nullptr);
@@ -449,7 +442,7 @@ IRGenerator::generateKernelDebug(
             unsigned r = hi * LK + li; // row
 
             // real part
-            std::string nameRe = "newRe_" + std::to_string(r) + "_";
+            std::string nameRe = "re.new." + std::to_string(r) + ".";
             if (_config.useFMS) {
                 for (unsigned c = 0; c < K; c++) {
                     if (matrix[r*K + c].realLoadNeg)
@@ -486,7 +479,7 @@ IRGenerator::generateKernelDebug(
                     assert(false && "newReal is null");
             }
             // imag part
-            std::string nameIm = "newIm_" + std::to_string(r) + "_";
+            std::string nameIm = "im.new." + std::to_string(r) + ".";
             for (unsigned c = 0; c < K; c++) {
                 if (matrix[r*K + c].realLoadNeg)
                     newImag[li] = genMulSub(newImag[li], matrix[r*K + c].realVal, imag[c],
@@ -527,21 +520,22 @@ IRGenerator::generateKernelDebug(
                 maskIt++;
             }
         }
-        // store
         if (debugLevel > 2)
             std::cerr << "Merged hi = " << hi << "\n";
         
+        // store
         if (_config.ampFormat == AmpFormat::Sep) {
             builder.CreateStore(newReal[0], pRe[hi], false);
             builder.CreateStore(newImag[0], pIm[hi], false);
         } else {
-            auto* newSv = builder.CreateShuffleVector(newReal[0], newImag[0], svMargeMask, "sv.new");
+            auto* newSv = builder.CreateShuffleVector(newReal[0], newImag[0],
+                                                      svMargeMask, "sv.new");
             builder.CreateStore(newSv, pSv[hi], false);
         }
     }
 
     // increment counter and return 
-    auto* counterNextV = builder.CreateAdd(counterV, builder.getInt64(1), "counterNext");
+    auto* counterNextV = builder.CreateAdd(counterV, builder.getInt64(1), "counter.next");
     counterV->addIncoming(counterNextV, loopBodyBB);
     builder.CreateBr(loopBB);
     

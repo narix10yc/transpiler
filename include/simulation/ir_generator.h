@@ -5,10 +5,6 @@
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
-#include <llvm/IR/Verifier.h>
-#include <llvm/IR/Intrinsics.h>
-#include <llvm/Support/raw_ostream.h>
-#include <llvm/Support/FileSystem.h>
 
 #include <vector>
 #include <array>
@@ -16,6 +12,7 @@
 #include "quench/QuantumGate.h"
 
 namespace simulation {
+
 struct IRGeneratorConfig {
     enum class AmpFormat { Alt, Sep };
 
@@ -54,7 +51,8 @@ public:
         mod(std::make_unique<llvm::Module>(moduleName, llvmContext)),
         _config() {}
 
-    IRGenerator(const IRGeneratorConfig& irConfig, const std::string& moduleName = "myModule") : 
+    IRGenerator(const IRGeneratorConfig& irConfig,
+                const std::string& moduleName = "myModule") : 
         llvmContext(),
         builder(llvmContext), 
         mod(std::make_unique<llvm::Module>(moduleName, llvmContext)),
@@ -90,20 +88,16 @@ public:
             llvm::Value* aa, llvm::Value* bb, llvm::Value* cc, int bbFlag,
             const llvm::Twine& bbccName = "", const llvm::Twine& aaName = "");
 
-    llvm::Function*
-    generateKernel(
+    llvm::Function* generateKernel(
             const quench::quantum_gate::QuantumGate& gate,
             const std::string& funcName = "") {
         return generateKernelDebug(gate, 0, funcName);
     }
 
-    llvm::Function*
-    generateKernelDebug(const quench::quantum_gate::QuantumGate& gate,
-                        int debugLevel,
-                        const std::string& funcName = "");
-
+    llvm::Function* generateKernelDebug(
+            const quench::quantum_gate::QuantumGate& gate, int debugLevel,
+            const std::string& funcName = "");
 };
-
 
 } // namespace simulation
 
