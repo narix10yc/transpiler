@@ -8,15 +8,15 @@ using namespace quench::complex_matrix;
 using namespace quench::quantum_gate;
 
 namespace {
-    static bool _isValidShuffleFlag(const std::vector<unsigned>& flags) {
-        auto copy = flags;
-        std::sort(copy.begin(), copy.end());
-        for (unsigned i = 0; i < copy.size(); i++) {
-            if (copy[i] != i)
-                return false;
-        }
-        return true;
+static bool _isValidShuffleFlag(const std::vector<unsigned>& flags) {
+    auto copy = flags;
+    std::sort(copy.begin(), copy.end());
+    for (unsigned i = 0; i < copy.size(); i++) {
+        if (copy[i] != i)
+            return false;
     }
+    return true;
+}
 }
 
 GateMatrix& GateMatrix::approximateSelf(int level, double thres) {
@@ -130,6 +130,7 @@ int GateMatrix::updateNqubits() {
         break;
     case 1:
         assert(false && "1x1 matrix does not represent quantum gates");
+        nqubits = 0;
         break;
     case 2: nqubits = 1; break;
     case 4: nqubits = 2; break;

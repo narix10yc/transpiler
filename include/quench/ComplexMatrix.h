@@ -9,16 +9,15 @@
 
 namespace quench::complex_matrix {
 
-template<typename real_t>
-class SquareComplexMatrix {
+template<typename data_t>
+class SquareMatrix {
     size_t size;
 public:
-    using complex_t = std::complex<real_t>;
-    std::vector<complex_t> data;
+    std::vector<data_t> data;
 
-    SquareComplexMatrix() : size(0), data() {}
-    SquareComplexMatrix(size_t size) : size(size), data(size * size) {}
-    SquareComplexMatrix(std::initializer_list<complex_t> data)
+    SquareMatrix() : size(0), data() {}
+    SquareMatrix(size_t size) : size(size), data(size * size) {}
+    SquareMatrix(std::initializer_list<data_t> data)
         : size(std::sqrt(data.size())), data(data)
     {
         assert(size * size == data.size()
@@ -31,17 +30,17 @@ public:
         return data.size() == size * size;
     }
 
-    static SquareComplexMatrix Identity(size_t size) {
-        SquareComplexMatrix m;
+    static SquareMatrix Identity(size_t size) {
+        SquareMatrix m;
         for (size_t r = 0; r < size; r++)
             m.data[r*size + r].real = 1;
         return m;
     }
 
-    SquareComplexMatrix matmul(const SquareComplexMatrix& other) {
+    SquareMatrix matmul(const SquareMatrix& other) {
         assert(size == other.size);
 
-        SquareComplexMatrix m(size);
+        SquareMatrix m(size);
         for (size_t i = 0; i < size; i++) {
         for (size_t j = 0; j < size; j++) {
         for (size_t k = 0; k < size; k++) {
@@ -51,11 +50,11 @@ public:
         return m;
     }
 
-    SquareComplexMatrix kron(const SquareComplexMatrix& other) const {
+    SquareMatrix kron(const SquareMatrix& other) const {
         size_t lsize = size;
         size_t rsize = other.size;
         size_t msize = lsize * rsize;
-        SquareComplexMatrix m(msize);
+        SquareMatrix m(msize);
         for (size_t lr = 0; lr < lsize; lr++) {
         for (size_t lc = 0; lc < lsize; lc++) {
         for (size_t rr = 0; rr < rsize; rr++) {
@@ -67,8 +66,8 @@ public:
         return m;
     }
 
-    SquareComplexMatrix leftKronI() const {
-        SquareComplexMatrix m(size * size);
+    SquareMatrix leftKronI() const {
+        SquareMatrix m(size * size);
         for (size_t i = 0; i < size; i++) {
         for (size_t r = 0; r < size; r++) {
         for (size_t c = 0; c < size; c++) {
@@ -77,8 +76,8 @@ public:
         return m;
     }
 
-    SquareComplexMatrix rightKronI() const {
-        SquareComplexMatrix m(size * size);
+    SquareMatrix rightKronI() const {
+        SquareMatrix m(size * size);
         for (size_t i = 0; i < size; i++) {
         for (size_t r = 0; r < size; r++) {
         for (size_t c = 0; c < size; c++) {
@@ -87,7 +86,7 @@ public:
         return m;
     }
 
-    SquareComplexMatrix swapTargetQubits() const {
+    SquareMatrix swapTargetQubits() const {
         assert(size == 4);
         return {{data[ 0], data[ 2], data[ 1], data[ 3],
                  data[ 8], data[10], data[ 9], data[11],

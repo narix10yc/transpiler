@@ -8,9 +8,9 @@ namespace quench::quantum_gate {
 
 struct matrix_t {
     // parametrised matrix type
-    using p_matrix_t = complex_matrix::SquareComplexMatrix<cas::Polynomial>;
+    using p_matrix_t = complex_matrix::SquareMatrix<cas::Polynomial>;
     // constant matrix type
-    using c_matrix_t = complex_matrix::SquareComplexMatrix<double>;
+    using c_matrix_t = complex_matrix::SquareMatrix<std::complex<double>>;
     union {
         p_matrix_t parametrizedMatrix;
         c_matrix_t constantMatrix;

@@ -11,4 +11,4 @@ add_executable(playground "playground.cpp")
 target_link_libraries(playground quench qasm simulation)
 
 add_executable(pg_polynomial "pg_polynomial.cpp")
-target_link_libraries(pg_polynomial quench saot simulation)
+target_link_libraries(pg_polynomial quench simulation)

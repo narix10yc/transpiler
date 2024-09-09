@@ -1,23 +1,18 @@
-#include "saot/Polynomial.h"
+#include "quench/Polynomial.h"
 #include "utils/iocolor.h"
 
-using namespace saot::polynomial;
+using namespace quench::cas;
 
 int main() {
 
-    CASContext ctx;
+    auto var0 = std::make_shared<VariableNode>("x[0]")->toPolynomial();
+    auto var1 = std::make_shared<VariableNode>("y[1]")->toPolynomial();
 
-    auto num2 = ctx.getNumerics(2.0);
-    auto varx = ctx.getVariable("x");
+    auto const0 = std::make_shared<ConstantNode>(1.2)->toPolynomial();
+    auto const1 = std::make_shared<ConstantNode>(1.9)->toPolynomial();
 
-    auto expr = ctx.createSin(ctx.createMul(num2, varx));
-    // auto expr = ctx.createMul(num2, varx);
-
-    expr->print(std::cerr) << "\n";
-
-    expr->derivative("x", ctx)->print(std::cerr) << "\n";
-    expr->derivative("x", ctx)->simplify(ctx)->print(std::cerr) << "\n";
-
+    auto poly1 = var0 + const0 + const1;
+    (poly1 * poly1).print(std::cerr) << "\n";
 
     return 0;
 }

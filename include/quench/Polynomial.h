@@ -7,6 +7,7 @@
 #include <memory>
 #include <cassert>
 #include <cmath>
+#include <complex>
 
 namespace quench::cas {
 
@@ -16,7 +17,7 @@ class CASNode {
 public:
     struct expr_value {
         bool isConstant;
-        double value;
+        std::complex<double> value;
     };
 
     virtual std::ostream& print(std::ostream&) const = 0;
@@ -221,6 +222,115 @@ public:
     Polynomial toPolynomial() const override;
 };
 
+class VarAddNode : public BasicCASNode {
+    std::shared_ptr<VariableNode> lhs, rhs;
+public:
+    VarAddNode(std::shared_ptr<VariableNode> lhs,
+               std::shared_ptr<VariableNode> rhs) : lhs(lhs), rhs(rhs) {}
+
+    std::ostream& print(std::ostream& os) const override {
+        os << "(";
+        lhs->print(os);
+        os << " + ";
+        rhs->print(os);
+        os << ")";
+        return os;
+    }
+
+    std::ostream& printLaTeX(std::ostream& os) const override {
+        os << "(";
+        lhs->print(os);
+        os << " + ";
+        rhs->print(os);
+        os << ")";
+        return os;
+    }
+
+    int compare(const BasicCASNode* other) const override {
+        if (getSortPriority() < other->getSortPriority())
+            return -1;
+        if (getSortPriority() > other->getSortPriority())
+            return +1;
+        auto otherVarAddNode = dynamic_cast<const VarAddNode*>(other);
+        assert(otherVarAddNode != nullptr);
+
+        auto compareLHS = lhs->compare(otherVarAddNode->lhs.get());
+        if (compareLHS != 0)
+            return compareLHS;
+        return rhs->compare(otherVarAddNode->rhs.get());
+    }
+
+    bool equals(const CASNode* other) const override {
+        auto otherVarAddNode = dynamic_cast<const VarAddNode*>(other);
+        if (otherVarAddNode == nullptr)
+            return false;
+        return (lhs->equals(otherVarAddNode->lhs.get()))
+                && (rhs->equals(otherVarAddNode->rhs.get()));
+    }
+
+    expr_value getExprValue() const override {
+        auto lhsValue = lhs->getExprValue();
+        if (!lhsValue.isConstant)
+            return { false };
+        auto rhsValue = rhs->getExprValue();
+        if (!rhsValue.isConstant)
+            return { false };
+        return { true, lhsValue.value + rhsValue.value };
+    }
+
+    int getSortPriority() const override { return 15; }
+
+    Polynomial toPolynomial() const override;
+};
+
+class ComplexExpNode : public BasicCASNode {
+    std::shared_ptr<BasicCASNode> node;
+public:
+    ComplexExpNode(std::shared_ptr<BasicCASNode> node) : node(node) {}
+
+    std::ostream& print(std::ostream& os) const override {
+        os << "cexp(";
+        node->print(os);
+        os << ")";
+        return os;
+    }
+
+    std::ostream& printLaTeX(std::ostream& os) const override {
+        os << "\\exp(i";
+        node->print(os);
+        os << ")";
+        return os;
+    }
+
+    int compare(const BasicCASNode* other) const override {
+        if (getSortPriority() < other->getSortPriority())
+            return -1;
+        if (getSortPriority() > other->getSortPriority())
+            return +1;
+        auto otherCExpNode = dynamic_cast<const ComplexExpNode*>(other);
+        assert(otherCExpNode != nullptr);
+        return node->compare(otherCExpNode->node.get());
+    }
+
+    bool equals(const CASNode* other) const override {
+        if (auto otherCExpNode = dynamic_cast<const ComplexExpNode*>(other))
+            return (node->equals(otherCExpNode->node.get()));
+        return false;
+    }
+
+    expr_value getExprValue() const override {
+        auto nodeValue = node->getExprValue();
+        if (!nodeValue.isConstant)
+            return { false };
+        std::complex<double> ivalue(-nodeValue.value.imag(), nodeValue.value.real());
+        return { true, std::exp(ivalue) };
+    }
+
+    int getSortPriority() const override { return 35; }
+
+    Polynomial toPolynomial() const override;
+};
+
 class Polynomial : public CASNode {
 public:
     struct monomial_t {
@@ -240,45 +350,11 @@ public:
     };
 
 private:
-    /// @brief monomial comparison function, strict order. return a < b 
+    /// @brief monomial comparison function (coef neglected), strict order
     /// @return a < b. Happens when (1). a has less terms than b does, or 
     /// otherwise, (2). the order of a is less than the order of b, or (3) 
-    static bool monomial_cmp(const monomial_t& a, const monomial_t& b) {
-        auto aSize = a.powers.size();
-        auto bSize = b.powers.size();
-        if (aSize < bSize) return true;
-        if (aSize > bSize) return false;
-        auto aOrder = a.order();
-        auto bOrder = b.order();
-        if (aOrder < bOrder) return true;
-        if (aOrder > bOrder) return false;
-        for (unsigned i = 0; i < aSize; i++) {
-            int r = a.powers[i].base->compare(b.powers[i].base.get());
-            if (r < 0) return true;
-            if (r > 0) return false;
-            if (a.powers[i].exponent > b.powers[i].exponent)
-                return true;
-            if (a.powers[i].exponent < b.powers[i].exponent)
-                return false;
-        }
-        return false;
-    };
-
-    static bool monomial_eq(const monomial_t& a, const monomial_t& b) {
-        auto aSize = a.powers.size();
-        auto bSize = b.powers.size();
-        if (aSize != bSize)
-            return false;
-        if (a.order() != b.order())
-            return false;
-        for (unsigned i = 0; i < aSize; i++) {
-            if (a.powers[i].exponent != b.powers[i].exponent)
-                return false;
-            if (!(a.powers[i].base->equals(b.powers[i].base.get())))
-                return false;
-        }
-        return true;
-    }
+    static bool monomial_cmp(const monomial_t& a, const monomial_t& b);
+    static bool monomial_eq(const monomial_t& a, const monomial_t& b);
 
     std::vector<monomial_t> monomials;
 
@@ -312,8 +388,8 @@ public:
     }
 
     expr_value getExprValue() const override {
-        double v = 0.0;
-        double mV = 1.0;
+        std::complex<double> v = 0.0;
+        std::complex<double> mV = 1.0;
         for (const auto& m : monomials) {
             mV = m.coef;
             for (const auto& p : m.powers) {

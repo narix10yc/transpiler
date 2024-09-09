@@ -4,6 +4,43 @@
 using namespace quench::cas;
 using namespace Color;
 
+bool Polynomial::monomial_cmp(const monomial_t& a, const monomial_t& b) {
+    auto aSize = a.powers.size();
+    auto bSize = b.powers.size();
+    if (aSize < bSize) return true;
+    if (aSize > bSize) return false;
+    auto aOrder = a.order();
+    auto bOrder = b.order();
+    if (aOrder < bOrder) return true;
+    if (aOrder > bOrder) return false;
+    for (unsigned i = 0; i < aSize; i++) {
+        int r = a.powers[i].base->compare(b.powers[i].base.get());
+        if (r < 0) return true;
+        if (r > 0) return false;
+        if (a.powers[i].exponent > b.powers[i].exponent)
+            return true;
+        if (a.powers[i].exponent < b.powers[i].exponent)
+            return false;
+    }
+    return false;
+};
+
+bool Polynomial::monomial_eq(const monomial_t& a, const monomial_t& b) {
+    auto aSize = a.powers.size();
+    auto bSize = b.powers.size();
+    if (aSize != bSize)
+        return false;
+    if (a.order() != b.order())
+        return false;
+    for (unsigned i = 0; i < aSize; i++) {
+        if (a.powers[i].exponent != b.powers[i].exponent)
+            return false;
+        if (!(a.powers[i].base->equals(b.powers[i].base.get())))
+            return false;
+    }
+    return true;
+}
+
 std::ostream& Polynomial::print(std::ostream& os) const {
     if (monomials.empty())
         return os << "0";
@@ -51,7 +88,8 @@ std::ostream& Polynomial::printLaTeX(std::ostream& os) const {
 }
 
 Polynomial& Polynomial::operator+=(const monomial_t& monomial) {
-    auto it = std::lower_bound(monomials.begin(), monomials.end(), monomial, monomial_cmp);
+    auto it = std::lower_bound(monomials.begin(), monomials.end(),
+                               monomial, monomial_cmp);
     if (it == monomials.end())
         monomials.insert(it, monomial);
     else if (monomial_eq(*it, monomial))
@@ -62,13 +100,14 @@ Polynomial& Polynomial::operator+=(const monomial_t& monomial) {
 }
 
 Polynomial& Polynomial::operator-=(const monomial_t& monomial) {
-    auto it = std::lower_bound(monomials.begin(), monomials.end(), monomial, monomial_cmp);
+    auto it = std::lower_bound(monomials.begin(), monomials.end(),
+                               monomial, monomial_cmp);
     if (it == monomials.end())
-        monomials.insert(it, monomial);
+        monomials.insert(it, monomial)->coef *= -1.0;
     else if (monomial_eq(*it, monomial))
         it->coef -= monomial.coef;
     else
-        monomials.insert(it, monomial);
+        monomials.insert(it, monomial)->coef *= -1.0;
     return *this;
 }
 
@@ -117,18 +156,14 @@ Polynomial& Polynomial::operator*=(const monomial_t& m) {
 }
 
 Polynomial Polynomial::operator*(const Polynomial& other) const {
-    std::cerr << "Start to multiply ";
-    print(std::cerr) << " with ";
-    other.print(std::cerr) << "\n";
     Polynomial newPoly;
     for (const auto& m : other.monomials) {
         auto tmp = *this;
-        (tmp *= m).print(std::cerr) << "\n";
+        tmp *= m;
         newPoly += tmp;
     }
     return newPoly;
 }
-
 
 Polynomial ConstantNode::toPolynomial() const {
     return { value };
@@ -144,4 +179,11 @@ Polynomial CosineNode::toPolynomial() const {
 
 Polynomial SineNode::toPolynomial() const {
     return {{1.0, {{std::make_shared<SineNode>(*this), 1}}}};
+}
+
+Polynomial VarAddNode::toPolynomial() const {
+    return {{1.0, {{std::make_shared<VarAddNode>(*this), 1}}}};
+}
+Polynomial ComplexExpNode::toPolynomial() const {
+    return {{1.0, {{std::make_shared<ComplexExpNode>(*this), 1}}}};
 }
