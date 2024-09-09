@@ -10,5 +10,5 @@ target_link_libraries(correctness_kernel quench qasm simulation)
 add_executable(playground "playground.cpp")
 target_link_libraries(playground quench qasm simulation)
 
-add_executable(prefetch "prefetch.cpp")
-target_link_libraries(prefetch quench simulation)
+add_executable(pg_polynomial "pg_polynomial.cpp")
+target_link_libraries(pg_polynomial quench saot simulation)

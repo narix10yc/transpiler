@@ -241,8 +241,8 @@ public:
 
 private:
     /// @brief monomial comparison function, strict order. return a < b 
-    /// @return a < b. Happens when (1). a has less terms than b does, or (2). 
-    /// the order of a is less than the order of b, or (3) 
+    /// @return a < b. Happens when (1). a has less terms than b does, or 
+    /// otherwise, (2). the order of a is less than the order of b, or (3) 
     static bool monomial_cmp(const monomial_t& a, const monomial_t& b) {
         auto aSize = a.powers.size();
         auto bSize = b.powers.size();
