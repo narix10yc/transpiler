@@ -3,8 +3,7 @@
 using namespace quench::ast;
 
 std::ostream& RootNode::print(std::ostream& os) const {
-    for (const auto& c : circuits)
-        c->print(os);
+    circuit.print(os);
     os << "\n";
 
     os << "Warning: printing ParamDefStmt not implemented yet\n";

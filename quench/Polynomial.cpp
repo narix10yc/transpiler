@@ -51,14 +51,22 @@ std::ostream& Polynomial::print(std::ostream& os) const {
     while (it != monomials.end()) {
         if (it != monomials.begin())
             os << " + ";
-        if (it->coef == 1.0)
-            {}
-        else if (it->coef == -1.0)
-            os << "-";
-        else if (it->coef.imag() == 0.0)
-            os << it->coef.real();
+        
+        double re = it->coef.real();
+        double im = it->coef.imag();
+        if (im == 0.0) {
+            if (re == 0.0)       {}
+            else if (re == 1.0)  {}
+            else if (re == -1.0) os << "-";
+            else                 os << it->coef.real();
+        }
+        else if (re == 0.0) {
+            if (im == 1.0)       os << "i*";
+            else if (im == -1.0) os << "-i*";
+            else                 os << it->coef.imag() << "i*";
+        }
         else
-            os << it->coef.real() << "+" << it->coef.imag() << "i)";
+            os << "(" << it->coef.real() << "+" << it->coef.imag() << "i)";
 
         for (const auto& p : it->powers) {
             p.base->print(os);

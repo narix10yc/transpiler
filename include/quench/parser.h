@@ -171,27 +171,27 @@ protected:
     std::vector<Token> tokenVec;
     std::vector<Token>::const_iterator tokenIt;
 
-    void throwParserError(const std::string& msg) const {
-        std::cerr << Color::RED_FG << Color::BOLD << "parser error: "
-                  << Color::DEFAULT_FG << msg << Color::RESET << "\n"
-                  << std::setw(5) << std::setfill(' ') << lineNumber << " | "
-                  << currentLine << "\n"
-                  << "      | " << std::string(static_cast<size_t>(tokenIt->colStart), ' ')
-                  << Color::GREEN_FG << Color::BOLD
-                  << std::string(static_cast<size_t>(tokenIt->colEnd - tokenIt->colStart), '^')
-                  << "\n" << Color::RESET;
+    void throwParserError(const std::string& msg, std::ostream& os = std::cerr) const {
+        os << Color::RED_FG << Color::BOLD << "parser error: "
+            << Color::DEFAULT_FG << msg << Color::RESET << "\n"
+            << std::setw(5) << std::setfill(' ') << lineNumber << " | "
+            << currentLine << "\n"
+            << "      | " << std::string(static_cast<size_t>(tokenIt->colStart), ' ')
+            << Color::GREEN_FG << Color::BOLD
+            << std::string(static_cast<size_t>(tokenIt->colEnd - tokenIt->colStart), '^')
+            << "\n" << Color::RESET;
         throw std::runtime_error("parser error");
     }
 
-    void displayParserWarning(const std::string& msg) const {
-        std::cerr << Color::YELLOW_FG << Color::BOLD << "parser warning: "
+    std::ostream& displayParserWarning(const std::string& msg, std::ostream& os = std::cerr) const {
+        return os << Color::YELLOW_FG << Color::BOLD << "parser warning: "
                   << Color::DEFAULT_FG << msg << Color::RESET << "\n"
                   << std::setw(5) << std::setfill(' ') << lineNumber << " | "
                   << currentLine << "\n";
     }
 
-    void displayParserLog(const std::string& msg) const {
-        std::cerr << Color::CYAN_FG << Color::BOLD << "parser log: "
+    std::ostream& displayParserLog(const std::string& msg, std::ostream& os = std::cerr) const {
+        return os << Color::CYAN_FG << Color::BOLD << "parser log: "
                   << Color::DEFAULT_FG << msg << Color::RESET << "\n";
     }
 
@@ -202,7 +202,9 @@ protected:
     Token parseToken(int col);
 
     double convertCurTokenToFloat() const {
-        assert(tokenIt->type == TokenTy::Numeric);
+        if (tokenIt->type != TokenTy::Numeric)
+            throwParserError("Expect a float, but got " + TokenTyToString(tokenIt->type));
+
         int count = 0;
         for (const auto& c : tokenIt->str) {
             if (c == '.')
@@ -214,7 +216,9 @@ protected:
     }
 
     int convertCurTokenToInt() const {
-        assert(tokenIt->type == TokenTy::Numeric);
+        if (tokenIt->type != TokenTy::Numeric)
+            throwParserError("Expect an integer, but got " + TokenTyToString(tokenIt->type));
+    
         for (const auto& c : tokenIt->str) {
             if (c == '.') {
                 throwParserError("Unable to parse '" + tokenIt->str + "' to int");
@@ -263,12 +267,13 @@ protected:
     // cas::VariableNode _parseCASVariable();
     // cas::Polynomial _parsePolynomial();
 
+    std::complex<double> _parseComplexNumber();
+
     quantum_gate::GateParameter _parseGateParameter();
     GateApplyStmt _parseGateApply();
-    // GateBlockStmt _parseGateBlockStmt();
-    // CircuitStmt _parseCircuitStmt();
 
-    // ParameterDefStmt _parseParameterDefStmt();
+    cas::Polynomial _parsePolynomial(cas::Context& casContext);
+    ParameterDefStmt _parseParameterDefStmt(cas::Context& casContext);
 
     // bool _parseStatement(RootNode&);
 public:
@@ -276,7 +281,7 @@ public:
         : lineNumber(0), currentLine(""), file(fileName),
           tokenVec(), tokenIt(tokenVec.cbegin()) {}
 
-    RootNode parse();
+    RootNode* parse();
 };
 
 

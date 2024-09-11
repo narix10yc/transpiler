@@ -482,11 +482,9 @@ std::vector<int> CircuitGraph::getBlockSizes() const {
         if (b->nqubits > largestSize)
             largestSize = b->nqubits;
     }
-    
     sizes.resize(largestSize+1);
     return sizes;
 }
-
 
 std::vector<std::vector<int>> CircuitGraph::getBlockOpCountHistogram() const {
     const auto allBlocks = getAllBlocks();
@@ -508,10 +506,8 @@ std::vector<std::vector<int>> CircuitGraph::getBlockOpCountHistogram() const {
         
         hist[q][catagory]++;
     }
-    return hist;
-    
+    return hist;   
 }
-
 
 std::ostream& CircuitGraph::displayInfo(std::ostream& os, int verbose) const {
     os << CYAN_FG << "=== CircuitGraph Info (verbose " << verbose << ") ===\n" << RESET;

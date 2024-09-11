@@ -43,6 +43,8 @@ class ConstantNode : public AtomicCASNode {
     std::complex<double> value;
 public:
     ConstantNode(std::complex<double> value) : value(value) {}
+
+    std::complex<double> getValue() const { return value; }
     
     std::ostream& print(std::ostream& os) const override {
         return os << value;
@@ -92,6 +94,8 @@ class VariableNode : public AtomicCASNode {
     std::string name;
 public:
     VariableNode(const std::string& name) : name(name) {}
+
+    std::string getName() const { return name; }
 
     std::ostream& print(std::ostream& os) const override {
         return os << name;
@@ -365,16 +369,22 @@ private:
     Polynomial& operator-=(const monomial_t& monomial);
 
     Polynomial& operator*=(const monomial_t& monomial);
-    
-    void insertMonomial(const monomial_t& monomial) {
-        auto it = std::lower_bound(monomials.begin(), monomials.end(), monomial, monomial_cmp);
-        monomials.insert(it, monomial);
-    }
 public:
     Polynomial() : monomials() {}
     Polynomial(std::complex<double> v) : monomials({{v, {}}}) {}
     Polynomial(std::initializer_list<monomial_t> monomials)
         : monomials(monomials) {}
+
+    void insertMonomial(const monomial_t& monomial) {
+        auto it = std::lower_bound(monomials.begin(), monomials.end(), monomial, monomial_cmp);
+        monomials.insert(it, monomial);
+    }
+
+    std::string str() const {
+        std::stringstream ss;
+        ss << (*this);
+        return ss.str();
+    }
 
     std::ostream& print(std::ostream& os) const override;
 
@@ -440,6 +450,75 @@ public:
 
 
 class Context {
+    std::vector<VariableNode*> vars;
+    std::vector<ConstantNode*> consts;
+    std::vector<CASNode*> nodes;
+public:
+    Context(int nparams = 0)
+        : vars(nparams),
+          consts({ new ConstantNode(0.0), new ConstantNode(1.0), new ConstantNode(-1.0) }),
+          nodes() {
+        for (int i = 0; i < nparams; i++)
+            vars[i] = new VariableNode("%" + std::to_string(i));
+    }
+
+    Context(const Context&) = delete;
+    Context(Context&&) = delete;
+    Context& operator=(const Context&) = delete;
+    Context& operator=(Context&&) = delete;
+
+    ~Context() {
+        for (auto& n : vars)
+            delete(n);
+        for (auto& n : consts)
+            delete(n);
+        for (auto& n : nodes)
+            delete(n);
+    }
+
+    VariableNode* getVar(const std::string& name) {
+        for (auto it = vars.begin(); it != vars.end(); it++) {
+            if ((*it)->getName() == name)
+                return *it;
+        }
+        auto* var = new VariableNode(name);
+        vars.push_back(var);
+        return var;
+    }
+
+    ConstantNode* getConst(const std::complex<double>& value) {
+        for (auto it = consts.begin(); it != consts.end(); it++) {
+            if ((*it)->getValue() == value)
+                return *it;
+        }
+        auto* cons = new ConstantNode(value);
+        consts.push_back(cons);
+        return cons;
+    }
+
+    CosineNode* createCosNode(CASNode* node) {
+        auto* n = new CosineNode(node);
+        nodes.push_back(n);
+        return n;
+    }
+
+    SineNode* createSinNode(CASNode* node) {
+        auto* n = new SineNode(node);
+        nodes.push_back(n);
+        return n;
+    }
+
+    VarAddNode* createAddNode(VariableNode* lhs, VariableNode* rhs) {
+        auto* n = new VarAddNode(lhs, rhs);
+        nodes.push_back(n);
+        return n;
+    }
+
+    ComplexExpNode* createCompExpNode(CASNode* node) {
+        auto* n = new ComplexExpNode(node);
+        nodes.push_back(n);
+        return n;
+    }
 
 };
 

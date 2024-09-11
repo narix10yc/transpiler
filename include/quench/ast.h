@@ -79,7 +79,6 @@ public:
         : refNumber(refNumber), matrix() {}
 
     std::ostream& print(std::ostream& os) const override {return os;}
-
 };
 
 class RootNode : public Node {
@@ -91,21 +90,11 @@ private:
         }
     };
 public:
-    std::vector<std::unique_ptr<CircuitStmt>> circuits;
-    std::map<int, quantum_gate::GateMatrix> matrices;
+    CircuitStmt circuit;
+    std::vector<ParameterDefStmt> paramDefs;
+    cas::Context casContext;
 
-    RootNode() : circuits(), matrices() {}
-
-    void addCircuit(std::unique_ptr<CircuitStmt> circuit) {
-        circuits.push_back(std::move(circuit));
-    }
-
-    /// @brief Insert the ParameterDefStmt. Record refNumber.
-    /// @return whether the insertion is successful. return false if the
-    /// refNumber already exists (re-definition)
-    bool addParameterDef(const ParameterDefStmt& def) {
-        return matrices.insert(std::make_pair(def.refNumber, def.matrix)).second;
-    }
+    RootNode() : circuit(), paramDefs(), casContext() {}
 
     std::ostream& print(std::ostream& os) const override;
 };

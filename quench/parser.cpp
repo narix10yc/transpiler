@@ -3,6 +3,7 @@
 
 using namespace quench;
 using namespace quench::ast;
+using namespace quench::cas;
 
 int Parser::readLine() {
     if (file.eof()) {
@@ -148,13 +149,15 @@ Token Parser::parseToken(int col) {
     }
 }
 
-RootNode Parser::parse() {
+RootNode* Parser::parse() {
     readLine();
+    auto* root = new RootNode();
+    while (true) {
+    // parse circuit
     if (tokenIt->type == TokenTy::Circuit) {
         displayParserLog("ready to parse circuit");
         proceedWithType(TokenTy::Identifier);
-        CircuitStmt circuit;
-        circuit.name = tokenIt->str;
+        root->circuit.name = tokenIt->str;
         proceedWithType(TokenTy::L_CurlyBraket, true);
 
         while (true) {
@@ -173,7 +176,7 @@ RootNode Parser::parse() {
                     throwParserError("Unexpected token type " + TokenTyToString(tokenIt->type)
                                     + " when expecting either AtSymbol or Semicolon");
                 }
-                circuit.addGateChain(chain);
+                root->circuit.addGateChain(chain);
                 continue;
             }
             break;
@@ -183,9 +186,16 @@ RootNode Parser::parse() {
             throwParserError("Unexpected token " + tokenIt->to_string());
         }
         proceed(); // eat '}'
-        displayParserLog("Parsed a circuit with " + std::to_string(circuit.stmts.size()) + " chains");
+        displayParserLog("Parsed a circuit with " + std::to_string(root->circuit.stmts.size()) + " chains");
+        continue;
     }
-    return {};
+    if (tokenIt->type == TokenTy::Hash) {
+        root->paramDefs.push_back(_parseParameterDefStmt(root->casContext));
+    }
+    
+    break;
+    }
+    return root;
 }
 
 quench::quantum_gate::GateParameter Parser::_parseGateParameter() {
@@ -195,26 +205,7 @@ quench::quantum_gate::GateParameter Parser::_parseGateParameter() {
         proceed();
         return { "%" + std::to_string(i) };
     }
-    if (tokenIt->type == TokenTy::Numeric) {
-        double real = convertCurTokenToFloat();
-        if (optionalProceedWithType(TokenTy::Add)) {
-            proceedWithType(TokenTy::Numeric);
-            double imag = convertCurTokenToFloat();
-            proceedWithType(TokenTy::Identifier);
-            if (tokenIt->str != "i")
-                throwParserError("Expect complex number to end with 'i'");
-            proceed();
-            return { std::complex<double>(real, imag) };
-        }
-        if (optionalProceedWithType(TokenTy::Identifier) && tokenIt->str == "i") {
-            return { std::complex<double>(0.0, real) };
-        }
-        return { std::complex<double>(real, 0.0) };
-    }
-
-    throwParserError("Unable to parse gate parameter");
-    assert(false && "Unreachable");
-    return { std::complex<double>(0.0, 0.0) };
+    return { _parseComplexNumber() };
 }
 
 GateApplyStmt Parser::_parseGateApply() {
@@ -227,16 +218,19 @@ GateApplyStmt Parser::_parseGateApply() {
             gate.paramRefNumber = convertCurTokenToInt();
             proceedWithType(TokenTy::R_RoundBraket);
         }
-        else if (optionalProceedWithType(TokenTy::Numeric)
-                 || optionalProceedWithType(TokenTy::Percent)) {
+        else {
+            proceed(); // eat '('
             while (true) {
                 gate.params.push_back(_parseGateParameter());
                 if (tokenIt->type == TokenTy::Comma) {
                     proceed();
                     continue;
                 }
+                if (tokenIt->type == TokenTy::Numeric || tokenIt->type == TokenTy::Percent)
+                    continue;
                 if (tokenIt->type == TokenTy::R_RoundBraket)
                     break;
+                throwParserError("Unexpected token " + TokenTyToString(tokenIt->type));
             }
         }
     }
@@ -257,4 +251,176 @@ GateApplyStmt Parser::_parseGateApply() {
     displayParserLog("Parsed gate " + gate.name + " with " +
                      std::to_string(gate.qubits.size()) + " targets");
     return gate;
+}
+
+ParameterDefStmt Parser::_parseParameterDefStmt(cas::Context& casContext) {
+    assert(tokenIt->type == TokenTy::Hash);
+
+    proceedWithType(TokenTy::Numeric);
+    ParameterDefStmt def(convertCurTokenToInt());
+    displayParserLog("Ready to parse ParameterDef #" + std::to_string(def.refNumber));
+
+    proceedWithType(TokenTy::Equal);
+    proceedWithType(TokenTy::L_CurlyBraket);
+    proceed();
+
+    std::vector<cas::Polynomial> polyMatrix;
+    while (true) {
+        polyMatrix.push_back(_parsePolynomial(casContext));
+        if (tokenIt->type == TokenTy::Comma) {
+            proceed();
+        }
+        if (tokenIt->type == TokenTy::R_CurlyBraket) {
+            proceed();
+            break;
+        }
+    }
+
+    return def;
+}
+
+quench::cas::Polynomial Parser::_parsePolynomial(cas::Context& casContext) {
+    const auto parseExponent = [&]() -> int {
+        if (optionalProceedWithType(TokenTy::Pow)) {
+            proceedWithType(TokenTy::Numeric);
+            return convertCurTokenToInt();
+        }
+        return 1;
+    };
+
+    const auto parseAtom = [&]() -> cas::CASNode* {
+        if (tokenIt->type == TokenTy::Percent) {
+            proceedWithType(TokenTy::Numeric);
+            return casContext.getVar("%" + std::to_string(convertCurTokenToInt()));
+        }
+        if (tokenIt->type == TokenTy::L_RoundBraket) {
+            proceedWithType(TokenTy::Percent);
+            proceedWithType(TokenTy::Numeric);
+            auto* varLHS = casContext.getVar("%" + std::to_string(convertCurTokenToInt()));
+            proceedWithType(TokenTy::Add);
+            proceedWithType(TokenTy::Percent);
+            proceedWithType(TokenTy::Numeric);
+            auto* varRHS = casContext.getVar("%" + std::to_string(convertCurTokenToInt()));
+            auto* varAdd = casContext.createAddNode(varLHS, varRHS);
+            proceedWithType(TokenTy::R_RoundBraket);
+            return varAdd;
+        }
+        return nullptr;
+    };
+
+    const auto parseCoef = [&]() -> std::complex<double> {
+        if (tokenIt->type == TokenTy::Percent)
+            return { 1.0, 0.0 };     
+        if (tokenIt->type == TokenTy::Identifier && tokenIt->str != "i")
+            return { 1.0, 0.0 };
+        return _parseComplexNumber();
+    };
+
+    /// Before: at the first token;
+    /// After: exit the last token
+    const auto parseMonomial = [&]() -> cas::Polynomial::monomial_t {
+        Polynomial::monomial_t monomial;
+        monomial.coef = parseCoef();
+        while (true) {
+            if (tokenIt->type == TokenTy::Mul)
+                proceed();
+
+            if (tokenIt->type == TokenTy::Identifier) {
+                int flag;
+                if (tokenIt->str == "cos")
+                    flag = 1;
+                else if (tokenIt->str == "sin")
+                    flag = 2;
+                else if (tokenIt->str == "cexp")
+                    flag = 3;
+                else
+                    throwParserError("Available operators are 'cos', 'sin', or 'cexp'");
+                
+                proceed();
+                auto* atom = parseAtom();
+                if (atom == nullptr)
+                    throwParserError("Expect an atom");
+                int exponent = parseExponent();
+                if (flag == 1)
+                    monomial.powers.push_back({casContext.createCosNode(atom), exponent});
+                else if (flag == 2)
+                    monomial.powers.push_back({casContext.createSinNode(atom), exponent});
+                else if (flag == 3)
+                    monomial.powers.push_back({casContext.createCompExpNode(atom), exponent});
+                proceed();
+                continue;
+            }
+            if (auto* atom = parseAtom()) {
+                monomial.powers.push_back({atom, parseExponent()});
+                proceed();
+                continue;
+            }
+            break;
+        }
+        return monomial;
+    };
+
+    Polynomial poly;
+    while (true) {
+        poly.insertMonomial(parseMonomial());
+        if (tokenIt->type == TokenTy::Add) {
+            proceed();
+            continue;
+        }
+        break;
+    }
+    displayParserLog("Parsed polynomial " + poly.str());
+    return poly;
+}
+
+std::complex<double> Parser::_parseComplexNumber() {
+    double m = 1.0;
+    while (true) {
+        if (tokenIt->type == TokenTy::Sub) {
+            proceed();
+            m *= -1.0;
+            continue;
+        }
+        if (tokenIt->type == TokenTy::Add) {
+            proceed();
+            continue;
+        }
+        break;
+    }
+    double real = m;
+    if (tokenIt->type == TokenTy::Numeric) {
+        real *= convertCurTokenToFloat();
+        proceed();
+    }
+    else if (tokenIt->type == TokenTy::Identifier) {
+        if (tokenIt->str == "i") {
+            proceed();
+            return { 0.0, real };
+        }
+        throwParserError("Expect purely imaginary number to end with 'i'");
+    }
+    // just one part (pure real or pure imag)
+    if (tokenIt->type != TokenTy::Add && tokenIt->type != TokenTy::Sub)
+        return { real, 0.0 };
+
+    m = 1.0;
+    while (true) {
+        if (tokenIt->type == TokenTy::Sub) {
+            proceed();
+            m *= -1.0;
+            continue;
+        }
+        if (tokenIt->type == TokenTy::Add) {
+            proceed();
+            continue;
+        }
+        break;
+    }
+    double imag = m * convertCurTokenToFloat();
+    proceed();
+    if (!(tokenIt->type == TokenTy::Identifier && tokenIt->str == "i"))
+        throwParserError("Expect complex number to end with 'i'");
+
+    proceed();
+    return { real, imag };
 }
