@@ -2,6 +2,7 @@
 #include "utils/iocolor.h"
 #include "utils/utils.h"
 #include <iomanip>
+#include <cmath>
 
 using namespace Color;
 using namespace quench::complex_matrix;
@@ -74,52 +75,26 @@ GateMatrix GateMatrix::permute(const std::vector<unsigned>& flags) const {
     GateMatrix m;
     m.nqubits = nqubits;
     m.N = N;
-    m.matrix = matrix_t::c_matrix_t(size);
+    if (isConstantMatrix())
+        m.matrix = matrix_t::c_matrix_t(size);
+    else  {
+        assert(isParametrizedMatrix());
+        m.matrix = matrix_t::p_matrix_t(size);
+    }
 
     for (size_t r = 0; r < size; r++) {
         for (size_t c = 0; c < size; c++) {
-            m.matrix.constantMatrix.data[permuteIndex(r) * size + permuteIndex(c)]
-                = matrix.constantMatrix.data[r * size + c];
+            auto idxNew = permuteIndex(r) * size + permuteIndex(c);
+            auto idxOld = r * size + c;
+            if (isConstantMatrix())
+                m.matrix.constantMatrix.data[idxNew] = matrix.constantMatrix.data[idxOld];
+            else
+                m.matrix.parametrizedMatrix.data[idxNew] = matrix.parametrizedMatrix.data[idxOld];
         }
     }
 
     assert(m.checkConsistency());
     return m;
-}
-
-GateMatrix& GateMatrix::permuteSelf(const std::vector<unsigned>& flags) {
-    assert(nqubits == flags.size());
-    assert(_isValidShuffleFlag(flags));
-    assert(isConstantMatrix());
-
-    bool isConstantShuffleFlag = true;
-    for (unsigned i = 0; i < nqubits; i++) {
-        if (flags[i] != i) {
-            isConstantShuffleFlag = false;
-            break;
-        }
-    }
-    if (isConstantShuffleFlag)
-        return *this;
-
-    auto permuteIndex = [&flags, k=flags.size()](size_t idx) -> size_t {
-        size_t newIdx = 0;
-        for (unsigned b = 0; b < k; b++)
-            newIdx += ((idx & (1ULL<<b)) >> b) << flags[b];
-        return newIdx;
-    };
-    const size_t size = matrix.getSize();
-    matrix_t::c_matrix_t newCMatrix(size);
-
-    for (size_t r = 0; r < size; r++) {
-        for (size_t c = 0; c < size; c++) {
-            newCMatrix.data[permuteIndex(r) * size + permuteIndex(c)]
-                = matrix.constantMatrix.data[r * size + c];
-        }
-    }
-
-    matrix = std::move(newCMatrix);
-    return *this;
 }
 
 int GateMatrix::updateNqubits() {
@@ -132,9 +107,9 @@ int GateMatrix::updateNqubits() {
         assert(false && "1x1 matrix does not represent quantum gates");
         nqubits = 0;
         break;
-    case 2: nqubits = 1; break;
-    case 4: nqubits = 2; break;
-    case 8: nqubits = 3; break;
+    case  2: nqubits = 1; break;
+    case  4: nqubits = 2; break;
+    case  8: nqubits = 3; break;
     case 16: nqubits = 4; break;
     default:
         nqubits = std::log2(mSize);
@@ -254,7 +229,7 @@ void QuantumGate::sortQubits() {
         newQubits[i] = qubits[indices[i]];
     
     qubits = std::move(newQubits);
-    gateMatrix.permuteSelf(indices);
+    gateMatrix = gateMatrix.permute(indices);
 }
 
 QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
@@ -307,7 +282,6 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
     // std::cerr << "]\n";
 
     matrix_t::c_matrix_t newCMatrix(1 << newNqubits);
-    using complex_t = std::complex<double>;
 
     assert(other.gateMatrix.isConstantMatrix());
     assert(gateMatrix.isConstantMatrix());

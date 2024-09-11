@@ -14,7 +14,7 @@ bool Polynomial::monomial_cmp(const monomial_t& a, const monomial_t& b) {
     if (aOrder < bOrder) return true;
     if (aOrder > bOrder) return false;
     for (unsigned i = 0; i < aSize; i++) {
-        int r = a.powers[i].base->compare(b.powers[i].base.get());
+        int r = a.powers[i].base->compare(b.powers[i].base);
         if (r < 0) return true;
         if (r > 0) return false;
         if (a.powers[i].exponent > b.powers[i].exponent)
@@ -35,7 +35,7 @@ bool Polynomial::monomial_eq(const monomial_t& a, const monomial_t& b) {
     for (unsigned i = 0; i < aSize; i++) {
         if (a.powers[i].exponent != b.powers[i].exponent)
             return false;
-        if (!(a.powers[i].base->equals(b.powers[i].base.get())))
+        if (!(a.powers[i].base->equals(b.powers[i].base)))
             return false;
     }
     return true;
@@ -51,9 +51,15 @@ std::ostream& Polynomial::print(std::ostream& os) const {
     while (it != monomials.end()) {
         if (it != monomials.begin())
             os << " + ";
-        if (it->coef == 1.0) {}
-        else if (it->coef == -1.0) { os << "-"; }
-        else { os << it->coef; }
+        if (it->coef == 1.0)
+            {}
+        else if (it->coef == -1.0)
+            os << "-";
+        else if (it->coef.imag() == 0.0)
+            os << it->coef.real();
+        else
+            os << it->coef.real() << "+" << it->coef.imag() << "i)";
+
         for (const auto& p : it->powers) {
             p.base->print(os);
             if (p.exponent != 1)
@@ -139,7 +145,7 @@ Polynomial& Polynomial::operator*=(const monomial_t& m) {
                 }
                 break;
             }
-            int cmp = myIter->base->compare(otherIter->base.get());
+            int cmp = myIter->base->compare(otherIter->base);
             if (cmp == 0) {
                 myIter->exponent += otherIter->exponent;
                 myIter++; otherIter++;
@@ -165,25 +171,26 @@ Polynomial Polynomial::operator*(const Polynomial& other) const {
     return newPoly;
 }
 
-Polynomial ConstantNode::toPolynomial() const {
+Polynomial ConstantNode::toPolynomial() {
     return { value };
 }
 
-Polynomial VariableNode::toPolynomial() const {
-    return {{1.0, {{std::make_shared<VariableNode>(*this), 1}}}};
+Polynomial VariableNode::toPolynomial() {
+    return {{1.0, {{this, 1}}}};
 }
 
-Polynomial CosineNode::toPolynomial() const {
-    return {{1.0, {{std::make_shared<CosineNode>(*this), 1}}}};
+Polynomial CosineNode::toPolynomial() {
+    return {{1.0, {{this, 1}}}};
 }
 
-Polynomial SineNode::toPolynomial() const {
-    return {{1.0, {{std::make_shared<SineNode>(*this), 1}}}};
+Polynomial SineNode::toPolynomial() {
+    return {{1.0, {{this, 1}}}};
 }
 
-Polynomial VarAddNode::toPolynomial() const {
-    return {{1.0, {{std::make_shared<VarAddNode>(*this), 1}}}};
+Polynomial VarAddNode::toPolynomial() {
+    return {{1.0, {{this, 1}}}};
 }
-Polynomial ComplexExpNode::toPolynomial() const {
-    return {{1.0, {{std::make_shared<ComplexExpNode>(*this), 1}}}};
+
+Polynomial ComplexExpNode::toPolynomial() {
+    return {{1.0, {{this, 1}}}};
 }

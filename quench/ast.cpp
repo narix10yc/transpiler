@@ -22,8 +22,8 @@ std::ostream& CircuitStmt::print(std::ostream& os) const {
     return os;
 }
 
-void CircuitStmt::addGateChain(const GateBlockStmt& chain) {
-    stmts.push_back(std::make_unique<GateBlockStmt>(chain));
+void CircuitStmt::addGateChain(const GateChainStmt& chain) {
+    stmts.push_back(std::make_unique<GateChainStmt>(chain));
     // update number of qubits
     for (const auto& gate : chain.gates) {
         for (const auto& q : gate.qubits) {

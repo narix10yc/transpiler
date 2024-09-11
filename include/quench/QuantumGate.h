@@ -121,6 +121,22 @@ struct matrix_t {
         return *this;
     }
 
+    matrix_t& operator=(const p_matrix_t& pMatrix) {
+        if (activeType == ActiveMatrixType::C)
+            constantMatrix.~c_matrix_t();
+        activeType = ActiveMatrixType::P;
+        new (&parametrizedMatrix) p_matrix_t(pMatrix);
+        return *this;
+    }
+
+    matrix_t& operator=(p_matrix_t&& pMatrix) {
+        if (activeType == ActiveMatrixType::C)
+            constantMatrix.~c_matrix_t();
+        activeType = ActiveMatrixType::P;
+        new (&parametrizedMatrix) p_matrix_t(std::move(pMatrix));
+        return *this;
+    }
+
     ~matrix_t() {
         destroyMatrix();
     }
@@ -129,6 +145,19 @@ struct matrix_t {
 /// @brief GateMatrix is a wrapper around constant and polynomial-based square
 /// matrices. It does NOT store qubits array.
 /// Matrix size is always a power of 2.
+
+class GateParameter {
+public:
+    std::string variableName;
+    std::complex<double> constant;
+    bool isConstant;
+
+    GateParameter(const std::string& variableName)
+        : variableName(variableName), isConstant(false) {}
+    GateParameter(std::complex<double> constant)
+        : constant(constant), isConstant(true) {}
+};
+
 class GateMatrix {
 public:
     unsigned nqubits;
@@ -185,8 +214,6 @@ public:
     GateMatrix& approximateSelf(int level, double thres = 1e-8);
 
     GateMatrix permute(const std::vector<unsigned>& flags) const;
-    
-    GateMatrix& permuteSelf(const std::vector<unsigned>& flags);
 
     std::ostream& printMatrix(std::ostream& os) const;
 };

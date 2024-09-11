@@ -10,6 +10,7 @@
 #include <sstream>
 
 #include "quench/ast.h"
+#include "utils/iocolor.h"
 
 namespace quench::ast {
 
@@ -19,7 +20,7 @@ enum class BinaryOp;
 
 enum class TokenTy : int { 
     Eof = -1,
-    Start = -4,
+    EndOfLine = -4,
     Identifier = -2,
     Numeric = -3,
 
@@ -67,23 +68,25 @@ enum class TokenTy : int {
 
 static std::string TokenTyToString(TokenTy ty) {
     switch (ty) {
-    case TokenTy::Eof: return "EoF";
-    case TokenTy::Start: return "Start";
-    case TokenTy::Identifier: return "Identifier";
     case TokenTy::Numeric: return "Numeric";
-    
-    case TokenTy::Circuit: return "Circuit";
+    case TokenTy::Identifier: return "Identifier";
+    case TokenTy::Circuit: return "'circuit'";
 
     case TokenTy::Add: return "Add";
     case TokenTy::Sub: return "Sub";
     case TokenTy::Mul: return "Mul";
     case TokenTy::Div: return "Div";
-    case TokenTy::Pow: return "Pow";
+    case TokenTy::Equal: return "Equal";
+    case TokenTy::EqualEqual: return "EqualEqual";
+    case TokenTy::Less: return "Less";
+    case TokenTy::LessEqual: return "LessEqual";
+    case TokenTy::Greater: return "Greater";
+    case TokenTy::GreaterEqual: return "GreaterEqual";
 
     case TokenTy::Comma: return "Comma";
     case TokenTy::Semicolon: return "Semicolon";
     case TokenTy::L_RoundBraket: return "L_RoundBraket";
-    case TokenTy::R_RoundBraket: return "R_RoundBraket";
+    case TokenTy::R_RoundBraket: return "R_Roundbraket";
     case TokenTy::L_SquareBraket: return "L_SquareBraket";
     case TokenTy::R_SquareBraket: return "R_SquareBraket";
     case TokenTy::L_CurlyBraket: return "L_CurlyBraket";
@@ -91,8 +94,17 @@ static std::string TokenTyToString(TokenTy ty) {
     case TokenTy::SingleQuote: return "SingleQuote";
     case TokenTy::DoubleQuote: return "DoubleQuote";
     case TokenTy::Hash: return "Hash";
+    case TokenTy::Percent: return "Percent";
+    case TokenTy::AtSymbol: return "AtSymbol";
+    case TokenTy::Comment: return "'Comment'";
+    case TokenTy::CommentStart: return "'CommentStart'";
+    case TokenTy::CommentEnd: return "'CommentEnd'";
 
-    default: return "'Not Implemented TokenTy'";
+    case TokenTy::LineFeed: return "LineFeed";
+    case TokenTy::CarriageReturn: return "CarriageReturn";
+
+    case TokenTy::Unknown: return "<Unknown>";
+    default: return "'Not Implemented'";
     }
 }
 
@@ -111,10 +123,11 @@ class Token {
 public:
     TokenTy type;
     std::string str;
+    int colStart;
+    int colEnd;
 
-    Token() : type(TokenTy::Unknown), str() {}
-    Token(TokenTy type, const std::string& str="") : type(type), str(str) {}
-    Token(const std::string& str) : type(TokenTy::Identifier), str(str) {}
+    Token(TokenTy type, const std::string& str, int colStart, int colEnd)
+        : type(type), str(str), colStart(colStart), colEnd(colEnd) {}
 
     BinaryOp toBinaryOp() const {
         switch (type) {
@@ -132,166 +145,136 @@ public:
         }
     }
 
-    friend std::ostream& operator<<(std::ostream& os, const Token& token) {
-        switch (token.type) {
-            case TokenTy::Eof: return os << "EoF";
-            case TokenTy::Start: return os << "Start";
-            case TokenTy::Numeric: return os << "Num(" << token.str << ")";
-            case TokenTy::Identifier: return os << "Identifier("
-                                                << token.str << ")";
-
-            case TokenTy::Circuit: return os << "'circuit'";
-
-            case TokenTy::Add: return os << "'+'";
-            case TokenTy::Sub: return os << "'-'";
-            case TokenTy::Mul: return os << "'*'";
-            case TokenTy::Div: return os << "'/'";
-            case TokenTy::Equal: return os << "'='";
-            case TokenTy::EqualEqual: return os << "'=='";
-            case TokenTy::Less: return os << "'<'";
-            case TokenTy::LessEqual: return os << "'<='";
-            case TokenTy::Greater: return os << "'>'";
-            case TokenTy::GreaterEqual: return os << "'>='";
-
-            case TokenTy::Comma: return os << "','";
-            case TokenTy::Semicolon: return os << "';'";
-            case TokenTy::L_RoundBraket: return os << "'('";
-            case TokenTy::R_RoundBraket: return os << "')'";
-            case TokenTy::L_SquareBraket: return os << "'['";
-            case TokenTy::R_SquareBraket: return os << "']'";
-            case TokenTy::L_CurlyBraket: return os << "'{'";
-            case TokenTy::R_CurlyBraket: return os << "'}'";
-            case TokenTy::SingleQuote: return os << "'SingleQuote'";
-            case TokenTy::DoubleQuote: return os << "'\"'";
-            case TokenTy::Hash: return os << "'#'";
-            case TokenTy::Comment: return os << "'Comment'";
-            case TokenTy::CommentStart: return os << "'CommentStart'";
-            case TokenTy::CommentEnd: return os << "'CommentEnd'";
-
-            case TokenTy::LineFeed: return os << "'\\n'";
-            case TokenTy::CarriageReturn: return os << "'\\r'";
-
-            case TokenTy::Unknown: return os << "'Unknown'";
-            default: return os << "'Not Implemented'";
+    std::string to_string() const {
+        switch (type) {
+        case TokenTy::Numeric:
+            return "Numeric(" + str + ")";
+        case TokenTy::Identifier:
+            return "Identifier(" + str + ")";
+        default:
+            return TokenTyToString(type);
         }
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, const Token& token) {
+        return os << token.to_string();
     }
 };
 
 class Parser {
 protected:
-    const std::string RED_FG = "\033[31m";
-    const std::string YELLOW_FG = "\033[33m";
-    const std::string GREEN_FG = "\033[32m";
-    const std::string CYAN_FG = "\033[36m";
-    const std::string DEFAULT_FG = "\033[39m";
-    const std::string RESET = "\033[0m";
-    const std::string BOLD = "\033[1m";
-
-    int line;
-    int column;
+    int lineNumber;
+    int lineLength;
     std::string currentLine;
     std::ifstream file;
 
-    Token curToken;
-    Token nextToken;
+    std::vector<Token> tokenVec;
+    std::vector<Token>::const_iterator tokenIt;
 
     void throwParserError(const std::string& msg) const {
-        std::cerr << RED_FG << BOLD << "parser error: " << DEFAULT_FG
-                  << msg << RESET << "\n"
-                  << std::setw(5) << std::setfill(' ') << line << " | "
+        std::cerr << Color::RED_FG << Color::BOLD << "parser error: "
+                  << Color::DEFAULT_FG << msg << Color::RESET << "\n"
+                  << std::setw(5) << std::setfill(' ') << lineNumber << " | "
                   << currentLine << "\n"
-                  << "      | " << std::string(static_cast<size_t>(column), ' ')
-                  << GREEN_FG << BOLD << "^\n" << RESET;
+                  << "      | " << std::string(static_cast<size_t>(tokenIt->colStart), ' ')
+                  << Color::GREEN_FG << Color::BOLD
+                  << std::string(static_cast<size_t>(tokenIt->colEnd - tokenIt->colStart), '^')
+                  << "\n" << Color::RESET;
         throw std::runtime_error("parser error");
     }
 
     void displayParserWarning(const std::string& msg) const {
-        std::cerr << YELLOW_FG << BOLD << "parser warning: "
-                  << DEFAULT_FG << msg << RESET << "\n"
-                  << std::setw(5) << std::setfill(' ') << line << " | "
+        std::cerr << Color::YELLOW_FG << Color::BOLD << "parser warning: "
+                  << Color::DEFAULT_FG << msg << Color::RESET << "\n"
+                  << std::setw(5) << std::setfill(' ') << lineNumber << " | "
                   << currentLine << "\n";
-
     }
 
     void displayParserLog(const std::string& msg) const {
-        std::cerr << CYAN_FG << BOLD << "parser log: "
-                << DEFAULT_FG << msg << RESET << "\n";
+        std::cerr << Color::CYAN_FG << Color::BOLD << "parser log: "
+                  << Color::DEFAULT_FG << msg << Color::RESET << "\n";
     }
 
     /// @brief read one line from file. Return the length of the read line.
     /// @return -1 if EoF is reached. In such case file.close() will be called.
-    /// Otherwise, return the length of the read line.
+    /// Otherwise, return the size of tokenVec
     int readLine();
-
-    int nextChar();
-    int peekChar();
-
-    /// @brief Proceed to the next Token. curToken is replaced by nextToken.
-    /// nextToken is updated by reading the next (few) characters.
-    /// return false if EoF is reached (i.e. curToken is EoF after procession)
-    bool proceed();
-
-    void skipLineFeeds() {
-        while (curToken.type == TokenTy::LineFeed)
-            proceed();
-    }
+    Token parseToken(int col);
 
     double convertCurTokenToFloat() const {
-        assert(curToken.type == TokenTy::Numeric);
+        assert(tokenIt->type == TokenTy::Numeric);
         int count = 0;
-        for (const auto& c : curToken.str) {
+        for (const auto& c : tokenIt->str) {
             if (c == '.')
                 count++;
         }
         if (count > 1)
-            throwParserError("Unable to parse '" + curToken.str + "' to float");
-        return std::stod(curToken.str);
+            throwParserError("Unable to parse '" + tokenIt->str + "' to float");
+        return std::stod(tokenIt->str);
     }
 
     int convertCurTokenToInt() const {
-        assert(curToken.type == TokenTy::Numeric);
-        int count = 0;
-        for (const auto& c : curToken.str) {
-            if (c == '.')
-                count++;
+        assert(tokenIt->type == TokenTy::Numeric);
+        for (const auto& c : tokenIt->str) {
+            if (c == '.') {
+                throwParserError("Unable to parse '" + tokenIt->str + "' to int");
+                return -1;
+            }
         }
-        if (count > 1 || (count == 1 && curToken.str.back() != '.'))
-            throwParserError("Unable to parse '" + curToken.str + "' to int");
-        return std::stod(curToken.str);
+        return std::stoi(tokenIt->str);
     }
 
-    /// @brief Proceed to the next Token with the expectation that the next
-    /// Token has a specific type. Procession takes place in case of match.
-    /// @param ty Next Token's type
-    /// @param must_match if set to true, display error in case of mismatch 
-    /// @return bool: is the target type met? 
-    bool proceedWithType(TokenTy ty, bool must_match=true) {
-        if (nextToken.type == ty) {
-            proceed();
-            return true;
+    void proceed() {
+        if (++tokenIt == tokenVec.cend())
+            readLine();
+    }
+
+    /// @brief Proceed to the next token, ensuring a specific token type
+    /// @param ty If successful, tokenIt points to a token that has type 
+    void proceedWithType(TokenTy ty, bool allowLineFeed = false) {
+        tokenIt++;
+        if (tokenIt == tokenVec.cend()) {
+            if (!allowLineFeed) {
+                std::stringstream ss;
+                ss << "Expecting token type " << TokenTyToString(ty) << ", "
+                << "but reached end of line";
+                throwParserError(ss.str());
+            } else {
+                readLine();
+            }
         }
-        if (must_match) {
+        if (tokenIt->type != ty) {
             std::stringstream ss;
             ss << "Expecting token type " << TokenTyToString(ty) << ", "
-                << "but nextToken is " << nextToken;
+               << "but nextToken is " << (*tokenIt);
             throwParserError(ss.str());
+        }
+    }
+
+    bool optionalProceedWithType(TokenTy ty) {
+        if ((tokenIt+1) != tokenVec.cend() && (tokenIt+1)->type == ty) {
+            tokenIt++;
+            return true;
         }
         return false;
     }
 
-    cas::Polynomial parsePolynomial_();
+    // std::complex<double> _parseComplexNumber();
+    // cas::VariableNode _parseCASVariable();
+    // cas::Polynomial _parsePolynomial();
 
-    GateApplyStmt parseGateApplyStmt_();
-    GateBlockStmt parseGateBlockStmt_();
-    CircuitStmt parseCircuitStmt_();
+    quantum_gate::GateParameter _parseGateParameter();
+    GateApplyStmt _parseGateApply();
+    // GateBlockStmt _parseGateBlockStmt();
+    // CircuitStmt _parseCircuitStmt();
 
-    ParameterDefStmt parseParameterDefStmt_();
+    // ParameterDefStmt _parseParameterDefStmt();
 
-    bool parseStatement_(RootNode&);
+    // bool _parseStatement(RootNode&);
 public:
     Parser(const std::string& fileName)
-        : line(0), column(0), currentLine(""), file(fileName),
-          curToken(TokenTy::Start), nextToken(TokenTy::Start) {}
+        : lineNumber(0), currentLine(""), file(fileName),
+          tokenVec(), tokenIt(tokenVec.cbegin()) {}
 
     RootNode parse();
 };

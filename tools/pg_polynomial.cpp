@@ -1,18 +1,24 @@
 #include "quench/Polynomial.h"
-#include "utils/iocolor.h"
+#include "quench/parser.h"
 
 using namespace quench::cas;
+using namespace quench::ast;
 
-int main() {
+int main(int argc, char** argv) {
 
-    auto var0 = std::make_shared<VariableNode>("x[0]")->toPolynomial();
-    auto var1 = std::make_shared<VariableNode>("y[1]")->toPolynomial();
+    auto var0 = (new VariableNode("x[0]"))->toPolynomial();
+    auto var1 = (new VariableNode("y[1]"))->toPolynomial();
 
-    auto const0 = std::make_shared<ConstantNode>(1.2)->toPolynomial();
-    auto const1 = std::make_shared<ConstantNode>(1.9)->toPolynomial();
+    auto const0 = (new ConstantNode(1.2))->toPolynomial();
+    auto const1 = (new ConstantNode(1.9))->toPolynomial();
 
     auto poly1 = var0 + const0 + const1;
     (poly1 * poly1).print(std::cerr) << "\n";
+
+    assert(argc > 1);
+
+    Parser parser(argv[1]);
+    parser.parse();
 
     return 0;
 }

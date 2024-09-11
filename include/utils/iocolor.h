@@ -7,6 +7,7 @@ namespace Color {
     const static char* BOLD = "\033[1m";
     const static char* ITATIC = "\033[3m";
 
+    const static char* DEFAULT_FG = "\033[30m";
     const static char* RED_FG = "\033[31m";
     const static char* GREEN_FG = "\033[32m";
     const static char* YELLOW_FG = "\033[33m";

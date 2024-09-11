@@ -26,6 +26,7 @@ class GateApplyStmt : public CircuitCompatibleStmt {
 public:
     std::string name;
     std::vector<int> qubits;
+    std::vector<quantum_gate::GateParameter> params;
     int paramRefNumber;
 
     GateApplyStmt(const std::string& name, int paramRefNumber = -1)
@@ -38,11 +39,11 @@ public:
     std::ostream& print(std::ostream& os) const override;
 };
 
-class GateBlockStmt : public CircuitCompatibleStmt {
+class GateChainStmt : public CircuitCompatibleStmt {
 public:
     std::vector<GateApplyStmt> gates;
 
-    GateBlockStmt() : gates() {}
+    GateChainStmt() : gates() {}
 
     std::ostream& print(std::ostream& os) const override {
         auto it = gates.begin();
@@ -58,12 +59,12 @@ class CircuitStmt : public Statement {
 public:
     std::string name;
     int nqubits;
+    int nparams;
     std::vector<std::unique_ptr<CircuitCompatibleStmt>> stmts;
-    std::vector<std::shared_ptr<cas::VariableNode>> parameters;
     
-    CircuitStmt() : nqubits(0), stmts() {}
+    CircuitStmt() : nqubits(0), nparams(0), stmts() {}
 
-    void addGateChain(const GateBlockStmt& chain);
+    void addGateChain(const GateChainStmt& chain);
 
     std::ostream& print(std::ostream& os) const override;
 };
