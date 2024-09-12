@@ -44,8 +44,24 @@ bool Polynomial::monomial_eq(const monomial_t& a, const monomial_t& b) {
 std::ostream& Polynomial::print(std::ostream& os) const {
     if (monomials.empty())
         return os << "0";
-    if (monomials.size() == 1 && monomials[0].powers.empty())
-        return os << monomials[0].coef;
+    if (monomials.size() == 1 && monomials[0].powers.empty()) {
+        double re = monomials[0].coef.real();
+        double im = monomials[0].coef.imag();
+        if (im == 0.0) {
+            if (re == 0.0)       os << "0.0";
+            else if (re == 1.0)  os << "1.0";
+            else if (re == -1.0) os << "-";
+            else                 os << re;
+        }
+        else if (re == 0.0) {
+            if (im == 1.0)       os << "i";
+            else if (im == -1.0) os << "-i";
+            else                 os << im << "i";
+        }
+        else
+            os << "(" << re << "+" << im << "i)"; 
+        return os;
+    }
 
     auto it = monomials.begin();
     while (it != monomials.end()) {
@@ -58,15 +74,15 @@ std::ostream& Polynomial::print(std::ostream& os) const {
             if (re == 0.0)       {}
             else if (re == 1.0)  {}
             else if (re == -1.0) os << "-";
-            else                 os << it->coef.real();
+            else                 os << re;
         }
         else if (re == 0.0) {
             if (im == 1.0)       os << "i*";
             else if (im == -1.0) os << "-i*";
-            else                 os << it->coef.imag() << "i*";
+            else                 os << im << "i*";
         }
         else
-            os << "(" << it->coef.real() << "+" << it->coef.imag() << "i)";
+            os << "(" << re << "+" << im << "i)*";
 
         for (const auto& p : it->powers) {
             p.base->print(os);

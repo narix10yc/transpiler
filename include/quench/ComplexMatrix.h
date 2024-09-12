@@ -24,6 +24,13 @@ public:
                && "data.size() should be a perfect square");
     }
 
+    void updateSize() {
+        if (size * size != data.size()) {
+            size = std::sqrt(data.size());
+            assert(size * size == data.size());
+        }
+    }
+    
     size_t getSize() const { return size; }
     
     bool checkSizeMatch() const {

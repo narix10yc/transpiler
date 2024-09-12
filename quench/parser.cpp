@@ -30,8 +30,8 @@ int Parser::readLine() {
     tokenIt = tokenVec.cbegin();
 
     std::cerr << Color::CYAN_FG << lineNumber << " | " << currentLine << "\n";
-    for (auto it = tokenVec.cbegin(); it != tokenVec.cend(); it++)
-        std::cerr << "col " << it->colStart << "-" << it->colEnd << "  " << (*it) << "\n";
+    // for (auto it = tokenVec.cbegin(); it != tokenVec.cend(); it++)
+        // std::cerr << "col " << it->colStart << "-" << it->colEnd << "  " << (*it) << "\n";
     std::cerr << Color::RESET;
 
     return tokenVec.size();
@@ -190,7 +190,11 @@ RootNode* Parser::parse() {
         continue;
     }
     if (tokenIt->type == TokenTy::Hash) {
-        root->paramDefs.push_back(_parseParameterDefStmt(root->casContext));
+        auto defStmt = _parseParameterDefStmt(root->casContext);
+        defStmt.matrix.updateNqubits();
+        root->paramDefs.push_back(defStmt);
+        displayParserLog("Parsed param def #" + std::to_string(defStmt.refNumber));
+        continue;
     }
     
     break;
@@ -257,16 +261,18 @@ ParameterDefStmt Parser::_parseParameterDefStmt(cas::Context& casContext) {
     assert(tokenIt->type == TokenTy::Hash);
 
     proceedWithType(TokenTy::Numeric);
-    ParameterDefStmt def(convertCurTokenToInt());
-    displayParserLog("Ready to parse ParameterDef #" + std::to_string(def.refNumber));
+    ParameterDefStmt defStmt(convertCurTokenToInt());
+    displayParserLog("Ready to parse ParameterDef #" + std::to_string(defStmt.refNumber));
 
     proceedWithType(TokenTy::Equal);
     proceedWithType(TokenTy::L_CurlyBraket);
     proceed();
 
-    std::vector<cas::Polynomial> polyMatrix;
+    quench::quantum_gate::matrix_t::p_matrix_t polyMatrix;
     while (true) {
-        polyMatrix.push_back(_parsePolynomial(casContext));
+        auto poly = _parsePolynomial(casContext);
+        poly.print(std::cerr) << "\n";
+        polyMatrix.data.push_back(poly);
         if (tokenIt->type == TokenTy::Comma) {
             proceed();
         }
@@ -275,8 +281,9 @@ ParameterDefStmt Parser::_parseParameterDefStmt(cas::Context& casContext) {
             break;
         }
     }
-
-    return def;
+    polyMatrix.updateSize();
+    defStmt.matrix.matrix = std::move(polyMatrix);
+    return defStmt;
 }
 
 quench::cas::Polynomial Parser::_parsePolynomial(cas::Context& casContext) {

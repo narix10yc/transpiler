@@ -263,10 +263,6 @@ protected:
         return false;
     }
 
-    // std::complex<double> _parseComplexNumber();
-    // cas::VariableNode _parseCASVariable();
-    // cas::Polynomial _parsePolynomial();
-
     std::complex<double> _parseComplexNumber();
 
     quantum_gate::GateParameter _parseGateParameter();

@@ -18,7 +18,9 @@ int main(int argc, char** argv) {
     assert(argc > 1);
 
     Parser parser(argv[1]);
-    parser.parse();
+    auto* root = parser.parse();
+    std::cerr << "Recovered:\n";
+    root->print(std::cerr);
 
     return 0;
 }

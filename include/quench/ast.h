@@ -45,14 +45,7 @@ public:
 
     GateChainStmt() : gates() {}
 
-    std::ostream& print(std::ostream& os) const override {
-        auto it = gates.begin();
-        while (it != gates.end()) {
-            os << ((it == gates.begin()) ? "  " : "@ ");
-            it->print(os) << "\n";
-        }
-        return os;
-    }
+    std::ostream& print(std::ostream& os) const override;
 };
 
 class CircuitStmt : public Statement {
@@ -78,7 +71,7 @@ public:
     ParameterDefStmt(int refNumber)
         : refNumber(refNumber), matrix() {}
 
-    std::ostream& print(std::ostream& os) const override {return os;}
+    std::ostream& print(std::ostream& os) const override;
 };
 
 class RootNode : public Node {

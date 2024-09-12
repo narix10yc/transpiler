@@ -3,6 +3,7 @@
 
 #include "quench/ComplexMatrix.h"
 #include "quench/Polynomial.h"
+#include "utils/utils.h"
 
 namespace quench::quantum_gate {
 
@@ -29,7 +30,6 @@ struct matrix_t {
 
     matrix_t(matrix_t&& other) : activeType(other.activeType) {
         // std::cerr << "called matrix_t(matrix_t&&)\n";
-        
         switch (other.activeType) {
         case ActiveMatrixType::P:
             new (&parametrizedMatrix) p_matrix_t(std::move(other.parametrizedMatrix));
@@ -44,7 +44,6 @@ struct matrix_t {
 
     matrix_t(const matrix_t& other) : activeType(other.activeType) {
         // std::cerr << "called matrix_t(const matrix_t&)\n";
-
         switch (other.activeType) {
         case ActiveMatrixType::P:
             new (&parametrizedMatrix) p_matrix_t(other.parametrizedMatrix);
@@ -142,10 +141,6 @@ struct matrix_t {
     }
 };
 
-/// @brief GateMatrix is a wrapper around constant and polynomial-based square
-/// matrices. It does NOT store qubits array.
-/// Matrix size is always a power of 2.
-
 class GateParameter {
 public:
     std::string variableName;
@@ -156,8 +151,17 @@ public:
         : variableName(variableName), isConstant(false) {}
     GateParameter(std::complex<double> constant)
         : constant(constant), isConstant(true) {}
+
+    std::ostream& print(std::ostream& os) const {
+        if (isConstant)
+            return utils::print_complex(os, constant, 12);
+        return os << variableName;
+    }
 };
 
+/// @brief GateMatrix is a wrapper around constant and polynomial-based square
+/// matrices. It does NOT store qubits array.
+/// Matrix size is always a power of 2.
 class GateMatrix {
 public:
     unsigned nqubits;
