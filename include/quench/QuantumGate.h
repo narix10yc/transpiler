@@ -29,7 +29,6 @@ struct matrix_t {
     }
 
     matrix_t(matrix_t&& other) : activeType(other.activeType) {
-        // std::cerr << "called matrix_t(matrix_t&&)\n";
         switch (other.activeType) {
         case ActiveMatrixType::P:
             new (&parametrizedMatrix) p_matrix_t(std::move(other.parametrizedMatrix));
@@ -43,7 +42,6 @@ struct matrix_t {
     }
 
     matrix_t(const matrix_t& other) : activeType(other.activeType) {
-        // std::cerr << "called matrix_t(const matrix_t&)\n";
         switch (other.activeType) {
         case ActiveMatrixType::P:
             new (&parametrizedMatrix) p_matrix_t(other.parametrizedMatrix);
@@ -160,8 +158,8 @@ public:
 };
 
 /// @brief GateMatrix is a wrapper around constant and polynomial-based square
-/// matrices. It does NOT store qubits array.
-/// Matrix size is always a power of 2.
+/// matrices. It does NOT store qubits array, only the number of qubits
+/// Consistency requires matrix size is always a power of 2.
 class GateMatrix {
 public:
     unsigned nqubits;
@@ -174,6 +172,21 @@ public:
         updateNqubits();
     }
 
+    GateMatrix(matrix_t::c_matrix_t&& cMatrix) {
+        matrix = std::move(cMatrix);
+        updateNqubits();
+    }
+
+    GateMatrix(const matrix_t::p_matrix_t& pMatrix) {
+        matrix = pMatrix;
+        updateNqubits();
+    }
+
+    GateMatrix(matrix_t::p_matrix_t&& pMatrix) {
+        matrix = std::move(pMatrix);
+        updateNqubits();
+    }
+
     bool checkConsistency() const {
         return (1 << nqubits == N)
             && (matrix.getSize() == N);
@@ -182,32 +195,25 @@ public:
     static GateMatrix
     FromName(const std::string& name, const std::vector<double>& params = {});
 
-    bool isConstantMatrix() const {
+    inline bool isConstantMatrix() const {
         return matrix.activeType == matrix_t::ActiveMatrixType::C;
     }
 
-    bool isParametrizedMatrix() const {
+    inline bool isParametrizedMatrix() const {
         return matrix.activeType == matrix_t::ActiveMatrixType::P;
     }
 
-    const matrix_t::c_matrix_t& cMatrix() const {
+    void convertToParametrizedMatrix() {
+        if (isParametrizedMatrix())
+            return;
         assert(isConstantMatrix());
-        return matrix.constantMatrix;
-    }
 
-    matrix_t::c_matrix_t& cMatrix() {
-        assert(isConstantMatrix());
-        return matrix.constantMatrix;
-    }
-
-    const matrix_t::p_matrix_t& pMatrix() const {
-        assert(isParametrizedMatrix());
-        return matrix.parametrizedMatrix;
-    }
-
-    matrix_t::p_matrix_t& pMatrix() {
-        assert(isParametrizedMatrix());
-        return matrix.parametrizedMatrix;
+        size_t size = matrix.constantMatrix.getSize();
+        matrix_t::p_matrix_t pmat(size);
+        for (size_t i = 0; i < size*size; i++)
+            pmat.data[i] = cas::Polynomial(matrix.constantMatrix.data[i]);
+        
+        matrix = std::move(pmat);
     }
 
     int updateNqubits();
@@ -283,8 +289,9 @@ public:
     int opCount(double zeroSkippingThres = 1e-8);
 
     matrix_t::c_matrix_t& getCMatrix() {
-        assert(gateMatrix.isConstantMatrix());
-        return gateMatrix.cMatrix();
+        if (!gateMatrix.isConstantMatrix())
+            throw "calling getCMatrix for a not-constant matrix";
+        return gateMatrix.matrix.constantMatrix;
     }
 
 };

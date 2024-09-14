@@ -10,11 +10,6 @@
 
 #include "utils/utils.h"
 
-namespace simulation {
-class CPUGenContext;
-class FPGAGenContext;
-} // namespace simulation
-
 namespace openqasm::ast {
 
 class Node;

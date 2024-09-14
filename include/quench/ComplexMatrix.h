@@ -9,6 +9,12 @@
 
 namespace quench::complex_matrix {
 
+/// @brief SquareMatrix class is a wrapper of data : vector<data_t> with a 
+/// private member called 'size'. data.size() should always be a perfect square,
+/// equaling to size * size. If manually update data by, for example,
+/// data.push_back, it is required to call updateSize() which will check
+/// dimension consistency.
+/// @tparam data_t 
 template<typename data_t>
 class SquareMatrix {
     size_t size;

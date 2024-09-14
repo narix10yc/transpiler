@@ -24,8 +24,10 @@ int Parser::readLine() {
 
     int col = 0;
     while (col < lineLength) {
-        tokenVec.push_back(parseToken(col));
-        col = tokenVec.back().colEnd;
+        auto token = parseToken(col);
+        col = token.colEnd;
+        if (token.type != TokenTy::EndOfLine)
+            tokenVec.push_back(token);
     }
     tokenIt = tokenVec.cbegin();
 
@@ -39,13 +41,14 @@ int Parser::readLine() {
 
 Token Parser::parseToken(int col) {
     if (col >= lineLength)
-        // end of line
         return Token(TokenTy::EndOfLine, "", lineLength, lineLength+1);
 
     int curCol = col;
     char c = currentLine[curCol];
     while (c == ' ')
         c = currentLine[++curCol];
+    if (curCol >= lineLength)
+        return Token(TokenTy::EndOfLine, "", lineLength, lineLength+1);
     int colStart = curCol;
 
     if (std::isdigit(c) || c == '.') {
@@ -143,7 +146,7 @@ Token Parser::parseToken(int col) {
         assert(false && "parsed LineFeed Token?");
         return Token(TokenTy::LineFeed, "", colStart, colStart+1);
     default:
-        throwParserError("Unknown char " + std::to_string(c));
+        throwParserError("Unknown char " + std::to_string((int)(c)));
         assert(false && "Unknown char");
         return Token(TokenTy::Unknown, "", colStart, colStart+1);
     }
@@ -153,53 +156,106 @@ RootNode* Parser::parse() {
     readLine();
     auto* root = new RootNode();
     while (true) {
-    // parse circuit
-    if (tokenIt->type == TokenTy::Circuit) {
-        displayParserLog("ready to parse circuit");
-        proceedWithType(TokenTy::Identifier);
-        root->circuit.name = tokenIt->str;
-        proceedWithType(TokenTy::L_CurlyBraket, true);
-
-        while (true) {
-            proceed();
-            if (tokenIt->type == TokenTy::Identifier) {
-                GateChainStmt chain;
-                while (true) {
-                    chain.gates.push_back(_parseGateApply());
-                    proceed();
-                    if (tokenIt->type == TokenTy::AtSymbol) {
-                        proceed();
-                        continue;
-                    }
-                    if (tokenIt->type == TokenTy::Semicolon)
-                        break;
-                    throwParserError("Unexpected token type " + TokenTyToString(tokenIt->type)
-                                    + " when expecting either AtSymbol or Semicolon");
-                }
-                root->circuit.addGateChain(chain);
-                continue;
-            }
-            break;
-        } 
-        
-        if (tokenIt->type != TokenTy::R_CurlyBraket) {
-            throwParserError("Unexpected token " + tokenIt->to_string());
+        if (tokenIt->type == TokenTy::Circuit) {
+            root->circuit = _parseCircuit();
+            continue;
         }
-        proceed(); // eat '}'
-        displayParserLog("Parsed a circuit with " + std::to_string(root->circuit.stmts.size()) + " chains");
-        continue;
-    }
-    if (tokenIt->type == TokenTy::Hash) {
-        auto defStmt = _parseParameterDefStmt(root->casContext);
-        defStmt.matrix.updateNqubits();
-        root->paramDefs.push_back(defStmt);
-        displayParserLog("Parsed param def #" + std::to_string(defStmt.refNumber));
-        continue;
-    }
-    
-    break;
+        if (tokenIt->type == TokenTy::Hash) {
+            auto defStmt = _parseParameterDefStmt(root->casContext);
+            defStmt.gateMatrix.updateNqubits();
+            root->paramDefs.push_back(defStmt);
+            displayParserLog("Parsed param def #" + std::to_string(defStmt.refNumber));
+            continue;
+        }
+        break;
     }
     return root;
+}
+
+CircuitStmt Parser::_parseCircuit() {
+    displayParserLog("ready to parse circuit");
+    CircuitStmt circuit;
+    int setNqubitsFlag = -1;
+    int setNparamsFlag = -1;
+    int setFlag = 0;
+    
+    // optional <n qubits, p parameters>
+    if (optionalProceedWithType(TokenTy::Less)) {
+        while (true) {
+            proceed();
+            setFlag = 0;
+            if (tokenIt->type == TokenTy::Greater) {
+                // proceed(); // eat '>'
+                break;
+            }
+            if (tokenIt->type == TokenTy::Identifier) {
+                if (tokenIt->str == "nqubits")
+                    setFlag = 1;
+                else if (tokenIt->str == "nparams")
+                    setFlag = 2;
+                else
+                    throwParserError("Unsupported circuit argument '" + tokenIt->str +
+                                     "' (expect either 'nqubits' or 'nparams')");
+                proceedWithType(TokenTy::Equal);
+                proceedWithType(TokenTy::Numeric);
+                int num = convertCurTokenToInt();
+                optionalProceedWithType(TokenTy::Comma);
+                if (setFlag == 1) {
+                    if (setNqubitsFlag >= 0)
+                        displayParserWarning("Overwrite nqubits from " + std::to_string(setNqubitsFlag)
+                                             + " to " + std::to_string(num));
+                    circuit.nqubits = num;
+                    setNqubitsFlag = num;
+                    displayParserLog("nqubits updated to " + std::to_string(num));
+                }
+                else if (setFlag == 2) {
+                    if (setNparamsFlag >= 0)
+                        displayParserWarning("Overwrite nparams from " + std::to_string(setNparamsFlag)
+                                             + " to " + std::to_string(num));
+                    circuit.nparams = num;
+                    setNparamsFlag = num;
+                    displayParserLog("nparams updated to " + std::to_string(num));
+                }
+                continue;
+            }
+
+            throwParserError("Unexpected token type " + TokenTyToString(tokenIt->type) + " when expecting an Identifier");
+        }
+    }
+
+    proceedWithType(TokenTy::Identifier);
+    circuit.name = tokenIt->str;
+    proceedWithType(TokenTy::L_CurlyBraket, true);
+    displayParserLog("Ready to parse circuit " + circuit.name);
+
+    while (true) {
+        proceed();
+        if (tokenIt->type == TokenTy::Identifier) {
+            GateChainStmt chain;
+            while (true) {
+                chain.gates.push_back(_parseGateApply());
+                proceed();
+                if (tokenIt->type == TokenTy::AtSymbol) {
+                    proceed();
+                    continue;
+                }
+                if (tokenIt->type == TokenTy::Semicolon)
+                    break;
+                throwParserError("Unexpected token type " + TokenTyToString(tokenIt->type)
+                                + " when expecting either AtSymbol or Semicolon");
+            }
+            circuit.addGateChain(chain);
+            continue;
+        }
+        break;
+    } 
+    
+    if (tokenIt->type != TokenTy::R_CurlyBraket) {
+        throwParserError("Unexpected token " + tokenIt->to_string());
+    }
+    proceed(); // eat '}'
+    displayParserLog("Parsed a circuit with " + std::to_string(circuit.stmts.size()) + " chains");
+    return circuit;
 }
 
 quench::quantum_gate::GateParameter Parser::_parseGateParameter() {
@@ -282,7 +338,7 @@ ParameterDefStmt Parser::_parseParameterDefStmt(cas::Context& casContext) {
         }
     }
     polyMatrix.updateSize();
-    defStmt.matrix.matrix = std::move(polyMatrix);
+    defStmt.gateMatrix.matrix = std::move(polyMatrix);
     return defStmt;
 }
 

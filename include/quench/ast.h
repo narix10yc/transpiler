@@ -9,6 +9,10 @@
 
 #include "quench/QuantumGate.h"
 
+namespace quench::circuit_graph {
+    class CircuitGraph;
+}
+
 namespace quench::ast {
 
 class Node {
@@ -66,10 +70,9 @@ public:
 class ParameterDefStmt : public Statement {
 public:
     int refNumber;
-    quantum_gate::GateMatrix matrix;
+    quantum_gate::GateMatrix gateMatrix;
 
-    ParameterDefStmt(int refNumber)
-        : refNumber(refNumber), matrix() {}
+    ParameterDefStmt(int refNumber) : refNumber(refNumber), gateMatrix() {}
 
     std::ostream& print(std::ostream& os) const override;
 };
@@ -90,6 +93,8 @@ public:
     RootNode() : circuit(), paramDefs(), casContext() {}
 
     std::ostream& print(std::ostream& os) const override;
+
+    quench::circuit_graph::CircuitGraph toCircuitGraph() const;
 };
 
 

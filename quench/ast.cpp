@@ -1,4 +1,5 @@
 #include "quench/ast.h"
+#include "quench/CircuitGraph.h"
 
 using namespace quench::ast;
 
@@ -18,14 +19,15 @@ std::ostream& GateApplyStmt::print(std::ostream& os) const {
         os << "(#" << paramRefNumber << ")";
     else if (!params.empty()) {
         os << "(";
-        for (const auto& p : params)
-            p.print(os) << " ";
-        os << ")";
+        for (int i = 0; i < params.size()-1; i++)
+            params[i].print(os) << " ";
+        params.back().print(os) << ")";
     }
 
     os << " ";
-    for (const auto& q : qubits)
-        os << q << " ";
+    for (int i = 0; i < qubits.size()-1; i++)
+        os << qubits[i] << " ";
+    os << qubits.back();
     return os;
 }
 
@@ -36,12 +38,12 @@ std::ostream& GateChainStmt::print(std::ostream& os) const {
     os << "  ";
     for (size_t i = 0; i < size-1; i++)
         gates[i].print(os) << "\n@ ";
-    gates[size-1].print(os) << "\n";
+    gates[size-1].print(os) << ";\n";
     return os;
 }
 
 std::ostream& CircuitStmt::print(std::ostream& os) const {
-    os << "circuit<" << nqubits << " qubits, " << nparams << " params> "
+    os << "circuit<nqubits=" << nqubits << ", nparams=" << nparams << "> "
        << name << " {\n";
     for (const auto& s : stmts)
         s->print(os);
@@ -50,9 +52,9 @@ std::ostream& CircuitStmt::print(std::ostream& os) const {
 
 std::ostream& ParameterDefStmt::print(std::ostream& os) const {
     os << "#" << refNumber << " = { ";
-    assert(matrix.isParametrizedMatrix());
+    assert(gateMatrix.isParametrizedMatrix());
 
-    for (const auto& poly : matrix.pMatrix().data)
+    for (const auto& poly : gateMatrix.matrix.parametrizedMatrix.data)
         poly.print(os) << ", ";
 
     return os << "}\n";
@@ -67,4 +69,13 @@ void CircuitStmt::addGateChain(const GateChainStmt& chain) {
                 nqubits = q + 1;
         }
     }
+}
+
+using namespace quench::circuit_graph;
+CircuitGraph RootNode::toCircuitGraph() const {
+    CircuitGraph graph;
+    for (const auto& s : circuit.stmts) {
+        
+    }
+    return graph;
 }

@@ -20,7 +20,9 @@ int main(int argc, char** argv) {
     Parser parser(argv[1]);
     auto* root = parser.parse();
     std::cerr << "Recovered:\n";
-    root->print(std::cerr);
+
+    std::ofstream file(std::string(argv[1]) + ".rec");
+    root->print(file);
 
     return 0;
 }

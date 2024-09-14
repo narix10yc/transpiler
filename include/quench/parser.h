@@ -102,6 +102,7 @@ static std::string TokenTyToString(TokenTy ty) {
 
     case TokenTy::LineFeed: return "LineFeed";
     case TokenTy::CarriageReturn: return "CarriageReturn";
+    case TokenTy::EndOfLine: return "EndOfLine";
 
     case TokenTy::Unknown: return "<Unknown>";
     default: return "'Not Implemented'";
@@ -267,6 +268,7 @@ protected:
 
     quantum_gate::GateParameter _parseGateParameter();
     GateApplyStmt _parseGateApply();
+    CircuitStmt _parseCircuit();
 
     cas::Polynomial _parsePolynomial(cas::Context& casContext);
     ParameterDefStmt _parseParameterDefStmt(cas::Context& casContext);

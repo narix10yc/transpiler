@@ -25,7 +25,7 @@ GateMatrix& GateMatrix::approximateSelf(int level, double thres) {
     if (level < 1)
         return *this;
     
-    auto& cMat = cMatrix();
+    auto& cMat = matrix.constantMatrix;
     for (auto& cplx : cMat.data) {
         if (std::abs(cplx.real()) < thres)
             cplx.real(0.0);
@@ -281,15 +281,45 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
     //     std::cerr << "(" << s.first << "," << s.second << "),";
     // std::cerr << "]\n";
 
-    matrix_t::c_matrix_t newCMatrix(1 << newNqubits);
-
-    assert(other.gateMatrix.isConstantMatrix());
-    assert(gateMatrix.isConstantMatrix());
     const auto twiceNewNqubits = 2 * newNqubits;
     const auto contractionBitwidth = sShift.size();
+
+    // constant gate matrix
+    if (other.gateMatrix.isConstantMatrix() && gateMatrix.isConstantMatrix()) {
+        matrix_t::c_matrix_t newCMatrix(1 << newNqubits);
+        for (size_t i = 0; i < (1 << twiceNewNqubits); i++) {
+            auto aPtrStart = other.gateMatrix.matrix.constantMatrix.data.data();
+            auto bPtrStart = gateMatrix.matrix.constantMatrix.data.data();
+            for (unsigned bit = 0; bit < twiceNewNqubits; bit++) {
+                if ((i & (1 << bit)) != 0) {
+                    aPtrStart += aShift[bit];
+                    bPtrStart += bShift[bit];
+                }
+            }
+
+            newCMatrix.data[i] = {0.0, 0.0};
+            for (size_t j = 0; j < (1 << contractionBitwidth); j++) {
+                auto aPtr = aPtrStart;
+                auto bPtr = bPtrStart;
+                for (unsigned bit = 0; bit < contractionBitwidth; bit++) {
+                    if ((j & (1 << bit)) != 0) {
+                        aPtr += sShift[bit].first;
+                        bPtr += sShift[bit].second;
+                    }
+                }
+                newCMatrix.data[i] += (*aPtr) * (*bPtr);
+            }
+        }
+        return QuantumGate(newCMatrix, allQubits);
+    }
+
+    // otherwise, parametrised matrix
+    assert(other.gateMatrix.isParametrizedMatrix());
+    assert(gateMatrix.isParametrizedMatrix());
+    matrix_t::p_matrix_t newPMatrix(1 << newNqubits);
     for (size_t i = 0; i < (1 << twiceNewNqubits); i++) {
-        auto aPtrStart = other.gateMatrix.matrix.constantMatrix.data.data();
-        auto bPtrStart = gateMatrix.matrix.constantMatrix.data.data();
+        auto aPtrStart = other.gateMatrix.matrix.parametrizedMatrix.data.data();
+        auto bPtrStart = gateMatrix.matrix.parametrizedMatrix.data.data();
         for (unsigned bit = 0; bit < twiceNewNqubits; bit++) {
             if ((i & (1 << bit)) != 0) {
                 aPtrStart += aShift[bit];
@@ -297,7 +327,7 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
             }
         }
 
-        newCMatrix.data[i] = {0.0, 0.0};
+        newPMatrix.data[i] = cas::Polynomial(0.0);
         for (size_t j = 0; j < (1 << contractionBitwidth); j++) {
             auto aPtr = aPtrStart;
             auto bPtr = bPtrStart;
@@ -307,26 +337,28 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
                     bPtr += sShift[bit].second;
                 }
             }
-            newCMatrix.data[i] += (*aPtr) * (*bPtr);
+            newPMatrix.data[i] += (*aPtr) * (*bPtr);
         }
     }
-
-    return {newCMatrix, allQubits};
+    return QuantumGate(newPMatrix, allQubits);
 }
 
 int QuantumGate::opCount(double thres) {
-    assert(gateMatrix.isConstantMatrix());
     if (opCountCache >= 0)
         return opCountCache;
 
-    int count = 0;
-    double normalizedThres = thres / std::pow(2.0, gateMatrix.nqubits);
-    for (const auto& data : gateMatrix.cMatrix().data) {
-        if (std::abs(data.real()) >= normalizedThres)
-            count++;
-        if (std::abs(data.imag()) >= normalizedThres)
-            count++;
+    if (gateMatrix.isConstantMatrix()) {
+        int count = 0;
+        double normalizedThres = thres / std::pow(2.0, gateMatrix.nqubits);
+        for (const auto& data : gateMatrix.matrix.constantMatrix.data) {
+            if (std::abs(data.real()) >= normalizedThres)
+                count++;
+            if (std::abs(data.imag()) >= normalizedThres)
+                count++;
+        }
+        opCountCache = 2 * count;
+        return opCountCache;
     }
-    opCountCache = 2 * count;
-    return opCountCache;
+    assert(false && "opCount not implemented for pmat yet");
+    return -1;
 }

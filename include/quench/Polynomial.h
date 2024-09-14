@@ -137,10 +137,8 @@ public:
     CosineNode(CASNode* node) : node(node) {}
 
     std::ostream& print(std::ostream& os) const override {
-        os << "cos(";
-        node->print(os);
-        os << ")";
-        return os;
+        os << "cos";
+        return node->print(os);
     }
 
     std::ostream& printLaTeX(std::ostream& os) const override {
@@ -186,9 +184,8 @@ public:
     SineNode(CASNode* node) : node(node) {}
 
     std::ostream& print(std::ostream& os) const override {
-        os << "sin(";
-        node->print(os);
-        os << ")";
+        os << "sin";
+        return node->print(os);
         return os;
     }
 
@@ -237,7 +234,7 @@ public:
     std::ostream& print(std::ostream& os) const override {
         os << "(";
         lhs->print(os);
-        os << " + ";
+        os << "+";
         rhs->print(os);
         os << ")";
         return os;
@@ -371,7 +368,7 @@ private:
     Polynomial& operator*=(const monomial_t& monomial);
 public:
     Polynomial() : monomials() {}
-    Polynomial(std::complex<double> v) : monomials({{v, {}}}) {}
+    Polynomial(const std::complex<double>& v) : monomials({{v, {}}}) {}
     Polynomial(std::initializer_list<monomial_t> monomials)
         : monomials(monomials) {}
 
@@ -519,7 +516,6 @@ public:
         nodes.push_back(n);
         return n;
     }
-
 };
 
 
