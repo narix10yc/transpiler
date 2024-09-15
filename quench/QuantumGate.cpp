@@ -9,7 +9,7 @@ using namespace quench::complex_matrix;
 using namespace quench::quantum_gate;
 
 namespace {
-static bool _isValidShuffleFlag(const std::vector<unsigned>& flags) {
+static bool _isValidShuffleFlag(const std::vector<int>& flags) {
     auto copy = flags;
     std::sort(copy.begin(), copy.end());
     for (unsigned i = 0; i < copy.size(); i++) {
@@ -48,7 +48,7 @@ GateMatrix& GateMatrix::approximateSelf(int level, double thres) {
     return *this;
 }
 
-GateMatrix GateMatrix::permute(const std::vector<unsigned>& flags) const {
+GateMatrix GateMatrix::permute(const std::vector<int>& flags) const {
     assert(nqubits == flags.size());
     assert(_isValidShuffleFlag(flags));
     assert(isConstantMatrix());
@@ -120,16 +120,15 @@ int GateMatrix::updateNqubits() {
     return nqubits;
 }
 
-GateMatrix GateMatrix::FromName(const std::string& name,
-                                const std::vector<double>& params)
-{
-    if (name == "u3") {
+GateMatrix GateMatrix::FromName(
+        const std::string& name, const std::vector<double>& params) {
+    if (name == "u3" || name == "u1q") { 
         if (params.size() != 3) {
             std::cerr << "Got " << params.size() << " params\n";
         }
         assert(params.size() == 3);
         const double theta = 0.5 * params[0];
-        const auto& phi = params[1];
+        const auto phi = params[1];
         const auto& lambd = params[2];
         const double ctheta = std::cos(theta);
         const double stheta = std::sin(theta);
@@ -215,16 +214,16 @@ std::ostream& QuantumGate::displayInfo(std::ostream& os) const {
 
 void QuantumGate::sortQubits() {
     const auto nqubits = qubits.size();
-    std::vector<unsigned> indices(nqubits);
+    std::vector<int> indices(nqubits);
     for (unsigned i = 0; i < nqubits; i++)
         indices[i] = i;
     
     std::sort(indices.begin(), indices.end(),
-        [&qubits=this->qubits](unsigned i, unsigned j) {
+        [&qubits=this->qubits](int i, int j) {
             return qubits[i] < qubits[j];
         });
 
-    std::vector<unsigned> newQubits(nqubits);
+    std::vector<int> newQubits(nqubits);
     for (unsigned i = 0; i < nqubits; i++)
         newQubits[i] = qubits[indices[i]];
     
@@ -235,10 +234,10 @@ void QuantumGate::sortQubits() {
 QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
     // Matrix Mul A @ B
     // A is other, B is this
-    const unsigned aNqubits = other.qubits.size();
-    const unsigned bNqubits = qubits.size();
+    const int aNqubits = other.qubits.size();
+    const int bNqubits = qubits.size();
 
-    std::vector<unsigned> allQubits;
+    std::vector<int> allQubits;
     for (const auto& q : qubits)
         allQubits.push_back(q);
     for (const auto& q : other.qubits) {

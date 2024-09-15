@@ -94,29 +94,6 @@ std::ostream& Polynomial::print(std::ostream& os) const {
     return os;
 }
 
-std::ostream& Polynomial::printLaTeX(std::ostream& os) const {
-    if (monomials.empty())
-        return os << "0";
-    if (monomials.size() == 1 && monomials[0].powers.empty())
-        return os << monomials[0].coef;
-
-    auto it = monomials.begin();
-    while (it != monomials.end()) {
-        if (it != monomials.begin())
-            os << " + ";
-        if (it->coef == 1.0) {}
-        else if (it->coef == -1.0) { os << "-"; }
-        else { os << it->coef << " "; }
-        for (const auto& p : it->powers) {
-            p.base->printLaTeX(os);
-            if (p.exponent != 1)
-                os << "^{" << p.exponent << "}";
-        }
-        it++;
-    }
-    return os;
-}
-
 Polynomial& Polynomial::operator+=(const monomial_t& monomial) {
     auto it = std::lower_bound(monomials.begin(), monomials.end(),
                                monomial, monomial_cmp);

@@ -1,5 +1,6 @@
 #include "quench/ast.h"
 #include "quench/CircuitGraph.h"
+#include "utils/iocolor.h"
 
 using namespace quench::ast;
 
@@ -19,13 +20,13 @@ std::ostream& GateApplyStmt::print(std::ostream& os) const {
         os << "(#" << paramRefNumber << ")";
     else if (!params.empty()) {
         os << "(";
-        for (int i = 0; i < params.size()-1; i++)
+        for (unsigned i = 0; i < params.size()-1; i++)
             params[i].print(os) << " ";
         params.back().print(os) << ")";
     }
 
     os << " ";
-    for (int i = 0; i < qubits.size()-1; i++)
+    for (unsigned i = 0; i < qubits.size()-1; i++)
         os << qubits[i] << " ";
     os << qubits.back();
     return os;
@@ -72,10 +73,36 @@ void CircuitStmt::addGateChain(const GateChainStmt& chain) {
 }
 
 using namespace quench::circuit_graph;
+
+QuantumGate 
+RootNode::gateApplyToQuantumGate(const GateApplyStmt& gateApplyStmt) const {
+    if (gateApplyStmt.paramRefNumber >= 0) {
+        for (auto it = paramDefs.begin(); it != paramDefs.end(); it++) {
+            if (it->refNumber == gateApplyStmt.paramRefNumber)
+                return QuantumGate(it->gateMatrix, gateApplyStmt.qubits);
+        }
+        assert(false && "Cannot find parameter def stmt");
+        return QuantumGate();
+    }
+    // return QuantumGate(GateMatrix::FromName(gateApplyStmt.name, gateApplyStmt.params), gateApplyStmt.qubits);
+    return QuantumGate();
+}
+
 CircuitGraph RootNode::toCircuitGraph() const {
     CircuitGraph graph;
     for (const auto& s : circuit.stmts) {
+        const GateChainStmt* chain = dynamic_cast<const GateChainStmt*>(s.get());
+        if (chain == nullptr) {
+            std::cerr << Color::YELLOW_FG << Color::BOLD << "Warning: " << Color::RESET
+                      << "Unable to convert to GateChainStmt when calling RootNode::toCircuitGraph\n";
+            continue;
+        }
+        if (chain->gates.empty())
+            continue;
         
+        // quantum_gate::QuantumGate gate()
+        // graph.addGate()
+
     }
     return graph;
 }

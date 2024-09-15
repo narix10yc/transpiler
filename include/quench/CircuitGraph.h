@@ -17,7 +17,7 @@ using QuantumGate = quench::quantum_gate::QuantumGate;
 class GateNode {
 public:
     struct gate_data {
-        unsigned qubit;
+        int qubit;
         GateNode* lhsGate;
         GateNode* rhsGate;
     };
@@ -28,7 +28,7 @@ public:
 
     GateNode(int id,
              const GateMatrix& gateMatrix,
-             const std::vector<unsigned>& qubits)
+             const std::vector<int>& qubits)
         : id(id),
           nqubits(gateMatrix.nqubits),
           gateMatrix(gateMatrix),
@@ -67,8 +67,8 @@ public:
 
     int connect(GateNode* rhsGate, int q = -1);
 
-    std::vector<unsigned> getQubits() const {
-        std::vector<unsigned> qubits(nqubits);
+    std::vector<int> getQubits() const {
+        std::vector<int> qubits(nqubits);
         for (unsigned i = 0; i < nqubits; i++)
             qubits[i] = dataVector[i].qubit;
         
@@ -83,7 +83,7 @@ public:
 class GateBlock {
 public:
     struct block_data {
-        unsigned qubit;
+        int qubit;
         GateNode* lhsEntry;
         GateNode* rhsEntry;
     };
@@ -265,7 +265,7 @@ public:
     }
 
     void addGate(const quantum_gate::GateMatrix& matrix,
-                 const std::vector<unsigned>& qubits);
+                 const std::vector<int>& qubits);
 
     /// @return ordered vector of blocks
     std::vector<GateBlock*> getAllBlocks() const;

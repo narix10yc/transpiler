@@ -289,7 +289,7 @@ public:
 
     CircuitGraph toCircuitGraph() const {
         CircuitGraph graph;
-        std::vector<unsigned> qubits;
+        std::vector<int> qubits;
         std::vector<double> params;
         for (const auto& s : stmts) {
             auto gateApply = dynamic_cast<GateApplyStmt*>(s.get());

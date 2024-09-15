@@ -94,7 +94,10 @@ public:
 
     std::ostream& print(std::ostream& os) const override;
 
-    quench::circuit_graph::CircuitGraph toCircuitGraph() const;
+    quantum_gate::QuantumGate
+    gateApplyToQuantumGate(const GateApplyStmt&) const;
+    
+    circuit_graph::CircuitGraph toCircuitGraph() const;
 };
 
 

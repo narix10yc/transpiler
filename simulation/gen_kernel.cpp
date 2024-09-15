@@ -209,7 +209,7 @@ IRGenerator::generateKernelDebug(
 
     // split qubits
     unsigned sepBit;
-    std::vector<unsigned> simdQubits, higherQubits, lowerQubits;
+    std::vector<int> simdQubits, higherQubits, lowerQubits;
     { /* split qubits */
     unsigned _q = 0;
     auto qubitsIt = gate.qubits.cbegin();

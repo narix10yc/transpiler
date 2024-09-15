@@ -22,8 +22,6 @@ public:
 
     virtual std::ostream& print(std::ostream&) const = 0;
 
-    virtual std::ostream& printLaTeX(std::ostream&) const = 0;
-
     virtual expr_value getExprValue() const = 0;
 
     virtual int compare(const CASNode* other) const = 0;
@@ -37,9 +35,7 @@ public:
     virtual ~CASNode() = default;
 };
 
-class AtomicCASNode : public CASNode {};
-
-class ConstantNode : public AtomicCASNode {
+class ConstantNode : public CASNode {
     std::complex<double> value;
 public:
     ConstantNode(std::complex<double> value) : value(value) {}
@@ -47,10 +43,6 @@ public:
     std::complex<double> getValue() const { return value; }
     
     std::ostream& print(std::ostream& os) const override {
-        return os << value;
-    }
-
-    std::ostream& printLaTeX(std::ostream& os) const override {
         return os << value;
     }
 
@@ -90,7 +82,7 @@ public:
     Polynomial toPolynomial() override;
 };
 
-class VariableNode : public AtomicCASNode {
+class VariableNode : public CASNode {
     std::string name;
 public:
     VariableNode(const std::string& name) : name(name) {}
@@ -98,10 +90,6 @@ public:
     std::string getName() const { return name; }
 
     std::ostream& print(std::ostream& os) const override {
-        return os << name;
-    }
-
-    std::ostream& printLaTeX(std::ostream& os) const override {
         return os << name;
     }
 
@@ -139,13 +127,6 @@ public:
     std::ostream& print(std::ostream& os) const override {
         os << "cos";
         return node->print(os);
-    }
-
-    std::ostream& printLaTeX(std::ostream& os) const override {
-        os << "\\cos(";
-        node->print(os);
-        os << ")";
-        return os;
     }
 
     expr_value getExprValue() const override {
@@ -189,13 +170,6 @@ public:
         return os;
     }
 
-    std::ostream& printLaTeX(std::ostream& os) const override {
-        os << "\\sin(";
-        node->print(os);
-        os << ")";
-        return os;
-    }
-
     int compare(const CASNode* other) const override {
         if (getSortPriority() < other->getSortPriority())
             return -1;
@@ -235,15 +209,6 @@ public:
         os << "(";
         lhs->print(os);
         os << "+";
-        rhs->print(os);
-        os << ")";
-        return os;
-    }
-
-    std::ostream& printLaTeX(std::ostream& os) const override {
-        os << "(";
-        lhs->print(os);
-        os << " + ";
         rhs->print(os);
         os << ")";
         return os;
@@ -293,13 +258,6 @@ public:
 
     std::ostream& print(std::ostream& os) const override {
         os << "cexp(";
-        node->print(os);
-        os << ")";
-        return os;
-    }
-
-    std::ostream& printLaTeX(std::ostream& os) const override {
-        os << "\\exp(i";
         node->print(os);
         os << ")";
         return os;
@@ -385,8 +343,6 @@ public:
 
     std::ostream& print(std::ostream& os) const override;
 
-    std::ostream& printLaTeX(std::ostream& os) const override;
-
     friend std::ostream& operator<<(std::ostream& os, const Polynomial& poly) {
         return poly.print(os);
     }
@@ -455,7 +411,7 @@ public:
         : vars(nparams),
           consts({ new ConstantNode(0.0), new ConstantNode(1.0), new ConstantNode(-1.0) }),
           nodes() {
-        for (int i = 0; i < nparams; i++)
+        for (unsigned i = 0; i < nparams; i++)
             vars[i] = new VariableNode("%" + std::to_string(i));
     }
 

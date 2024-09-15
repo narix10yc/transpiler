@@ -131,7 +131,7 @@ GateBlock* CircuitGraph::fusionCandidate(GateBlock* lhs, GateBlock* rhs) {
             //   << "lhs " << lhs->id << " and rhs " << rhs->id
             //   << " => candidate block " << block->id << "\n";
 
-    std::vector<unsigned> blockQubits;
+    std::vector<int> blockQubits;
     for (const auto& lData : lhs->dataVector) {
         const auto& q = lData.qubit;
 
@@ -240,7 +240,7 @@ GateBlock* CircuitGraph::tryFuseSameRow(tile_iter_t tileIt, size_t q0) {
 }
 
 void CircuitGraph::addGate(const quantum_gate::GateMatrix& matrix,
-                           const std::vector<unsigned>& qubits)
+                           const std::vector<int>& qubits)
 {
     assert(matrix.nqubits == qubits.size());
 
@@ -588,7 +588,7 @@ void CircuitGraph::greedyGateFusion() {
 
     // print(std::cerr, 2) << "\n\n";
     int maxK = fusionConfig.maxNQubits;
-    for (int currentK = (fusionConfig.incrementScheme) ? 2 : maxK;
+    for (unsigned currentK = (fusionConfig.incrementScheme) ? 2 : maxK;
                 currentK <= maxK; currentK++) {
         fusionConfig.maxNQubits = currentK;
         bool hasChange = true;

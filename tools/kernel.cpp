@@ -23,7 +23,7 @@ using namespace Color;
 
 static CircuitGraph& getCircuitH1(CircuitGraph& graph, int nqubits) {
     auto mat = GateMatrix::FromName("h");
-    for (unsigned q = 0; q < nqubits; q++)
+    for (int q = 0; q < nqubits; q++)
         graph.addGate(mat, {q});
     
     return graph;
@@ -31,7 +31,7 @@ static CircuitGraph& getCircuitH1(CircuitGraph& graph, int nqubits) {
 
 static CircuitGraph& getCircuitU1(CircuitGraph& graph, int nqubits) {
     auto mat = GateMatrix::FromName("u3", {0.92, 0.46, 0.22});
-    for (unsigned q = 0; q < nqubits; q++)
+    for (int q = 0; q < nqubits; q++)
         graph.addGate(mat, {q});
     
     return graph;
@@ -39,7 +39,7 @@ static CircuitGraph& getCircuitU1(CircuitGraph& graph, int nqubits) {
 
 static CircuitGraph& getCircuitH2(CircuitGraph& graph, int nqubits) {
     auto mat = GateMatrix::FromName("h");
-    for (unsigned q = 0; q < nqubits; q++) {
+    for (int q = 0; q < nqubits; q++) {
         QuantumGate gate(mat, {q});
         gate = gate.lmatmul(QuantumGate(mat, {(q+1) % nqubits}));
         graph.addGate(gate);
@@ -50,7 +50,7 @@ static CircuitGraph& getCircuitH2(CircuitGraph& graph, int nqubits) {
 
 static CircuitGraph& getCircuitU2(CircuitGraph& graph, int nqubits) {
     auto mat = GateMatrix::FromName("u3", {0.92, 0.46, 0.22});
-    for (unsigned q = 0; q < nqubits; q++) {
+    for (int q = 0; q < nqubits; q++) {
         QuantumGate gate(mat, {q});
         gate = gate.lmatmul(QuantumGate(mat, {(q+1) % nqubits}));
         graph.addGate(gate);
@@ -61,7 +61,7 @@ static CircuitGraph& getCircuitU2(CircuitGraph& graph, int nqubits) {
 
 static CircuitGraph& getCircuitH3(CircuitGraph& graph, int nqubits) {
     auto mat = GateMatrix::FromName("h");
-    for (unsigned q = 0; q < nqubits; q++) {
+    for (int q = 0; q < nqubits; q++) {
         QuantumGate gate(mat, {q});
         gate = gate.lmatmul(QuantumGate(mat, {(q+1) % nqubits}));
         gate = gate.lmatmul(QuantumGate(mat, {(q+2) % nqubits}));
@@ -73,7 +73,7 @@ static CircuitGraph& getCircuitH3(CircuitGraph& graph, int nqubits) {
 
 static CircuitGraph& getCircuitU3(CircuitGraph& graph, int nqubits) {
     auto mat = GateMatrix::FromName("u3", {0.92, 0.46, 0.22});
-    for (unsigned q = 0; q < nqubits; q++) {
+    for (int q = 0; q < nqubits; q++) {
         QuantumGate gate(mat, {q});
         gate = gate.lmatmul(QuantumGate(mat, {(q+1) % nqubits}));
         gate = gate.lmatmul(QuantumGate(mat, {(q+2) % nqubits}));

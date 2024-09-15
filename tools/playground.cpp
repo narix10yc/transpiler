@@ -59,10 +59,10 @@ int main(int argc, char** argv) {
 
     const auto matH = GateMatrix::FromName("h"); 
 
-    for (unsigned q = 0; q < NQubits; q++) {
+    for (int q = 0; q < NQubits; q++) {
         applyGeneral<double>(sv64.data, matH, { q }, NQubits);
         applyGeneral<float>(sv32.data, matH, { q }, NQubits);
-        for (unsigned qq = q+1; qq < NQubits; qq++) {
+        for (int qq = q+1; qq < NQubits; qq++) {
             double lambd = M_PI / static_cast<double>(1 << (qq - q));
             const auto matCP = GateMatrix::FromName("cp", {lambd});
             applyGeneral<double>(sv64.data, matCP, {q, qq}, NQubits);

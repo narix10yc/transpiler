@@ -162,7 +162,7 @@ public:
 /// Consistency requires matrix size is always a power of 2.
 class GateMatrix {
 public:
-    unsigned nqubits;
+    int nqubits;
     size_t N;
     matrix_t matrix;
     GateMatrix() : nqubits(0), N(0), matrix() {}
@@ -192,8 +192,9 @@ public:
             && (matrix.getSize() == N);
     }
 
-    static GateMatrix
-    FromName(const std::string& name, const std::vector<double>& params = {});
+    static GateMatrix FromName(
+            const std::string& name,
+            const std::vector<double>& params = {});
 
     inline bool isConstantMatrix() const {
         return matrix.activeType == matrix_t::ActiveMatrixType::C;
@@ -223,7 +224,7 @@ public:
     /// only applies zero-skipping. Level > 1 also applies to 1 and -1.
     GateMatrix& approximateSelf(int level, double thres = 1e-8);
 
-    GateMatrix permute(const std::vector<unsigned>& flags) const;
+    GateMatrix permute(const std::vector<int>& flags) const;
 
     std::ostream& printMatrix(std::ostream& os) const;
 };
@@ -233,23 +234,23 @@ private:
     int opCountCache = -1;
 public:
     /// The canonical form of qubits is in ascending order
-    std::vector<unsigned> qubits;
+    std::vector<int> qubits;
     GateMatrix gateMatrix;
 
     QuantumGate() : qubits(), gateMatrix() {}
 
-    QuantumGate(const GateMatrix& gateMatrix, unsigned q)
+    QuantumGate(const GateMatrix& gateMatrix, int q)
         : gateMatrix(gateMatrix), qubits({q}) {
         assert(gateMatrix.nqubits == 1);
     }
 
-    QuantumGate(const GateMatrix& gateMatrix, std::initializer_list<unsigned> qubits)
+    QuantumGate(const GateMatrix& gateMatrix, std::initializer_list<int> qubits)
         : gateMatrix(gateMatrix), qubits(qubits) {
         assert(gateMatrix.nqubits == qubits.size());
         sortQubits();
     }
 
-    QuantumGate(const GateMatrix& gateMatrix, const std::vector<unsigned>& qubits)
+    QuantumGate(const GateMatrix& gateMatrix, const std::vector<int>& qubits)
         : gateMatrix(gateMatrix), qubits(qubits) {
         assert(gateMatrix.nqubits == qubits.size());
         sortQubits();
@@ -273,7 +274,7 @@ public:
 
     std::ostream& displayInfo(std::ostream& os) const;
 
-    int findQubit(unsigned q) const {
+    int findQubit(int q) const {
         for (unsigned i = 0; i < qubits.size(); i++) {
             if (qubits[i] == q)
                 return i;
