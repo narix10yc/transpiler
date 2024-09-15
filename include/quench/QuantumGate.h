@@ -196,6 +196,11 @@ public:
             const std::string& name,
             const std::vector<double>& params = {});
 
+    static GateMatrix FromParameters(
+            const std::string& name,
+            const std::vector<GateParameter>& params,
+            cas::Context& ctx);
+
     inline bool isConstantMatrix() const {
         return matrix.activeType == matrix_t::ActiveMatrixType::C;
     }

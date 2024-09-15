@@ -351,7 +351,7 @@ quench::cas::Polynomial Parser::_parsePolynomial(cas::Context& casContext) {
         return 1;
     };
 
-    const auto parseAtom = [&]() -> cas::CASNode* {
+    const auto parseAtom = [&]() -> cas::CasNode* {
         if (tokenIt->type == TokenTy::Percent) {
             proceedWithType(TokenTy::Numeric);
             return casContext.getVar("%" + std::to_string(convertCurTokenToInt()));

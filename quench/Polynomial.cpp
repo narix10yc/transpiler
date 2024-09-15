@@ -87,7 +87,8 @@ std::ostream& Polynomial::print(std::ostream& os) const {
         for (const auto& p : it->powers) {
             p.base->print(os);
             if (p.exponent != 1)
-                os << "**" << p.exponent << "";
+                os << "**" << p.exponent;
+            os << " ";
         }
         it++;
     }
@@ -139,7 +140,6 @@ Polynomial& Polynomial::operator*=(const monomial_t& m) {
             if (otherIter == m.powers.end())
                 break;
             if (myIter == monomial.powers.end()) {
-                // std::cerr << "flag2\n";
                 while (otherIter != m.powers.end()) {
                     monomial.powers.push_back(*otherIter);
                     otherIter++;
@@ -154,7 +154,7 @@ Polynomial& Polynomial::operator*=(const monomial_t& m) {
             else if (cmp < 0)
                 myIter++;
             else {
-                monomial.powers.insert(myIter, *otherIter);
+                myIter = monomial.powers.insert(myIter, *otherIter);
                 otherIter++;
             }
         } // while loop
@@ -172,26 +172,28 @@ Polynomial Polynomial::operator*(const Polynomial& other) const {
     return newPoly;
 }
 
+using monomial_t = Polynomial::monomial_t;
+
 Polynomial ConstantNode::toPolynomial() {
-    return { value };
+    return Polynomial(monomial_t(value));
 }
 
 Polynomial VariableNode::toPolynomial() {
-    return {{1.0, {{this, 1}}}};
+    return Polynomial(monomial_t(this));
 }
 
 Polynomial CosineNode::toPolynomial() {
-    return {{1.0, {{this, 1}}}};
+    return Polynomial(monomial_t(this));
 }
 
 Polynomial SineNode::toPolynomial() {
-    return {{1.0, {{this, 1}}}};
+    return Polynomial(monomial_t(this));
 }
 
-Polynomial VarAddNode::toPolynomial() {
-    return {{1.0, {{this, 1}}}};
+Polynomial AddNode::toPolynomial() {
+    return Polynomial(monomial_t(this));
 }
 
 Polynomial ComplexExpNode::toPolynomial() {
-    return {{1.0, {{this, 1}}}};
+    return Polynomial(monomial_t(this));
 }

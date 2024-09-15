@@ -13,7 +13,7 @@ namespace quench::cas {
 
 class Polynomial;
 
-class CASNode {
+class CasNode {
 public:
     struct expr_value {
         bool isConstant;
@@ -24,18 +24,18 @@ public:
 
     virtual expr_value getExprValue() const = 0;
 
-    virtual int compare(const CASNode* other) const = 0;
+    virtual int compare(const CasNode* other) const = 0;
 
-    virtual bool equals(const CASNode*) const = 0;
+    virtual bool equals(const CasNode*) const = 0;
 
     virtual int getSortPriority() const = 0;
 
     virtual Polynomial toPolynomial() = 0;
 
-    virtual ~CASNode() = default;
+    virtual ~CasNode() = default;
 };
 
-class ConstantNode : public CASNode {
+class ConstantNode : public CasNode {
     std::complex<double> value;
 public:
     ConstantNode(std::complex<double> value) : value(value) {}
@@ -50,7 +50,7 @@ public:
         return { true, value };
     }
 
-    int compare(const CASNode* other) const override {
+    int compare(const CasNode* other) const override {
         if (getSortPriority() < other->getSortPriority())
             return -1;
         if (getSortPriority() > other->getSortPriority())
@@ -71,7 +71,7 @@ public:
         return 0;
     }
 
-    bool equals(const CASNode* other) const override {
+    bool equals(const CasNode* other) const override {
         if (auto otherConstantNode = dynamic_cast<const ConstantNode*>(other))
             return (otherConstantNode->value == value);
         return false;
@@ -82,7 +82,7 @@ public:
     Polynomial toPolynomial() override;
 };
 
-class VariableNode : public CASNode {
+class VariableNode : public CasNode {
     std::string name;
 public:
     VariableNode(const std::string& name) : name(name) {}
@@ -97,7 +97,7 @@ public:
         return { false };
     }
 
-    int compare(const CASNode* other) const override {
+    int compare(const CasNode* other) const override {
         if (getSortPriority() < other->getSortPriority())
             return -1;
         if (getSortPriority() > other->getSortPriority())
@@ -108,7 +108,7 @@ public:
         return name.compare(otherVariableNode->name);
     }
 
-    bool equals(const CASNode* other) const override {
+    bool equals(const CasNode* other) const override {
         if (auto otherVariableNode = dynamic_cast<const VariableNode*>(other))
             return (otherVariableNode->name == name);
         return false;
@@ -119,10 +119,10 @@ public:
     Polynomial toPolynomial() override;
 };
 
-class CosineNode : public CASNode {
-    CASNode* node;
+class CosineNode : public CasNode {
+    CasNode* node;
 public:
-    CosineNode(CASNode* node) : node(node) {}
+    CosineNode(CasNode* node) : node(node) {}
 
     std::ostream& print(std::ostream& os) const override {
         os << "cos";
@@ -136,7 +136,7 @@ public:
         return { true, std::cos(nodeValue.value) };
     }
 
-    int compare(const CASNode* other) const override {
+    int compare(const CasNode* other) const override {
         if (getSortPriority() < other->getSortPriority())
             return -1;
         if (getSortPriority() > other->getSortPriority())
@@ -146,7 +146,7 @@ public:
         return node->compare(otherCosineNode->node);
     }
 
-    bool equals(const CASNode* other) const override {
+    bool equals(const CasNode* other) const override {
         auto otherCosineNode = dynamic_cast<const CosineNode*>(other);
         if (otherCosineNode == nullptr)
             return false;
@@ -159,10 +159,10 @@ public:
 
 };
 
-class SineNode : public CASNode {
-    CASNode* node;
+class SineNode : public CasNode {
+    CasNode* node;
 public:
-    SineNode(CASNode* node) : node(node) {}
+    SineNode(CasNode* node) : node(node) {}
 
     std::ostream& print(std::ostream& os) const override {
         os << "sin";
@@ -170,7 +170,7 @@ public:
         return os;
     }
 
-    int compare(const CASNode* other) const override {
+    int compare(const CasNode* other) const override {
         if (getSortPriority() < other->getSortPriority())
             return -1;
         if (getSortPriority() > other->getSortPriority())
@@ -180,7 +180,7 @@ public:
         return node->compare(otherSineNode->node);
     }
 
-    bool equals(const CASNode* other) const override {
+    bool equals(const CasNode* other) const override {
         auto otherSineNode = dynamic_cast<const SineNode*>(other);
         if (otherSineNode == nullptr)
             return false;
@@ -199,11 +199,11 @@ public:
     Polynomial toPolynomial() override;
 };
 
-class VarAddNode : public CASNode {
-    VariableNode* lhs;
-    VariableNode* rhs;
+class AddNode : public CasNode {
+    CasNode* lhs;
+    CasNode* rhs;
 public:
-    VarAddNode(VariableNode* lhs, VariableNode* rhs) : lhs(lhs), rhs(rhs) {}
+    AddNode(CasNode* lhs, CasNode* rhs) : lhs(lhs), rhs(rhs) {}
 
     std::ostream& print(std::ostream& os) const override {
         os << "(";
@@ -214,26 +214,25 @@ public:
         return os;
     }
 
-    int compare(const CASNode* other) const override {
+    int compare(const CasNode* other) const override {
         if (getSortPriority() < other->getSortPriority())
             return -1;
         if (getSortPriority() > other->getSortPriority())
             return +1;
-        auto otherVarAddNode = dynamic_cast<const VarAddNode*>(other);
-        assert(otherVarAddNode != nullptr);
+        auto otherAddNode = dynamic_cast<const AddNode*>(other);
+        assert(otherAddNode != nullptr);
 
-        auto compareLHS = lhs->compare(otherVarAddNode->lhs);
+        auto compareLHS = lhs->compare(otherAddNode->lhs);
         if (compareLHS != 0)
             return compareLHS;
-        return rhs->compare(otherVarAddNode->rhs);
+        return rhs->compare(otherAddNode->rhs);
     }
 
-    bool equals(const CASNode* other) const override {
-        auto otherVarAddNode = dynamic_cast<const VarAddNode*>(other);
-        if (otherVarAddNode == nullptr)
+    bool equals(const CasNode* other) const override {
+        auto otherAddNode = dynamic_cast<const AddNode*>(other);
+        if (otherAddNode == nullptr)
             return false;
-        return (lhs->equals(otherVarAddNode->lhs))
-                && (rhs->equals(otherVarAddNode->rhs));
+        return (lhs->equals(otherAddNode->lhs))  && (rhs->equals(otherAddNode->rhs));
     }
 
     expr_value getExprValue() const override {
@@ -251,19 +250,19 @@ public:
     Polynomial toPolynomial() override;
 };
 
-class ComplexExpNode : public CASNode {
-    CASNode* node;
+class ComplexExpNode : public CasNode {
+    CasNode* node;
 public:
-    ComplexExpNode(CASNode* node) : node(node) {}
+    ComplexExpNode(CasNode* node) : node(node) {}
 
     std::ostream& print(std::ostream& os) const override {
-        os << "cexp(";
+        os << "cexp";
         node->print(os);
-        os << ")";
+        os << "";
         return os;
     }
 
-    int compare(const CASNode* other) const override {
+    int compare(const CasNode* other) const override {
         if (getSortPriority() < other->getSortPriority())
             return -1;
         if (getSortPriority() > other->getSortPriority())
@@ -273,7 +272,7 @@ public:
         return node->compare(otherCExpNode->node);
     }
 
-    bool equals(const CASNode* other) const override {
+    bool equals(const CasNode* other) const override {
         if (auto otherCExpNode = dynamic_cast<const ComplexExpNode*>(other))
             return (node->equals(otherCExpNode->node));
         return false;
@@ -287,20 +286,22 @@ public:
         return { true, std::exp(ivalue) };
     }
 
-    int getSortPriority() const override { return 35; }
+    int getSortPriority() const override { return 40; }
 
     Polynomial toPolynomial() override;
 };
 
-class Polynomial : public CASNode {
+class Polynomial : public CasNode {
 public:
     struct monomial_t {
         struct power_t {
-            CASNode* base;
-            int exponent = 1;
+            CasNode* base;
+            int exponent;
+
+            power_t(CasNode* base, int exponent=1) : base(base), exponent(exponent) {}
         };
-        std::complex<double> coef = { 1.0, 0.0 };
-        std::vector<power_t> powers = {};
+        std::complex<double> coef;
+        std::vector<power_t> powers;
 
         int order() const {
             int sum = 0;
@@ -308,6 +309,12 @@ public:
                 sum += p.exponent;
             return sum;
         }
+
+        monomial_t(const std::complex<double>& coef = {1.0, 0.0},
+                   const std::vector<power_t>& powers = {})
+            : coef(coef), powers(powers) {}
+        
+        monomial_t(CasNode* base) : coef(1.0, 0.0), powers({ {base, 1} }) {}
     };
 
 private:
@@ -326,13 +333,15 @@ private:
     Polynomial& operator*=(const monomial_t& monomial);
 public:
     Polynomial() : monomials() {}
-    Polynomial(const std::complex<double>& v) : monomials({{v, {}}}) {}
-    Polynomial(std::initializer_list<monomial_t> monomials)
-        : monomials(monomials) {}
+    Polynomial(const monomial_t& m) : monomials({m}) {}
+    Polynomial(const std::vector<monomial_t>& monomials) {
+        for (const auto& m : monomials)
+            insertMonomial(m);
+    }
 
-    void insertMonomial(const monomial_t& monomial) {
-        auto it = std::lower_bound(monomials.begin(), monomials.end(), monomial, monomial_cmp);
-        monomials.insert(it, monomial);
+    void insertMonomial(const monomial_t& m) {
+        auto it = std::lower_bound(monomials.begin(), monomials.end(), m, monomial_cmp);
+        monomials.insert(it, m);
     }
 
     std::string str() const {
@@ -347,12 +356,12 @@ public:
         return poly.print(os);
     }
 
-    int compare(const CASNode* other) const override {
+    int compare(const CasNode* other) const override {
         assert(false && "Do not compare Polynomial");
         return -2;
     }
 
-    bool equals(const CASNode* other) const override {
+    bool equals(const CasNode* other) const override {
         assert(false && "Unimplemented yet");
         return false;
     }
@@ -405,7 +414,7 @@ public:
 class Context {
     std::vector<VariableNode*> vars;
     std::vector<ConstantNode*> consts;
-    std::vector<CASNode*> nodes;
+    std::vector<CasNode*> nodes;
 public:
     Context(int nparams = 0)
         : vars(nparams),
@@ -449,25 +458,25 @@ public:
         return cons;
     }
 
-    CosineNode* createCosNode(CASNode* node) {
+    CosineNode* createCosNode(CasNode* node) {
         auto* n = new CosineNode(node);
         nodes.push_back(n);
         return n;
     }
 
-    SineNode* createSinNode(CASNode* node) {
+    SineNode* createSinNode(CasNode* node) {
         auto* n = new SineNode(node);
         nodes.push_back(n);
         return n;
     }
 
-    VarAddNode* createAddNode(VariableNode* lhs, VariableNode* rhs) {
-        auto* n = new VarAddNode(lhs, rhs);
+    AddNode* createAddNode(CasNode* lhs, CasNode* rhs) {
+        auto* n = new AddNode(lhs, rhs);
         nodes.push_back(n);
         return n;
     }
 
-    ComplexExpNode* createCompExpNode(CASNode* node) {
+    ComplexExpNode* createCompExpNode(CasNode* node) {
         auto* n = new ComplexExpNode(node);
         nodes.push_back(n);
         return n;

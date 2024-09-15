@@ -7,6 +7,8 @@
 using namespace Color;
 using namespace quench::complex_matrix;
 using namespace quench::quantum_gate;
+using namespace quench::cas;
+using monomial_t = quench::cas::Polynomial::monomial_t;
 
 namespace {
 static bool _isValidShuffleFlag(const std::vector<int>& flags) {
@@ -51,7 +53,6 @@ GateMatrix& GateMatrix::approximateSelf(int level, double thres) {
 GateMatrix GateMatrix::permute(const std::vector<int>& flags) const {
     assert(nqubits == flags.size());
     assert(_isValidShuffleFlag(flags));
-    assert(isConstantMatrix());
 
     bool isConstantShuffleFlag = true;
     for (unsigned i = 0; i < nqubits; i++) {
@@ -182,25 +183,64 @@ GateMatrix GateMatrix::FromName(
     return GateMatrix();
 }
 
-std::ostream& GateMatrix::printMatrix(std::ostream& os) const {     
-    assert(matrix.activeType == matrix_t::ActiveMatrixType::C
-            && "Only supporting constant matrices now");
-            
-    const auto& data = matrix.constantMatrix.data;
-    os << "[";
-    for (size_t r = 0; r < N; r++) {
-        for (size_t c = 0; c < N; c++) {
-            utils::print_complex(os, data[r * N + c], 3);
-            if (c != N-1 || r != N-1)
-                os << ",";
-            os << " ";
-        }
-        if (r == N-1)
-            os << "]\n";
-        else 
-            os << "\n ";
+GateMatrix GateMatrix::FromParameters(
+        const std::string& name,
+        const std::vector<GateParameter>& params,
+        cas::Context& ctx) {
+    const auto paramToCasNode = [&ctx](const GateParameter& p) -> cas::CasNode* {
+        if (p.isConstant)
+            return ctx.getConst(p.constant);
+        return ctx.getVar(p.variableName);
+    };
+
+    if (name == "u3" || name == "u1q") {
+        assert(params.size() == 3 && "u1q gate needs 3 parameters");
+
+        auto* theta = paramToCasNode(params[0]);
+        auto* phi = paramToCasNode(params[1]);
+        auto* lambd = paramToCasNode(params[2]);
+
+        return GateMatrix(matrix_t::p_matrix_t {
+            Polynomial(monomial_t(ctx.createCosNode(theta))),
+            Polynomial(monomial_t(-1.0, { ctx.createSinNode(theta), ctx.createCompExpNode(lambd) })),
+            Polynomial(monomial_t( 1.0, { ctx.createSinNode(theta), ctx.createCompExpNode(phi) })),
+            Polynomial(monomial_t( 1.0, { ctx.createCosNode(theta), ctx.createCompExpNode(ctx.createAddNode(phi, lambd)) }))
+        });
     }
-    return os;   
+        
+    std::cerr << RED_FG << BOLD << "Not Implemented gate '" << name << "'"
+              << RESET << "\n";
+    assert(false);
+    return GateMatrix();
+}
+
+std::ostream& GateMatrix::printMatrix(std::ostream& os) const {     
+    if (isConstantMatrix()) {
+        const auto& data = matrix.constantMatrix.data;
+        os << "[";
+        for (size_t r = 0; r < N; r++) {
+            for (size_t c = 0; c < N; c++) {
+                utils::print_complex(os, data[r * N + c], 3);
+                if (c != N-1 || r != N-1)
+                    os << ",";
+                os << " ";
+            }
+            if (r == N-1)
+                os << "]\n";
+            else 
+                os << "\n ";
+        }
+        return os;
+    } else {
+        const auto& data = matrix.parametrizedMatrix.data;
+        for (size_t r = 0; r < N; r++) {
+            for (size_t c = 0; c < N; c++) {
+                os << "[" << r << "," << c << "]: ";
+                data[r*N + c].print(os) << "\n";
+            }
+        }
+        return os;
+    }
 }
 
 std::ostream& QuantumGate::displayInfo(std::ostream& os) const {
@@ -326,7 +366,7 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
             }
         }
 
-        newPMatrix.data[i] = cas::Polynomial(0.0);
+        newPMatrix.data[i] = cas::Polynomial();
         for (size_t j = 0; j < (1 << contractionBitwidth); j++) {
             auto aPtr = aPtrStart;
             auto bPtr = bPtrStart;
