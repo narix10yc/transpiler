@@ -10,8 +10,7 @@ using namespace quench::quantum_gate;
 using namespace quench::cas;
 using monomial_t = quench::cas::Polynomial::monomial_t;
 
-namespace {
-static bool _isValidShuffleFlag(const std::vector<int>& flags) {
+bool _isValidShuffleFlag(const std::vector<int>& flags) {
     auto copy = flags;
     std::sort(copy.begin(), copy.end());
     for (unsigned i = 0; i < copy.size(); i++) {
@@ -20,10 +19,9 @@ static bool _isValidShuffleFlag(const std::vector<int>& flags) {
     }
     return true;
 }
-}
 
 GateMatrix& GateMatrix::approximateSelf(int level, double thres) {
-    assert(isConstantMatrix());
+    assert(isConstantMatrix() && "approximateSelf only works for constant matrix");
     if (level < 1)
         return *this;
     
@@ -190,7 +188,7 @@ GateMatrix GateMatrix::FromParameters(
     const auto paramToCasNode = [&ctx](const GateParameter& p) -> cas::CasNode* {
         if (p.isConstant)
             return ctx.getConst(p.constant);
-        return ctx.getVar(p.variableName);
+        return ctx.getVar(p.variable);
     };
 
     if (name == "u3" || name == "u1q") {
@@ -417,9 +415,9 @@ int QuantumGate::opCount(double thres) {
     if (opCountCache >= 0)
         return opCountCache;
 
+    int count = 0;
+    double normalizedThres = thres / std::pow(2.0, gateMatrix.nqubits);
     if (gateMatrix.isConstantMatrix()) {
-        int count = 0;
-        double normalizedThres = thres / std::pow(2.0, gateMatrix.nqubits);
         for (const auto& data : gateMatrix.matrix.constantMatrix.data) {
             if (std::abs(data.real()) >= normalizedThres)
                 count++;
@@ -429,6 +427,23 @@ int QuantumGate::opCount(double thres) {
         opCountCache = 2 * count;
         return opCountCache;
     }
-    assert(false && "opCount not implemented for pmat yet");
+    else {
+        assert(gateMatrix.isParametrizedMatrix());
+        for (const auto& data : gateMatrix.matrix.parametrizedMatrix.data) {
+            auto ev = data.getExprValue();
+            if (ev.isConstant) {
+                if (std::abs(ev.value.real()) >= normalizedThres)
+                    count++;
+                if (std::abs(ev.value.imag()) >= normalizedThres)
+                    count++;
+            } else {
+                count += 2;
+            }
+        }
+        opCountCache = 2 * count;
+        return opCountCache;
+    }
+    assert(false && "Unreachable");
+
     return -1;
 }

@@ -26,7 +26,9 @@ public:
 
     virtual int compare(const CasNode* other) const = 0;
 
-    virtual bool equals(const CasNode*) const = 0;
+    virtual bool equals(const CasNode* other) const {
+        return compare(other) == 0;
+    }
 
     virtual int getSortPriority() const = 0;
 
@@ -36,11 +38,10 @@ public:
 };
 
 class ConstantNode : public CasNode {
-    std::complex<double> value;
 public:
-    ConstantNode(std::complex<double> value) : value(value) {}
+    std::complex<double> value;
 
-    std::complex<double> getValue() const { return value; }
+    ConstantNode(const std::complex<double>& value) : value(value) {}
     
     std::ostream& print(std::ostream& os) const override {
         return os << value;
@@ -83,14 +84,13 @@ public:
 };
 
 class VariableNode : public CasNode {
-    std::string name;
 public:
-    VariableNode(const std::string& name) : name(name) {}
+    int v;
 
-    std::string getName() const { return name; }
+    VariableNode(int v) : v(v) {}
 
     std::ostream& print(std::ostream& os) const override {
-        return os << name;
+        return os << "%" << v;
     }
 
     expr_value getExprValue() const override {
@@ -102,15 +102,19 @@ public:
             return -1;
         if (getSortPriority() > other->getSortPriority())
             return +1;
-        auto otherVariableNode = dynamic_cast<const VariableNode*>(other);
+        auto* otherVariableNode = dynamic_cast<const VariableNode*>(other);
         assert(otherVariableNode != nullptr);
 
-        return name.compare(otherVariableNode->name);
+        if (v > otherVariableNode->v)
+            return +1;
+        if (v == otherVariableNode->v)
+            return 0;
+        return -1;
     }
 
     bool equals(const CasNode* other) const override {
         if (auto otherVariableNode = dynamic_cast<const VariableNode*>(other))
-            return (otherVariableNode->name == name);
+            return (otherVariableNode->v == v);
         return false;
     }
 
@@ -421,7 +425,7 @@ public:
           consts({ new ConstantNode(0.0), new ConstantNode(1.0), new ConstantNode(-1.0) }),
           nodes() {
         for (unsigned i = 0; i < nparams; i++)
-            vars[i] = new VariableNode("%" + std::to_string(i));
+            vars[i] = new VariableNode(i);
     }
 
     Context(const Context&) = delete;
@@ -438,19 +442,19 @@ public:
             delete(n);
     }
 
-    VariableNode* getVar(const std::string& name) {
+    VariableNode* getVar(int v) {
         for (auto it = vars.begin(); it != vars.end(); it++) {
-            if ((*it)->getName() == name)
+            if (v == (*it)->v)
                 return *it;
         }
-        auto* var = new VariableNode(name);
+        auto* var = new VariableNode(v);
         vars.push_back(var);
         return var;
     }
 
     ConstantNode* getConst(const std::complex<double>& value) {
         for (auto it = consts.begin(); it != consts.end(); it++) {
-            if ((*it)->getValue() == value)
+            if ((*it)->value == value)
                 return *it;
         }
         auto* cons = new ConstantNode(value);
@@ -482,7 +486,6 @@ public:
         return n;
     }
 };
-
 
 } // namespace quench::cas
 

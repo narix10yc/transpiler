@@ -15,15 +15,15 @@ namespace quench::circuit_graph {
 
 namespace quench::ast {
 
-class Node {
+class AstNode {
 public:
-    virtual ~Node() = default;
+    virtual ~AstNode() = default;
     virtual std::ostream& print(std::ostream& os) const = 0;
 };
 
-class Expression : public Node {};
+class Expression : public AstNode {};
 
-class Statement : public Node {};
+class Statement : public AstNode {};
 class CircuitCompatibleStmt : public Statement {};
 
 class GateApplyStmt : public CircuitCompatibleStmt {
@@ -77,14 +77,7 @@ public:
     std::ostream& print(std::ostream& os) const override;
 };
 
-class RootNode : public Node {
-private:
-    struct param_def_stmt_cmp {
-        bool operator()
-                (const ParameterDefStmt& a, const ParameterDefStmt& b) const {
-            return a.refNumber < b.refNumber;
-        }
-    };
+class RootNode : public AstNode {
 public:
     CircuitStmt circuit;
     std::vector<ParameterDefStmt> paramDefs;

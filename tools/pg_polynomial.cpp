@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
 
     auto graph = root->toCircuitGraph();
     graph.getAllBlocks()[0]->quantumGate->displayInfo(std::cerr);
-    // graph.displayInfo(std::cerr, 3);
+    graph.displayInfo(std::cerr, 3);
 
 
     return 0;

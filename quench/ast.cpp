@@ -3,7 +3,7 @@
 #include "utils/iocolor.h"
 
 using namespace quench::ast;
-using CircuitGraph = quench::circuit_graph::CircuitGraph;
+using namespace quench::circuit_graph;
 
 std::ostream& RootNode::print(std::ostream& os) const {
     circuit.print(os);
@@ -64,16 +64,14 @@ std::ostream& ParameterDefStmt::print(std::ostream& os) const {
 
 void CircuitStmt::addGateChain(const GateChainStmt& chain) {
     stmts.push_back(std::make_unique<GateChainStmt>(chain));
-    // update number of qubits
     for (const auto& gate : chain.gates) {
+        // update number of qubits
         for (const auto& q : gate.qubits) {
             if (q >= nqubits)
                 nqubits = q + 1;
         }
     }
 }
-
-using namespace quench::circuit_graph;
 
 QuantumGate RootNode::gateApplyToQuantumGate(const GateApplyStmt& gateApplyStmt) {
     if (gateApplyStmt.paramRefNumber >= 0) {

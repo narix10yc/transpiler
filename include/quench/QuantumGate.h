@@ -141,19 +141,20 @@ struct matrix_t {
 
 class GateParameter {
 public:
-    std::string variableName;
+    int variable;
     std::complex<double> constant;
     bool isConstant;
 
-    GateParameter(const std::string& variableName)
-        : variableName(variableName), isConstant(false) {}
-    GateParameter(const std::complex<double>& constant)
+    explicit GateParameter(int variable)
+        : variable(variable), isConstant(false) {}
+
+    explicit GateParameter(const std::complex<double>& constant)
         : constant(constant), isConstant(true) {}
 
     std::ostream& print(std::ostream& os) const {
         if (isConstant)
             return utils::print_complex(os, constant, 12);
-        return os << variableName;
+        return os << "%" << variable;
     }
 };
 

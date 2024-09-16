@@ -512,18 +512,18 @@ std::vector<std::vector<int>> CircuitGraph::getBlockOpCountHistogram() const {
 std::ostream& CircuitGraph::displayInfo(std::ostream& os, int verbose) const {
     os << CYAN_FG << "=== CircuitGraph Info (verbose " << verbose << ") ===\n" << RESET;
 
-    os << "Number of Gates:  " << countGates() << "\n";
+    os << "- Number of Gates:  " << countGates() << "\n";
     const auto allBlocks = getAllBlocks();
     auto nBlocks = allBlocks.size();
-    os << "Number of Blocks: " << nBlocks << "\n";
+    os << "- Number of Blocks: " << nBlocks << "\n";
     auto totalOp = countTotalOps();
-    os << "Total Op Count:   " << totalOp << "\n";
-    os << "Avergae Op Count: " << std::fixed << std::setprecision(1)
+    os << "- Total Op Count:   " << totalOp << "\n";
+    os << "- Avergae Op Count: " << std::fixed << std::setprecision(1)
        << static_cast<double>(totalOp) / nBlocks << "\n";
-    os << "Circuit Depth:    " << tile.size() << "\n";
+    os << "- Circuit Depth:    " << tile.size() << "\n";
 
     if (verbose > 3) {
-        os << "Block Sizes Count:\n";
+        os << "- Block Sizes Count:\n";
         std::vector<std::vector<int>> vec(nqubits + 1);
         const auto allBlocks = getAllBlocks();
         for (const auto* block : allBlocks)
@@ -537,7 +537,7 @@ std::ostream& CircuitGraph::displayInfo(std::ostream& os, int verbose) const {
         }
     }
     else if (verbose > 2) {
-        os << "Block Statistics:\n";
+        os << "- Block Statistics:\n";
         const auto hist = getBlockOpCountHistogram();
         for (unsigned q = 1; q < hist.size(); q++) {
             auto count = std::reduce(hist[q].begin(), hist[q].end());
@@ -548,7 +548,7 @@ std::ostream& CircuitGraph::displayInfo(std::ostream& os, int verbose) const {
         }
     }
     else if (verbose > 1) {
-        os << "Block Sizes Count:\n";
+        os << "- Block Sizes Count:\n";
         const auto sizes = getBlockSizes();
         for (unsigned q = 1; q < sizes.size(); q++) {
             if (sizes[q] <= 0)

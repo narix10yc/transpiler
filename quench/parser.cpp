@@ -4,6 +4,7 @@
 using namespace quench;
 using namespace quench::ast;
 using namespace quench::cas;
+using namespace quench::quantum_gate;
 
 int Parser::readLine() {
     if (file.eof()) {
@@ -258,14 +259,14 @@ CircuitStmt Parser::_parseCircuit() {
     return circuit;
 }
 
-quench::quantum_gate::GateParameter Parser::_parseGateParameter() {
+GateParameter Parser::_parseGateParameter() {
     if (tokenIt->type == TokenTy::Percent) {
         proceedWithType(TokenTy::Numeric);
         int i = convertCurTokenToInt();
         proceed();
-        return { "%" + std::to_string(i) };
+        return GateParameter(i);
     }
-    return { _parseComplexNumber() };
+    return GateParameter(_parseComplexNumber());
 }
 
 GateApplyStmt Parser::_parseGateApply() {
@@ -354,16 +355,16 @@ quench::cas::Polynomial Parser::_parsePolynomial(cas::Context& casContext) {
     const auto parseAtom = [&]() -> cas::CasNode* {
         if (tokenIt->type == TokenTy::Percent) {
             proceedWithType(TokenTy::Numeric);
-            return casContext.getVar("%" + std::to_string(convertCurTokenToInt()));
+            return casContext.getVar(convertCurTokenToInt());
         }
         if (tokenIt->type == TokenTy::L_RoundBraket) {
             proceedWithType(TokenTy::Percent);
             proceedWithType(TokenTy::Numeric);
-            auto* varLHS = casContext.getVar("%" + std::to_string(convertCurTokenToInt()));
+            auto* varLHS = casContext.getVar(convertCurTokenToInt());
             proceedWithType(TokenTy::Add);
             proceedWithType(TokenTy::Percent);
             proceedWithType(TokenTy::Numeric);
-            auto* varRHS = casContext.getVar("%" + std::to_string(convertCurTokenToInt()));
+            auto* varRHS = casContext.getVar(convertCurTokenToInt());
             auto* varAdd = casContext.createAddNode(varLHS, varRHS);
             proceedWithType(TokenTy::R_RoundBraket);
             return varAdd;
