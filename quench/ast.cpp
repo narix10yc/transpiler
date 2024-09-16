@@ -44,7 +44,7 @@ std::ostream& GateChainStmt::print(std::ostream& os) const {
     return os;
 }
 
-std::ostream& CircuitStmt::print(std::ostream& os) const {
+std::ostream& QuantumCircuit::print(std::ostream& os) const {
     os << "circuit<nqubits=" << nqubits << ", nparams=" << nparams << "> "
        << name << " {\n";
     for (const auto& s : stmts)
@@ -62,7 +62,7 @@ std::ostream& ParameterDefStmt::print(std::ostream& os) const {
     return os << "}\n";
 }
 
-void CircuitStmt::addGateChain(const GateChainStmt& chain) {
+void QuantumCircuit::addGateChain(const GateChainStmt& chain) {
     stmts.push_back(std::make_unique<GateChainStmt>(chain));
     for (const auto& gate : chain.gates) {
         // update number of qubits

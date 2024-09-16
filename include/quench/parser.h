@@ -268,7 +268,7 @@ protected:
 
     quantum_gate::GateParameter _parseGateParameter();
     GateApplyStmt _parseGateApply();
-    CircuitStmt _parseCircuit();
+    QuantumCircuit _parseCircuit();
 
     cas::Polynomial _parsePolynomial(cas::Context& casContext);
     ParameterDefStmt _parseParameterDefStmt(cas::Context& casContext);

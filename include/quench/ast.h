@@ -15,16 +15,13 @@ namespace quench::circuit_graph {
 
 namespace quench::ast {
 
-class AstNode {
+
+class CircuitCompatibleStmt {
 public:
-    virtual ~AstNode() = default;
+    virtual ~CircuitCompatibleStmt() = default;
+
     virtual std::ostream& print(std::ostream& os) const = 0;
 };
-
-class Expression : public AstNode {};
-
-class Statement : public AstNode {};
-class CircuitCompatibleStmt : public Statement {};
 
 class GateApplyStmt : public CircuitCompatibleStmt {
 public:
@@ -52,40 +49,40 @@ public:
     std::ostream& print(std::ostream& os) const override;
 };
 
-class CircuitStmt : public Statement {
+class QuantumCircuit {
 public:
     std::string name;
     int nqubits;
     int nparams;
     std::vector<std::unique_ptr<CircuitCompatibleStmt>> stmts;
     
-    CircuitStmt() : nqubits(0), nparams(0), stmts() {}
+    QuantumCircuit() : nqubits(0), nparams(0), stmts() {}
 
     void addGateChain(const GateChainStmt& chain);
 
-    std::ostream& print(std::ostream& os) const override;
+    std::ostream& print(std::ostream& os) const;
 };
 
 /// @brief '#'<number:int> '=' '{' ... '}'';'
-class ParameterDefStmt : public Statement {
+class ParameterDefStmt {
 public:
     int refNumber;
     quantum_gate::GateMatrix gateMatrix;
 
     ParameterDefStmt(int refNumber) : refNumber(refNumber), gateMatrix() {}
 
-    std::ostream& print(std::ostream& os) const override;
+    std::ostream& print(std::ostream& os) const;
 };
 
-class RootNode : public AstNode {
+class RootNode {
 public:
-    CircuitStmt circuit;
+    QuantumCircuit circuit;
     std::vector<ParameterDefStmt> paramDefs;
     cas::Context casContext;
 
     RootNode() : circuit(), paramDefs(), casContext() {}
 
-    std::ostream& print(std::ostream& os) const override;
+    std::ostream& print(std::ostream& os) const;
 
     quantum_gate::QuantumGate
     gateApplyToQuantumGate(const GateApplyStmt&);

@@ -173,9 +173,9 @@ RootNode* Parser::parse() {
     return root;
 }
 
-CircuitStmt Parser::_parseCircuit() {
+QuantumCircuit Parser::_parseCircuit() {
     displayParserLog("ready to parse circuit");
-    CircuitStmt circuit;
+    QuantumCircuit circuit;
     int setNqubitsFlag = -1;
     int setNparamsFlag = -1;
     int setFlag = 0;

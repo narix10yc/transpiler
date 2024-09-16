@@ -30,6 +30,9 @@ int main(int argc, char** argv) {
     root->print(file);
 
     auto graph = root->toCircuitGraph();
+    graph.updateFusionConfig(FusionConfig::Default());
+    graph.greedyGateFusion();
+
     graph.getAllBlocks()[0]->quantumGate->displayInfo(std::cerr);
     graph.displayInfo(std::cerr, 3);
 

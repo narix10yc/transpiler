@@ -10,6 +10,7 @@
 #include <array>
 
 #include "quench/QuantumGate.h"
+#include "quench/CircuitGraph.h"
 
 namespace simulation {
 
@@ -97,6 +98,9 @@ public:
     llvm::Function* generateKernelDebug(
             const quench::quantum_gate::QuantumGate& gate, int debugLevel,
             const std::string& funcName = "");
+
+    llvm::Function* generatePrepareParameter(
+            const quench::circuit_graph::CircuitGraph& graph);
 };
 
 } // namespace simulation
