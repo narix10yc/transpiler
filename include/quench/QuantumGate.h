@@ -147,7 +147,7 @@ public:
 
     GateParameter(const std::string& variableName)
         : variableName(variableName), isConstant(false) {}
-    GateParameter(std::complex<double> constant)
+    GateParameter(const std::complex<double>& constant)
         : constant(constant), isConstant(true) {}
 
     std::ostream& print(std::ostream& os) const {

@@ -95,9 +95,9 @@ public:
     std::ostream& print(std::ostream& os) const override;
 
     quantum_gate::QuantumGate
-    gateApplyToQuantumGate(const GateApplyStmt&) const;
+    gateApplyToQuantumGate(const GateApplyStmt&);
     
-    circuit_graph::CircuitGraph toCircuitGraph() const;
+    circuit_graph::CircuitGraph toCircuitGraph();
 };
 
 

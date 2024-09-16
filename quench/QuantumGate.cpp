@@ -207,6 +207,37 @@ GateMatrix GateMatrix::FromParameters(
             Polynomial(monomial_t( 1.0, { ctx.createCosNode(theta), ctx.createCompExpNode(ctx.createAddNode(phi, lambd)) }))
         });
     }
+
+    if (name == "h") {
+        GateMatrix gateMat(matrix_t::c_matrix_t {
+            { M_SQRT1_2, 0 }, { M_SQRT1_2, 0 },
+            { M_SQRT1_2, 0 }, {-M_SQRT1_2, 0 } 
+        });
+        gateMat.convertToParametrizedMatrix();
+        return gateMat;
+    }
+
+    if (name == "cx") {
+        GateMatrix gateMat(matrix_t::c_matrix_t {
+            {1,0}, {0,0}, {0,0}, {0,0},
+            {0,0}, {0.0}, {0.0}, {1,0},
+            {0,0}, {0.0}, {1.0}, {0,0},
+            {0,0}, {1.0}, {0.0}, {0,0}
+        });
+        gateMat.convertToParametrizedMatrix();
+        return gateMat;
+    }
+
+    if (name == "cz") {
+        GateMatrix gateMat(matrix_t::c_matrix_t {
+            {1,0}, {0,0}, {0,0}, {0,0},
+            {0,0}, {1,0}, {0,0}, {0,0},
+            {0,0}, {0,0}, {1,0}, {0,0},
+            {0,0}, {0,0}, {0,0}, {-1,0}
+        });
+        gateMat.convertToParametrizedMatrix();
+        return gateMat;
+    }
         
     std::cerr << RED_FG << BOLD << "Not Implemented gate '" << name << "'"
               << RESET << "\n";
@@ -244,10 +275,10 @@ std::ostream& GateMatrix::printMatrix(std::ostream& os) const {
 }
 
 std::ostream& QuantumGate::displayInfo(std::ostream& os) const {
-    os << CYAN_FG << "QuantumGate" << RESET << " on qubits [";
-    for (const auto& q : qubits)
-        os << q << ",";
-    os << "]\nMatrix:\n";
+    os << CYAN_FG << "QuantumGate Info\n" << RESET
+       << "- Target Qubits ";
+    utils::printVector(qubits) << "\n";
+    os << "- Matrix:\n";
     gateMatrix.printMatrix(os);
     return os;
 }

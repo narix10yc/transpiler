@@ -3,6 +3,7 @@
 #include "utils/iocolor.h"
 
 using namespace quench::ast;
+using CircuitGraph = quench::circuit_graph::CircuitGraph;
 
 std::ostream& RootNode::print(std::ostream& os) const {
     circuit.print(os);
@@ -74,8 +75,7 @@ void CircuitStmt::addGateChain(const GateChainStmt& chain) {
 
 using namespace quench::circuit_graph;
 
-QuantumGate 
-RootNode::gateApplyToQuantumGate(const GateApplyStmt& gateApplyStmt) const {
+QuantumGate RootNode::gateApplyToQuantumGate(const GateApplyStmt& gateApplyStmt) {
     if (gateApplyStmt.paramRefNumber >= 0) {
         for (auto it = paramDefs.begin(); it != paramDefs.end(); it++) {
             if (it->refNumber == gateApplyStmt.paramRefNumber)
@@ -84,11 +84,13 @@ RootNode::gateApplyToQuantumGate(const GateApplyStmt& gateApplyStmt) const {
         assert(false && "Cannot find parameter def stmt");
         return QuantumGate();
     }
-    // return QuantumGate(GateMatrix::FromName(gateApplyStmt.name, gateApplyStmt.params), gateApplyStmt.qubits);
-    return QuantumGate();
+    return QuantumGate(
+            GateMatrix::FromParameters(
+                gateApplyStmt.name, gateApplyStmt.params, casContext),
+            gateApplyStmt.qubits);
 }
 
-CircuitGraph RootNode::toCircuitGraph() const {
+CircuitGraph RootNode::toCircuitGraph() {
     CircuitGraph graph;
     for (const auto& s : circuit.stmts) {
         const GateChainStmt* chain = dynamic_cast<const GateChainStmt*>(s.get());
@@ -100,9 +102,10 @@ CircuitGraph RootNode::toCircuitGraph() const {
         if (chain->gates.empty())
             continue;
         
-        // quantum_gate::QuantumGate gate()
-        // graph.addGate()
-
+        auto quGate = gateApplyToQuantumGate(chain->gates[0]);
+        for (int i = 1; i < chain->gates.size(); i++)
+            quGate = quGate.lmatmul(gateApplyToQuantumGate(chain->gates[i]));
+        graph.addGate(quGate);
     }
     return graph;
 }
