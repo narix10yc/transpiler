@@ -99,8 +99,11 @@ public:
             const quench::quantum_gate::QuantumGate& gate, int debugLevel,
             const std::string& funcName = "");
 
-    llvm::Function* generatePrepareParameter(
-            const quench::circuit_graph::CircuitGraph& graph);
+    std::pair<llvm::Value*, llvm::Value*> generatePolynomial(
+            const quench::cas::Polynomial& polynomial, llvm::Value* paramArgV);
+
+    llvm::Function*
+    generatePrepareParameter(const quench::circuit_graph::CircuitGraph& graph);
 };
 
 } // namespace simulation

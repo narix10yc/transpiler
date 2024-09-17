@@ -23,7 +23,7 @@ namespace { /* anonymous namespace */
         bool realLoadNeg;
         bool imagLoadNeg;
     };
-    
+
     /// @return (mask, vec)
     std::pair<std::vector<int>, std::vector<int>>
     getMaskToMerge(const std::vector<int>& v0, const std::vector<int>& v1) {
@@ -85,15 +85,15 @@ IRGenerator::generateKernelDebug(
                                                : builder.getDoubleTy();
     Function* func;
     Argument *pSvArg, *pReArg, *pImArg, *ctrBeginArg, *ctrEndArg, *pMatArg;
-    { /* function declaration */
+    { /* start of function declaration */
     auto argType = (_config.ampFormat == AmpFormat::Sep)
             ? SmallVector<Type*> { builder.getPtrTy(), builder.getPtrTy(),
                 builder.getInt64Ty(), builder.getInt64Ty(), builder.getPtrTy() }
-            : SmallVector<Type*> { builder.getPtrTy(), 
+            : SmallVector<Type*> { builder.getPtrTy(),
                 builder.getInt64Ty(), builder.getInt64Ty(), builder.getPtrTy() };
-    
+
     auto* funcType = FunctionType::get(builder.getVoidTy(), argType, false);
-    func = Function::Create(funcType, Function::ExternalLinkage, funcName, *mod);      
+    func = Function::Create(funcType, Function::ExternalLinkage, funcName, *mod);
 
     if (_config.ampFormat == AmpFormat::Sep) {
         pReArg = func->getArg(0);      pReArg->setName("pRe");
@@ -107,7 +107,7 @@ IRGenerator::generateKernelDebug(
         ctrEndArg = func->getArg(2);   ctrEndArg->setName("ctr.end");
         pMatArg = func->getArg(3);     pMatArg->setName("pmat");
     }
-    }
+    } /* end of function declaration */
 
     // init basic blocks
     BasicBlock* entryBB = BasicBlock::Create(llvmContext, "entry", func);
@@ -142,7 +142,7 @@ IRGenerator::generateKernelDebug(
                 matrix[i].realFlag = 1;
             else if (std::abs(real + 1.0) < zeroSkipThres)
                 matrix[i].realFlag = -1;
-            else 
+            else
                 matrix[i].realFlag = 2;
 
             if (std::abs(imag) < zeroSkipThres)
@@ -151,9 +151,9 @@ IRGenerator::generateKernelDebug(
                 matrix[i].imagFlag = 1;
             else if (std::abs(imag + 1.0) < zeroSkipThres)
                 matrix[i].imagFlag = -1;
-            else 
+            else
                 matrix[i].imagFlag = 2;
-            
+
             if (shareMatrixElemThres > 0.0) {
                 auto realIt = std::find_if(uniqueEntries.begin(), uniqueEntries.end(),
                         [thres=shareMatrixElemThres, real=real](const std::pair<double, int> pair)
@@ -195,7 +195,7 @@ IRGenerator::generateKernelDebug(
                 auto* pReVal = builder.CreateConstGEP1_64(scalarTy, pMatArg, reLoadPosition, "pm.re." + std::to_string(i));
                 auto* mReVal = builder.CreateLoad(scalarTy, pReVal, "m.re." + std::to_string(i) + ".tmp");
                 matrix[i].realVal = builder.CreateVectorSplat(S, mReVal, "m.re." + std::to_string(i));
-                
+
                 uint64_t imLoadPosition = (shareMatrixElemThres > 0.0) ? uniqueEntryIndices[2*i+1] : 2ULL * i + 1;
                 auto* pImVal = builder.CreateConstGEP1_64(scalarTy, pMatArg, imLoadPosition, "pmIm_" + std::to_string(i));
                 auto* mImVal = builder.CreateLoad(scalarTy, pImVal, "m.re." + std::to_string(i) + ".tmp");
@@ -310,7 +310,7 @@ IRGenerator::generateKernelDebug(
         // idx = insert 0 to every bit in higherQubits to counter
         if (debugLevel > 2)
             std::cerr << "finding masks... idxStart = sum of ((counter & mask) << i)\n";
-        
+
         idxStartV = builder.getInt64(0ULL);
         uint64_t mask = 0ULL;
         uint64_t maskSum = 0ULL;
@@ -368,7 +368,7 @@ IRGenerator::generateKernelDebug(
         std::cerr << " ]\n";
     }
     }
-    
+
     /* load amplitude registers
       There are a total of 2K registers, among which K are real and K are imag
       In Alt Format, we load HK size-(2*S*LK) LLVM registers.
@@ -397,7 +397,7 @@ IRGenerator::generateKernelDebug(
             std::cerr << "hi = " << hi << ", "
                       << "idxShift = " << std::bitset<12>(idxShift) << ", "
                       << "keyStart = " << keyStart << "\n";
-        
+
         auto* _idxV = builder.CreateAdd(idxStartV, builder.getInt64(idxShift), "idx_" + std::to_string(hi));
         if (_config.ampFormat == AmpFormat::Sep) {
             pRe[hi] = builder.CreateGEP(vecType, pReArg, _idxV, "pRe." + std::to_string(hi));
@@ -434,7 +434,7 @@ IRGenerator::generateKernelDebug(
         if (i & S)
             svMargeMask[i] = (imCount++) + vecSize;
         else
-            svMargeMask[i] = reCount++;   
+            svMargeMask[i] = reCount++;
     }
     if (debugLevel > 1)
         std::cerr << CYAN_FG << "-- merge masks done\n" << RESET;
@@ -454,7 +454,7 @@ IRGenerator::generateKernelDebug(
                     if (matrix[r*K + c].realLoadNeg)
                         newReal[li] = genMulSub(newReal[li], matrix[r*K + c].realVal, real[c],
                                         matrix[r * K + c].realFlag, "", nameRe);
-                    else 
+                    else
                         newReal[li] = genMulAdd(newReal[li], matrix[r*K + c].realVal, real[c],
                                         matrix[r * K + c].realFlag, "", nameRe);
                 }
@@ -473,7 +473,7 @@ IRGenerator::generateKernelDebug(
                     newRe0 = genMulAdd(newRe0, matrix[r * K + c].realVal, real[c],
                                     matrix[r * K + c].realFlag, "", nameRe);
                     newRe1 = genMulAdd(newRe1, matrix[r * K + c].imagVal, imag[c],
-                                    matrix[r * K + c].imagFlag, "", nameRe);  
+                                    matrix[r * K + c].imagFlag, "", nameRe);
                 }
                 if (newRe0 != nullptr && newRe1 != nullptr)
                     newReal[li] = builder.CreateFSub(newRe0, newRe1, "newRe" + std::to_string(r) + "_");
@@ -528,7 +528,7 @@ IRGenerator::generateKernelDebug(
         }
         if (debugLevel > 2)
             std::cerr << "Merged hi = " << hi << "\n";
-        
+
         // store
         if (_config.ampFormat == AmpFormat::Sep) {
             builder.CreateStore(newReal[0], pRe[hi], false);
@@ -540,11 +540,11 @@ IRGenerator::generateKernelDebug(
         }
     }
 
-    // increment counter and return 
+    // increment counter and return
     auto* counterNextV = builder.CreateAdd(counterV, builder.getInt64(1), "counter.next");
     counterV->addIncoming(counterNextV, loopBodyBB);
     builder.CreateBr(loopBB);
-    
+
     builder.SetInsertPoint(retBB);
     builder.CreateRetVoid();
 

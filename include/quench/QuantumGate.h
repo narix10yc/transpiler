@@ -210,6 +210,26 @@ public:
         return matrix.activeType == matrix_t::ActiveMatrixType::P;
     }
 
+    inline const std::vector<std::complex<double>>& cData() const {
+        assert(isConstantMatrix() && "calling cData()");
+        return matrix.constantMatrix.data;
+    }
+
+    inline std::vector<std::complex<double>>& cData() {
+        assert(isConstantMatrix() && "calling cData()");
+        return matrix.constantMatrix.data;
+    }
+
+    inline const std::vector<cas::Polynomial>& pData() const {
+        assert(isParametrizedMatrix() && "calling pData()");
+        return matrix.parametrizedMatrix.data;
+    }
+
+    inline std::vector<cas::Polynomial>& pData() {
+        assert(isParametrizedMatrix() && "calling pData()");
+        return matrix.parametrizedMatrix.data;
+    }
+
     void convertToParametrizedMatrix() {
         if (isParametrizedMatrix())
             return;

@@ -171,29 +171,3 @@ Polynomial Polynomial::operator*(const Polynomial& other) const {
     }
     return newPoly;
 }
-
-using monomial_t = Polynomial::monomial_t;
-
-Polynomial ConstantNode::toPolynomial() {
-    return Polynomial(monomial_t(value));
-}
-
-Polynomial VariableNode::toPolynomial() {
-    return Polynomial(monomial_t(this));
-}
-
-Polynomial CosineNode::toPolynomial() {
-    return Polynomial(monomial_t(this));
-}
-
-Polynomial SineNode::toPolynomial() {
-    return Polynomial(monomial_t(this));
-}
-
-Polynomial AddNode::toPolynomial() {
-    return Polynomial(monomial_t(this));
-}
-
-Polynomial ComplexExpNode::toPolynomial() {
-    return Polynomial(monomial_t(this));
-}

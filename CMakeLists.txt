@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
 
-
 message("########### Custom Setups ###########")
 message(STATUS "PROJECT SOURCE DIR: ${PROJECT_SOURCE_DIR}")
 
@@ -31,8 +30,8 @@ project(simulation)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED on)
 
-message("STATUS C Compiler: ${CMAKE_C_COMPILER}")
-message("STATUS C++ Compiler: ${CMAKE_CXX_COMPILER}")
+message(STATUS "C Compiler: ${CMAKE_C_COMPILER}")
+message(STATUS "C++ Compiler: ${CMAKE_CXX_COMPILER}")
 
 find_package(LLVM REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")

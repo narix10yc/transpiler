@@ -4,7 +4,6 @@
 #include <vector>
 #include <algorithm>
 #include <iostream>
-#include <memory>
 #include <cassert>
 #include <cmath>
 #include <complex>
@@ -31,8 +30,6 @@ public:
     }
 
     virtual int getSortPriority() const = 0;
-
-    virtual Polynomial toPolynomial() = 0;
 
     virtual ~CasNode() = default;
 };
@@ -79,8 +76,6 @@ public:
     }
 
     int getSortPriority() const override { return 0; }
-
-    Polynomial toPolynomial() override;
 };
 
 class VariableNode : public CasNode {
@@ -119,8 +114,6 @@ public:
     }
 
     int getSortPriority() const override { return 10; }
-
-    Polynomial toPolynomial() override;
 };
 
 class CosineNode : public CasNode {
@@ -158,9 +151,6 @@ public:
     }
 
     int getSortPriority() const override { return 20; }
-
-    Polynomial toPolynomial() override;
-
 };
 
 class SineNode : public CasNode {
@@ -199,8 +189,6 @@ public:
     }
 
     int getSortPriority() const override { return 30; }
-
-    Polynomial toPolynomial() override;
 };
 
 class AddNode : public CasNode {
@@ -250,8 +238,6 @@ public:
     }
 
     int getSortPriority() const override { return 15; }
-
-    Polynomial toPolynomial() override;
 };
 
 class ComplexExpNode : public CasNode {
@@ -291,8 +277,6 @@ public:
     }
 
     int getSortPriority() const override { return 40; }
-
-    Polynomial toPolynomial() override;
 };
 
 class Polynomial : public CasNode {
@@ -387,8 +371,6 @@ public:
     }
 
     int getSortPriority() const override { return 60; }
-
-    Polynomial toPolynomial() override { return Polynomial(*this); };
 
     Polynomial& operator+=(const Polynomial& other);
 

@@ -42,7 +42,7 @@ std::ostream& IRGeneratorConfig::display(
         int verbose, bool title, std::ostream& os) const {
     if (title)
         os << CYAN_FG << "===== IR Generator Config =====\n" << RESET;
-    
+
     const char* ON = "\033[32mon\033[0m";
     const char* OFF = "\033[31moff\033[0m";
 
@@ -78,9 +78,9 @@ void IRGenerator::loadFromFile(const std::string& fileName) {
 Value* IRGenerator::genMulAdd(
         Value* aa, Value* bb, Value* cc, int bbFlag,
         const Twine& bbccName, const Twine& aaName) {
-    if (bbFlag == 0) 
+    if (bbFlag == 0)
         return aa;
-    
+
     // new_aa = aa + cc
     if (bbFlag == 1) {
         if (aa == nullptr)
@@ -98,7 +98,7 @@ Value* IRGenerator::genMulAdd(
     // bb is non-special
     if (aa == nullptr)
         return builder.CreateFMul(bb, cc, aaName);
-    
+
     // new_aa = aa + bb * cc
     if (_config.useFMA)
         return builder.CreateIntrinsic(bb->getType(), Intrinsic::fmuladd,
@@ -108,11 +108,10 @@ Value* IRGenerator::genMulAdd(
     return builder.CreateFAdd(aa, bbcc, aaName);
 }
 
-
 Value* IRGenerator::genMulSub(
         Value* aa, Value* bb, Value* cc, int bbFlag,
         const Twine& bbccName, const Twine& aaName) {
-    if (bbFlag == 0) 
+    if (bbFlag == 0)
         return aa;
 
     auto* ccNeg = builder.CreateFNeg(cc, "ccNeg");
