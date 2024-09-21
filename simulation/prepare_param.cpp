@@ -4,7 +4,7 @@ using namespace llvm;
 using namespace simulation;
 using namespace quench::circuit_graph;
 using GateMatrix = quench::quantum_gate::GateMatrix;
-using Polynomial = quench::cas::Polynomial;
+using namespace saot;
 
 std::pair<Value*, Value*>
 IRGenerator::generatePolynomial(const Polynomial& p, Value* paramArgV) {
@@ -14,8 +14,7 @@ IRGenerator::generatePolynomial(const Polynomial& p, Value* paramArgV) {
 }
 
 Function* IRGenerator::generatePrepareParameter(const CircuitGraph& graph) {
-    Type* scalarTy = (_config.precision == 32) ? builder.getFloatTy()
-                                               : builder.getDoubleTy();
+    Type* scalarTy = getScalarTy();
 
     auto* funcTy = FunctionType::get(builder.getVoidTy(),
             { builder.getPtrTy(), builder.getPtrTy() }, false);

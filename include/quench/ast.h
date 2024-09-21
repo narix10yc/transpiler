@@ -78,9 +78,8 @@ class RootNode {
 public:
     QuantumCircuit circuit;
     std::vector<ParameterDefStmt> paramDefs;
-    cas::Context casContext;
 
-    RootNode() : circuit(), paramDefs(), casContext() {}
+    RootNode() : circuit(), paramDefs() {}
 
     std::ostream& print(std::ostream& os) const;
 

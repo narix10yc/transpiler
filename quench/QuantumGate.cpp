@@ -7,8 +7,7 @@
 using namespace Color;
 using namespace quench::complex_matrix;
 using namespace quench::quantum_gate;
-using namespace quench::cas;
-using monomial_t = quench::cas::Polynomial::monomial_t;
+using namespace saot;
 
 bool _isValidShuffleFlag(const std::vector<int>& flags) {
     auto copy = flags;
@@ -181,67 +180,67 @@ GateMatrix GateMatrix::FromName(
     return GateMatrix();
 }
 
-GateMatrix GateMatrix::FromParameters(
-        const std::string& name,
-        const std::vector<GateParameter>& params,
-        cas::Context& ctx) {
-    const auto paramToCasNode = [&ctx](const GateParameter& p) -> cas::CasNode* {
-        if (p.isConstant)
-            return ctx.getConst(p.constant);
-        return ctx.getVar(p.variable);
-    };
+// GateMatrix GateMatrix::FromParameters(
+//         const std::string& name,
+//         const std::vector<GateParameter>& params,
+//         cas::Context& ctx) {
+//     const auto paramToCasNode = [&ctx](const GateParameter& p) -> cas::CasNode* {
+//         if (p.isConstant)
+//             return ctx.getConst(p.constant);
+//         return ctx.getVar(p.variable);
+//     };
 
-    if (name == "u3" || name == "u1q") {
-        assert(params.size() == 3 && "u1q gate needs 3 parameters");
+//     if (name == "u3" || name == "u1q") {
+//         assert(params.size() == 3 && "u1q gate needs 3 parameters");
 
-        auto* theta = paramToCasNode(params[0]);
-        auto* phi = paramToCasNode(params[1]);
-        auto* lambd = paramToCasNode(params[2]);
+//         auto* theta = paramToCasNode(params[0]);
+//         auto* phi = paramToCasNode(params[1]);
+//         auto* lambd = paramToCasNode(params[2]);
 
-        return GateMatrix(matrix_t::p_matrix_t {
-            Polynomial(monomial_t(ctx.createCosNode(theta))),
-            Polynomial(monomial_t(-1.0, { ctx.createSinNode(theta), ctx.createCompExpNode(lambd) })),
-            Polynomial(monomial_t( 1.0, { ctx.createSinNode(theta), ctx.createCompExpNode(phi) })),
-            Polynomial(monomial_t( 1.0, { ctx.createCosNode(theta), ctx.createCompExpNode(ctx.createAddNode(phi, lambd)) }))
-        });
-    }
+//         return GateMatrix(matrix_t::p_matrix_t {
+//             Polynomial(monomial_t(ctx.createCosNode(theta))),
+//             Polynomial(monomial_t(-1.0, { ctx.createSinNode(theta), ctx.createCompExpNode(lambd) })),
+//             Polynomial(monomial_t( 1.0, { ctx.createSinNode(theta), ctx.createCompExpNode(phi) })),
+//             Polynomial(monomial_t( 1.0, { ctx.createCosNode(theta), ctx.createCompExpNode(ctx.createAddNode(phi, lambd)) }))
+//         });
+//     }
 
-    if (name == "h") {
-        GateMatrix gateMat(matrix_t::c_matrix_t {
-            { M_SQRT1_2, 0 }, { M_SQRT1_2, 0 },
-            { M_SQRT1_2, 0 }, {-M_SQRT1_2, 0 } 
-        });
-        gateMat.convertToParametrizedMatrix();
-        return gateMat;
-    }
+//     if (name == "h") {
+//         GateMatrix gateMat(matrix_t::c_matrix_t {
+//             { M_SQRT1_2, 0 }, { M_SQRT1_2, 0 },
+//             { M_SQRT1_2, 0 }, {-M_SQRT1_2, 0 } 
+//         });
+//         gateMat.convertToParametrizedMatrix();
+//         return gateMat;
+//     }
 
-    if (name == "cx") {
-        GateMatrix gateMat(matrix_t::c_matrix_t {
-            {1,0}, {0,0}, {0,0}, {0,0},
-            {0,0}, {0.0}, {0.0}, {1,0},
-            {0,0}, {0.0}, {1.0}, {0,0},
-            {0,0}, {1.0}, {0.0}, {0,0}
-        });
-        gateMat.convertToParametrizedMatrix();
-        return gateMat;
-    }
+//     if (name == "cx") {
+//         GateMatrix gateMat(matrix_t::c_matrix_t {
+//             {1,0}, {0,0}, {0,0}, {0,0},
+//             {0,0}, {0.0}, {0.0}, {1,0},
+//             {0,0}, {0.0}, {1.0}, {0,0},
+//             {0,0}, {1.0}, {0.0}, {0,0}
+//         });
+//         gateMat.convertToParametrizedMatrix();
+//         return gateMat;
+//     }
 
-    if (name == "cz") {
-        GateMatrix gateMat(matrix_t::c_matrix_t {
-            {1,0}, {0,0}, {0,0}, {0,0},
-            {0,0}, {1,0}, {0,0}, {0,0},
-            {0,0}, {0,0}, {1,0}, {0,0},
-            {0,0}, {0,0}, {0,0}, {-1,0}
-        });
-        gateMat.convertToParametrizedMatrix();
-        return gateMat;
-    }
+//     if (name == "cz") {
+//         GateMatrix gateMat(matrix_t::c_matrix_t {
+//             {1,0}, {0,0}, {0,0}, {0,0},
+//             {0,0}, {1,0}, {0,0}, {0,0},
+//             {0,0}, {0,0}, {1,0}, {0,0},
+//             {0,0}, {0,0}, {0,0}, {-1,0}
+//         });
+//         gateMat.convertToParametrizedMatrix();
+//         return gateMat;
+//     }
         
-    std::cerr << RED_FG << BOLD << "Not Implemented gate '" << name << "'"
-              << RESET << "\n";
-    assert(false);
-    return GateMatrix();
-}
+//     std::cerr << RED_FG << BOLD << "Not Implemented gate '" << name << "'"
+//               << RESET << "\n";
+//     assert(false);
+//     return GateMatrix();
+// }
 
 std::ostream& GateMatrix::printMatrix(std::ostream& os) const {     
     if (isConstantMatrix()) {
@@ -395,10 +394,10 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
             }
         }
 
-        newPMatrix.data[i] = cas::Polynomial();
+        newPMatrix.data[i] = Polynomial();
         for (size_t j = 0; j < (1 << contractionBitwidth); j++) {
-            auto aPtr = aPtrStart;
-            auto bPtr = bPtrStart;
+            auto* aPtr = aPtrStart;
+            auto* bPtr = bPtrStart;
             for (unsigned bit = 0; bit < contractionBitwidth; bit++) {
                 if ((j & (1 << bit)) != 0) {
                     aPtr += sShift[bit].first;
@@ -430,11 +429,11 @@ int QuantumGate::opCount(double thres) {
     else {
         assert(gateMatrix.isParametrizedMatrix());
         for (const auto& data : gateMatrix.matrix.parametrizedMatrix.data) {
-            auto ev = data.getExprValue();
-            if (ev.isConstant) {
-                if (std::abs(ev.value.real()) >= normalizedThres)
+            auto ev = data.getValue();
+            if (ev.first) {
+                if (std::abs(ev.second.real()) >= normalizedThres)
                     count++;
-                if (std::abs(ev.value.imag()) >= normalizedThres)
+                if (std::abs(ev.second.imag()) >= normalizedThres)
                     count++;
             } else {
                 count += 2;

@@ -3,7 +3,6 @@
 
 using namespace quench;
 using namespace quench::ast;
-using namespace quench::cas;
 using namespace quench::quantum_gate;
 
 int Parser::readLine() {
@@ -162,7 +161,7 @@ RootNode* Parser::parse() {
             continue;
         }
         if (tokenIt->type == TokenTy::Hash) {
-            auto defStmt = _parseParameterDefStmt(root->casContext);
+            auto defStmt = _parseParameterDefStmt();
             defStmt.gateMatrix.updateNqubits();
             root->paramDefs.push_back(defStmt);
             displayParserLog("Parsed param def #" + std::to_string(defStmt.refNumber));
@@ -314,7 +313,7 @@ GateApplyStmt Parser::_parseGateApply() {
     return gate;
 }
 
-ParameterDefStmt Parser::_parseParameterDefStmt(cas::Context& casContext) {
+ParameterDefStmt Parser::_parseParameterDefStmt() {
     assert(tokenIt->type == TokenTy::Hash);
 
     proceedWithType(TokenTy::Numeric);
@@ -327,7 +326,7 @@ ParameterDefStmt Parser::_parseParameterDefStmt(cas::Context& casContext) {
 
     quench::quantum_gate::matrix_t::p_matrix_t polyMatrix;
     while (true) {
-        auto poly = _parsePolynomial(casContext);
+        auto poly = _parseSaotPolynomial();
         poly.print(std::cerr) << "\n";
         polyMatrix.data.push_back(poly);
         if (tokenIt->type == TokenTy::Comma) {
@@ -341,100 +340,6 @@ ParameterDefStmt Parser::_parseParameterDefStmt(cas::Context& casContext) {
     polyMatrix.updateSize();
     defStmt.gateMatrix.matrix = std::move(polyMatrix);
     return defStmt;
-}
-
-quench::cas::Polynomial Parser::_parsePolynomial(cas::Context& casContext) {
-    const auto parseExponent = [&]() -> int {
-        if (optionalProceedWithType(TokenTy::Pow)) {
-            proceedWithType(TokenTy::Numeric);
-            return convertCurTokenToInt();
-        }
-        return 1;
-    };
-
-    const auto parseAtom = [&]() -> cas::CasNode* {
-        if (tokenIt->type == TokenTy::Percent) {
-            proceedWithType(TokenTy::Numeric);
-            return casContext.getVar(convertCurTokenToInt());
-        }
-        if (tokenIt->type == TokenTy::L_RoundBraket) {
-            proceedWithType(TokenTy::Percent);
-            proceedWithType(TokenTy::Numeric);
-            auto* varLHS = casContext.getVar(convertCurTokenToInt());
-            proceedWithType(TokenTy::Add);
-            proceedWithType(TokenTy::Percent);
-            proceedWithType(TokenTy::Numeric);
-            auto* varRHS = casContext.getVar(convertCurTokenToInt());
-            auto* varAdd = casContext.createAddNode(varLHS, varRHS);
-            proceedWithType(TokenTy::R_RoundBraket);
-            return varAdd;
-        }
-        return nullptr;
-    };
-
-    const auto parseCoef = [&]() -> std::complex<double> {
-        if (tokenIt->type == TokenTy::Percent)
-            return { 1.0, 0.0 };     
-        if (tokenIt->type == TokenTy::Identifier && tokenIt->str != "i")
-            return { 1.0, 0.0 };
-        return _parseComplexNumber();
-    };
-
-    /// Before: at the first token;
-    /// After: exit the last token
-    const auto parseMonomial = [&]() -> cas::Polynomial::monomial_t {
-        Polynomial::monomial_t monomial;
-        monomial.coef = parseCoef();
-        while (true) {
-            if (tokenIt->type == TokenTy::Mul)
-                proceed();
-
-            if (tokenIt->type == TokenTy::Identifier) {
-                int flag;
-                if (tokenIt->str == "cos")
-                    flag = 1;
-                else if (tokenIt->str == "sin")
-                    flag = 2;
-                else if (tokenIt->str == "cexp")
-                    flag = 3;
-                else
-                    throwParserError("Available operators are 'cos', 'sin', or 'cexp'");
-                
-                proceed();
-                auto* atom = parseAtom();
-                if (atom == nullptr)
-                    throwParserError("Expect an atom");
-                int exponent = parseExponent();
-                if (flag == 1)
-                    monomial.powers.push_back({casContext.createCosNode(atom), exponent});
-                else if (flag == 2)
-                    monomial.powers.push_back({casContext.createSinNode(atom), exponent});
-                else if (flag == 3)
-                    monomial.powers.push_back({casContext.createCompExpNode(atom), exponent});
-                proceed();
-                continue;
-            }
-            if (auto* atom = parseAtom()) {
-                monomial.powers.push_back({atom, parseExponent()});
-                proceed();
-                continue;
-            }
-            break;
-        }
-        return monomial;
-    };
-
-    Polynomial poly;
-    while (true) {
-        poly.insertMonomial(parseMonomial());
-        if (tokenIt->type == TokenTy::Add) {
-            proceed();
-            continue;
-        }
-        break;
-    }
-    displayParserLog("Parsed polynomial " + poly.str());
-    return poly;
 }
 
 std::complex<double> Parser::_parseComplexNumber() {
@@ -487,4 +392,150 @@ std::complex<double> Parser::_parseComplexNumber() {
 
     proceed();
     return { real, imag };
+}
+
+saot::Polynomial Parser::_parseSaotPolynomial() {
+    const auto parseCoef = [&]() -> std::complex<double> {
+        if (tokenIt->type == TokenTy::Identifier) {
+            if (tokenIt->str == "i")
+                return { 0.0, 1.0 };
+            return { 1.0, 0.0 };
+        }
+        bool paranFlag = false;
+        if (tokenIt->type == TokenTy::L_RoundBraket) {
+            paranFlag = true;
+            proceed();
+            auto cplx = _parseComplexNumber();
+            if (tokenIt->type == TokenTy::R_RoundBraket) {
+                proceed();
+                return cplx;
+            }
+            throwParserError("Expect ')'");
+        }
+        auto cplx = _parseComplexNumber();
+        if (cplx.real() != 0.0 && cplx.imag() != 0.0) {
+            displayParserWarning("Expect complex number to be enclosed by '()'");
+        }
+        return cplx;
+    };
+
+    const auto parseSaotVarSum = [&]() -> saot::VariableSumNode {
+        saot::VariableSumNode N;
+        // 'cos' 'sin'
+        if (tokenIt->type != TokenTy::Identifier)
+            throwParserError("Expect VariableSumNode to start with 'cos' or 'sin");
+        if (tokenIt->str == "cos")
+            N.op = saot::VariableSumNode::CosOp;
+        else if (tokenIt->str == "sin")
+            N.op = saot::VariableSumNode::SinOp;
+        else
+            throwParserError("Expect VariableSumNode to start with 'cos' or 'sin");
+        proceed();
+
+        // optional '('
+        bool paranFlag = false;
+        if (tokenIt->type == TokenTy::L_RoundBraket) {
+            paranFlag = true;
+            proceed();
+        }
+
+        // terms
+        int nAdd = 0;
+        while (true) {
+            if (tokenIt->type == TokenTy::Percent) {
+                proceedWithType(TokenTy::Numeric);
+                N.addVar(convertCurTokenToInt());
+                proceed();
+            }
+            else if (tokenIt->type == TokenTy::Numeric) {
+                N.constant = convertCurTokenToFloat();
+                proceed();
+                break;
+            }
+            if (tokenIt->type == TokenTy::Add) {
+                nAdd++;
+                proceed();
+                continue;
+            }
+            break;
+        }
+
+        // matching (optional) ')'
+        if (paranFlag) {
+            if (nAdd > 0)
+                displayParserWarning("Expect sum terms to be enclosed by '()'");
+            if (tokenIt->type != TokenTy::R_RoundBraket)
+                throwParserError("Expect ')' to end VariableSumNode");
+            proceed();
+        }
+        return N;
+    };
+
+    const auto parseSaotMonomial = [&]() -> saot::Monomial {
+        saot::Monomial M;
+        M.coef = parseCoef();
+        if (tokenIt->type == TokenTy::Mul) {
+            if (M.coef == std::complex<double>(1.0, 0.0))
+                displayParserWarning("Top-level '*'");
+            proceed();
+        }
+
+        // mul term
+        while (true) {
+            if (tokenIt->type == TokenTy::Identifier && tokenIt->str == "expi")
+               break;
+            M.insertMulTerm(parseSaotVarSum());
+            if (tokenIt->type == TokenTy::Mul) {
+                proceed();
+                continue;
+            }
+            break;
+        }
+
+        // expi term
+        if (tokenIt->type != TokenTy::Identifier || tokenIt->str != "expi")
+            return M;
+        
+        proceed();
+        bool paranFlag = false;
+        if (tokenIt->type == TokenTy::L_RoundBraket) {
+            paranFlag = true;
+            proceed();
+        }
+        while (true) {
+            if (tokenIt->type != TokenTy::Percent)
+                throwParserError("Expect '%' in parsing ExpiVars");
+            proceedWithType(TokenTy::Numeric);
+            M.insertExpiVar(convertCurTokenToInt());
+            if (optionalProceedWithType(TokenTy::Add)) {
+                proceed();
+                continue;
+            }
+            proceed();
+            break;
+        }
+        if (paranFlag) {
+            if (tokenIt->type == TokenTy::R_RoundBraket)
+                proceed();
+            else
+                throwParserError("Expect ')'");
+        }
+        else {
+            if (M.expiVars().size() > 1)
+                displayParserWarning("Expect multiple expi terms to be enclosed by '()'");
+        }
+        return M;
+    };
+
+    saot::Polynomial P;
+    while (true) {
+        P.insertMonomial(parseSaotMonomial());
+        if (tokenIt->type == TokenTy::Add) {
+            proceed();
+            continue;
+        }
+        break;
+    }
+
+    return P;
 }

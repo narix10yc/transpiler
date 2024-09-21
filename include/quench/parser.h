@@ -10,6 +10,7 @@
 #include <sstream>
 
 #include "quench/ast.h"
+#include "saot/Polynomial.h"
 #include "utils/iocolor.h"
 
 namespace quench::ast {
@@ -270,9 +271,9 @@ protected:
     GateApplyStmt _parseGateApply();
     QuantumCircuit _parseCircuit();
 
-    cas::Polynomial _parsePolynomial(cas::Context& casContext);
-    ParameterDefStmt _parseParameterDefStmt(cas::Context& casContext);
+    ParameterDefStmt _parseParameterDefStmt();
 
+    saot::Polynomial _parseSaotPolynomial();
     // bool _parseStatement(RootNode&);
 public:
     Parser(const std::string& fileName)

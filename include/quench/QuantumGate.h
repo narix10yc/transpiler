@@ -2,14 +2,14 @@
 #define QUENCH_QUANTUM_GATE_H
 
 #include "quench/ComplexMatrix.h"
-#include "quench/Polynomial.h"
+#include "saot/Polynomial.h"
 #include "utils/utils.h"
 
 namespace quench::quantum_gate {
 
 struct matrix_t {
     // parametrised matrix type
-    using p_matrix_t = complex_matrix::SquareMatrix<cas::Polynomial>;
+    using p_matrix_t = complex_matrix::SquareMatrix<saot::Polynomial>;
     // constant matrix type
     using c_matrix_t = complex_matrix::SquareMatrix<std::complex<double>>;
     union {
@@ -197,10 +197,10 @@ public:
             const std::string& name,
             const std::vector<double>& params = {});
 
-    static GateMatrix FromParameters(
-            const std::string& name,
-            const std::vector<GateParameter>& params,
-            cas::Context& ctx);
+    // static GateMatrix FromParameters(
+            // const std::string& name,
+            // const std::vector<GateParameter>& params,
+            // cas::Context& ctx);
 
     inline bool isConstantMatrix() const {
         return matrix.activeType == matrix_t::ActiveMatrixType::C;
@@ -220,12 +220,12 @@ public:
         return matrix.constantMatrix.data;
     }
 
-    inline const std::vector<cas::Polynomial>& pData() const {
+    inline const std::vector<saot::Polynomial>& pData() const {
         assert(isParametrizedMatrix() && "calling pData()");
         return matrix.parametrizedMatrix.data;
     }
 
-    inline std::vector<cas::Polynomial>& pData() {
+    inline std::vector<saot::Polynomial>& pData() {
         assert(isParametrizedMatrix() && "calling pData()");
         return matrix.parametrizedMatrix.data;
     }
@@ -238,7 +238,7 @@ public:
         size_t size = matrix.constantMatrix.getSize();
         matrix_t::p_matrix_t pmat(size);
         for (size_t i = 0; i < size*size; i++)
-            pmat.data[i] = cas::Polynomial(matrix.constantMatrix.data[i]);
+            pmat.data[i] = saot::Polynomial::Constant(matrix.constantMatrix.data[i]);
         
         matrix = std::move(pmat);
     }

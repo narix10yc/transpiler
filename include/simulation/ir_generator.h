@@ -68,11 +68,17 @@ public:
     const IRGeneratorConfig& config() const { return _config; }
 
     void loadFromFile(const std::string& fileName);
+
+    llvm::Type* getScalarTy() {
+        if (_config.precision == 32)
+            return builder.getFloatTy();
+        if (_config.precision == 64)
+            return builder.getDoubleTy();
+        llvm_unreachable("Unsupported precision");
+    }
     
     /// @brief Generate the IR that applies new_aa = aa + bb * cc
     /// @param aa can be nullptr. In such case, new_aa will be assigned to bb * cc
-    /// @param bb
-    /// @param cc 
     /// @param bbFlag special values are +1, -1, or 0
     /// @return aa + bb * cc. Possible nullptr, when aa is nullptr and bbFlag = 0
     llvm::Value* genMulAdd(
@@ -81,10 +87,8 @@ public:
 
     /// @brief Generate the IR that applies new_aa = aa - bb * cc
     /// @param aa can be nullptr. In such case, new_aa will be assigned to -bb * cc
-    /// @param bb
-    /// @param cc 
     /// @param bbFlag special values are +1, -1, or 0
-    /// @return aa - bb * cc
+    /// @return aa - bb * cc. Possible nullptr, when aa is nullptr and bbFlag = 0
     llvm::Value* genMulSub(
             llvm::Value* aa, llvm::Value* bb, llvm::Value* cc, int bbFlag,
             const llvm::Twine& bbccName = "", const llvm::Twine& aaName = "");
@@ -100,7 +104,7 @@ public:
             const std::string& funcName = "");
 
     std::pair<llvm::Value*, llvm::Value*> generatePolynomial(
-            const quench::cas::Polynomial& polynomial, llvm::Value* paramArgV);
+            const saot::Polynomial& polynomial, llvm::Value* paramArgV);
 
     llvm::Function*
     generatePrepareParameter(const quench::circuit_graph::CircuitGraph& graph);

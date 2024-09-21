@@ -4,190 +4,161 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <complex>
+#include <algorithm>
+#include <initializer_list>
 
-namespace saot::polynomial {
+namespace saot {
 
-class CASContext;
-
-class Node {
+class CasNode {
 public:
     virtual std::ostream& print(std::ostream&) const = 0;
-
-    virtual Node* derivative(
-            const std::string& var, CASContext& ctx) const = 0;
-
-    virtual Node* simplify(CASContext& ctx) { return this; }
+    ~CasNode() = default;
 };
 
-class Atom : public Node {};
-
-class Expression : public Node {};
-
-class Numerics : public Atom {
+/// @brief op(vars[0] + vars[1] + <other vars> + constant)
+/// @param op one of None, CosOp, SinOp
+class VariableSumNode : public CasNode {
 public:
-    double value;
-    Numerics(double value) : value(value) {}
-
-    std::ostream& print(std::ostream& os) const override {
-        return os << value << " ";
-    }
-
-    Node* derivative(const std::string& var, CASContext& ctx) const override;
-};
-
-class Variable : public Atom {
-public:
-    std::string name;
-    Variable(const std::string& name) : name(name) {}
-
-    std::ostream& print(std::ostream& os) const override {
-        return os << name << " ";
-    }
-
-    Node* derivative(const std::string& var, CASContext& ctx) const override;
-};
-
-class AddExpr : public Expression {
-public:
-    Node* lhs;
-    Node* rhs;
-    AddExpr(Node* lhs, Node* rhs)
-        : lhs(lhs), rhs(rhs) {}
+    enum Operator { None, CosOp, SinOp };
     
-    std::ostream& print(std::ostream& os) const override {
-        os << "+ ";
-        lhs->print(os);
-        return rhs->print(os);
-    }
-
-    Node* derivative(const std::string& var, CASContext& ctx) const override;
-    Node* simplify(CASContext& ctx) override;
-};
-
-class SubExpr : public Expression {
-public:
-    Node* lhs;
-    Node* rhs;
-    SubExpr(Node* lhs, Node* rhs)
-        : lhs(lhs), rhs(rhs) {}
+    double constant;
+    std::vector<int> vars;
+    Operator op;
     
-    std::ostream& print(std::ostream& os) const override {
-        os << "- ";
-        lhs->print(os);
-        return rhs->print(os);
+    VariableSumNode(
+            std::initializer_list<int> variables = {},
+            double constant = 0.0,
+            Operator op = None)
+            : constant(constant), vars(), op(op) {
+        for (const auto& v : variables)
+            addVar(v);
     }
-
-    Node* derivative(const std::string& var, CASContext& ctx) const override;
-    Node* simplify(CASContext& ctx) override;
-};
-
-class MulExpr : public Expression {
-public:
-    Node* lhs;
-    Node* rhs;
-    MulExpr(Node* lhs, Node* rhs)
-        : lhs(lhs), rhs(rhs) {}
     
-    std::ostream& print(std::ostream& os) const override {
-        os << "* ";
-        lhs->print(os);
-        return rhs->print(os);
-        return os;
+    static inline VariableSumNode Cosine(
+            std::initializer_list<int> vars, double constant = 0.0) {
+        return VariableSumNode(vars, constant, CosOp);
     }
 
-    Node* derivative(const std::string& var, CASContext& ctx) const override;
-    Node* simplify(CASContext& ctx) override;
-};
-
-class CosExpr : public Expression {
-public:
-    Node* node;
-    CosExpr(Node* node) : node(node) {}
-    
-    std::ostream& print(std::ostream& os) const override {
-        os << "cos ";
-        return node->print(os);
+    static inline VariableSumNode Sine(
+            std::initializer_list<int> vars, double constant = 0.0) {
+        return VariableSumNode(vars, constant, SinOp);
     }
 
-    Node* derivative(const std::string& var, CASContext& ctx) const override;
-    Node* simplify(CASContext& ctx) override;
-};
-
-class SinExpr : public Expression {
-public:
-    Node* node;
-    SinExpr(Node* node) : node(node) {}
-    
-    std::ostream& print(std::ostream& os) const override {
-        os << "sin ";
-        return node->print(os);
+    void addVar(int v) {
+        auto it = std::lower_bound(vars.begin(), vars.end(), v);
+        vars.insert(it, v);
     }
 
-    Node* derivative(const std::string& var, CASContext& ctx) const override;
-    Node* simplify(CASContext& ctx) override;
+    int compare(const VariableSumNode&) const;
+    bool operator<(const VariableSumNode& N) const { return compare(N) < 0; }
+    bool operator>(const VariableSumNode& N) const { return compare(N) > 0; }
+
+    bool operator==(const VariableSumNode&) const;
+    bool operator!=(const VariableSumNode&) const;
+
+    std::ostream& print(std::ostream&) const override;
 };
 
 
-
-class CASContext {
-    std::vector<Variable*> vars;
-    std::vector<Numerics*> nums;
-    std::vector<Node*> nodes;
+class Monomial : public CasNode {
+    std::vector<VariableSumNode> _mulTerms;
+    std::vector<int> _expiVars;
 public:
-    CASContext() : vars(), nums() {}
+    std::complex<double> coef;
+
+    Monomial(const std::complex<double>& coef = { 1.0, 0.0 }) : coef(coef), _mulTerms(), _expiVars() {}
     
-    Variable* getVariable(const std::string& name) {
-        for (auto it = vars.begin(); it != vars.end(); it++) {
-            if ((*it)->name == name)
-                return *it;
+    int compare(const Monomial&) const;
+    bool operator<(const Monomial& M) const { return compare(M) < 0; }
+    bool operator>(const Monomial& M) const { return compare(M) > 0; }
+
+    bool mergeable(const Monomial&) const;
+
+    std::vector<VariableSumNode>& mulTerms() { return _mulTerms; }
+    const std::vector<VariableSumNode>& mulTerms() const { return _mulTerms; }
+
+    std::vector<int>& expiVars() { return _expiVars; }
+    const std::vector<int>& expiVars() const { return _expiVars; }
+
+    void insertMulTerm(const VariableSumNode& N) {
+        auto it = std::lower_bound(_mulTerms.begin(), _mulTerms.end(), N);
+        _mulTerms.insert(it, N);
+    }
+
+    void insertExpiVar(int v) {
+        auto it = std::lower_bound(_expiVars.begin(), _expiVars.end(), v);
+        _expiVars.insert(it, v);
+    }
+
+    Monomial& operator*=(const Monomial&);
+    Monomial operator*(const Monomial& M) const {
+        return Monomial(*this) *= M;
+    }
+
+    std::ostream& print(std::ostream&) const override;
+};
+
+
+class Polynomial : public CasNode {
+    std::vector<Monomial> _monomials;
+public:
+    Polynomial() : _monomials() {}
+
+    std::vector<Monomial>& monomials() { return _monomials; }
+    const std::vector<Monomial>& monomials() const { return _monomials; }
+
+    void insertMonomial(const Monomial& M) {
+        auto it = std::lower_bound(_monomials.begin(), _monomials.end(), M);
+        _monomials.insert(it, M);
+    }
+
+    static Polynomial Constant(const std::complex<double>& c) {
+        Polynomial P;
+        P.insertMonomial(Monomial(c));
+        return P;
+    }
+
+    /// @return <isConstant, value> 
+    std::pair<bool, std::complex<double>> getValue() const {
+        if (_monomials.size() == 1 && _monomials[0].mulTerms().empty() && _monomials[0].expiVars().empty()) {
+            return { true, _monomials[0].coef };
         }
-        auto var = new Variable(name);
-        vars.push_back(var);
-        return var;
+        return { false, { 0.0, 0.0 } };
+    }
+    
+
+    std::ostream& print(std::ostream&) const override;
+
+    Polynomial& operator+=(const Monomial&);
+
+    Polynomial& operator+=(const Polynomial& P) {
+        for (const auto& M : P._monomials)
+            operator+=(M);
+        return *this;
     }
 
-    Numerics* getNumerics(double value) {
-        for (auto it = nums.begin(); it != nums.end(); it++) {
-            if ((*it)->value == value)
-                return *it;
-        }
-        auto num = new Numerics(value);
-        nums.push_back(num);
-        return num;
+    Polynomial operator+(const Polynomial& P) const {
+        return Polynomial(*this) += P;
     }
 
-    CosExpr* createCos(Node* node) {
-        auto cos = new CosExpr(node);
-        nodes.push_back(cos);
-        return cos;
+    Polynomial& operator*=(const Monomial& M) {
+        for (auto& m : _monomials)
+            m *= M;
+        return *this;
     }
 
-    SinExpr* createSin(Node* node) {
-        auto sin = new SinExpr(node);
-        nodes.push_back(sin);
-        return sin;
+    Polynomial& operator*=(const Polynomial& P) {
+        for (const auto& M : P._monomials)
+            operator*=(M);
+        return *this;
     }
 
-    AddExpr* createAdd(Node* lhs, Node* rhs) {
-        auto add = new AddExpr(lhs, rhs);
-        nodes.push_back(add);
-        return add;
+    Polynomial operator*(const Polynomial& P) const {
+        return Polynomial(*this) *= P;
     }
-
-    SubExpr* createSub(Node* lhs, Node* rhs) {
-        auto sub = new SubExpr(lhs, rhs);
-        nodes.push_back(sub);
-        return sub;
-    }
-
-    MulExpr* createMul(Node* lhs, Node* rhs) {
-        auto mul = new MulExpr(lhs, rhs);
-        nodes.push_back(mul);
-        return mul;
-    }
-
 };
 
-} // namespace saot::polynomial
+} // namespace saot
 
 #endif // SAOT_POLYNOMIAL_H 

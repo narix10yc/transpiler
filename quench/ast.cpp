@@ -4,6 +4,7 @@
 
 using namespace quench::ast;
 using namespace quench::circuit_graph;
+using namespace quench::quantum_gate;
 
 std::ostream& RootNode::print(std::ostream& os) const {
     circuit.print(os);
@@ -82,10 +83,12 @@ QuantumGate RootNode::gateApplyToQuantumGate(const GateApplyStmt& gateApplyStmt)
         assert(false && "Cannot find parameter def stmt");
         return QuantumGate();
     }
-    return QuantumGate(
-            GateMatrix::FromParameters(
-                gateApplyStmt.name, gateApplyStmt.params, casContext),
-            gateApplyStmt.qubits);
+    assert(false && "Not Implemented");
+    return QuantumGate();
+    // return QuantumGate(
+            // GateMatrix::FromParameters(
+                // gateApplyStmt.name, gateApplyStmt.params),
+            // gateApplyStmt.qubits);
 }
 
 CircuitGraph RootNode::toCircuitGraph() {
