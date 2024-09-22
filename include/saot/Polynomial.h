@@ -59,7 +59,7 @@ public:
 
     std::ostream& print(std::ostream&) const override;
 
-    void simplify(const std::vector<std::pair<int, double>>& varValues);
+    VariableSumNode& simplify(const std::vector<std::pair<int, double>>& varValues);
 };
 
 
@@ -114,7 +114,7 @@ public:
 
     std::ostream& print(std::ostream&) const override;
 
-    void simplify(const std::vector<std::pair<int, double>>& varValues);
+    Monomial& simplify(const std::vector<std::pair<int, double>>& varValues);
 };
 
 
@@ -152,7 +152,7 @@ public:
     
     std::ostream& print(std::ostream&) const override;
 
-    void simplify(const std::vector<std::pair<int, double>>& varValues);
+    Polynomial& simplify(const std::vector<std::pair<int, double>>& varValues);
 
     Polynomial& operator+=(const Monomial&);
 

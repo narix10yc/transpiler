@@ -213,7 +213,8 @@ Monomial& Monomial::operator*=(const Monomial& M) {
     return *this;
 }
 
-void VariableSumNode::simplify(const std::vector<std::pair<int, double>>& varValues) {
+VariableSumNode&
+VariableSumNode::simplify(const std::vector<std::pair<int, double>>& varValues) {
     std::vector<int> updatedVars;
     for (const int var : vars) {
         auto it = std::find_if(varValues.cbegin(), varValues.cend(),
@@ -236,9 +237,11 @@ void VariableSumNode::simplify(const std::vector<std::pair<int, double>>& varVal
     }
     else
         vars = std::move(updatedVars);
+    
+    return *this;
 }
 
-void Monomial::simplify(const std::vector<std::pair<int, double>>& varValues) {
+Monomial& Monomial::simplify(const std::vector<std::pair<int, double>>& varValues) {
     for (auto& M : _mulTerms)
         M.simplify(varValues);
     
@@ -261,12 +264,13 @@ void Monomial::simplify(const std::vector<std::pair<int, double>>& varValues) {
             coef *= std::complex<double>(std::cos(it->second), std::sin(it->second));
     }
     _expiVars = std::move(updatedExpiVars);
+    return *this;
 }
 
-void Polynomial::simplify(const std::vector<std::pair<int, double>>& varValues) {
+Polynomial& Polynomial::simplify(const std::vector<std::pair<int, double>>& varValues) {
     if (varValues.empty())
-        return;
-        
+        return *this;
     for (auto& M : _monomials)
         M.simplify(varValues);
+    return *this;
 }
