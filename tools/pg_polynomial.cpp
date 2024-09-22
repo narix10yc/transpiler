@@ -11,16 +11,15 @@ using namespace quench::quantum_gate;
 using namespace quench::circuit_graph;
 
 int main(int argc, char** argv) {
-    // Context ctx;
-    // auto mat1 = GateMatrix::FromParameters("u1q", {{"%0"}, {"%1"}, {"%2"}}, ctx);
-    // auto mat2 = GateMatrix::FromParameters("u1q", {{"%3"}, {"%4"}, {"%5"}}, ctx);
+    auto mat1 = GateMatrix::FromParameters("u1q", std::vector<GateParameter>{GateParameter(0), GateParameter(1), GateParameter(2)});
+    auto mat2 = GateMatrix::FromParameters("u1q", std::vector<GateParameter>{GateParameter(3), GateParameter(4), GateParameter(5)});
 
-    // mat1.printMatrix(std::cerr) << "\n";
+    mat1.printMatrix(std::cerr) << "\n";
 
-    // QuantumGate gate1(mat1, {1});
-    // QuantumGate gate2(mat1, {2});
+    QuantumGate gate1(mat1, {1});
+    QuantumGate gate2(mat2, {2});
 
-    // gate1.lmatmul(gate2).gateMatrix.printMatrix(std::cerr);
+    gate1.lmatmul(gate2).gateMatrix.printMatrix(std::cerr);
 
     // assert(argc > 1);
 
@@ -49,8 +48,6 @@ int main(int argc, char** argv) {
 
     p.simplify({{0, 0.77}, {2, 1.14}, {3, 4.0}});
     p.print(std::cerr) << "\n";
-
-
 
     return 0;
 }

@@ -74,7 +74,12 @@ public:
     Monomial(const std::complex<double>& coef,
              const std::vector<VariableSumNode>& mulTerms,
              const std::vector<int>& expiVars)
-        : coef(coef), _mulTerms(mulTerms), _expiVars(expiVars) {}
+            : coef(coef), _mulTerms(), _expiVars() {
+        for (const auto& M : mulTerms)
+            insertMulTerm(M);
+        for (const auto& V : expiVars)
+            insertExpiVar(V);
+    }
     
     static Monomial Constant(const std::complex<double>& v) {
         return Monomial(v, {}, {});
@@ -117,7 +122,7 @@ class Polynomial : public CasNode {
     std::vector<Monomial> _monomials;
 public:
     Polynomial() : _monomials() {}
-    explicit Polynomial(const Monomial& M) : _monomials({M}) {}
+    Polynomial(const Monomial& M) : _monomials({M}) {}
     Polynomial(std::initializer_list<Monomial> Ms) : _monomials() {
         for (const auto& M : Ms)
             insertMonomial(M);

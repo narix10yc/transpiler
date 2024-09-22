@@ -183,55 +183,55 @@ GateMatrix GateMatrix::FromName(
 GateMatrix GateMatrix::FromParameters(
         const std::string& name,
         const std::vector<GateParameter>& params) {
-    // if (name == "u3" || name == "u1q") {
-    //     assert(params.size() == 3 && "u1q gate needs 3 parameters");
+    if (name == "u3" || name == "u1q") {
+        assert(params.size() == 3 && "u1q gate needs 3 parameters");
 
-    //     auto* theta = paramToCasNode(params[0]);
-    //     auto* phi = paramToCasNode(params[1]);
-    //     auto* lambd = paramToCasNode(params[2]);
+        const auto theta = params[0].isConstant ? -1 : params[0].variable;
+        const auto lambd = params[1].isConstant ? -2 : params[1].variable;
+        const auto phi   = params[2].isConstant ? -3 : params[2].variable;
 
-    //     return GateMatrix(matrix_t::p_matrix_t {
-    //         Polynomial(monomial_t(ctx.createCosNode(theta))),
-    //         Polynomial(monomial_t(-1.0, { ctx.createSinNode(theta), ctx.createCompExpNode(lambd) })),
-    //         Polynomial(monomial_t( 1.0, { ctx.createSinNode(theta), ctx.createCompExpNode(phi) })),
-    //         Polynomial(monomial_t( 1.0, { ctx.createCosNode(theta), ctx.createCompExpNode(ctx.createAddNode(phi, lambd)) }))
-    //     });
-    // }
+        return GateMatrix(matrix_t::p_matrix_t {
+            Polynomial(Monomial(std::complex<double>(1.0, 0.0), { VariableSumNode::Cosine({theta})}, {})),
+            Polynomial(Monomial(std::complex<double>(-1.0, 0.0), { VariableSumNode::Sine({theta}) }, {lambd})),
+            Polynomial(Monomial(std::complex<double>(1.0, 0.0), { VariableSumNode::Sine({theta}) }, { phi })),
+            Polynomial(Monomial(std::complex<double>(1.0, 0.0), { VariableSumNode::Cosine({theta}) }, { phi, lambd }))
+        });
+    }
 
-    // if (name == "h") {
-    //     GateMatrix gateMat(matrix_t::c_matrix_t {
-    //         { M_SQRT1_2, 0 }, { M_SQRT1_2, 0 },
-    //         { M_SQRT1_2, 0 }, {-M_SQRT1_2, 0 } 
-    //     });
-    //     gateMat.convertToParametrizedMatrix();
-    //     return gateMat;
-    // }
+    if (name == "h") {
+        GateMatrix gateMat(matrix_t::c_matrix_t {
+            { M_SQRT1_2, 0 }, { M_SQRT1_2, 0 },
+            { M_SQRT1_2, 0 }, {-M_SQRT1_2, 0 } 
+        });
+        gateMat.convertToParametrizedMatrix();
+        return gateMat;
+    }
 
-    // if (name == "cx") {
-    //     GateMatrix gateMat(matrix_t::c_matrix_t {
-    //         {1,0}, {0,0}, {0,0}, {0,0},
-    //         {0,0}, {0.0}, {0.0}, {1,0},
-    //         {0,0}, {0.0}, {1.0}, {0,0},
-    //         {0,0}, {1.0}, {0.0}, {0,0}
-    //     });
-    //     gateMat.convertToParametrizedMatrix();
-    //     return gateMat;
-    // }
+    if (name == "cx") {
+        GateMatrix gateMat(matrix_t::c_matrix_t {
+            {1,0}, {0,0}, {0,0}, {0,0},
+            {0,0}, {0.0}, {0.0}, {1,0},
+            {0,0}, {0.0}, {1.0}, {0,0},
+            {0,0}, {1.0}, {0.0}, {0,0}
+        });
+        gateMat.convertToParametrizedMatrix();
+        return gateMat;
+    }
 
-    // if (name == "cz") {
-    //     GateMatrix gateMat(matrix_t::c_matrix_t {
-    //         {1,0}, {0,0}, {0,0}, {0,0},
-    //         {0,0}, {1,0}, {0,0}, {0,0},
-    //         {0,0}, {0,0}, {1,0}, {0,0},
-    //         {0,0}, {0,0}, {0,0}, {-1,0}
-    //     });
-    //     gateMat.convertToParametrizedMatrix();
-    //     return gateMat;
-    // }
+    if (name == "cz") {
+        GateMatrix gateMat(matrix_t::c_matrix_t {
+            {1,0}, {0,0}, {0,0}, {0,0},
+            {0,0}, {1,0}, {0,0}, {0,0},
+            {0,0}, {0,0}, {1,0}, {0,0},
+            {0,0}, {0,0}, {0,0}, {-1,0}
+        });
+        gateMat.convertToParametrizedMatrix();
+        return gateMat;
+    }
         
-    // std::cerr << RED_FG << BOLD << "Not Implemented gate '" << name << "'"
-    //           << RESET << "\n";
-    assert(false && "Not Implemented");
+    std::cerr << RED_FG << BOLD << "Not Implemented gate '" << name << "'"
+              << RESET << "\n";
+    assert(false);
     return GateMatrix();
 }
 

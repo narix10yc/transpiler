@@ -42,7 +42,7 @@ std::ostream& Monomial::print(std::ostream& os) const {
         os << "0.0";
     else if (coef.imag() == 0.0) {
         if      (coef.real() ==  1.0) mulSign = false;
-        else if (coef.real() == -1.0) os << "-";
+        else if (coef.real() == -1.0) { os << "-"; mulSign = false; }
         else                          os << coef.real();
     }
     else if (coef.real() == 0.0) {
@@ -264,6 +264,9 @@ void Monomial::simplify(const std::vector<std::pair<int, double>>& varValues) {
 }
 
 void Polynomial::simplify(const std::vector<std::pair<int, double>>& varValues) {
+    if (varValues.empty())
+        return;
+        
     for (auto& M : _monomials)
         M.simplify(varValues);
 }
