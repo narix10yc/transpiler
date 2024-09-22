@@ -34,14 +34,21 @@ std::ostream& VariableSumNode::print(std::ostream& os) const {
 
 std::ostream& Monomial::print(std::ostream& os) const {
     // coef
-    os << "(";
+    bool coefFlag = (coef.real() != 0.0 && coef.imag() != 0.0);
+    bool mulSign = true;
+    if (coefFlag)
+        os << "(";
     if (coef.real() == 0.0 && coef.imag() == 0.0)
         os << "0.0";
     else if (coef.imag() == 0.0) {
-        os << coef.real();
+        if      (coef.real() ==  1.0) mulSign = false;
+        else if (coef.real() == -1.0) os << "-";
+        else                          os << coef.real();
     }
     else if (coef.real() == 0.0) {
-        os << coef.imag() << "i";
+        if (coef.imag() == 1.0) os << "i";
+        else if (coef.imag() == -1.0) os << "-i";
+        else os << coef.imag() << "i";
     }
     else {
         os << coef.real();
@@ -50,14 +57,25 @@ std::ostream& Monomial::print(std::ostream& os) const {
         else
             os << " - " << -coef.imag() << "i";
     }
-    os << ")";
+    if (coefFlag)
+        os << ")";
+        
     // mul terms
-    for (const auto& T : _mulTerms)
-        T.print(os << "*");
+    if (!_mulTerms.empty()) {
+        auto it = _mulTerms.cbegin();
+        if (mulSign)
+            os << "*";
+        mulSign = true;
+        it->print(os);
+        while (++it != _mulTerms.cend())
+            it->print(os << "*");
+    }
     
     // expi terms
     if (!_expiVars.empty()) {
-        os << "*expi(%" << _expiVars[0];
+        if (mulSign)
+            os << "*";
+        os << "expi(%" << _expiVars[0];
         for (unsigned i = 1; i < _expiVars.size(); i++)
             os << "+%" << _expiVars[i];
         os << ")";
@@ -195,3 +213,57 @@ Monomial& Monomial::operator*=(const Monomial& M) {
     return *this;
 }
 
+void VariableSumNode::simplify(const std::vector<std::pair<int, double>>& varValues) {
+    std::vector<int> updatedVars;
+    for (const int var : vars) {
+        auto it = std::find_if(varValues.cbegin(), varValues.cend(),
+            [var](const std::pair<int, double>& p) { return p.first == var; });
+        if (it == varValues.cend())
+            updatedVars.push_back(var);
+        else
+            constant += it->second;
+    }
+    if (updatedVars.empty()) {
+        vars.clear();
+        if (op == CosOp) {
+            constant = std::cos(constant);
+            op = None;
+        }
+        else if (op == SinOp) {
+            constant = std::sin(constant);
+            op = None;
+        }
+    }
+    else
+        vars = std::move(updatedVars);
+}
+
+void Monomial::simplify(const std::vector<std::pair<int, double>>& varValues) {
+    for (auto& M : _mulTerms)
+        M.simplify(varValues);
+    
+    std::vector<VariableSumNode> updatedMulTerms;
+    for (const auto& M : _mulTerms) {
+        if (M.op == VariableSumNode::None && M.vars.empty())
+            coef *= M.constant;
+        else 
+            updatedMulTerms.push_back(M);
+    }
+    _mulTerms = std::move(updatedMulTerms);
+
+    std::vector<int> updatedExpiVars;
+    for (const int var : _expiVars) {
+        auto it = std::find_if(varValues.cbegin(), varValues.cend(),
+            [var](const std::pair<int, double>& p) { return p.first == var; });
+        if (it == varValues.cend())
+            updatedExpiVars.push_back(var);
+        else
+            coef *= std::complex<double>(std::cos(it->second), std::sin(it->second));
+    }
+    _expiVars = std::move(updatedExpiVars);
+}
+
+void Polynomial::simplify(const std::vector<std::pair<int, double>>& varValues) {
+    for (auto& M : _monomials)
+        M.simplify(varValues);
+}

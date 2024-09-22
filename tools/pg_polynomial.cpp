@@ -1,16 +1,14 @@
-// #include "quench/Polynomial.h"
-// #include "quench/parser.h"
-// #include "quench/QuantumGate.h"
-// #include "quench/CircuitGraph.h"
+#include "quench/parser.h"
+#include "quench/QuantumGate.h"
+#include "quench/CircuitGraph.h"
 
 #include "saot/Polynomial.h"
 
 using namespace saot;
 
-// using namespace quench::cas;
-// using namespace quench::ast;
-// using namespace quench::quantum_gate;
-// using namespace quench::circuit_graph;
+using namespace quench::ast;
+using namespace quench::quantum_gate;
+using namespace quench::circuit_graph;
 
 int main(int argc, char** argv) {
     // Context ctx;
@@ -40,14 +38,17 @@ int main(int argc, char** argv) {
     // graph.getAllBlocks()[0]->quantumGate->displayInfo(std::cerr);
     // graph.displayInfo(std::cerr, 3);
 
-    auto n1 = VariableSumNode::Cosine({0, 1, 2}, 1.2);
     Monomial m1;
-    m1.insertMulTerm(n1);
+    m1.insertMulTerm(VariableSumNode::Cosine({0, 2}, 1.2));
+    m1.insertExpiVar(3);
 
     Polynomial p;
     p.insertMonomial(m1);
 
-    (p * p).print(std::cerr) << "\n";
+    p.print(std::cerr) << "\n";
+
+    p.simplify({{0, 0.77}, {2, 1.14}, {3, 4.0}});
+    p.print(std::cerr) << "\n";
 
 
 

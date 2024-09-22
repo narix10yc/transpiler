@@ -58,6 +58,8 @@ public:
     bool operator!=(const VariableSumNode&) const;
 
     std::ostream& print(std::ostream&) const override;
+
+    void simplify(const std::vector<std::pair<int, double>>& varValues);
 };
 
 
@@ -68,7 +70,16 @@ public:
     std::complex<double> coef;
 
     Monomial(const std::complex<double>& coef = { 1.0, 0.0 }) : coef(coef), _mulTerms(), _expiVars() {}
+
+    Monomial(const std::complex<double>& coef,
+             const std::vector<VariableSumNode>& mulTerms,
+             const std::vector<int>& expiVars)
+        : coef(coef), _mulTerms(mulTerms), _expiVars(expiVars) {}
     
+    static Monomial Constant(const std::complex<double>& v) {
+        return Monomial(v, {}, {});
+    }
+
     int compare(const Monomial&) const;
     bool operator<(const Monomial& M) const { return compare(M) < 0; }
     bool operator>(const Monomial& M) const { return compare(M) > 0; }
@@ -97,6 +108,8 @@ public:
     }
 
     std::ostream& print(std::ostream&) const override;
+
+    void simplify(const std::vector<std::pair<int, double>>& varValues);
 };
 
 
@@ -104,6 +117,11 @@ class Polynomial : public CasNode {
     std::vector<Monomial> _monomials;
 public:
     Polynomial() : _monomials() {}
+    explicit Polynomial(const Monomial& M) : _monomials({M}) {}
+    Polynomial(std::initializer_list<Monomial> Ms) : _monomials() {
+        for (const auto& M : Ms)
+            insertMonomial(M);
+    }
 
     std::vector<Monomial>& monomials() { return _monomials; }
     const std::vector<Monomial>& monomials() const { return _monomials; }
@@ -127,8 +145,9 @@ public:
         return { false, { 0.0, 0.0 } };
     }
     
-
     std::ostream& print(std::ostream&) const override;
+
+    void simplify(const std::vector<std::pair<int, double>>& varValues);
 
     Polynomial& operator+=(const Monomial&);
 

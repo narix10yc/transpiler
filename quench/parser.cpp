@@ -154,7 +154,7 @@ Token Parser::parseToken(int col) {
 
 RootNode* Parser::parse() {
     readLine();
-    auto* root = new RootNode();
+    auto root = new RootNode();
     while (true) {
         if (tokenIt->type == TokenTy::Circuit) {
             root->circuit = _parseCircuit();
@@ -397,8 +397,10 @@ std::complex<double> Parser::_parseComplexNumber() {
 saot::Polynomial Parser::_parseSaotPolynomial() {
     const auto parseCoef = [&]() -> std::complex<double> {
         if (tokenIt->type == TokenTy::Identifier) {
-            if (tokenIt->str == "i")
+            if (tokenIt->str == "i") {
+                proceed();
                 return { 0.0, 1.0 };
+            }
             return { 1.0, 0.0 };
         }
         bool paranFlag = false;
@@ -462,11 +464,14 @@ saot::Polynomial Parser::_parseSaotPolynomial() {
 
         // matching (optional) ')'
         if (paranFlag) {
+            if (tokenIt->type == TokenTy::R_RoundBraket)
+                proceed();
+            else
+                throwParserError("Expect ')'");
+        }
+        else {
             if (nAdd > 0)
-                displayParserWarning("Expect sum terms to be enclosed by '()'");
-            if (tokenIt->type != TokenTy::R_RoundBraket)
-                throwParserError("Expect ')' to end VariableSumNode");
-            proceed();
+                displayParserWarning("Expect multiple mul terms to be enclosed by '()'");
         }
         return N;
     };

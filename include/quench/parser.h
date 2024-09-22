@@ -187,9 +187,13 @@ protected:
 
     std::ostream& displayParserWarning(const std::string& msg, std::ostream& os = std::cerr) const {
         return os << Color::YELLOW_FG << Color::BOLD << "parser warning: "
-                  << Color::DEFAULT_FG << msg << Color::RESET << "\n"
-                  << std::setw(5) << std::setfill(' ') << lineNumber << " | "
-                  << currentLine << "\n";
+            << Color::DEFAULT_FG << msg << Color::RESET << "\n"
+            << std::setw(5) << std::setfill(' ') << lineNumber << " | "
+            << currentLine << "\n"
+            << "      | " << std::string(static_cast<size_t>(tokenIt->colStart), ' ')
+            << Color::GREEN_FG << Color::BOLD
+            << std::string(static_cast<size_t>(tokenIt->colEnd - tokenIt->colStart), '^')
+            << "\n" << Color::RESET;
     }
 
     std::ostream& displayParserLog(const std::string& msg, std::ostream& os = std::cerr) const {

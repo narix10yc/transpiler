@@ -24,8 +24,7 @@ public:
     SquareMatrix() : size(0), data() {}
     SquareMatrix(size_t size) : size(size), data(size * size) {}
     SquareMatrix(std::initializer_list<data_t> data)
-        : size(std::sqrt(data.size())), data(data)
-    {
+            : size(std::sqrt(data.size())), data(data) {
         assert(size * size == data.size()
                && "data.size() should be a perfect square");
     }

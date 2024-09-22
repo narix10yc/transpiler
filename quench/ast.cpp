@@ -18,15 +18,19 @@ std::ostream& RootNode::print(std::ostream& os) const {
 
 std::ostream& GateApplyStmt::print(std::ostream& os) const {
     os << name;
+    // parameter
     if (paramRefNumber >= 0)
         os << "(#" << paramRefNumber << ")";
     else if (!params.empty()) {
         os << "(";
-        for (unsigned i = 0; i < params.size()-1; i++)
-            params[i].print(os) << " ";
-        params.back().print(os) << ")";
+        auto it = params.cbegin();
+        it->print(os);
+        while (++it != params.cend())
+            it->print(os << ",");
+        os << ")";
     }
 
+    // target qubits
     os << " ";
     for (unsigned i = 0; i < qubits.size()-1; i++)
         os << qubits[i] << " ";
@@ -57,10 +61,11 @@ std::ostream& ParameterDefStmt::print(std::ostream& os) const {
     os << "#" << refNumber << " = { ";
     assert(gateMatrix.isParametrizedMatrix());
 
-    for (const auto& poly : gateMatrix.matrix.parametrizedMatrix.data)
-        poly.print(os) << ", ";
-
-    return os << "}\n";
+    auto it = gateMatrix.pData().cbegin();
+    it->print(os);
+    while (++it != gateMatrix.pData().cend())
+        it->print(os << ", ");
+    return os << " }\n";
 }
 
 void QuantumCircuit::addGateChain(const GateChainStmt& chain) {
