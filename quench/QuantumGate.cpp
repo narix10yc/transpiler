@@ -185,16 +185,103 @@ GateMatrix GateMatrix::FromParameters(
         const std::vector<GateParameter>& params) {
     if (name == "u3" || name == "u1q") {
         assert(params.size() == 3 && "u1q gate needs 3 parameters");
+        std::vector<Polynomial> polyVec;
+        // theta
+        if (params[0].isConstant) {
+            double c = std::cos(params[0].constant);
+            double s = std::sin(params[0].constant);
+            polyVec = {
+                Polynomial::Constant(c), Polynomial::Constant(-s),
+                Polynomial::Constant(s), Polynomial::Constant(c)
+            };
+        } else
+            polyVec = {
+                Polynomial(Monomial( 1.0, { VariableSumNode::Cosine({params[0].variable})}, {})),
+                Polynomial(Monomial(-1.0, { VariableSumNode::Sine  ({params[0].variable})}, {})),
+                Polynomial(Monomial( 1.0, { VariableSumNode::Sine  ({params[0].variable})}, {})),
+                Polynomial(Monomial( 1.0, { VariableSumNode::Cosine({params[0].variable})}, {})),
+            };
+        
+        // lambda
+        if (params[1].isConstant) {
+            std::complex<double> expiLambda(std::cos(params[1].constant), std::sin(params[1].constant));
+            polyVec[1].monomials()[0].coef *= expiLambda;
+            polyVec[3].monomials()[0].coef *= expiLambda;
+        } else {
+            polyVec[1].monomials()[0].insertExpiVar(params[1].variable);
+            polyVec[3].monomials()[0].insertExpiVar(params[1].variable);
+        }
+        
+        // phi
+        if (params[1].isConstant) {
+            std::complex<double> expiPhi(std::cos(params[2].constant), std::sin(params[2].constant));
+            polyVec[2].monomials()[0].coef *= expiPhi;
+            polyVec[3].monomials()[0].coef *= expiPhi;
+        } else {
+            polyVec[2].monomials()[0].insertExpiVar(params[2].variable);
+            polyVec[3].monomials()[0].insertExpiVar(params[2].variable);
+        }
 
-        const auto theta = params[0].isConstant ? -1 : params[0].variable;
-        const auto lambd = params[1].isConstant ? -2 : params[1].variable;
-        const auto phi   = params[2].isConstant ? -3 : params[2].variable;
+        return GateMatrix(matrix_t::p_matrix_t(polyVec));
+    }
 
+    if (name == "rx") {
+        assert(params.size() == 1 && "rx gate needs 1 parameter");
+        if (params[0].isConstant) {
+            double c = std::cos(params[0].constant);
+            double s = std::sin(params[0].constant);
+            return GateMatrix(matrix_t::p_matrix_t {
+                Polynomial::Constant({c,  0.0}), // cos(theta)
+                Polynomial::Constant({0.0, -s}), // -i * sin(theta)
+                Polynomial::Constant({0.0, -s}), // -i * sin(theta)
+                Polynomial::Constant({c,  0.0})  // cos(theta)
+            });
+        }
         return GateMatrix(matrix_t::p_matrix_t {
-            Polynomial(Monomial(std::complex<double>(1.0, 0.0), { VariableSumNode::Cosine({theta})}, {})),
-            Polynomial(Monomial(std::complex<double>(-1.0, 0.0), { VariableSumNode::Sine({theta}) }, {lambd})),
-            Polynomial(Monomial(std::complex<double>(1.0, 0.0), { VariableSumNode::Sine({theta}) }, { phi })),
-            Polynomial(Monomial(std::complex<double>(1.0, 0.0), { VariableSumNode::Cosine({theta}) }, { phi, lambd }))
+            Polynomial(Monomial({1.0,  0.0}, { VariableSumNode::Cosine({params[0].variable}) }, {})),
+            Polynomial(Monomial({0.0, -1.0}, { VariableSumNode::Sine  ({params[0].variable}) }, {})),
+            Polynomial(Monomial({0.0, -1.0}, { VariableSumNode::Sine  ({params[0].variable}) }, {})),
+            Polynomial(Monomial({1.0,  0.0}, { VariableSumNode::Cosine({params[0].variable}) }, {}))
+        });
+    }
+
+    if (name == "ry") {
+        assert(params.size() == 1 && "ry gate needs 1 parameter");
+        if (params[0].isConstant) {
+            double c = std::cos(params[0].constant);
+            double s = std::sin(params[0].constant);
+            return GateMatrix(matrix_t::p_matrix_t {
+                Polynomial::Constant({ c, 0.0}), //  cos(theta)
+                Polynomial::Constant({-s, 0.0}), // -sin(theta)
+                Polynomial::Constant({-s, 0.0}), // -sin(theta)
+                Polynomial::Constant({ c, 0.0})  //  cos(theta)
+            });
+        }
+        return GateMatrix(matrix_t::p_matrix_t {
+            Polynomial(Monomial( 1.0, { VariableSumNode::Cosine({params[0].variable}) }, {})),
+            Polynomial(Monomial(-1.0, { VariableSumNode::Sine  ({params[0].variable}) }, {})),
+            Polynomial(Monomial(-1.0, { VariableSumNode::Sine  ({params[0].variable}) }, {})),
+            Polynomial(Monomial( 1.0, { VariableSumNode::Cosine({params[0].variable}) }, {}))
+        });
+    }
+
+    if (name == "rz") {
+        assert(params.size() == 1 && "rz gate needs 1 parameter");
+        if (params[0].isConstant) {
+            double c = std::cos(params[0].constant);
+            double s = std::sin(params[0].constant);
+            return GateMatrix(matrix_t::p_matrix_t {
+                Polynomial::Constant({  c,  -s}), // expi(-lambda)
+                Polynomial(),                     // 0.0
+                Polynomial(),                     // 0.0
+                Polynomial::Constant({  c,   s})  // expi(lambda)
+            });
+        }
+        return GateMatrix(matrix_t::p_matrix_t {
+            Polynomial(Monomial(1.0, {}, {{params[0].variable, false}})),
+            Polynomial(),
+            Polynomial(),
+            Polynomial(Monomial(1.0, {}, {{params[0].variable, true}}))
         });
     }
 

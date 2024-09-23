@@ -88,12 +88,9 @@ QuantumGate RootNode::gateApplyToQuantumGate(const GateApplyStmt& gateApplyStmt)
         assert(false && "Cannot find parameter def stmt");
         return QuantumGate();
     }
-    assert(false && "Not Implemented");
-    return QuantumGate();
-    // return QuantumGate(
-            // GateMatrix::FromParameters(
-                // gateApplyStmt.name, gateApplyStmt.params),
-            // gateApplyStmt.qubits);
+    return QuantumGate(GateMatrix::FromParameters(
+                gateApplyStmt.name, gateApplyStmt.params),
+            gateApplyStmt.qubits);
 }
 
 CircuitGraph RootNode::toCircuitGraph() {

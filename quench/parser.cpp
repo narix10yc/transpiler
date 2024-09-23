@@ -265,7 +265,10 @@ GateParameter Parser::_parseGateParameter() {
         proceed();
         return GateParameter(i);
     }
-    return GateParameter(_parseComplexNumber());
+    assert(tokenIt->type == TokenTy::Numeric);
+    double n = convertCurTokenToFloat();
+    proceed();
+    return GateParameter(n);
 }
 
 GateApplyStmt Parser::_parseGateApply() {

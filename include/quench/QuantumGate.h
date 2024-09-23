@@ -142,18 +142,18 @@ struct matrix_t {
 class GateParameter {
 public:
     int variable;
-    std::complex<double> constant;
+    double constant;
     bool isConstant;
 
     explicit GateParameter(int variable)
         : variable(variable), isConstant(false) {}
 
-    explicit GateParameter(const std::complex<double>& constant)
+    explicit GateParameter(double constant)
         : constant(constant), isConstant(true) {}
 
     std::ostream& print(std::ostream& os) const {
         if (isConstant)
-            return utils::print_complex(os, constant, 12);
+            return os << constant;
         return os << "%" << variable;
     }
 };
@@ -238,7 +238,7 @@ public:
         matrix_t::p_matrix_t pmat(size);
         for (size_t i = 0; i < size*size; i++)
             pmat.data[i] = saot::Polynomial::Constant(matrix.constantMatrix.data[i]);
-        
+        pmat.updateSize();
         matrix = std::move(pmat);
     }
 

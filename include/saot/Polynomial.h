@@ -64,8 +64,40 @@ public:
 
 
 class Monomial : public CasNode {
+public:
+    class ExpiVar {
+    public:
+        int var;
+        bool isPlus;
+        ExpiVar(int var, bool isPlus) : var(var), isPlus(isPlus) {}
+        
+        bool operator<(const ExpiVar& E) const {
+            if (var < E.var)
+                return true;
+            if (isPlus < E.isPlus)
+                return true;
+            return false;
+        }
+
+        bool operator>(const ExpiVar& E) const {
+            if (var > E.var)
+                return true;
+            if (isPlus > E.isPlus)
+                return true;
+            return false;
+        }
+
+        bool operator==(const ExpiVar& E) const {
+            return var == E.var && isPlus == E.isPlus;
+        }
+
+        bool operator!=(const ExpiVar& E) const {
+            return var != E.var || isPlus != E.isPlus;
+        }
+    };
+private:
     std::vector<VariableSumNode> _mulTerms;
-    std::vector<int> _expiVars;
+    std::vector<ExpiVar> _expiVars;
 public:
     std::complex<double> coef;
 
@@ -73,7 +105,7 @@ public:
 
     Monomial(const std::complex<double>& coef,
              const std::vector<VariableSumNode>& mulTerms,
-             const std::vector<int>& expiVars)
+             const std::vector<ExpiVar>& expiVars)
             : coef(coef), _mulTerms(), _expiVars() {
         for (const auto& M : mulTerms)
             insertMulTerm(M);
@@ -85,6 +117,7 @@ public:
         return Monomial(v, {}, {});
     }
 
+    bool isConstant() const { return _expiVars.empty() && _mulTerms.empty(); }
     int compare(const Monomial&) const;
     bool operator<(const Monomial& M) const { return compare(M) < 0; }
     bool operator>(const Monomial& M) const { return compare(M) > 0; }
@@ -94,17 +127,30 @@ public:
     std::vector<VariableSumNode>& mulTerms() { return _mulTerms; }
     const std::vector<VariableSumNode>& mulTerms() const { return _mulTerms; }
 
-    std::vector<int>& expiVars() { return _expiVars; }
-    const std::vector<int>& expiVars() const { return _expiVars; }
+    std::vector<ExpiVar>& expiVars() { return _expiVars; }
+    const std::vector<ExpiVar>& expiVars() const { return _expiVars; }
 
     void insertMulTerm(const VariableSumNode& N) {
         auto it = std::lower_bound(_mulTerms.begin(), _mulTerms.end(), N);
         _mulTerms.insert(it, N);
     }
 
-    void insertExpiVar(int v) {
-        auto it = std::lower_bound(_expiVars.begin(), _expiVars.end(), v);
-        _expiVars.insert(it, v);
+    void insertExpiVar(const ExpiVar& E) {
+        if (_expiVars.empty()) {
+            _expiVars.push_back(E);
+            return;
+        }
+        auto it = std::upper_bound(_expiVars.begin(), _expiVars.end(), ExpiVar(E.var, true));
+        it--;
+        if (it->var == E.var && (it->isPlus ^ E.isPlus)) {
+            _expiVars.erase(it);
+            return;
+        }
+
+        _expiVars.insert(++it, E);
+    }
+    void insertExpiVar(int v, bool isPlus = true) {
+        return insertExpiVar(ExpiVar(v, isPlus));
     }
 
     Monomial& operator*=(const Monomial&);
@@ -152,7 +198,10 @@ public:
     
     std::ostream& print(std::ostream&) const override;
 
-    Polynomial& simplify(const std::vector<std::pair<int, double>>& varValues);
+    /// @brief Remove Monomials whose coefficient is less than a given threshold
+    /// @return updated *this
+    Polynomial& removeSmallMonomials(double thres = 1e-8);
+    Polynomial& simplify(const std::vector<std::pair<int, double>>& varValues = {});
 
     Polynomial& operator+=(const Monomial&);
 

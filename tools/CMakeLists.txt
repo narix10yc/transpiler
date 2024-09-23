@@ -1,5 +1,5 @@
 llvm_map_components_to_libnames(llvm_libs support core irreader)
-target_link_libraries(simulation ${llvm_libs})
+target_link_libraries(simulation ${llvm_libs} saot)
 target_link_libraries(quench ${llvm_libs})
 
 add_executable(qasm_to_quench "openqasm_to_quench.cpp")

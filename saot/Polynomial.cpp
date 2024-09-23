@@ -41,9 +41,17 @@ std::ostream& Monomial::print(std::ostream& os) const {
     if (coef.real() == 0.0 && coef.imag() == 0.0)
         os << "0.0";
     else if (coef.imag() == 0.0) {
-        if      (coef.real() ==  1.0) mulSign = false;
-        else if (coef.real() == -1.0) { os << "-"; mulSign = false; }
-        else                          os << coef.real();
+        if (coef.real() ==  1.0) {
+            if (_mulTerms.empty() && _expiVars.empty())
+                return os << "1.0";
+            mulSign = false;
+        }
+        else if (coef.real() == -1.0) {
+            os << "-";
+            mulSign = false;
+        }
+        else
+            os << coef.real();
     }
     else if (coef.real() == 0.0) {
         if (coef.imag() == 1.0) os << "i";
@@ -75,9 +83,10 @@ std::ostream& Monomial::print(std::ostream& os) const {
     if (!_expiVars.empty()) {
         if (mulSign)
             os << "*";
-        os << "expi(%" << _expiVars[0];
-        for (unsigned i = 1; i < _expiVars.size(); i++)
-            os << "+%" << _expiVars[i];
+        auto it = _expiVars.cbegin();
+        os << "expi(" << (it->isPlus ? "%" : "-%") << it->var;
+        while (++it != _expiVars.cend())
+            os << (it->isPlus ? "+%" : "-%") << it->var;
         os << ")";
     }
 
@@ -242,9 +251,14 @@ VariableSumNode::simplify(const std::vector<std::pair<int, double>>& varValues) 
 }
 
 Monomial& Monomial::simplify(const std::vector<std::pair<int, double>>& varValues) {
+    if (coef == std::complex<double>(0.0, 0.0)) {
+        _mulTerms.clear();
+        _expiVars.clear();
+        return *this;
+    }
     for (auto& M : _mulTerms)
         M.simplify(varValues);
-    
+
     std::vector<VariableSumNode> updatedMulTerms;
     for (const auto& M : _mulTerms) {
         if (M.op == VariableSumNode::None && M.vars.empty())
@@ -254,16 +268,28 @@ Monomial& Monomial::simplify(const std::vector<std::pair<int, double>>& varValue
     }
     _mulTerms = std::move(updatedMulTerms);
 
-    std::vector<int> updatedExpiVars;
-    for (const int var : _expiVars) {
-        auto it = std::find_if(varValues.cbegin(), varValues.cend(),
-            [var](const std::pair<int, double>& p) { return p.first == var; });
-        if (it == varValues.cend())
-            updatedExpiVars.push_back(var);
-        else
-            coef *= std::complex<double>(std::cos(it->second), std::sin(it->second));
-    }
-    _expiVars = std::move(updatedExpiVars);
+    _expiVars.erase(std::remove_if(_expiVars.begin(), _expiVars.end(),
+            [&varValues, this](const ExpiVar& E) {
+                auto it = varValues.cbegin();
+                while (true) {
+                    if (it->first == E.var) {
+                        coef *= std::complex<double>(std::cos(it->second),
+                            (E.isPlus) ? std::sin(it->second) : -std::sin(it->second));
+                        return true;
+                    }
+                    if (++it == varValues.cend())
+                        return false;
+                }
+            }),
+        _expiVars.end());
+    return *this;
+}
+
+Polynomial& Polynomial::removeSmallMonomials(double thres) {
+    _monomials.erase(std::remove_if(_monomials.begin(), _monomials.end(),
+            [thres](const Monomial& M) {
+                return std::abs(M.coef) < thres;
+            }), _monomials.end());
     return *this;
 }
 
@@ -272,5 +298,18 @@ Polynomial& Polynomial::simplify(const std::vector<std::pair<int, double>>& varV
         return *this;
     for (auto& M : _monomials)
         M.simplify(varValues);
+    
+    std::complex<double> cons(0.0, 0.0);
+    _monomials.erase(std::remove_if(_monomials.begin(), _monomials.end(),
+            [&cons](const Monomial& M) {
+                if (M.isConstant())
+                    cons += M.coef;
+                    return true;
+                return false;
+            }),
+        _monomials.end());
+
+    if (cons != std::complex<double>(0.0, 0.0))
+        return (*this) += Monomial::Constant(cons);
     return *this;
 }
