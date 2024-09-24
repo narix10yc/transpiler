@@ -9,8 +9,8 @@
 #include <vector>
 #include <array>
 
-#include "quench/QuantumGate.h"
-#include "quench/CircuitGraph.h"
+#include "saot/QuantumGate.h"
+#include "saot/CircuitGraph.h"
 
 namespace simulation {
 
@@ -94,20 +94,20 @@ public:
             const llvm::Twine& bbccName = "", const llvm::Twine& aaName = "");
 
     llvm::Function* generateKernel(
-            const quench::quantum_gate::QuantumGate& gate,
+            const saot::quantum_gate::QuantumGate& gate,
             const std::string& funcName = "") {
         return generateKernelDebug(gate, 0, funcName);
     }
 
     llvm::Function* generateKernelDebug(
-            const quench::quantum_gate::QuantumGate& gate, int debugLevel,
+            const saot::quantum_gate::QuantumGate& gate, int debugLevel,
             const std::string& funcName = "");
 
     std::pair<llvm::Value*, llvm::Value*> generatePolynomial(
             const saot::Polynomial& polynomial, llvm::Value* paramArgV);
 
     llvm::Function*
-    generatePrepareParameter(const quench::circuit_graph::CircuitGraph& graph);
+    generatePrepareParameter(const saot::circuit_graph::CircuitGraph& graph);
 };
 
 } // namespace simulation

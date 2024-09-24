@@ -1,4 +1,4 @@
-#include "quench/CircuitGraph.h"
+#include "saot/CircuitGraph.h"
 #include "utils/iocolor.h"
 #include "utils/utils.h"
 
@@ -10,7 +10,7 @@
 #include <numeric>
 
 using namespace Color;
-using namespace quench::circuit_graph;
+using namespace saot::circuit_graph;
 
 int GateNode::connect(GateNode* rhsGate, int q) {
     assert(rhsGate);

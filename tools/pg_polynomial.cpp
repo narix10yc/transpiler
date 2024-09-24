@@ -1,14 +1,14 @@
-#include "quench/parser.h"
-#include "quench/QuantumGate.h"
-#include "quench/CircuitGraph.h"
+#include "saot/parser.h"
+#include "saot/QuantumGate.h"
+#include "saot/CircuitGraph.h"
 
 #include "saot/Polynomial.h"
 
 using namespace saot;
 
-using namespace quench::ast;
-using namespace quench::quantum_gate;
-using namespace quench::circuit_graph;
+using namespace saot::ast;
+using namespace saot::quantum_gate;
+using namespace saot::circuit_graph;
 
 int main(int argc, char** argv) {
     std::vector<std::pair<int, double>> varValues {
@@ -36,13 +36,13 @@ int main(int argc, char** argv) {
     assert(argc > 1);
 
     Parser parser(argv[1]);
-    auto* root = parser.parse();
+    auto qc = parser.parse();
     std::cerr << "Recovered:\n";
 
     std::ofstream file(std::string(argv[1]) + ".rec");
-    root->print(file);
+    qc.print(file);
 
-    auto graph = root->toCircuitGraph();
+    auto graph = qc.toCircuitGraph();
     graph.updateFusionConfig(FusionConfig::Default());
     graph.greedyGateFusion();
 

@@ -1,4 +1,4 @@
-#include "quench/cpu.h"
+#include "saot/cpu.h"
 
 #include "utils/utils.h"
 #include "utils/iocolor.h"
@@ -8,8 +8,8 @@
 #include <iomanip>
 
 using namespace Color;
-using namespace quench::cpu;
-using namespace quench::circuit_graph;
+using namespace saot::cpu;
+using namespace saot::circuit_graph;
 using IRGenerator = simulation::IRGenerator;
 using AmpFormat = simulation::IRGeneratorConfig::AmpFormat;
 

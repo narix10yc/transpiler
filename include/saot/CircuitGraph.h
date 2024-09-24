@@ -1,18 +1,18 @@
-#ifndef QUENCH_CIRCUITGRAPH_H
-#define QUENCH_CIRCUITGRAPH_H
+#ifndef SAOT_CIRCUITGRAPH_H
+#define SAOT_CIRCUITGRAPH_H
 
 #include <vector>
 #include <array>
 #include <set>
 #include <list>
 #include <functional>
-#include "quench/ast.h"
-#include "quench/QuantumGate.h"
+#include "saot/ast.h"
+#include "saot/QuantumGate.h"
 
-namespace quench::circuit_graph {
+namespace saot::circuit_graph {
 
-using GateMatrix = quench::quantum_gate::GateMatrix;
-using QuantumGate = quench::quantum_gate::QuantumGate;
+using GateMatrix = saot::quantum_gate::GateMatrix;
+using QuantumGate = saot::quantum_gate::QuantumGate;
 
 class GateNode {
 public:
@@ -318,6 +318,6 @@ public:
 };
 
 
-}; // namespace quench::circuit_graph
+}; // namespace saot::circuit_graph
 
-#endif // QUENCH_CIRCUITGRAPH_H
+#endif // SAOT_CIRCUITGRAPH_H

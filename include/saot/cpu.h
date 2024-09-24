@@ -1,12 +1,12 @@
-#ifndef QUENCH_CPU_H
-#define QUENCH_CPU_H
+#ifndef SAOT_CPU_H
+#define SAOT_CPU_H
 
-#include "quench/CircuitGraph.h"
+#include "saot/CircuitGraph.h"
 #include "simulation/ir_generator.h"
 
 #include <iomanip>
 
-namespace quench::cpu {
+namespace saot::cpu {
 
 struct CodeGeneratorCPUConfig {
     bool multiThreaded;
@@ -39,6 +39,6 @@ public:
     
 };
 
-} // namespace quench::cpu
+} // namespace saot::cpu
 
-#endif // QUENCH_CPU_H
+#endif // SAOT_CPU_H

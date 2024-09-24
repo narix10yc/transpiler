@@ -1,5 +1,5 @@
-#ifndef QUENCH_PARSER_H
-#define QUENCH_PARSER_H
+#ifndef SAOT_PARSER_H
+#define SAOT_PARSER_H
 
 #include <string>
 #include <iostream>
@@ -9,11 +9,11 @@
 #include <queue>
 #include <sstream>
 
-#include "quench/ast.h"
+#include "saot/ast.h"
 #include "saot/Polynomial.h"
 #include "utils/iocolor.h"
 
-namespace quench::ast {
+namespace saot::ast {
 
 enum class TokenTy;
 enum class UnaryOp;
@@ -271,9 +271,10 @@ protected:
 
     std::complex<double> _parseComplexNumber();
 
+    QuantumCircuit& _parseCircuitBody(QuantumCircuit& qc);
+    
     quantum_gate::GateParameter _parseGateParameter();
     GateApplyStmt _parseGateApply();
-    QuantumCircuit _parseCircuit();
 
     ParameterDefStmt _parseParameterDefStmt();
 
@@ -284,12 +285,12 @@ public:
         : lineNumber(0), currentLine(""), file(fileName),
           tokenVec(), tokenIt(tokenVec.cbegin()) {}
 
-    RootNode* parse();
+    QuantumCircuit parse();
 };
 
 
 
 
-} // namespace quench::parse
+} // namespace saot::parse
 
-#endif // QUENCH_PARSER_H
+#endif // SAOT_PARSER_H

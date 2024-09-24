@@ -45,7 +45,7 @@ single_gate : $(CURDIR)/gen_file.ll $(CURDIR)/single_gate.cpp
 	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -o $(BUILD_DIR)/single_gate
 
 correctness: $(CURDIR)/gen_file.ll $(CURDIR)/correctness.cpp
-	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -L$(BUILD_DIR)/quench -lquench -o $(BUILD_DIR)/correctness
+	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -L$(BUILD_DIR)/saot -lsaot -o $(BUILD_DIR)/correctness
 
 ir_benchmark : ir_benchmark_gcc ir_benchmark_clang
 

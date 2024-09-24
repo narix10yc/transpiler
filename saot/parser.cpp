@@ -1,9 +1,9 @@
-#include "quench/parser.h"
+#include "saot/parser.h"
 #include <cassert>
 
-using namespace quench;
-using namespace quench::ast;
-using namespace quench::quantum_gate;
+using namespace saot;
+using namespace saot::ast;
+using namespace saot::quantum_gate;
 
 int Parser::readLine() {
     if (file.eof()) {
@@ -152,29 +152,28 @@ Token Parser::parseToken(int col) {
     }
 }
 
-RootNode* Parser::parse() {
+QuantumCircuit Parser::parse() {
     readLine();
-    auto root = new RootNode();
+    QuantumCircuit qc;
     while (true) {
         if (tokenIt->type == TokenTy::Circuit) {
-            root->circuit = _parseCircuit();
+            _parseCircuitBody(qc);
             continue;
         }
         if (tokenIt->type == TokenTy::Hash) {
             auto defStmt = _parseParameterDefStmt();
             defStmt.gateMatrix.updateNqubits();
-            root->paramDefs.push_back(defStmt);
+            qc.paramDefs.push_back(defStmt);
             displayParserLog("Parsed param def #" + std::to_string(defStmt.refNumber));
             continue;
         }
         break;
     }
-    return root;
+    return qc;
 }
 
-QuantumCircuit Parser::_parseCircuit() {
+QuantumCircuit& Parser::_parseCircuitBody(QuantumCircuit& qc) {
     displayParserLog("ready to parse circuit");
-    QuantumCircuit circuit;
     int setNqubitsFlag = -1;
     int setNparamsFlag = -1;
     int setFlag = 0;
@@ -204,7 +203,7 @@ QuantumCircuit Parser::_parseCircuit() {
                     if (setNqubitsFlag >= 0)
                         displayParserWarning("Overwrite nqubits from " + std::to_string(setNqubitsFlag)
                                              + " to " + std::to_string(num));
-                    circuit.nqubits = num;
+                    qc.nqubits = num;
                     setNqubitsFlag = num;
                     displayParserLog("nqubits updated to " + std::to_string(num));
                 }
@@ -212,7 +211,7 @@ QuantumCircuit Parser::_parseCircuit() {
                     if (setNparamsFlag >= 0)
                         displayParserWarning("Overwrite nparams from " + std::to_string(setNparamsFlag)
                                              + " to " + std::to_string(num));
-                    circuit.nparams = num;
+                    qc.nparams = num;
                     setNparamsFlag = num;
                     displayParserLog("nparams updated to " + std::to_string(num));
                 }
@@ -224,9 +223,9 @@ QuantumCircuit Parser::_parseCircuit() {
     }
 
     proceedWithType(TokenTy::Identifier);
-    circuit.name = tokenIt->str;
+    qc.name = tokenIt->str;
     proceedWithType(TokenTy::L_CurlyBraket, true);
-    displayParserLog("Ready to parse circuit " + circuit.name);
+    displayParserLog("Ready to parse circuit " + qc.name);
 
     while (true) {
         proceed();
@@ -244,7 +243,7 @@ QuantumCircuit Parser::_parseCircuit() {
                 throwParserError("Unexpected token type " + TokenTyToString(tokenIt->type)
                                 + " when expecting either AtSymbol or Semicolon");
             }
-            circuit.addGateChain(chain);
+            qc.stmts.push_back(std::make_unique<GateChainStmt>(chain));
             continue;
         }
         break;
@@ -254,8 +253,8 @@ QuantumCircuit Parser::_parseCircuit() {
         throwParserError("Unexpected token " + tokenIt->to_string());
     }
     proceed(); // eat '}'
-    displayParserLog("Parsed a circuit with " + std::to_string(circuit.stmts.size()) + " chains");
-    return circuit;
+    displayParserLog("Parsed a circuit with " + std::to_string(qc.stmts.size()) + " chains");
+    return qc;
 }
 
 GateParameter Parser::_parseGateParameter() {
@@ -273,7 +272,7 @@ GateParameter Parser::_parseGateParameter() {
 
 GateApplyStmt Parser::_parseGateApply() {
     assert(tokenIt->type == TokenTy::Identifier);
-    GateApplyStmt gate(tokenIt->str);
+    GateApplyStmt gate(tokenIt->str, {});
 
     if (optionalProceedWithType(TokenTy::L_RoundBraket)) {
         if (optionalProceedWithType(TokenTy::Hash)) {
@@ -284,7 +283,7 @@ GateApplyStmt Parser::_parseGateApply() {
         else {
             proceed(); // eat '('
             while (true) {
-                gate.params.push_back(_parseGateParameter());
+                gate.gateParams.push_back(_parseGateParameter());
                 if (tokenIt->type == TokenTy::Comma) {
                     proceed();
                     continue;
@@ -327,7 +326,7 @@ ParameterDefStmt Parser::_parseParameterDefStmt() {
     proceedWithType(TokenTy::L_CurlyBraket);
     proceed();
 
-    quench::quantum_gate::matrix_t::p_matrix_t polyMatrix;
+    saot::quantum_gate::matrix_t::p_matrix_t polyMatrix;
     while (true) {
         auto poly = _parseSaotPolynomial();
         poly.print(std::cerr) << "\n";

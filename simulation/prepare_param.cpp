@@ -2,13 +2,13 @@
 
 using namespace llvm;
 using namespace simulation;
-using namespace quench::circuit_graph;
-using GateMatrix = quench::quantum_gate::GateMatrix;
+using namespace saot::circuit_graph;
+using GateMatrix = saot::quantum_gate::GateMatrix;
 using namespace saot;
 
 std::pair<Value*, Value*>
 IRGenerator::generatePolynomial(const Polynomial& p, Value* paramArgV) {
-
+    // const auto generateMonomial(const Monomial& M)
 
     return { nullptr, nullptr };
 }

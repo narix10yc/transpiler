@@ -1,7 +1,7 @@
 #include "openqasm/parser.h"
-#include "quench/CircuitGraph.h"
-#include "quench/cpu.h"
-#include "quench/simulate.h"
+#include "saot/CircuitGraph.h"
+#include "saot/cpu.h"
+#include "saot/simulate.h"
 #include "utils/iocolor.h"
 #include "utils/statevector.h"
 // #include "utils/half.h"
@@ -13,9 +13,9 @@
 #include <cmath>
 
 using namespace utils::statevector;
-using namespace quench::simulate;
-using QuantumGate = quench::quantum_gate::QuantumGate;
-using GateMatrix = quench::quantum_gate::GateMatrix;
+using namespace saot::simulate;
+using QuantumGate = saot::quantum_gate::QuantumGate;
+using GateMatrix = saot::quantum_gate::GateMatrix;
 using namespace llvm;
 using namespace Color;
 

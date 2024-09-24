@@ -6,7 +6,7 @@
 #include <vector>
 #include <fstream>
 #include "token.h"
-#include "quench/CircuitGraph.h"
+#include "saot/CircuitGraph.h"
 
 #include "utils/utils.h"
 
@@ -275,8 +275,8 @@ public:
 class RootNode : public Node {
     std::vector<std::unique_ptr<Statement>> stmts;
 protected:
-    using CircuitGraph = quench::circuit_graph::CircuitGraph;
-    using GateMatrix = quench::quantum_gate::GateMatrix;
+    using CircuitGraph = saot::circuit_graph::CircuitGraph;
+    using GateMatrix = saot::quantum_gate::GateMatrix;
 public:
     std::string toString() const override { return "Root"; }
     void prettyPrint(std::ostream& f, int depth) const override;

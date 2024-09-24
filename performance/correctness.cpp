@@ -4,7 +4,7 @@
 #include "timeit/timeit.h"
 #include <iomanip>
 #include <iostream>
-#include <quench/simulate.h>
+#include <saot/simulate.h>
 
 #ifdef USING_F32
     using real_t = float;
@@ -14,9 +14,9 @@
 
 using namespace timeit;
 using namespace Color;
-using namespace quench::simulate;
+using namespace saot::simulate;
 using namespace utils::statevector;
-using namespace quench::quantum_gate;
+using namespace saot::quantum_gate;
 
 
 int main(int argc, char** argv) {

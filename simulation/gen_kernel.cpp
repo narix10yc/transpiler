@@ -12,7 +12,7 @@ using namespace utils;
 using namespace llvm;
 using namespace Color;
 using namespace simulation;
-using namespace quench::quantum_gate;
+using namespace saot::quantum_gate;
 
 namespace { /* anonymous namespace */
     struct matrix_data_t {

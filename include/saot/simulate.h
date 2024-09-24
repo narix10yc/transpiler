@@ -1,11 +1,11 @@
-#ifndef QUENCH_SIMULATE_H
-#define QUENCH_SIMULATE_H
+#ifndef SAOT_SIMULATE_H
+#define SAOT_SIMULATE_H
 
-#include "quench/QuantumGate.h"
-#include "quench/CircuitGraph.h"
+#include "saot/QuantumGate.h"
+#include "saot/CircuitGraph.h"
 #include <iomanip>
 
-namespace quench::simulate {
+namespace saot::simulate {
 
 inline size_t insertZeroBit(size_t number, int index) {
     size_t left, right;
@@ -16,7 +16,7 @@ inline size_t insertZeroBit(size_t number, int index) {
 
 template<typename real_t = double>
 static void applyGeneral(std::complex<real_t>* sv,
-                  const quench::quantum_gate::GateMatrix& gate,
+                  const saot::quantum_gate::GateMatrix& gate,
                   const std::vector<int>& qubits,
                   unsigned nqubits)
 {
@@ -76,6 +76,6 @@ static void applyGeneral(std::complex<real_t>* sv,
     }
 }
 
-} // namespace quench::simulate
+} // namespace saot::simulate
 
-#endif // QUENCH_SIMULATE_H
+#endif // SAOT_SIMULATE_H

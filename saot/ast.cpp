@@ -1,40 +1,68 @@
-#include "quench/ast.h"
-#include "quench/CircuitGraph.h"
+#include "saot/ast.h"
+#include "saot/CircuitGraph.h"
 #include "utils/iocolor.h"
 
-using namespace quench::ast;
-using namespace quench::circuit_graph;
-using namespace quench::quantum_gate;
+using namespace saot::ast;
+using namespace saot::circuit_graph;
+using namespace saot::quantum_gate;
 
-std::ostream& RootNode::print(std::ostream& os) const {
-    circuit.print(os);
+template<typename T>
+std::ostream& printVector(
+        std::ostream& os, const std::vector<T>& vec,
+        const std::string& sep = ",") {
+    if (vec.empty())
+        return os;
+    auto it = vec.cbegin();
+    os << (*it);
+    while (++it != vec.cend())
+        os << sep << (*it);
+    return os;
+}
+
+std::ostream& MeasureStmt::print(std::ostream& os) const {
+    os << "m ";
+    printVector(os, qubits, " ");
+    return os << "\n";
+}
+
+std::ostream& QuantumCircuit::print(std::ostream& os) const {
+    os << "circuit<nqubits=" << nqubits << ", nparams=" << nparams << "> "
+       << name << " {\n";
+    for (const auto& s : stmts)
+        s->print(os);
     os << "\n";
-
     for (const auto& def : paramDefs)
         def.print(os);
 
     return os;
 }
 
+
 std::ostream& GateApplyStmt::print(std::ostream& os) const {
     os << name;
     // parameter
     if (paramRefNumber >= 0)
         os << "(#" << paramRefNumber << ")";
-    else if (!params.empty()) {
+    else if (!gateParams.empty()) {
         os << "(";
-        auto it = params.cbegin();
-        it->print(os);
-        while (++it != params.cend())
-            it->print(os << ",");
+        auto it = gateParams.cbegin();
+        while (true) {
+            if (it->isConstant)
+                os << it->constant;
+            else
+                os << "%" << it->variable;
+            if (++it != gateParams.cend()) {
+                os << ",";
+                continue;
+            }
+            break;
+        }
         os << ")";
     }
 
     // target qubits
     os << " ";
-    for (unsigned i = 0; i < qubits.size()-1; i++)
-        os << qubits[i] << " ";
-    os << qubits.back();
+    printVector(os, qubits, " ");
     return os;
 }
 
@@ -49,14 +77,6 @@ std::ostream& GateChainStmt::print(std::ostream& os) const {
     return os;
 }
 
-std::ostream& QuantumCircuit::print(std::ostream& os) const {
-    os << "circuit<nqubits=" << nqubits << ", nparams=" << nparams << "> "
-       << name << " {\n";
-    for (const auto& s : stmts)
-        s->print(os);
-    return os << "}\n";
-}
-
 std::ostream& ParameterDefStmt::print(std::ostream& os) const {
     os << "#" << refNumber << " = { ";
     assert(gateMatrix.isParametrizedMatrix());
@@ -68,18 +88,7 @@ std::ostream& ParameterDefStmt::print(std::ostream& os) const {
     return os << " }\n";
 }
 
-void QuantumCircuit::addGateChain(const GateChainStmt& chain) {
-    stmts.push_back(std::make_unique<GateChainStmt>(chain));
-    for (const auto& gate : chain.gates) {
-        // update number of qubits
-        for (const auto& q : gate.qubits) {
-            if (q >= nqubits)
-                nqubits = q + 1;
-        }
-    }
-}
-
-QuantumGate RootNode::gateApplyToQuantumGate(const GateApplyStmt& gateApplyStmt) {
+QuantumGate QuantumCircuit::gateApplyToQuantumGate(const GateApplyStmt& gateApplyStmt) {
     if (gateApplyStmt.paramRefNumber >= 0) {
         for (auto it = paramDefs.begin(); it != paramDefs.end(); it++) {
             if (it->refNumber == gateApplyStmt.paramRefNumber)
@@ -89,13 +98,13 @@ QuantumGate RootNode::gateApplyToQuantumGate(const GateApplyStmt& gateApplyStmt)
         return QuantumGate();
     }
     return QuantumGate(GateMatrix::FromParameters(
-                gateApplyStmt.name, gateApplyStmt.params),
+                gateApplyStmt.name, gateApplyStmt.gateParams),
             gateApplyStmt.qubits);
 }
 
-CircuitGraph RootNode::toCircuitGraph() {
+CircuitGraph QuantumCircuit::toCircuitGraph() {
     CircuitGraph graph;
-    for (const auto& s : circuit.stmts) {
+    for (const auto& s : stmts) {
         const GateChainStmt* chain = dynamic_cast<const GateChainStmt*>(s.get());
         if (chain == nullptr) {
             std::cerr << Color::YELLOW_FG << Color::BOLD << "Warning: " << Color::RESET

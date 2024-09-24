@@ -1,5 +1,5 @@
-#ifndef QUENCH_COMPLEX_MATRIX_H
-#define QUENCH_COMPLEX_MATRIX_H
+#ifndef SAOT_COMPLEX_MATRIX_H
+#define SAOT_COMPLEX_MATRIX_H
 
 #include <vector>
 #include <cassert>
@@ -7,7 +7,7 @@
 #include <complex>
 #include <iostream>
 
-namespace quench::complex_matrix {
+namespace saot::complex_matrix {
 
 /// @brief SquareMatrix class is a wrapper of data : vector<data_t> with a 
 /// private member called 'size'. data.size() should always be a perfect square,
@@ -111,6 +111,6 @@ public:
 };
 
 
-} // namespace quench::complex_matrix
+} // namespace saot::complex_matrix
 
-#endif // QUENCH_COMPLEX_MATRIX_H
+#endif // SAOT_COMPLEX_MATRIX_H

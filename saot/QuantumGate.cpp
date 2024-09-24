@@ -1,12 +1,12 @@
-#include "quench/QuantumGate.h"
+#include "saot/QuantumGate.h"
 #include "utils/iocolor.h"
 #include "utils/utils.h"
 #include <iomanip>
 #include <cmath>
 
 using namespace Color;
-using namespace quench::complex_matrix;
-using namespace quench::quantum_gate;
+using namespace saot::complex_matrix;
+using namespace saot::quantum_gate;
 using namespace saot;
 
 bool _isValidShuffleFlag(const std::vector<int>& flags) {

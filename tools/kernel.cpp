@@ -1,6 +1,6 @@
 #include "openqasm/parser.h"
-#include "quench/CircuitGraph.h"
-#include "quench/cpu.h"
+#include "saot/CircuitGraph.h"
+#include "saot/cpu.h"
 #include "utils/iocolor.h"
 #include <functional>
 
@@ -9,14 +9,14 @@
 #include <chrono>
 #include <sstream>
 
-using QuantumGate = quench::quantum_gate::QuantumGate;
-using GateMatrix = quench::quantum_gate::GateMatrix;
-using FusionConfig = quench::circuit_graph::FusionConfig;
-using CircuitGraph = quench::circuit_graph::CircuitGraph;
+using QuantumGate = saot::quantum_gate::QuantumGate;
+using GateMatrix = saot::quantum_gate::GateMatrix;
+using FusionConfig = saot::circuit_graph::FusionConfig;
+using CircuitGraph = saot::circuit_graph::CircuitGraph;
 using IRGeneratorConfig = simulation::IRGeneratorConfig;
 using AmpFormat = IRGeneratorConfig::AmpFormat;
 
-using namespace quench::cpu;
+using namespace saot::cpu;
 using namespace llvm;
 using namespace Color;
 
