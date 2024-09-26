@@ -71,7 +71,7 @@ Function* IRGenerator::generatePrepareParameter(const CircuitGraph& graph) {
     auto* funcTy = FunctionType::get(builder.getVoidTy(),
             { builder.getPtrTy(), builder.getPtrTy() }, false);
     Function* func = Function::Create(funcTy, Function::ExternalLinkage,
-            "prepare_function", *mod);
+            "prepare_function", getModule());
 
     auto* paramArgV = func->getArg(0);
     paramArgV->setName("param.ptr");
@@ -79,7 +79,7 @@ Function* IRGenerator::generatePrepareParameter(const CircuitGraph& graph) {
     matrixArgV->setName("matrix.ptr");
     ParamValueFeeder feeder(paramArgV);
 
-    BasicBlock* entryBB = BasicBlock::Create(llvmContext, "entry", func);
+    BasicBlock* entryBB = BasicBlock::Create(*_context, "entry", func);
     builder.SetInsertPoint(entryBB);
 
     uint64_t startIndex = 0;

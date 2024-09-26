@@ -160,7 +160,7 @@ public:
 
 /// @brief GateMatrix is a wrapper around constant and polynomial-based square
 /// matrices. It does NOT store qubits array, only the number of qubits
-/// Consistency requires matrix size is always a power of 2.
+/// Consistency requires \p matrix.size() is always a power of 2.
 class GateMatrix {
 public:
     int nqubits;

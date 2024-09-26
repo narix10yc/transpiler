@@ -79,10 +79,10 @@ std::ostream& IRGeneratorConfig::display(
 
 void IRGenerator::loadFromFile(const std::string& fileName) {
     SMDiagnostic err;
-    this->mod = parseIRFile(fileName, err, this->llvmContext);
-    if (mod == nullptr) {
+    _module = std::move(parseIRFile(fileName, err, *_context));
+    if (_module == nullptr) {
         err.print("IRGenerator::loadFromFile", llvm::errs());
-        this->mod = std::make_unique<Module>("MyModule", this->llvmContext);
+        llvm_unreachable("Failed to load from file");
     }
 }
 

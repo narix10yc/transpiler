@@ -93,7 +93,7 @@ IRGenerator::generateKernelDebug(
                 builder.getInt64Ty(), builder.getInt64Ty(), builder.getPtrTy() };
 
     auto* funcType = FunctionType::get(builder.getVoidTy(), argType, false);
-    func = Function::Create(funcType, Function::ExternalLinkage, funcName, *mod);
+    func = Function::Create(funcType, Function::ExternalLinkage, funcName, getModule());
 
     if (_config.ampFormat == AmpFormat::Sep) {
         pReArg = func->getArg(0);      pReArg->setName("pRe");
@@ -110,10 +110,10 @@ IRGenerator::generateKernelDebug(
     } /* end of function declaration */
 
     // init basic blocks
-    BasicBlock* entryBB = BasicBlock::Create(llvmContext, "entry", func);
-    BasicBlock* loopBB = BasicBlock::Create(llvmContext, "loop", func);
-    BasicBlock* loopBodyBB = BasicBlock::Create(llvmContext, "loop.body", func);
-    BasicBlock* retBB = BasicBlock::Create(llvmContext, "ret", func);
+    BasicBlock* entryBB = BasicBlock::Create(*_context, "entry", func);
+    BasicBlock* loopBB = BasicBlock::Create(*_context, "loop", func);
+    BasicBlock* loopBodyBB = BasicBlock::Create(*_context, "loop.body", func);
+    BasicBlock* retBB = BasicBlock::Create(*_context, "ret", func);
 
     std::vector<matrix_data_t> matrix(K * K);
     const auto loadMatrixF = [&]() {

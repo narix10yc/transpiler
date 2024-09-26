@@ -48,28 +48,32 @@ struct IRGeneratorConfig {
 
 /// @brief IR Generator.
 class IRGenerator {
-    llvm::LLVMContext llvmContext;
+public:
+    std::unique_ptr<llvm::LLVMContext> _context;
+    std::unique_ptr<llvm::Module> _module;
     llvm::IRBuilder<> builder;
-    std::unique_ptr<llvm::Module> mod;
     IRGeneratorConfig _config;
 
     using AmpFormat = IRGeneratorConfig::AmpFormat;
 public:
     IRGenerator(const std::string& moduleName = "myModule") : 
-        llvmContext(),
-        builder(llvmContext), 
-        mod(std::make_unique<llvm::Module>(moduleName, llvmContext)),
+        _context(std::make_unique<llvm::LLVMContext>()),
+        _module(std::make_unique<llvm::Module>(moduleName, *_context)),
+        builder(*_context), 
         _config() {}
 
     IRGenerator(const IRGeneratorConfig& irConfig,
                 const std::string& moduleName = "myModule") : 
-        llvmContext(),
-        builder(llvmContext), 
-        mod(std::make_unique<llvm::Module>(moduleName, llvmContext)),
+        _context(std::make_unique<llvm::LLVMContext>()),
+        _module(std::make_unique<llvm::Module>(moduleName, *_context)),
+        builder(*_context), 
         _config(irConfig) {}
 
-    const llvm::Module& getModule() const { return *mod; }
-    llvm::Module& getModule() { return *mod; }
+    const llvm::LLVMContext* getContext() const { return _context.get(); }
+    llvm::LLVMContext* getContext() { return _context.get(); }
+
+    const llvm::Module* getModule() const { return _module.get(); }
+    llvm::Module* getModule() { return _module.get(); }
 
     llvm::IRBuilder<>& getBuilder() { return builder; }
 
@@ -78,7 +82,7 @@ public:
 
     void loadFromFile(const std::string& fileName);
 
-    void dumpToStderr() const { mod->print(llvm::errs(), nullptr); }
+    void dumpToStderr() const { _module->print(llvm::errs(), nullptr); }
 
     llvm::Type* getScalarTy() {
         if (_config.precision == 32)
