@@ -11,6 +11,17 @@ using namespace Color;
 using namespace llvm;
 using namespace simulation;
 
+Value* ParamValueFeeder::get(int v, IRBuilder<>& B, Type* Ty) {
+    if (v >= cache.size())
+        cache.resize(v + 1);
+
+    if (cache[v] != nullptr)
+        return cache[v];
+    
+    Value* ptr = B.CreateConstGEP1_32(Ty, basePtrV, v, "p.param." + std::to_string(v));
+    return cache[v] = B.CreateLoad(Ty, ptr, "param." + std::to_string(v));
+}
+
 bool IRGeneratorConfig::checkConfliction(std::ostream& os) const {
     bool check = true;
     const auto warn = [&os]() -> std::ostream& {
@@ -140,4 +151,30 @@ Value* IRGenerator::genMulSub(
     // not use FMS
     auto* bbccNeg = builder.CreateFMul(bb, ccNeg, bbccName + "Neg");
     return builder.CreateFAdd(aa, bbccNeg, aaName);
+}
+
+Value* IRGenerator::genFAdd(Value* a, Value* b) {
+    if (a && b) return builder.CreateFAdd(a, b);
+    if (a)      return a;
+    return b;
+}
+
+Value* IRGenerator::genFSub(Value* a, Value* b) {
+    if (a && b) return builder.CreateFSub(a, b);
+    if (a)      return a;
+    if (b)      return builder.CreateFNeg(b);
+    return nullptr;
+}
+
+Value* IRGenerator::genFMul(Value* a, Value* b) {
+    if (a && b) return builder.CreateFMul(a, b);
+    if (a)      return a;
+    return b;
+}
+
+std::pair<Value*, Value*> IRGenerator::genComplexMultiply(
+        const std::pair<llvm::Value*, llvm::Value*>& a,
+        const std::pair<llvm::Value*, llvm::Value*>& b) {
+    return { genFSub(genFMul(a.first, b.first), genFMul(a.second, b.second)),
+             genFAdd(genFMul(a.first, b.second), genFMul(a.second, b.first)) };
 }

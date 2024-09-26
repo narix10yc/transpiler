@@ -3,12 +3,17 @@
 #include "saot/CircuitGraph.h"
 
 #include "saot/Polynomial.h"
+#include "simulation/ir_generator.h"
+
+#include "llvm/Passes/PassBuilder.h"
+
 
 using namespace saot;
 
 using namespace saot::ast;
 using namespace saot::quantum_gate;
 using namespace saot::circuit_graph;
+using namespace simulation;
 
 int main(int argc, char** argv) {
     std::vector<std::pair<int, double>> varValues {
@@ -33,6 +38,26 @@ int main(int argc, char** argv) {
 
     // gate.gateMatrix.printMatrix(std::cerr);
 
+   
+    
+
+    // Monomial m1;
+    // m1.insertMulTerm(VariableSumNode::Cosine({0, 2}, 1.2));
+    // m1.insertExpiVar(3, false);
+    // m1.print(std::cerr) << "\n";
+
+    // m1.insertExpiVar(3, true);
+    // m1.print(std::cerr) << "\n";
+    // Polynomial p;
+    // p.insertMonomial(m1);
+
+    // p.print(std::cerr) << "\n";
+
+    // p.simplify({{0, 0.77}, {2, 1.14}, {3, 4.0}});
+    // p.print(std::cerr) << "\n";
+
+
+
     assert(argc > 1);
 
     Parser parser(argv[1]);
@@ -55,24 +80,15 @@ int main(int argc, char** argv) {
     }
     fusedGate->gateMatrix.printMatrix(std::cerr) << "\n";
 
-    for (auto& P : fusedGate->gateMatrix.pData())
-        P.simplify(varValues);
+    // for (auto& P : fusedGate->gateMatrix.pData())
+        // P.simplify(varValues);
     fusedGate->gateMatrix.printMatrix(std::cerr);
 
-    // Monomial m1;
-    // m1.insertMulTerm(VariableSumNode::Cosine({0, 2}, 1.2));
-    // m1.insertExpiVar(3, false);
-    // m1.print(std::cerr) << "\n";
-
-    // m1.insertExpiVar(3, true);
-    // m1.print(std::cerr) << "\n";
-    // Polynomial p;
-    // p.insertMonomial(m1);
-
-    // p.print(std::cerr) << "\n";
-
-    // p.simplify({{0, 0.77}, {2, 1.14}, {3, 4.0}});
-    // p.print(std::cerr) << "\n";
+    IRGenerator G;
+    G.generatePrepareParameter(graph);
+    G.dumpToStderr();
+ 
+    
 
     return 0;
 }

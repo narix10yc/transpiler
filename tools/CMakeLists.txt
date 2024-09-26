@@ -15,4 +15,4 @@ add_executable(playground "playground.cpp")
 target_link_libraries(playground saot qasm simulation)
 
 add_executable(pg_polynomial "pg_polynomial.cpp")
-target_link_libraries(pg_polynomial saot)
+target_link_libraries(pg_polynomial saot simulation)

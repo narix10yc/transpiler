@@ -7,10 +7,62 @@ using GateMatrix = saot::quantum_gate::GateMatrix;
 using namespace saot;
 
 std::pair<Value*, Value*>
-IRGenerator::generatePolynomial(const Polynomial& p, Value* paramArgV) {
-    // const auto generateMonomial(const Monomial& M)
+IRGenerator::generatePolynomial(const Polynomial& P, ParamValueFeeder& feeder) {
+    const auto generateMonomial = [&](const Monomial& M) {
+        std::pair<Value*, Value*> coefV {
+            (M.coef.real() == 0.0) ? nullptr : ConstantFP::get(getScalarTy(), M.coef.real()),
+            (M.coef.imag() == 0.0) ? nullptr : ConstantFP::get(getScalarTy(), M.coef.imag())
+        };
+        
+        assert((coefV.first || coefV.second) && "coef should not be 0");
+        // mul terms
+        Value* mulTermsV = nullptr;
+        for (const auto& T : M.mulTerms()) {
+            assert(!T.vars.empty() && "should be absorbed into M.coef");
+            auto it = T.vars.cbegin();
+            mulTermsV = feeder.get(*it, builder, getScalarTy());
+            while (++it != T.vars.cend())
+                mulTermsV = builder.CreateFAdd(mulTermsV, feeder.get(*it, builder, getScalarTy()));
+            if (T.constant != 0.0)
+                mulTermsV = builder.CreateFAdd(mulTermsV, ConstantFP::get(getScalarTy(), T.constant));
+            if (T.op == VariableSumNode::CosOp)
+                mulTermsV = builder.CreateUnaryIntrinsic(Intrinsic::cos, mulTermsV);
+            else if (T.op == VariableSumNode::SinOp)
+                mulTermsV = builder.CreateUnaryIntrinsic(Intrinsic::sin, mulTermsV);
+        }
 
-    return { nullptr, nullptr };
+        coefV = genComplexMultiply(coefV, { mulTermsV, nullptr });
+        // expi terms
+        if (M.expiVars().empty())
+            return coefV;
+        
+        auto it = M.expiVars().cbegin();
+        Value* expiVarV = feeder.get(it->var, builder, getScalarTy());
+        if (!it->isPlus)
+            expiVarV = builder.CreateFNeg(expiVarV);
+        while (++it != M.expiVars().cend()) {
+            Value* tmp = feeder.get(it->var, builder, getScalarTy());
+            if (it->isPlus)
+                expiVarV = builder.CreateFAdd(expiVarV, tmp);
+            else
+                expiVarV = builder.CreateFSub(expiVarV, tmp);
+        }
+        return genComplexMultiply(coefV, {
+            builder.CreateUnaryIntrinsic(Intrinsic::cos, expiVarV),
+            builder.CreateUnaryIntrinsic(Intrinsic::sin, expiVarV)
+        });
+    };
+
+    if (P.monomials().empty())
+        return { nullptr, nullptr };
+    auto it = P.monomials().cbegin();
+    auto polyV = generateMonomial(*it);
+    while (++it != P.monomials().cend()) {
+        auto tmp = generateMonomial(*it);
+        polyV.first = genFAdd(polyV.first, tmp.first);
+        polyV.second = genFAdd(polyV.second, tmp.second);
+    }
+    return polyV;
 }
 
 Function* IRGenerator::generatePrepareParameter(const CircuitGraph& graph) {
@@ -25,6 +77,7 @@ Function* IRGenerator::generatePrepareParameter(const CircuitGraph& graph) {
     paramArgV->setName("param.ptr");
     auto* matrixArgV = func->getArg(1);
     matrixArgV->setName("matrix.ptr");
+    ParamValueFeeder feeder(paramArgV);
 
     BasicBlock* entryBB = BasicBlock::Create(llvmContext, "entry", func);
     builder.SetInsertPoint(entryBB);
@@ -57,21 +110,26 @@ Function* IRGenerator::generatePrepareParameter(const CircuitGraph& graph) {
             assert(gateMatrix.isParametrizedMatrix());
             const auto& pData = gateMatrix.pData();
             for (uint64_t d = 0; d < numCompMatrixEntries; d++) {
-                auto polyV = generatePolynomial(pData[d], paramArgV);
+                auto polyV = generatePolynomial(pData[d], feeder);
                 std::string gepName;
                 Value* matPtrV;
                 // real part
                 gepName = "m.block" + std::to_string(i) + ".re" + std::to_string(d);
                 matPtrV = builder.CreateConstInBoundsGEP1_64(
                         scalarTy, matrixArgV, startIndex + 2*d, gepName);
-                builder.CreateStore(polyV.first, matPtrV);
+                if (polyV.first)
+                    builder.CreateStore(polyV.first, matPtrV);
+                else
+                    builder.CreateStore(ConstantFP::get(getScalarTy(), 0.0), matPtrV);
 
                 // imag part
                 gepName = "m.block" + std::to_string(i) + ".im" + std::to_string(d);
                 matPtrV = builder.CreateConstInBoundsGEP1_64(
                         scalarTy, matrixArgV, startIndex + 2*d + 1, gepName);
-                builder.CreateStore(polyV.second, matPtrV);
-            }
+                if (polyV.second)
+                    builder.CreateStore(polyV.second, matPtrV);
+                else
+                    builder.CreateStore(ConstantFP::get(getScalarTy(), 0.0), matPtrV);            }
         }
 
         startIndex += 2 * numCompMatrixEntries;

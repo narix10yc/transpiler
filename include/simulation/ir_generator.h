@@ -14,6 +14,15 @@
 
 namespace simulation {
 
+class ParamValueFeeder {
+public:
+    llvm::Value* basePtrV;
+    std::vector<llvm::Value*> cache;
+    ParamValueFeeder(llvm::Value* basePtrV) : basePtrV(basePtrV), cache(128, nullptr) {}
+    
+    llvm::Value* get(int v, llvm::IRBuilder<>& B, llvm::Type* Ty);
+};
+
 struct IRGeneratorConfig {
     enum class AmpFormat { Alt, Sep };
 
@@ -69,6 +78,8 @@ public:
 
     void loadFromFile(const std::string& fileName);
 
+    void dumpToStderr() const { mod->print(llvm::errs(), nullptr); }
+
     llvm::Type* getScalarTy() {
         if (_config.precision == 32)
             return builder.getFloatTy();
@@ -93,6 +104,14 @@ public:
             llvm::Value* aa, llvm::Value* bb, llvm::Value* cc, int bbFlag,
             const llvm::Twine& bbccName = "", const llvm::Twine& aaName = "");
 
+    llvm::Value* genFAdd(llvm::Value* a, llvm::Value* b);
+    llvm::Value* genFSub(llvm::Value* a, llvm::Value* b);
+    llvm::Value* genFMul(llvm::Value* a, llvm::Value* b);
+
+    std::pair<llvm::Value*, llvm::Value*> genComplexMultiply(
+            const std::pair<llvm::Value*, llvm::Value*>&,
+            const std::pair<llvm::Value*, llvm::Value*>&);
+
     llvm::Function* generateKernel(
             const saot::quantum_gate::QuantumGate& gate,
             const std::string& funcName = "") {
@@ -104,7 +123,7 @@ public:
             const std::string& funcName = "");
 
     std::pair<llvm::Value*, llvm::Value*> generatePolynomial(
-            const saot::Polynomial& polynomial, llvm::Value* paramArgV);
+            const saot::Polynomial& polynomial, ParamValueFeeder& feeder);
 
     llvm::Function*
     generatePrepareParameter(const saot::circuit_graph::CircuitGraph& graph);
