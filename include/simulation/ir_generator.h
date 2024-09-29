@@ -1,10 +1,11 @@
 #ifndef SIMULATION_CODEGEN_H_
 #define SIMULATION_CODEGEN_H_
 
-#include <llvm/IR/Value.h>
-#include <llvm/IR/IRBuilder.h>
-#include <llvm/IR/LLVMContext.h>
-#include <llvm/IR/Module.h>
+#include "llvm/IR/Value.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Passes/OptimizationLevel.h"
 
 #include <vector>
 #include <array>
@@ -81,6 +82,8 @@ public:
     const IRGeneratorConfig& config() const { return _config; }
 
     void loadFromFile(const std::string& fileName);
+
+    void applyLLVMOptimization(const llvm::OptimizationLevel&);
 
     void dumpToStderr() const { _module->print(llvm::errs(), nullptr); }
 

@@ -5,6 +5,9 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include "llvm/Passes/PassBuilder.h"
+#include "llvm/Pass.h"
+
 #include "utils/iocolor.h"
 
 using namespace Color;
@@ -84,6 +87,35 @@ void IRGenerator::loadFromFile(const std::string& fileName) {
         err.print("IRGenerator::loadFromFile", llvm::errs());
         llvm_unreachable("Failed to load from file");
     }
+}
+
+void IRGenerator::applyLLVMOptimization(const OptimizationLevel& level) {
+    // These must be declared in this order so that they are destroyed in the
+    // correct order due to inter-analysis-manager references.
+    LoopAnalysisManager LAM;
+    FunctionAnalysisManager FAM;
+    CGSCCAnalysisManager CGAM;
+    ModuleAnalysisManager MAM;
+
+    // Create the new pass manager builder.
+    // Take a look at the PassBuilder constructor parameters for more
+    // customization, e.g. specifying a TargetMachine or various debugging
+    // options.
+    PassBuilder PB;
+
+    // Register all the basic analyses with the managers.
+    PB.registerModuleAnalyses(MAM);
+    PB.registerCGSCCAnalyses(CGAM);
+    PB.registerFunctionAnalyses(FAM);
+    PB.registerLoopAnalyses(LAM);
+    PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+    // Create the pass manager.
+    // This one corresponds to a typical -O2 optimization pipeline.
+    ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(level);
+
+    // Optimize the IR!
+    MPM.run(*_module, MAM);
 }
 
 Value* IRGenerator::genMulAdd(
@@ -178,3 +210,4 @@ std::pair<Value*, Value*> IRGenerator::genComplexMultiply(
     return { genFSub(genFMul(a.first, b.first), genFMul(a.second, b.second)),
              genFAdd(genFMul(a.first, b.second), genFMul(a.second, b.first)) };
 }
+

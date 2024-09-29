@@ -94,13 +94,12 @@ public:
     std::unique_ptr<QuantumGate> quantumGate;
 
     GateBlock(int id, std::unique_ptr<QuantumGate> quantumGate = nullptr)
-        : id(id), nqubits(0), dataVector(),
-          quantumGate(std::move(quantumGate)) {}
+            : id(id), nqubits(0), dataVector(),
+              quantumGate(std::move(quantumGate)) {}
 
     GateBlock(int id, GateNode* gateNode)
-        : id(id), nqubits(gateNode->nqubits), dataVector(),
-          quantumGate(std::make_unique<QuantumGate>(gateNode->toQuantumGate()))
-    {
+           : id(id), nqubits(gateNode->nqubits), dataVector(),
+             quantumGate(std::make_unique<QuantumGate>(gateNode->toQuantumGate())) {
         for (const auto& data : gateNode->dataVector)
             dataVector.push_back({data.qubit, gateNode, gateNode});
     }
@@ -109,9 +108,7 @@ public:
 
     std::vector<GateNode*> getOrderedGates() const;
 
-    size_t countGates() const {
-        return getOrderedGates().size();
-    }
+    size_t countGates() const { return getOrderedGates().size(); }
 
     int connect(GateBlock* rhsBlock, int q = -1);
 
@@ -126,8 +123,8 @@ public:
     }
 
     std::vector<block_data>::const_iterator findQubit(unsigned q) const {
-        auto it = dataVector.begin();
-        while (it != dataVector.end()) {
+        auto it = dataVector.cbegin();
+        while (it != dataVector.cend()) {
             if (it->qubit == q)
                 break;
             it++;
