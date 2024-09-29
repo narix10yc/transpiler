@@ -1,5 +1,5 @@
-#ifndef SIMULATION_SAOTCONTEXT_H
-#define SIMULATION_SAOTCONTEXT_H
+#ifndef SIMULATION_JIT_H
+#define SIMULATION_JIT_H
 
 #include "simulation/ir_generator.h"
 
@@ -17,4 +17,4 @@ public:
 
 } // namespace saot::jit
 
-#endif // SIMULATION_SAOTCONTEXT_H
+#endif // SIMULATION_JIT_H
