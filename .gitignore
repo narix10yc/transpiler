@@ -3,7 +3,7 @@
 *.exe
 examples/simple.qasm
 examples/complex.qasm
-examples/*.rec
+*.rec
 build/*
 tmp/*
 */gen_file*

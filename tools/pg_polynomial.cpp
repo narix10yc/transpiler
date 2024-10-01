@@ -84,9 +84,8 @@ int main(int argc, char** argv) {
         // P.simplify(varValues);
     fusedGate->gateMatrix.printMatrix(std::cerr);
 
-    IRGenerator G;
-    G.generatePrepareParameter(graph);
-    G.dumpToStderr();
+    auto QC = QuantumCircuit::FromCircuitGraph(graph);
+    QC.print(std::cerr);
  
     
 

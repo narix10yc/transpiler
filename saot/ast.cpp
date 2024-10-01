@@ -37,7 +37,6 @@ std::ostream& QuantumCircuit::print(std::ostream& os) const {
     return os;
 }
 
-
 std::ostream& GateApplyStmt::print(std::ostream& os) const {
     os << name;
     // parameter
@@ -63,7 +62,7 @@ std::ostream& GateApplyStmt::print(std::ostream& os) const {
     // target qubits
     os << " ";
     printVector(os, qubits, " ");
-    return os;
+    return os << "\n";
 }
 
 std::ostream& GateChainStmt::print(std::ostream& os) const {
@@ -72,15 +71,22 @@ std::ostream& GateChainStmt::print(std::ostream& os) const {
         return os;
     os << "  ";
     for (size_t i = 0; i < size-1; i++)
-        gates[i].print(os) << "\n@ ";
+        gates[i].print(os) << "@ ";
     gates[size-1].print(os) << ";\n";
     return os;
 }
 
 std::ostream& ParameterDefStmt::print(std::ostream& os) const {
     os << "#" << refNumber << " = { ";
-    assert(gateMatrix.isParametrizedMatrix());
+    if (gateMatrix.isConstantMatrix()) {
+        auto it = gateMatrix.cData().cbegin();
+        utils::print_complex(os, *it);
+        while (++it != gateMatrix.cData().cend())
+            utils::print_complex(os << ", ", *it);
+        return os << " }\n";
+    }
 
+    assert(gateMatrix.isParametrizedMatrix());
     auto it = gateMatrix.pData().cbegin();
     it->print(os);
     while (++it != gateMatrix.pData().cend())
@@ -120,4 +126,22 @@ CircuitGraph QuantumCircuit::toCircuitGraph() {
         graph.addGate(quGate);
     }
     return graph;
+}
+
+QuantumCircuit QuantumCircuit::FromCircuitGraph(const CircuitGraph& G) {
+    const auto allBlocks = G.getAllBlocks();
+
+    QuantumCircuit QC;
+    int paramRefNumber = 0;
+
+    for (const auto* B : allBlocks) {
+        const auto qubits = B->getQubits();
+        std::string gateName = "u" + std::to_string(qubits.size()) + "q";
+        QC.stmts.push_back(std::make_unique<GateApplyStmt>(gateName, qubits, paramRefNumber));
+
+        QC.paramDefs.push_back(ParameterDefStmt(paramRefNumber, B->quantumGate->gateMatrix));
+        paramRefNumber++;
+    }
+
+    return QC;
 }

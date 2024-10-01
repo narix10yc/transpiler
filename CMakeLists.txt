@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
+project(simulation LANGUAGES C CXX)
+
 message("########### Custom Setups ###########")
 # Apple has a system LLVM. We need to use a specific version
 # specified by enviroment variable 'LLVM_ROOT' or 'llvm_root'
@@ -12,8 +14,6 @@ else()
 endif()
 
 message(STATUS "LLVM_ROOT: ${LLVM_ROOT}")
-
-project(simulation LANGUAGES C CXX)
 
 set(CMAKE_C_COMPILER "${LLVM_ROOT}/bin/clang")
 set(CMAKE_CXX_COMPILER "${LLVM_ROOT}/bin/clang++")
@@ -38,7 +38,6 @@ set(LLVM_DIR "${LLVM_ROOT}/lib/cmake/llvm")
 find_package(LLVM REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
-
 include_directories(${LLVM_INCLUDE_DIRS} include)
 separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
 add_definitions(${LLVM_DEFINITIONS_LIST})

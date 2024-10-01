@@ -3,14 +3,7 @@
 #include "saot/CircuitGraph.h"
 
 #include "saot/Polynomial.h"
-#include "simulation/ir_generator.h"
-
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "llvm/ExecutionEngine/Orc/LLJIT.h"
-#include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
-
-#include "llvm/Support/TargetSelect.h"
-#include "llvm/Support/Error.h"
+#include "simulation/jit.h"
 
 using namespace saot;
 
@@ -60,25 +53,9 @@ int main(int argc, char** argv) {
     G.dumpToStderr();
 
     // JIT
-    InitializeNativeTarget();
-    InitializeNativeTargetAsmPrinter();
-    InitializeNativeTargetAsmParser();
+    jit::JitEngine jitEngine(G);
+    jitEngine.dumpNativeAssembly(llvm::errs());
 
-    auto jit = cantFail(orc::LLJITBuilder().create());
-    auto TSModule = orc::ThreadSafeModule(std::move(G._module), std::move(G._context));
-
-    if (auto err = jit->addIRModule(std::move(TSModule))) {
-        errs() << "Error adding module to JIT: " << err;
-        return 1;
-    }
-
-    auto jitFunc = jit->lookup(func->getName());
-
-    if (!jitFunc) {
-        std::cerr << Color::RED_FG << "Error: " << Color::RESET << "JIT function cannot be found!\n";
-        return 1;
-    }
-    
 
     return 0;
 }

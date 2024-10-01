@@ -1,5 +1,5 @@
-#ifndef SIMULATION_CODEGEN_H_
-#define SIMULATION_CODEGEN_H_
+#ifndef SIMULATION_IR_GENERATOR_H
+#define SIMULATION_IR_GENERATOR_H
 
 #include "llvm/IR/Value.h"
 #include "llvm/IR/IRBuilder.h"
@@ -138,4 +138,4 @@ public:
 
 } // namespace simulation
 
-#endif // SIMULATION_CODEGEN_H_
+#endif // SIMULATION_IR_GENERATOR_H

@@ -66,7 +66,8 @@ public:
     int refNumber;
     quantum_gate::GateMatrix gateMatrix;
 
-    ParameterDefStmt(int refNumber) : refNumber(refNumber), gateMatrix() {}
+    ParameterDefStmt(int refNumber, const quantum_gate::GateMatrix& gateMatrix = {})
+        : refNumber(refNumber), gateMatrix(gateMatrix) {}
 
     std::ostream& print(std::ostream& os) const;
 };
@@ -79,7 +80,10 @@ public:
     std::vector<std::unique_ptr<CircuitCompatibleStmt>> stmts;
     std::vector<ParameterDefStmt> paramDefs;
 
-    QuantumCircuit(const std::string& name = "qc") : name(name), nqubits(0), nparams(0), stmts(), paramDefs() {}
+    QuantumCircuit(const std::string& name = "qc")
+        : name(name), nqubits(0), nparams(0), stmts(), paramDefs() {}
+    
+    static QuantumCircuit FromCircuitGraph(const circuit_graph::CircuitGraph&);
 
     std::ostream& print(std::ostream& os) const;
 

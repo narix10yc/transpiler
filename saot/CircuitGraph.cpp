@@ -236,12 +236,10 @@ GateBlock* CircuitGraph::tryFuseSameRow(tile_iter_t tileIt, size_t q0) {
         return fusedBlock;
     }
     return nullptr;
-
 }
 
-void CircuitGraph::addGate(const quantum_gate::GateMatrix& matrix,
-                           const std::vector<int>& qubits)
-{
+void CircuitGraph::addGate(
+        const quantum_gate::GateMatrix& matrix, const std::vector<int>& qubits) {
     assert(matrix.nqubits == qubits.size());
 
     // update nqubits

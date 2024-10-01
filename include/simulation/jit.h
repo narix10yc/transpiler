@@ -10,7 +10,7 @@ namespace saot::jit {
 class JitEngine {
     std::unique_ptr<llvm::orc::LLJIT> JIT;
 public:
-    JitEngine(std::unique_ptr<simulation::IRGenerator>);
+    JitEngine(simulation::IRGenerator&);
 
     void dumpNativeAssembly(llvm::raw_ostream&);
 };
