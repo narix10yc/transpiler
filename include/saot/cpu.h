@@ -6,7 +6,7 @@
 
 #include <iomanip>
 
-namespace saot::cpu {
+namespace saot {
 
 struct CodeGeneratorCPUConfig {
     bool multiThreaded;
@@ -30,7 +30,7 @@ public:
 
     /// @brief Generate IR
     /// @param forceInOrder: force generate IR according to block id 
-    void generate(const circuit_graph::CircuitGraph& graph,
+    void generate(const CircuitGraph& graph,
                   int debugLevel = 0, bool forceInOrder = false);
 
     std::ostream& displayConfig(int verbose = 1, std::ostream& os = std::cerr) const {

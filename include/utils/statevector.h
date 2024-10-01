@@ -360,7 +360,7 @@ public:
     }
 
     std::ostream& print(std::ostream& os) const {
-        using namespace Color;
+        using namespace IOColor;
 
         if (N > 32) {
             os << BOLD << CYAN_FG << "Warning: " << RESET << "statevector has more "

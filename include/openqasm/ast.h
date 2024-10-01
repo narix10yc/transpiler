@@ -275,8 +275,8 @@ public:
 class RootNode : public Node {
     std::vector<std::unique_ptr<Statement>> stmts;
 protected:
-    using CircuitGraph = saot::circuit_graph::CircuitGraph;
-    using GateMatrix = saot::quantum_gate::GateMatrix;
+    using CircuitGraph = saot::CircuitGraph;
+    using GateMatrix = saot::GateMatrix;
 public:
     std::string toString() const override { return "Root"; }
     void prettyPrint(std::ostream& f, int depth) const override;

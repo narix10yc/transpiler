@@ -4,9 +4,7 @@
 #include <iomanip>
 #include <cmath>
 
-using namespace Color;
-using namespace saot::complex_matrix;
-using namespace saot::quantum_gate;
+using namespace IOColor;
 using namespace saot;
 
 bool _isValidShuffleFlag(const std::vector<int>& flags) {

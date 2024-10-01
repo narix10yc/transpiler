@@ -13,10 +13,10 @@
 #endif
 
 using namespace timeit;
-using namespace Color;
+using namespace IOColor;
 using namespace saot::simulate;
 using namespace utils::statevector;
-using namespace saot::quantum_gate;
+using namespace saot;
 
 
 int main(int argc, char** argv) {

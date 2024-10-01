@@ -1,7 +1,7 @@
 #ifndef UTILS_IOCOLOR_H
 #define UTILS_IOCOLOR_H
 
-namespace Color {
+namespace IOColor {
     const static char* RESET = "\033[0m";
 
     const static char* BOLD = "\033[1m";

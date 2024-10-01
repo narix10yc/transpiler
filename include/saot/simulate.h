@@ -16,7 +16,7 @@ inline size_t insertZeroBit(size_t number, int index) {
 
 template<typename real_t = double>
 static void applyGeneral(std::complex<real_t>* sv,
-                  const saot::quantum_gate::GateMatrix& gate,
+                  const saot::GateMatrix& gate,
                   const std::vector<int>& qubits,
                   unsigned nqubits)
 {

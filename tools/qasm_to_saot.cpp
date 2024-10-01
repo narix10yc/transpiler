@@ -1,5 +1,6 @@
 #include "openqasm/parser.h"
 #include "saot/CircuitGraph.h"
+#include "saot/Fusion.h"
 #include "saot/cpu.h"
 #include "utils/iocolor.h"
 
@@ -8,13 +9,11 @@
 #include <chrono>
 #include <sstream>
 
-using FusionConfig = saot::circuit_graph::FusionConfig;
-using CircuitGraph = saot::circuit_graph::CircuitGraph;
 using IRGeneratorConfig = simulation::IRGeneratorConfig;
 using AmpFormat = IRGeneratorConfig::AmpFormat;
+using namespace IOColor;
 using namespace llvm;
-using namespace Color;
-using namespace saot::cpu;
+using namespace saot;
 
 int main(int argc, char** argv) {
     cl::opt<std::string>
@@ -123,27 +122,27 @@ int main(int argc, char** argv) {
 
     // gate fusion
     tic = clock::now();
+
+    FusionConfig fusionConfig;
     if (MaxNQubits > 0 || MaxOpCount > 0) {
         if (MaxNQubits == 0 || MaxOpCount == 0) {
             std::cerr << RED_FG << BOLD << "Argument Error: " << RESET
                       << "need to provide both 'max-k' and 'max-op'\n";
             return 1;
         }
-        graph.updateFusionConfig({
-                .maxNQubits = MaxNQubits,
-                .maxOpCount = MaxOpCount,
-                .zeroSkippingThreshold = ZeroSkipThreshold,
-            });
+        fusionConfig.maxNQubits = MaxNQubits;
+        fusionConfig.maxOpCount = MaxOpCount;
+        fusionConfig.zeroSkippingThreshold = ZeroSkipThreshold;
     }
     else
-        graph.updateFusionConfig(FusionConfig::Preset(FusionLevel));
-    graph.getFusionConfig().allowMultipleTraverse = AllowMultipleTraverse;
-    graph.getFusionConfig().incrementScheme = EnableIncreamentScheme;
+        fusionConfig = FusionConfig::Preset(FusionLevel);
+    fusionConfig.allowMultipleTraverse = AllowMultipleTraverse;
+    fusionConfig.incrementScheme = EnableIncreamentScheme;
 
     if (Verbose > 0)
-        graph.displayFusionConfig(std::cerr);
+        fusionConfig.display(std::cerr);
 
-    graph.greedyGateFusion();
+    saot::applyGateFusion(fusionConfig, graph);
 
     tok = clock::now();
     log() << "Gate fusion complete\n";

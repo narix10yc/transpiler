@@ -9,12 +9,11 @@
 #include "saot/ast.h"
 #include "saot/QuantumGate.h"
 
-namespace saot::circuit_graph {
-
-using GateMatrix = saot::quantum_gate::GateMatrix;
-using QuantumGate = saot::quantum_gate::QuantumGate;
+namespace saot {
 
 class GateNode {
+private:
+    static int idCount;
 public:
     struct gate_data {
         int qubit;
@@ -26,14 +25,11 @@ public:
     GateMatrix gateMatrix;
     std::vector<gate_data> dataVector;
 
-    GateNode(int id,
-             const GateMatrix& gateMatrix,
-             const std::vector<int>& qubits)
-        : id(id),
+    GateNode(const GateMatrix& gateMatrix, const std::vector<int>& qubits)
+        : id(idCount++),
           nqubits(gateMatrix.nqubits),
           gateMatrix(gateMatrix),
-          dataVector(gateMatrix.nqubits)
-    {
+          dataVector(gateMatrix.nqubits) {
         assert(gateMatrix.nqubits == qubits.size());
         for (unsigned i = 0; i < qubits.size(); i++)
             dataVector[i] = { qubits[i], nullptr, nullptr };
@@ -81,6 +77,8 @@ public:
 };
 
 class GateBlock {
+private:
+    static int idCount;
 public:
     struct block_data {
         int qubit;
@@ -93,12 +91,12 @@ public:
     std::vector<block_data> dataVector;
     std::unique_ptr<QuantumGate> quantumGate;
 
-    GateBlock(int id, std::unique_ptr<QuantumGate> quantumGate = nullptr)
-            : id(id), nqubits(0), dataVector(),
+    GateBlock(std::unique_ptr<QuantumGate> quantumGate = nullptr)
+            : id(idCount++), nqubits(0), dataVector(),
               quantumGate(std::move(quantumGate)) {}
 
-    GateBlock(int id, GateNode* gateNode)
-           : id(id), nqubits(gateNode->nqubits), dataVector(),
+    GateBlock(GateNode* gateNode)
+           : id(idCount++), nqubits(gateNode->nqubits), dataVector(),
              quantumGate(std::make_unique<QuantumGate>(gateNode->toQuantumGate())) {
         for (const auto& data : gateNode->dataVector)
             dataVector.push_back({data.qubit, gateNode, gateNode});
@@ -150,67 +148,6 @@ public:
     }
 };
 
-struct FusionConfig {
-    int maxNQubits;
-    int maxOpCount;
-    double zeroSkippingThreshold;
-    bool allowMultipleTraverse;
-    bool incrementScheme;
-public:
-    static FusionConfig Disable() {
-        return {
-            .maxNQubits = 0,
-            .maxOpCount = 0, 
-            .zeroSkippingThreshold = 0.0,
-            .allowMultipleTraverse = true,
-            .incrementScheme = true
-        };
-    }
-
-    static FusionConfig TwoQubitOnly() {
-        return {
-            .maxNQubits = 2,
-            .maxOpCount = 64, // 2-qubit dense
-            .zeroSkippingThreshold = 1e-8,
-            .allowMultipleTraverse = true,
-            .incrementScheme = true
-        };
-    }
-
-    static FusionConfig Default() {
-        return {
-            .maxNQubits = 5,
-            .maxOpCount = 256, // 3-qubit dense
-            .zeroSkippingThreshold = 1e-8,
-            .allowMultipleTraverse = true,
-            .incrementScheme = true
-        };
-    }
-    
-    static FusionConfig Aggressive() {
-        return {
-            .maxNQubits = 7,
-            .maxOpCount = 4096, // 5.5-qubit dense
-            .zeroSkippingThreshold = 1e-8,
-            .allowMultipleTraverse = true,
-            .incrementScheme = true
-        };
-    }
-
-    static FusionConfig Preset(int level) {
-        if (level == 0)
-            return FusionConfig::Disable();
-        if (level == 1) 
-            return FusionConfig::TwoQubitOnly();
-        if (level == 2) 
-            return FusionConfig::Default();
-        if (level == 3)
-            return FusionConfig::Aggressive();
-        assert(false && "Unsupported FusionConfig preset");
-        return FusionConfig::Default();
-    }
-};
-
 class CircuitGraph {
 private:
     using row_t = std::array<GateBlock*, 36>;
@@ -218,9 +155,16 @@ private:
     using tile_iter_t = std::list<row_t>::iterator;
     using tile_riter_t = std::list<row_t>::reverse_iterator;
     using tile_const_iter_t = std::list<row_t>::const_iterator;
-    int currentBlockId;
-    tile_t tile;
-    FusionConfig fusionConfig;
+    tile_t _tile;
+
+public:
+    int nqubits;
+
+    CircuitGraph()
+        : _tile(1, {nullptr}), nqubits(0) {}
+
+    tile_t& tile() { return _tile; }
+    const tile_t& tile() const { return _tile; }
 
     /// @brief Erase empty rows in the tile
     void eraseEmptyRows();
@@ -238,30 +182,17 @@ private:
     void updateTileUpward();
     void updateTileDownward();
 
-    GateBlock* fusionCandidate(GateBlock* lhs, GateBlock* rhs);
-
     tile_iter_t insertBlock(tile_iter_t it, GateBlock* block);
 
     GateBlock* tryFuseConnectedConsecutive(tile_iter_t tileLHS, size_t q);
 
     GateBlock* tryFuseSameRow(tile_iter_t tileIt, size_t q);
 
-public:
-    unsigned nqubits;
-
-    CircuitGraph(FusionConfig fusionConfig = FusionConfig::Disable())
-        : currentBlockId(0), tile(1, {nullptr}),
-          nqubits(0), fusionConfig(fusionConfig) {}
-
-    void updateFusionConfig(const FusionConfig& newConfig) {
-        fusionConfig = newConfig;
-    }
-
-    void addGate(const quantum_gate::QuantumGate& gate) {
+    void addGate(const QuantumGate& gate) {
         return addGate(gate.gateMatrix, gate.qubits);
     }
 
-    void addGate(const quantum_gate::GateMatrix& matrix,
+    void addGate(const GateMatrix& matrix,
                  const std::vector<int>& qubits);
 
     /// @return ordered vector of blocks
@@ -303,18 +234,9 @@ public:
     std::ostream& print(std::ostream& os = std::cerr, int verbose = 1) const;
 
     std::ostream& displayInfo(std::ostream& os = std::cerr, int verbose = 1) const;
-
-    std::ostream& displayFusionConfig(std::ostream& os = std::cerr) const;
-
-    FusionConfig& getFusionConfig() { return fusionConfig; }
-
-    void dependencyAnalysis();
-
-    void greedyGateFusion();
-
 };
 
 
-}; // namespace saot::circuit_graph
+}; // namespace saot
 
 #endif // SAOT_CIRCUITGRAPH_H

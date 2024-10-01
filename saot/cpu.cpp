@@ -7,9 +7,8 @@
 #include <sstream>
 #include <iomanip>
 
-using namespace Color;
-using namespace saot::cpu;
-using namespace saot::circuit_graph;
+using namespace IOColor;
+using namespace saot;
 using IRGenerator = simulation::IRGenerator;
 using AmpFormat = simulation::IRGeneratorConfig::AmpFormat;
 

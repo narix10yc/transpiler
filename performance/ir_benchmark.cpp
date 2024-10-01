@@ -14,7 +14,7 @@ using Statevector = utils::statevector::StatevectorSep<real_t>;
 
 #define Q0_VALUE 1
 
-using namespace Color;
+using namespace IOColor;
 using namespace timeit;
 using namespace simulation::tplt;
 

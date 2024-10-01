@@ -2,8 +2,8 @@
 
 using namespace llvm;
 using namespace simulation;
-using namespace saot::circuit_graph;
-using GateMatrix = saot::quantum_gate::GateMatrix;
+using namespace saot;
+using GateMatrix = saot::GateMatrix;
 using namespace saot;
 
 std::pair<Value*, Value*>

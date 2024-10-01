@@ -5,7 +5,7 @@
 #include "saot/Polynomial.h"
 #include "utils/utils.h"
 
-namespace saot::quantum_gate {
+namespace saot {
 
 struct matrix_t {
     // parametrised matrix type
@@ -322,6 +322,6 @@ public:
 
 };
 
-} // namespace saot::quantum_gate
+} // namespace saot
 
 #endif // SAOT_QUANTUM_GATE_H

@@ -10,9 +10,9 @@
 
 using namespace utils;
 using namespace llvm;
-using namespace Color;
+using namespace IOColor;
 using namespace simulation;
-using namespace saot::quantum_gate;
+using namespace saot;
 
 namespace { /* anonymous namespace */
     struct matrix_data_t {

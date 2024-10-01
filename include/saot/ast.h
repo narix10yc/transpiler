@@ -9,7 +9,7 @@
 
 #include "saot/QuantumGate.h"
 
-namespace saot::circuit_graph {
+namespace saot {
     class CircuitGraph;
 }
 
@@ -36,7 +36,7 @@ public:
     std::string name;
     std::vector<int> qubits;
     int paramRefNumber;
-    std::vector<quantum_gate::GateParameter> gateParams;
+    std::vector<GateParameter> gateParams;
 
     GateApplyStmt(
             const std::string& name, const std::vector<int>& qubits,
@@ -45,7 +45,7 @@ public:
 
     GateApplyStmt(
             const std::string& name, const std::vector<int>& qubits,
-            const std::vector<quantum_gate::GateParameter>& gateParams)
+            const std::vector<GateParameter>& gateParams)
         : name(name), qubits(qubits), paramRefNumber(-1), gateParams(gateParams) {}
 
     std::ostream& print(std::ostream& os) const override;
@@ -64,9 +64,9 @@ public:
 class ParameterDefStmt {
 public:
     int refNumber;
-    quantum_gate::GateMatrix gateMatrix;
+    GateMatrix gateMatrix;
 
-    ParameterDefStmt(int refNumber, const quantum_gate::GateMatrix& gateMatrix = {})
+    ParameterDefStmt(int refNumber, const GateMatrix& gateMatrix = {})
         : refNumber(refNumber), gateMatrix(gateMatrix) {}
 
     std::ostream& print(std::ostream& os) const;
@@ -83,14 +83,13 @@ public:
     QuantumCircuit(const std::string& name = "qc")
         : name(name), nqubits(0), nparams(0), stmts(), paramDefs() {}
     
-    static QuantumCircuit FromCircuitGraph(const circuit_graph::CircuitGraph&);
+    static QuantumCircuit FromCircuitGraph(const CircuitGraph&);
 
     std::ostream& print(std::ostream& os) const;
 
-    quantum_gate::QuantumGate
-    gateApplyToQuantumGate(const GateApplyStmt&);
+    QuantumGate gateApplyToQuantumGate(const GateApplyStmt&);
 
-    circuit_graph::CircuitGraph toCircuitGraph();
+    CircuitGraph toCircuitGraph();
 };
 
 

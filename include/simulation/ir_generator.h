@@ -120,20 +120,20 @@ public:
             const std::pair<llvm::Value*, llvm::Value*>&);
 
     llvm::Function* generateKernel(
-            const saot::quantum_gate::QuantumGate& gate,
+            const saot::QuantumGate& gate,
             const std::string& funcName = "") {
         return generateKernelDebug(gate, 0, funcName);
     }
 
     llvm::Function* generateKernelDebug(
-            const saot::quantum_gate::QuantumGate& gate, int debugLevel,
+            const saot::QuantumGate& gate, int debugLevel,
             const std::string& funcName = "");
 
     std::pair<llvm::Value*, llvm::Value*> generatePolynomial(
             const saot::Polynomial& polynomial, ParamValueFeeder& feeder);
 
     llvm::Function*
-    generatePrepareParameter(const saot::circuit_graph::CircuitGraph& graph);
+    generatePrepareParameter(const saot::CircuitGraph& graph);
 };
 
 } // namespace simulation

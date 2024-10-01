@@ -10,7 +10,7 @@
 
 #include "utils/iocolor.h"
 
-using namespace Color;
+using namespace IOColor;
 using namespace llvm;
 using namespace simulation;
 

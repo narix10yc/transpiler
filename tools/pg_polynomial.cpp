@@ -1,6 +1,7 @@
 #include "saot/parser.h"
 #include "saot/QuantumGate.h"
 #include "saot/CircuitGraph.h"
+#include "saot/Fusion.h"
 
 #include "saot/Polynomial.h"
 #include "simulation/ir_generator.h"
@@ -9,10 +10,7 @@
 
 
 using namespace saot;
-
 using namespace saot::ast;
-using namespace saot::quantum_gate;
-using namespace saot::circuit_graph;
 using namespace simulation;
 
 int main(int argc, char** argv) {
@@ -39,8 +37,6 @@ int main(int argc, char** argv) {
     // gate.gateMatrix.printMatrix(std::cerr);
 
    
-    
-
     // Monomial m1;
     // m1.insertMulTerm(VariableSumNode::Cosine({0, 2}, 1.2));
     // m1.insertExpiVar(3, false);
@@ -68,8 +64,7 @@ int main(int argc, char** argv) {
     qc.print(file);
 
     auto graph = qc.toCircuitGraph();
-    graph.updateFusionConfig(FusionConfig::Default());
-    graph.greedyGateFusion();
+    applyGateFusion(FusionConfig::Default, graph);
 
     auto* fusedGate = graph.getAllBlocks()[0]->quantumGate.get();
 

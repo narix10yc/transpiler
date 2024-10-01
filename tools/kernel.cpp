@@ -1,5 +1,6 @@
 #include "openqasm/parser.h"
 #include "saot/CircuitGraph.h"
+#include "saot/Fusion.h"
 #include "saot/cpu.h"
 #include "utils/iocolor.h"
 #include <functional>
@@ -9,16 +10,12 @@
 #include <chrono>
 #include <sstream>
 
-using QuantumGate = saot::quantum_gate::QuantumGate;
-using GateMatrix = saot::quantum_gate::GateMatrix;
-using FusionConfig = saot::circuit_graph::FusionConfig;
-using CircuitGraph = saot::circuit_graph::CircuitGraph;
 using IRGeneratorConfig = simulation::IRGeneratorConfig;
 using AmpFormat = IRGeneratorConfig::AmpFormat;
 
-using namespace saot::cpu;
+using namespace saot;
 using namespace llvm;
-using namespace Color;
+using namespace IOColor;
 
 
 static CircuitGraph& getCircuitH1(CircuitGraph& graph, int nqubits) {
@@ -171,7 +168,6 @@ int main(int argc, char** argv) {
     cl::ParseCommandLineOptions(argc, argv);
 
     CircuitGraph graph;
-    graph.updateFusionConfig(FusionConfig::Disable());
 
     const auto wrapper = [&](CircuitGraph& (*f)(CircuitGraph&, int)) {
         if (FullKernel) {

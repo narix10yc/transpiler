@@ -8,13 +8,13 @@
 // #include <chrono>
 // #include <sstream>
 
-// using QuantumGate = saot::quantum_gate::QuantumGate;
-// using GateMatrix = saot::quantum_gate::GateMatrix;
-// using FusionConfig = saot::circuit_graph::FusionConfig;
-// using CircuitGraph = saot::circuit_graph::CircuitGraph;
+// using QuantumGate = saot::QuantumGate;
+// using GateMatrix = saot::GateMatrix;
+// using FusionConfig = saot::FusionConfig;
+// using CircuitGraph = saot::CircuitGraph;
 // using CodeGeneratorCPU = saot::cpu::CodeGeneratorCPU;
 // using namespace llvm;
-// using namespace Color;
+// using namespace IOColor;
 
 
 // static CircuitGraph getCircuitH1(int nqubits, int repeat) {

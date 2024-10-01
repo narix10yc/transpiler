@@ -1,9 +1,39 @@
 #include "saot/parser.h"
 #include <cassert>
 
+#include "utils/iocolor.h"
+using namespace IOColor;
+
 using namespace saot;
 using namespace saot::ast;
-using namespace saot::quantum_gate;
+
+void Parser::throwParserError(const char* msg, std::ostream& os) const {
+    os << RED_FG << BOLD << "parser error: "
+       << DEFAULT_FG << msg << RESET << "\n"
+       << std::setw(5) << std::setfill(' ') << lineNumber << " | "
+       << currentLine << "\n"
+       << "      | " << std::string(static_cast<size_t>(tokenIt->colStart), ' ')
+       << GREEN_FG << BOLD
+       << std::string(static_cast<size_t>(tokenIt->colEnd - tokenIt->colStart), '^')
+       << "\n" << RESET;
+    throw std::runtime_error("parser error");
+}
+
+std::ostream& Parser::displayParserWarning(const char* msg, std::ostream& os) const {
+    return os << YELLOW_FG << BOLD << "parser warning: "
+              << DEFAULT_FG << msg << RESET << "\n"
+              << std::setw(5) << std::setfill(' ') << lineNumber << " | "
+              << currentLine << "\n"
+              << "      | " << std::string(static_cast<size_t>(tokenIt->colStart), ' ')
+              << GREEN_FG << BOLD
+              << std::string(static_cast<size_t>(tokenIt->colEnd - tokenIt->colStart), '^')
+              << "\n" << RESET;
+}
+
+std::ostream& Parser::displayParserLog(const char* msg, std::ostream& os) const {
+    return os << CYAN_FG << BOLD << "parser log: "
+              << DEFAULT_FG << msg << RESET << "\n";
+}
 
 int Parser::readLine() {
     if (file.eof()) {
@@ -31,10 +61,10 @@ int Parser::readLine() {
     }
     tokenIt = tokenVec.cbegin();
 
-    std::cerr << Color::CYAN_FG << lineNumber << " | " << currentLine << "\n";
+    std::cerr << CYAN_FG << lineNumber << " | " << currentLine << "\n";
     // for (auto it = tokenVec.cbegin(); it != tokenVec.cend(); it++)
         // std::cerr << "col " << it->colStart << "-" << it->colEnd << "  " << (*it) << "\n";
-    std::cerr << Color::RESET;
+    std::cerr << RESET;
 
     return tokenVec.size();
 }
@@ -326,7 +356,7 @@ ParameterDefStmt Parser::_parseParameterDefStmt() {
     proceedWithType(TokenTy::L_CurlyBraket);
     proceed();
 
-    saot::quantum_gate::matrix_t::p_matrix_t polyMatrix;
+    saot::matrix_t::p_matrix_t polyMatrix;
     while (true) {
         auto poly = _parseSaotPolynomial();
         poly.print(std::cerr) << "\n";

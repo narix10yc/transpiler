@@ -1,10 +1,10 @@
 #include "saot/ast.h"
 #include "saot/CircuitGraph.h"
-#include "utils/iocolor.h"
 
+#include "utils/iocolor.h"
+using namespace IOColor;
+using namespace saot;
 using namespace saot::ast;
-using namespace saot::circuit_graph;
-using namespace saot::quantum_gate;
 
 template<typename T>
 std::ostream& printVector(
@@ -113,7 +113,7 @@ CircuitGraph QuantumCircuit::toCircuitGraph() {
     for (const auto& s : stmts) {
         const GateChainStmt* chain = dynamic_cast<const GateChainStmt*>(s.get());
         if (chain == nullptr) {
-            std::cerr << Color::YELLOW_FG << Color::BOLD << "Warning: " << Color::RESET
+            std::cerr << YELLOW_FG << BOLD << "Warning: " << RESET
                       << "Unable to convert to GateChainStmt when calling RootNode::toCircuitGraph\n";
             continue;
         }

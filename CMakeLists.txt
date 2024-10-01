@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 
 project(simulation LANGUAGES C CXX)
 
-message("########### Custom Setups ###########")
+message("############ Custom Setups ############")
 # Apple has a system LLVM. We need to use a specific version
 # specified by enviroment variable 'LLVM_ROOT' or 'llvm_root'
 if(DEFINED ENV{llvm_root})

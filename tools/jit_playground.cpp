@@ -1,6 +1,7 @@
 #include "saot/parser.h"
 #include "saot/QuantumGate.h"
 #include "saot/CircuitGraph.h"
+#include "saot/Fusion.h"
 
 #include "saot/Polynomial.h"
 #include "simulation/jit.h"
@@ -8,8 +9,8 @@
 using namespace saot;
 
 using namespace saot::ast;
-using namespace saot::quantum_gate;
-using namespace saot::circuit_graph;
+using namespace saot;
+using namespace saot;
 using namespace simulation;
 
 using namespace llvm;
@@ -29,8 +30,7 @@ int main(int argc, char** argv) {
     qc.print(file);
 
     auto graph = qc.toCircuitGraph();
-    graph.updateFusionConfig(FusionConfig::Default());
-    graph.greedyGateFusion();
+    applyGateFusion(FusionConfig::Default, graph);
 
     auto* fusedGate = graph.getAllBlocks()[0]->quantumGate.get();
 
