@@ -7,7 +7,6 @@
 #include "llvm/Support/CommandLine.h"
 
 #include <chrono>
-#include <sstream>
 
 using IRGeneratorConfig = simulation::IRGeneratorConfig;
 using AmpFormat = IRGeneratorConfig::AmpFormat;

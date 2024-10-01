@@ -52,11 +52,7 @@ std::ostream& FusionConfig::display(std::ostream& OS) const {
 }
 
 // convenient iterator types
-using row_t = std::array<GateBlock*, 36>;
-using tile_t = std::list<row_t>;
-using tile_iter_t = std::list<row_t>::iterator;
-using tile_riter_t = std::list<row_t>::reverse_iterator;
-using tile_const_iter_t = std::list<row_t>::const_iterator;
+using tile_iter_t = std::list<std::array<GateBlock*, 36>>::iterator;
 
 GateBlock* computeCandidate(
         GateBlock* lhs, GateBlock* rhs, int maxNQubits, int maxOpCount,
@@ -218,11 +214,11 @@ void saot::applyGateFusion(const FusionConfig& config, CircuitGraph& graph) {
                         continue;
                     }
                     if ((*std::next(tileIt))[q] == nullptr) {
-                        auto downIt = graph.repositionBlockDownward(tileIt, q);
-                        q++;
+                        graph.repositionBlockDownward(tileIt, q++);
                         continue;
                     }
-                    auto* fusedBlock = trySameWireFuse(graph, tileIt, q, config.maxNQubits, currentK, config.zeroSkippingThreshold);
+                    auto* fusedBlock = trySameWireFuse(graph, tileIt, q,
+                        config.maxNQubits, currentK, config.zeroSkippingThreshold);
                     if (fusedBlock == nullptr)
                         q++;
                     else
@@ -231,7 +227,8 @@ void saot::applyGateFusion(const FusionConfig& config, CircuitGraph& graph) {
                 // cross wire (same row) fuse
                 q = 0;
                 while (q < graph.nqubits) {
-                    auto* fusedBlock = tryCrossWireFuse(graph, tileIt, q, config.maxNQubits, currentK, config.zeroSkippingThreshold);
+                    auto* fusedBlock = tryCrossWireFuse(graph, tileIt, q,
+                        config.maxNQubits, currentK, config.zeroSkippingThreshold);
                     if (fusedBlock == nullptr)
                         q++;
                 }

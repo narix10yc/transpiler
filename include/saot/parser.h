@@ -5,8 +5,6 @@
 #include <iostream>
 #include <iomanip>
 #include <fstream>
-#include <exception>
-#include <queue>
 #include <sstream>
 
 #include "saot/ast.h"

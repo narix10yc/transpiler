@@ -8,65 +8,63 @@
 #include <bitset>
 #include <algorithm>
 
+using namespace IOColor;
 using namespace utils;
 using namespace llvm;
-using namespace IOColor;
 using namespace simulation;
 using namespace saot;
 
-namespace { /* anonymous namespace */
-    struct matrix_data_t {
-        Value* realVal;
-        Value* imagVal;
-        int realFlag;
-        int imagFlag;
-        bool realLoadNeg;
-        bool imagLoadNeg;
-    };
+struct matrix_data_t {
+    Value* realVal;
+    Value* imagVal;
+    int realFlag;
+    int imagFlag;
+    bool realLoadNeg;
+    bool imagLoadNeg;
+};
 
-    /// @return (mask, vec)
-    std::pair<std::vector<int>, std::vector<int>>
-    getMaskToMerge(const std::vector<int>& v0, const std::vector<int>& v1) {
-        assert(v0.size() == v1.size());
-        const auto s = v0.size();
-        std::vector<int> mask(2*s);
-        std::vector<int> vec(2*s);
-        unsigned i0 = 0, i1 = 0, i;
-        int elem0, elem1;
-        while (i0 < s || i1 < s) {
-            i = i0 + i1;
-            if (i0 == s) {
-                vec[i] = v1[i1];
-                mask[i] = i1 + s;
-                i1++;
-                continue;
-            }
-            if (i1 == s) {
-                vec[i] = v0[i0];
-                mask[i] = i0;
-                i0++;
-                continue;
-            }
-            elem0 = v0[i0];
-            elem1 = v1[i1];
-            if (elem0 < elem1) {
-                vec[i] = elem0;
-                mask[i] = i0;
-                i0++;
-            } else {
-                vec[i] = elem1;
-                mask[i] = i1 + s;
-                i1++;
-            }
+/// v0 and v1 are always sorted. Perform linear time merge
+/// @return (mask, vec)
+std::pair<std::vector<int>, std::vector<int>>
+getMaskToMerge(const std::vector<int>& v0, const std::vector<int>& v1) {
+    assert(v0.size() == v1.size());
+    const auto s = v0.size();
+    std::vector<int> mask(2*s);
+    std::vector<int> vec(2*s);
+    unsigned i0 = 0, i1 = 0, i;
+    int elem0, elem1;
+    while (i0 < s || i1 < s) {
+        i = i0 + i1;
+        if (i0 == s) {
+            vec[i] = v1[i1];
+            mask[i] = i1 + s;
+            i1++;
+            continue;
         }
-        return std::make_pair(mask, vec);
+        if (i1 == s) {
+            vec[i] = v0[i0];
+            mask[i] = i0;
+            i0++;
+            continue;
+        }
+        elem0 = v0[i0];
+        elem1 = v1[i1];
+        if (elem0 < elem1) {
+            vec[i] = elem0;
+            mask[i] = i0;
+            i0++;
+        } else {
+            vec[i] = elem1;
+            mask[i] = i1 + s;
+            i1++;
+        }
     }
-} // anonymous namespace
+    return std::make_pair(mask, vec);
+}
 
 Function*
 IRGenerator::generateKernelDebug(
         const QuantumGate& gate, int debugLevel, const std::string& funcName) {
-
     const uint64_t s = _config.simd_s;
     const uint64_t S = 1ULL << s;
     const uint64_t k = gate.qubits.size();

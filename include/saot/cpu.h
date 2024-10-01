@@ -1,11 +1,15 @@
 #ifndef SAOT_CPU_H
 #define SAOT_CPU_H
 
-#include "saot/CircuitGraph.h"
 #include "simulation/ir_generator.h"
 
-#include <iomanip>
+namespace simulation {
+    class IRGeneratorConfig;
+}
 
+namespace saot {
+    class CircuitGraph;
+}
 namespace saot {
 
 struct CodeGeneratorCPUConfig {

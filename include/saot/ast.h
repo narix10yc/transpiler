@@ -1,12 +1,6 @@
 #ifndef SAOT_AST_H
 #define SAOT_AST_H
 
-#include <vector>
-#include <memory>
-#include <iostream>
-#include <cassert>
-#include <map>
-
 #include "saot/QuantumGate.h"
 
 namespace saot {

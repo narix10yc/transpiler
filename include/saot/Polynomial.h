@@ -5,8 +5,6 @@
 #include <string>
 #include <iostream>
 #include <complex>
-#include <algorithm>
-#include <initializer_list>
 
 namespace saot {
 
