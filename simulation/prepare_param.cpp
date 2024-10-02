@@ -3,8 +3,6 @@
 using namespace llvm;
 using namespace simulation;
 using namespace saot;
-using GateMatrix = saot::GateMatrix;
-using namespace saot;
 
 std::pair<Value*, Value*>
 IRGenerator::generatePolynomial(const Polynomial& P, ParamValueFeeder& feeder) {

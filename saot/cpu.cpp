@@ -9,8 +9,7 @@
 
 using namespace IOColor;
 using namespace saot;
-using IRGenerator = simulation::IRGenerator;
-using AmpFormat = simulation::IRGeneratorConfig::AmpFormat;
+using namespace simulation;
 
 std::ostream&
 CodeGeneratorCPUConfig::display(int verbose, std::ostream& os) const {
@@ -34,7 +33,7 @@ void CodeGeneratorCPU::generate(
         const CircuitGraph& graph, int debugLevel, bool forceInOrder) {
     IRGenerator irGenerator(config.irConfig);
 
-    bool isSepKernel = (config.irConfig.ampFormat == AmpFormat::Sep);
+    bool isSepKernel = (config.irConfig.ampFormat == IRGeneratorConfig::SepFormat);
 
     const std::string realTy = (config.irConfig.precision == 32) ? "float" : "double";
 

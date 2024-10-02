@@ -25,11 +25,11 @@ public:
 };
 
 struct IRGeneratorConfig {
-    enum class AmpFormat { Alt, Sep };
+    enum AmpFormat { AltFormat, SepFormat };
 
     int simd_s                      = 2;
     int precision                   = 64;
-    AmpFormat ampFormat             = AmpFormat::Alt;   
+    AmpFormat ampFormat             = AltFormat;   
     bool useFMA                     = true;
     bool useFMS                     = true;
     // parallel bits deposite from BMI2

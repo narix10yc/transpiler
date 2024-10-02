@@ -62,7 +62,7 @@ std::ostream& IRGeneratorConfig::display(
 
     os << "simd s:               " << simd_s << "\n"
        << "precision:            " << "f" << precision << "\n"
-       << "amp format:           " << ((ampFormat == AmpFormat::Alt) ? "Alt" : "Sep") << "\n"
+       << "amp format:           " << ((ampFormat == IRGeneratorConfig::AltFormat) ? "Alt" : "Sep") << "\n"
        << "FMA " << ((useFMA) ? ON : OFF)
        << ", FMS " << ((useFMS) ? ON : OFF)
        << ", PDEP " << ((usePDEP) ? ON : OFF) << "\n"

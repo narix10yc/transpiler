@@ -84,7 +84,7 @@ IRGenerator::generateKernelDebug(
     Function* func;
     Argument *pSvArg, *pReArg, *pImArg, *ctrBeginArg, *ctrEndArg, *pMatArg;
     { /* start of function declaration */
-    auto argType = (_config.ampFormat == AmpFormat::Sep)
+    auto argType = (_config.ampFormat == IRGeneratorConfig::SepFormat)
             ? SmallVector<Type*> { builder.getPtrTy(), builder.getPtrTy(),
                 builder.getInt64Ty(), builder.getInt64Ty(), builder.getPtrTy() }
             : SmallVector<Type*> { builder.getPtrTy(),
@@ -93,7 +93,7 @@ IRGenerator::generateKernelDebug(
     auto* funcType = FunctionType::get(builder.getVoidTy(), argType, false);
     func = Function::Create(funcType, Function::ExternalLinkage, funcName, getModule());
 
-    if (_config.ampFormat == AmpFormat::Sep) {
+    if (_config.ampFormat == IRGeneratorConfig::SepFormat) {
         pReArg = func->getArg(0);      pReArg->setName("pRe");
         pImArg = func->getArg(1);      pImArg->setName("pIm");
         ctrBeginArg = func->getArg(2); ctrBeginArg->setName("ctr.begin");
@@ -397,7 +397,7 @@ IRGenerator::generateKernelDebug(
                       << "keyStart = " << keyStart << "\n";
 
         auto* _idxV = builder.CreateAdd(idxStartV, builder.getInt64(idxShift), "idx_" + std::to_string(hi));
-        if (_config.ampFormat == AmpFormat::Sep) {
+        if (_config.ampFormat == IRGeneratorConfig::SepFormat) {
             pRe[hi] = builder.CreateGEP(vecType, pReArg, _idxV, "pRe." + std::to_string(hi));
             pIm[hi] = builder.CreateGEP(vecType, pImArg, _idxV, "pIm." + std::to_string(hi));
             reFull = builder.CreateLoad(vecType, pRe[hi], "re.full." + std::to_string(hi));
@@ -528,7 +528,7 @@ IRGenerator::generateKernelDebug(
             std::cerr << "Merged hi = " << hi << "\n";
 
         // store
-        if (_config.ampFormat == AmpFormat::Sep) {
+        if (_config.ampFormat == IRGeneratorConfig::SepFormat) {
             builder.CreateStore(newReal[0], pRe[hi], false);
             builder.CreateStore(newImag[0], pIm[hi], false);
         } else {

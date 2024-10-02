@@ -202,7 +202,7 @@ int main(int argc, char** argv) {
         .irConfig = IRGeneratorConfig {
             .simd_s = SimdS,
             .precision = (UseF32 || Precision == "f32") ? 32 : 64,
-            .ampFormat = (AmpFormat == "sep") ? AmpFormat::Sep : AmpFormat::Alt,
+            .ampFormat = (AmpFormat == "sep") ? IRGeneratorConfig::SepFormat : IRGeneratorConfig::AltFormat,
             .useFMA = UseFMA,
             .useFMS = UseFMS,
             .usePDEP = UsePDEP,
