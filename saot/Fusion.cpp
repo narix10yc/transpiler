@@ -5,7 +5,7 @@
 using namespace IOColor;
 using namespace saot;
 
-FusionConfig FusionConfig::Disable = FusionConfig {
+CPUFusionConfig CPUFusionConfig::Disable = CPUFusionConfig {
             .maxNQubits = 0,
             .maxOpCount = 0, 
             .zeroSkippingThreshold = 0.0,
@@ -13,7 +13,7 @@ FusionConfig FusionConfig::Disable = FusionConfig {
             .incrementScheme = true
         };
 
-FusionConfig FusionConfig::TwoQubitOnly = FusionConfig {
+CPUFusionConfig CPUFusionConfig::TwoQubitOnly = CPUFusionConfig {
             .maxNQubits = 2,
             .maxOpCount = 64, // 2-qubit dense
             .zeroSkippingThreshold = 1e-8,
@@ -21,7 +21,7 @@ FusionConfig FusionConfig::TwoQubitOnly = FusionConfig {
             .incrementScheme = true
         };
 
-FusionConfig FusionConfig::Default = FusionConfig {
+CPUFusionConfig CPUFusionConfig::Default = CPUFusionConfig {
             .maxNQubits = 5,
             .maxOpCount = 256, // 3-qubit dense
             .zeroSkippingThreshold = 1e-8,
@@ -29,7 +29,7 @@ FusionConfig FusionConfig::Default = FusionConfig {
             .incrementScheme = true
         };
 
-FusionConfig FusionConfig::Aggressive = FusionConfig {
+CPUFusionConfig CPUFusionConfig::Aggressive = CPUFusionConfig {
             .maxNQubits = 7,
             .maxOpCount = 4096, // 5.5-qubit dense
             .zeroSkippingThreshold = 1e-8,
@@ -37,7 +37,15 @@ FusionConfig FusionConfig::Aggressive = FusionConfig {
             .incrementScheme = true
         };
 
-std::ostream& FusionConfig::display(std::ostream& OS) const {
+CPUFusionConfig CPUFusionConfig::FpgaCanonicalForm = CPUFusionConfig {
+            .maxNQubits = 1,
+            .maxOpCount = 9999,
+            .zeroSkippingThreshold = 1e-8,
+            .allowMultipleTraverse = true,
+            .incrementScheme = false
+        };
+
+std::ostream& CPUFusionConfig::display(std::ostream& OS) const {
     OS << CYAN_FG << "======== Fusion Config: ========\n" << RESET;
     OS << "max nqubits:          " << maxNQubits << "\n";
     OS << "max op count:         " << maxOpCount;
@@ -55,7 +63,7 @@ std::ostream& FusionConfig::display(std::ostream& OS) const {
 using tile_iter_t = std::list<std::array<GateBlock*, 36>>::iterator;
 
 GateBlock* computeCandidate(
-        const GateBlock* lhs, const GateBlock* rhs, const FusionConfig& config) {
+        const GateBlock* lhs, const GateBlock* rhs, const CPUFusionConfig& config) {
     if (lhs == nullptr || rhs == nullptr)
         return nullptr;
     
@@ -122,7 +130,7 @@ GateBlock* computeCandidate(
     return block;
 }
 
-GateBlock* trySameWireFuse(const FusionConfig& config, CircuitGraph& graph,
+GateBlock* trySameWireFuse(const CPUFusionConfig& config, CircuitGraph& graph,
         const tile_iter_t& itLHS, int q_) {
     assert(itLHS != graph.tile().end());
     const auto itRHS = std::next(itLHS);
@@ -157,7 +165,7 @@ GateBlock* trySameWireFuse(const FusionConfig& config, CircuitGraph& graph,
     return block;
 }
 
-GateBlock* tryCrossWireFuse(const FusionConfig& config, CircuitGraph& graph,
+GateBlock* tryCrossWireFuse(const CPUFusionConfig& config, CircuitGraph& graph,
         const tile_iter_t& tileIt, int q) {
     auto block0 = (*tileIt)[q];
     if (block0 == nullptr)
@@ -178,7 +186,7 @@ GateBlock* tryCrossWireFuse(const FusionConfig& config, CircuitGraph& graph,
     return nullptr;
 }
 
-void saot::applyGateFusion(const FusionConfig& originalConfig, CircuitGraph& graph) {
+void saot::applyCPUGateFusion(const CPUFusionConfig& originalConfig, CircuitGraph& graph) {
     auto& tile = graph.tile();
     if (tile.size() < 2)
         return;

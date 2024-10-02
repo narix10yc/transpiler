@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
     qc.print(file);
 
     auto graph = qc.toCircuitGraph();
-    applyGateFusion(FusionConfig::Default, graph);
+    applyCPUGateFusion(CPUFusionConfig::Default, graph);
 
     auto* fusedGate = graph.getAllBlocks()[0]->quantumGate.get();
 

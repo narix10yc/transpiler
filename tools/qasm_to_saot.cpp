@@ -35,25 +35,25 @@ int main(int argc, char** argv) {
     DebugLevel("debug", cl::desc("IR generation debug level"), cl::init(0));
 
     // Gate Fusion Category
-    cl::OptionCategory GateFusionConfigCategory("Gate Fusion Options", "");
+    cl::OptionCategory GateCPUFusionConfigCategory("Gate Fusion Options", "");
     cl::opt<int>
-    FusionLevel("fusion", cl::cat(GateFusionConfigCategory),
+    FusionLevel("fusion", cl::cat(GateCPUFusionConfigCategory),
             cl::desc("fusion level presets 0 (disable), 1 (two-qubit only), 2 (default), and 3 (aggresive)"),
             cl::init(2));
     cl::opt<int>
-    MaxNQubits("max-k", cl::cat(GateFusionConfigCategory),
+    MaxNQubits("max-k", cl::cat(GateCPUFusionConfigCategory),
             cl::desc("maximum number of qubits of gates"), cl::init(0));
     cl::opt<int>
-    MaxOpCount("max-op", cl::cat(GateFusionConfigCategory),
+    MaxOpCount("max-op", cl::cat(GateCPUFusionConfigCategory),
             cl::desc("maximum operation count"), cl::init(0));
     cl::opt<double>
-    ZeroSkipThreshold("zero-thres", cl::cat(GateFusionConfigCategory),
+    ZeroSkipThreshold("zero-thres", cl::cat(GateCPUFusionConfigCategory),
             cl::desc("zero skipping threshold"), cl::init(1e-8));
     cl::opt<bool>
-    AllowMultipleTraverse("allow-multi-traverse", cl::cat(GateFusionConfigCategory),
+    AllowMultipleTraverse("allow-multi-traverse", cl::cat(GateCPUFusionConfigCategory),
             cl::desc("allow multiple tile traverse in gate fusion"), cl::init(true));
     cl::opt<bool>
-    EnableIncreamentScheme("increment-scheme", cl::cat(GateFusionConfigCategory),
+    EnableIncreamentScheme("increment-scheme", cl::cat(GateCPUFusionConfigCategory),
             cl::desc("enable increment fusion scheme"), cl::init(true));
 
     // IR Generation Category
@@ -124,7 +124,7 @@ int main(int argc, char** argv) {
     // gate fusion
     tic = clock::now();
 
-    FusionConfig fusionConfig;
+    CPUFusionConfig fusionConfig;
     if (MaxNQubits > 0 || MaxOpCount > 0) {
         if (MaxNQubits == 0 || MaxOpCount == 0) {
             std::cerr << RED_FG << BOLD << "Argument Error: " << RESET
@@ -136,14 +136,14 @@ int main(int argc, char** argv) {
         fusionConfig.zeroSkippingThreshold = ZeroSkipThreshold;
     }
     else
-        fusionConfig = FusionConfig::Preset(FusionLevel);
+        fusionConfig = CPUFusionConfig::Preset(FusionLevel);
     fusionConfig.allowMultipleTraverse = AllowMultipleTraverse;
     fusionConfig.incrementScheme = EnableIncreamentScheme;
 
     if (Verbose > 0)
         fusionConfig.display(std::cerr);
 
-    saot::applyGateFusion(fusionConfig, graph);
+    saot::applyCPUGateFusion(fusionConfig, graph);
 
     tok = clock::now();
     log() << "Gate fusion complete\n";

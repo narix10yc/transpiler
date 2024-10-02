@@ -8,35 +8,37 @@ namespace saot {
 
 class CircuitGraph;
 
-class FusionConfig {
+class CPUFusionConfig {
 public:
     int maxNQubits;
     int maxOpCount;
     double zeroSkippingThreshold;
     bool allowMultipleTraverse;
     bool incrementScheme;
-    static FusionConfig Disable;
-    static FusionConfig TwoQubitOnly;
-    static FusionConfig Default;
-    static FusionConfig Aggressive;
+    static CPUFusionConfig Disable;
+    static CPUFusionConfig TwoQubitOnly;
+    static CPUFusionConfig Default;
+    static CPUFusionConfig Aggressive;
 
-    static FusionConfig Preset(int level) {
+    static CPUFusionConfig FpgaCanonicalForm;
+
+    static CPUFusionConfig Preset(int level) {
         if (level == 0)
-            return FusionConfig::Disable;
+            return CPUFusionConfig::Disable;
         if (level == 1) 
-            return FusionConfig::TwoQubitOnly;
+            return CPUFusionConfig::TwoQubitOnly;
         if (level == 2) 
-            return FusionConfig::Default;
+            return CPUFusionConfig::Default;
         if (level == 3)
-            return FusionConfig::Aggressive;
-        assert(false && "Unsupported FusionConfig preset");
-        return FusionConfig::Default;
+            return CPUFusionConfig::Aggressive;
+        assert(false && "Unsupported CPUFusionConfig preset");
+        return CPUFusionConfig::Default;
     }
 
     std::ostream& display(std::ostream&) const;
 };
 
-void applyGateFusion(const FusionConfig&, CircuitGraph&);
+void applyCPUGateFusion(const CPUFusionConfig&, CircuitGraph&);
 
 } // namespace saot
 
