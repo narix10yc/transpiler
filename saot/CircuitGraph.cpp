@@ -170,7 +170,6 @@ void CircuitGraph::addGate(
             continue;
         lhsBlock->connect(block, q);
     }
-
 }
 
 std::vector<GateBlock*> CircuitGraph::getAllBlocks() const {

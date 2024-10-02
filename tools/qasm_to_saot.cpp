@@ -116,6 +116,8 @@ int main(int argc, char** argv) {
     auto graph = qasmRoot->toCircuitGraph();
     tok = clock::now();
     log() << "Parsed to CircuitGraph\n";
+    if (Verbose > 2)
+        graph.print(std::cerr << "CircuitGraph Before Fusion:\n");
     if (Verbose > 0)
         graph.displayInfo(std::cerr, 2);
 
@@ -146,13 +148,13 @@ int main(int argc, char** argv) {
     tok = clock::now();
     log() << "Gate fusion complete\n";
 
-    if (Verbose > 0)
-        graph.displayInfo(std::cerr, Verbose + 1);
+
     if (Verbose > 2) {
         graph.relabelBlocks();
-        graph.print(std::cerr);
+        graph.print(std::cerr << "CircuitGraph After Fusion:\n");
     }
-
+    if (Verbose > 0)
+        graph.displayInfo(std::cerr, Verbose + 1);
     // write to file if provided
     if (outputFilename != "") {
         tic = clock::now();

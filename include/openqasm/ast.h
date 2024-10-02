@@ -1,15 +1,14 @@
 #ifndef OPENQASM_AST_H_
 #define OPENQASM_AST_H_
 
-#include <iostream>
-#include <string>
-#include <vector>
-#include <fstream>
-#include "token.h"
-#include "saot/CircuitGraph.h"
-
+#include "openqasm/token.h"
 #include "utils/utils.h"
 
+#include <fstream>
+
+namespace saot {
+    class CircuitGraph;
+}
 namespace openqasm::ast {
 
 class Node;
@@ -271,12 +270,8 @@ public:
     void prettyPrint(std::ostream& f, int depth) const override;
 };
 
-
 class RootNode : public Node {
     std::vector<std::unique_ptr<Statement>> stmts;
-protected:
-    using CircuitGraph = saot::CircuitGraph;
-    using GateMatrix = saot::GateMatrix;
 public:
     std::string toString() const override { return "Root"; }
     void prettyPrint(std::ostream& f, int depth) const override;
@@ -287,32 +282,7 @@ public:
     size_t countStmts() { return stmts.size(); }
     Statement getStmt(size_t index) { return *(stmts[index]); }
 
-    CircuitGraph toCircuitGraph() const {
-        CircuitGraph graph;
-        std::vector<int> qubits;
-        std::vector<double> params;
-        for (const auto& s : stmts) {
-            auto gateApply = dynamic_cast<GateApplyStmt*>(s.get());
-            if (gateApply == nullptr) {
-                std::cerr << "skipping " << s->toString() << "\n";
-                continue;
-            }
-            qubits.clear();
-            for (const auto& t : gateApply->targets) {
-                qubits.push_back(static_cast<unsigned>(t->getIndex()));
-            }
-            params.clear();
-            for (const auto& p : gateApply->parameters) {
-                auto ev = p->getExprValue();
-                assert(ev.isConstant);
-                params.push_back(ev.value);
-            }
-            auto matrix = GateMatrix::FromName(gateApply->name, params);
-            graph.addGate(matrix, qubits);
-        }
-
-        return graph;
-    }
+    saot::CircuitGraph toCircuitGraph() const;
 };
 
 

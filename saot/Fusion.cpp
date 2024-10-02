@@ -55,8 +55,7 @@ std::ostream& FusionConfig::display(std::ostream& OS) const {
 using tile_iter_t = std::list<std::array<GateBlock*, 36>>::iterator;
 
 GateBlock* computeCandidate(
-        GateBlock* lhs, GateBlock* rhs, int maxNQubits, int maxOpCount,
-        double zeroSkippingThreshold) {
+        const GateBlock* lhs, const GateBlock* rhs, const FusionConfig& config) {
     if (lhs == nullptr || rhs == nullptr)
         return nullptr;
     
@@ -103,15 +102,15 @@ GateBlock* computeCandidate(
     block->nqubits = block->dataVector.size();
 
     // check fusion condition
-    if (block->nqubits > maxNQubits) {
+    if (block->nqubits > config.maxNQubits) {
         // std::cerr << CYAN_FG << "Rejected due to maxNQubits\n" << RESET;
         delete(block);
         return nullptr;
     }
     
     auto blockQuantumGate = rhs->quantumGate->lmatmul(*(lhs->quantumGate));
-    if (maxOpCount >= 0 && 
-            blockQuantumGate.opCount(zeroSkippingThreshold) > maxOpCount) {
+    if (config.maxNQubits >= 0 && 
+            blockQuantumGate.opCount(config.zeroSkippingThreshold) > config.maxOpCount) {
         // std::cerr << CYAN_FG << "Rejected due to OpCount\n" << RESET;
         delete(block);
         return nullptr;
@@ -123,22 +122,20 @@ GateBlock* computeCandidate(
     return block;
 }
 
-inline GateBlock* computeCandidate(GateBlock* lhs, GateBlock* rhs, const FusionConfig& config) {
-    return computeCandidate(lhs, rhs, config.maxNQubits, config.maxOpCount, config.zeroSkippingThreshold);
-}
-
-GateBlock* trySameWireFuse(
-        CircuitGraph& graph, tile_iter_t itLHS, unsigned q_,
-        int maxNQubits, int maxOpCount, double zeroSkippingThreshold) {
+GateBlock* trySameWireFuse(const FusionConfig& config, CircuitGraph& graph,
+        const tile_iter_t& itLHS, int q_) {
+    assert(itLHS != graph.tile().end());
     const auto itRHS = std::next(itLHS);
-    
+    if (itRHS == graph.tile().end())
+        return nullptr;
+
     GateBlock* lhs = (*itLHS)[q_];
     GateBlock* rhs = (*itRHS)[q_];
 
     if (!lhs || !rhs)
         return nullptr;
   
-    GateBlock* block = computeCandidate(lhs, rhs, maxNQubits, maxOpCount, zeroSkippingThreshold);
+    GateBlock* block = computeCandidate(lhs, rhs, config);
     if (block == nullptr)
         return nullptr;
 
@@ -147,34 +144,28 @@ GateBlock* trySameWireFuse(
     // rhs->displayInfo(std::cerr);
     // block->displayInfo(std::cerr) << RESET;
 
-    for (const auto& lData : lhs->dataVector)
-        (*itLHS)[lData.qubit] = nullptr;
-    for (const auto& rData : rhs->dataVector)
-        (*itRHS)[rData.qubit] = nullptr;
+    for (const auto& q : lhs->getQubits())
+        (*itLHS)[q] = nullptr;
+    for (const auto& q : rhs->getQubits())
+        (*itRHS)[q] = nullptr;
 
     delete(lhs);
     delete(rhs);
 
     // insert block to tile
-    auto itBlock = graph.insertBlock(itLHS, block);
-    for (const auto q : block->getQubits()) {
-        assert((*itBlock)[q] == block);
-    }
-    // updateTileUpward();
-
+    graph.insertBlock(itLHS, block);
     return block;
 }
 
-GateBlock* tryCrossWireFuse(
-        CircuitGraph& graph, tile_iter_t tileIt, unsigned q,
-        int maxNQubits, int maxOpCount, double zeroSkippingThreshold) {
+GateBlock* tryCrossWireFuse(const FusionConfig& config, CircuitGraph& graph,
+        const tile_iter_t& tileIt, int q) {
     auto block0 = (*tileIt)[q];
     if (block0 == nullptr)
         return nullptr;
     
     for (unsigned q1 = 0; q1 < graph.nqubits; q1++) {
         auto* block1 = (*tileIt)[q1];
-        auto* fusedBlock = computeCandidate(block0, block1, maxNQubits, maxOpCount, zeroSkippingThreshold);
+        auto* fusedBlock = computeCandidate(block0, block1, config);
         if (fusedBlock == nullptr)
             continue;
         for (const auto q : fusedBlock->getQubits()) {
@@ -187,21 +178,24 @@ GateBlock* tryCrossWireFuse(
     return nullptr;
 }
 
-void saot::applyGateFusion(const FusionConfig& config, CircuitGraph& graph) {
-    auto tile = graph.tile();
+void saot::applyGateFusion(const FusionConfig& originalConfig, CircuitGraph& graph) {
+    auto& tile = graph.tile();
     if (tile.size() < 2)
         return;
 
     GateBlock* lhsBlock;
     GateBlock* rhsBlock;
 
-    // print(std::cerr, 2) << "\n\n";
-    int maxK = config.maxNQubits;
-    for (unsigned currentK = (config.incrementScheme) ? 2 : maxK;
-                currentK <= maxK; currentK++) {
+    auto config = originalConfig;
+    // increment scheme applies maxNQubits = 2, 3, ..., maxNQubits
+    if (config.incrementScheme)
+        config.maxNQubits = 2;
+
+    do {
         bool hasChange = true;
-        auto tileIt = tile.begin();
+        tile_iter_t tileIt;
         unsigned q = 0;
+        // multi-traversal
         while (hasChange) {
             tileIt = tile.begin();
             hasChange = false;
@@ -217,8 +211,7 @@ void saot::applyGateFusion(const FusionConfig& config, CircuitGraph& graph) {
                         graph.repositionBlockDownward(tileIt, q++);
                         continue;
                     }
-                    auto* fusedBlock = trySameWireFuse(graph, tileIt, q,
-                        config.maxNQubits, currentK, config.zeroSkippingThreshold);
+                    auto* fusedBlock = trySameWireFuse(config, graph, tileIt, q);
                     if (fusedBlock == nullptr)
                         q++;
                     else
@@ -227,17 +220,18 @@ void saot::applyGateFusion(const FusionConfig& config, CircuitGraph& graph) {
                 // cross wire (same row) fuse
                 q = 0;
                 while (q < graph.nqubits) {
-                    auto* fusedBlock = tryCrossWireFuse(graph, tileIt, q,
-                        config.maxNQubits, currentK, config.zeroSkippingThreshold);
+                    auto* fusedBlock = tryCrossWireFuse(config, graph, tileIt, q);
                     if (fusedBlock == nullptr)
                         q++;
+                    else
+                        hasChange = true;
                 }
                 tileIt++;
             }
             graph.eraseEmptyRows();
-            graph.updateTileUpward();
+            // graph.updateTileUpward();
             if (!config.allowMultipleTraverse)
                 break;
         }
-    }
+    } while (++(config.maxNQubits) <= originalConfig.maxNQubits);
 }
