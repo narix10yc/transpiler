@@ -4,9 +4,20 @@
 #include <vector>
 #include <complex>
 #include <iostream>
+#include <algorithm>
 #include <iomanip>
 
 namespace utils {
+
+static bool isPermutation(const std::vector<int>& v) {
+    auto copy = v;
+    std::sort(copy.begin(), copy.end());
+    for (size_t i = 0, S = copy.size(); i < S; i++) {
+        if (copy[i] != i)
+            return false;
+    }
+    return true;
+}
 
 template<typename T>
 static bool isOrdered(const std::vector<T>& vec, bool ascending = true) {

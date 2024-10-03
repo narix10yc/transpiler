@@ -46,51 +46,10 @@ GateMatrix& GateMatrix::approximateSelf(int level, double thres) {
 }
 
 GateMatrix GateMatrix::permute(const std::vector<int>& flags) const {
-    assert(nqubits == flags.size());
-    assert(_isValidShuffleFlag(flags));
-
-    bool isConstantShuffleFlag = true;
-    for (unsigned i = 0; i < nqubits; i++) {
-        if (flags[i] != i) {
-            isConstantShuffleFlag = false;
-            break;
-        }
-    }
-    if (isConstantShuffleFlag)
-        return *this;
-
-    auto permuteIndex = [&flags, k=flags.size()](size_t idx) -> size_t {
-        size_t newIdx = 0;
-        for (unsigned b = 0; b < k; b++) {
-            newIdx += ((idx & (1ULL<<b)) >> b) << flags[b];
-        }
-        return newIdx;
-    };
-
-    const size_t size = matrix.getSize();
-    GateMatrix m;
-    m.nqubits = nqubits;
-    m.N = N;
     if (isConstantMatrix())
-        m.matrix = matrix_t::c_matrix_t(size);
-    else  {
-        assert(isParametrizedMatrix());
-        m.matrix = matrix_t::p_matrix_t(size);
-    }
-
-    for (size_t r = 0; r < size; r++) {
-        for (size_t c = 0; c < size; c++) {
-            auto idxNew = permuteIndex(r) * size + permuteIndex(c);
-            auto idxOld = r * size + c;
-            if (isConstantMatrix())
-                m.matrix.constantMatrix.data[idxNew] = matrix.constantMatrix.data[idxOld];
-            else
-                m.matrix.parametrizedMatrix.data[idxNew] = matrix.parametrizedMatrix.data[idxOld];
-        }
-    }
-
-    assert(m.checkConsistency());
-    return m;
+        return GateMatrix(matrix.constantMatrix.permute(flags));
+    assert(isParametrizedMatrix());
+    return GateMatrix(matrix.parametrizedMatrix.permute(flags));
 }
 
 int GateMatrix::updateNqubits() {

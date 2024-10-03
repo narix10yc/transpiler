@@ -1,4 +1,4 @@
-#include "saot/parser.h"
+#include "saot/Parser.h"
 #include <cassert>
 
 #include "utils/iocolor.h"

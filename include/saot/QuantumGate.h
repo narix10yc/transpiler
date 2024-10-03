@@ -4,10 +4,11 @@
 #include "saot/ComplexMatrix.h"
 #include "saot/Polynomial.h"
 #include "utils/utils.h"
-
+#include <array>
+#include <variant>
 namespace saot {
 
-enum QuantumGateType : int {
+enum GateType : int {
     gUndef = 0,
 
     // single-qubit gates
@@ -196,9 +197,22 @@ public:
 /// Consistency requires \p matrix.size() is always a power of 2.
 class GateMatrix {
 public:
+    // specify gate matrix with name and parameters
+    struct name_and_param_t {
+        GateType ty;
+        std::array<std::variant<std::monostate, int, double>, 3> params;
+    };
+    // parametrised matrix type
+    using p_matrix_t = complex_matrix::SquareMatrix<saot::Polynomial>;
+    // constant matrix type
+    using c_matrix_t = complex_matrix::SquareMatrix<std::complex<double>>;
+public:
     int nqubits;
     size_t N;
+    std::variant<name_and_param_t, c_matrix_t, p_matrix_t> _matrix;
+
     matrix_t matrix;
+
     GateMatrix() : nqubits(0), N(0), matrix() {}
 
     GateMatrix(const matrix_t::c_matrix_t& cMatrix) {
@@ -293,24 +307,24 @@ private:
 public:
     /// The canonical form of qubits is in ascending order
     std::vector<int> qubits;
-    QuantumGateType gateTy;
+    GateType gateTy;
     GateMatrix gateMatrix;
 
-    QuantumGate() : qubits(), gateTy(gUndef), gateMatrix() {}
+    QuantumGate() : qubits(), gateMatrix() {}
 
     QuantumGate(const GateMatrix& gateMatrix, int q)
-        : gateMatrix(gateMatrix), gateTy(gUndef), qubits({q}) {
+        : gateMatrix(gateMatrix), qubits({q}) {
         assert(gateMatrix.nqubits == 1);
     }
 
     QuantumGate(const GateMatrix& gateMatrix, std::initializer_list<int> qubits)
-        : gateMatrix(gateMatrix), gateTy(gUndef), qubits(qubits) {
+        : gateMatrix(gateMatrix), qubits(qubits) {
         assert(gateMatrix.nqubits == qubits.size());
         sortQubits();
     }
 
     QuantumGate(const GateMatrix& gateMatrix, const std::vector<int>& qubits)
-        : gateMatrix(gateMatrix), gateTy(gUndef), qubits(qubits) {
+        : gateMatrix(gateMatrix), qubits(qubits) {
         assert(gateMatrix.nqubits == qubits.size());
         sortQubits();
     }

@@ -1,6 +1,6 @@
 #include "saot/Fusion.h"
 #include "saot/CircuitGraph.h"
-#include "saot/parser.h"
+#include "saot/Parser.h"
 
 using namespace saot;
 

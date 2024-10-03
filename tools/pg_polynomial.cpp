@@ -1,4 +1,4 @@
-#include "saot/parser.h"
+#include "saot/Parser.h"
 #include "saot/QuantumGate.h"
 #include "saot/CircuitGraph.h"
 #include "saot/Fusion.h"
