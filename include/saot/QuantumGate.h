@@ -7,6 +7,39 @@
 
 namespace saot {
 
+enum QuantumGateType : int {
+    gUndef = 0,
+
+    // single-qubit gates
+    gX  = -10,
+    gY  = -11,
+    gZ  = -12,
+    gH  = -13,
+    gP  = -14,
+    gRX = -15,
+    gRY = -16,
+    gRZ = -17,
+    
+    // two-qubit gates
+    gCX   = -100,
+    gCNOT = -100,
+    gCZ   = -101,
+    gSWAP = -102,
+    gCP   = -103,
+
+    // general multi-qubit dense gates
+    gU1q = 1,
+    gU2q = 2,
+    gU3q = 3,
+    gU4q = 4,
+    gU5q = 5,
+    gU6q = 6,
+    gU7q = 7,
+    // to be defined by nqubits directly
+};
+
+// TODO: refactor to use std::variant
+// TODO: handle matmul between constant and parametrized gates
 struct matrix_t {
     // parametrised matrix type
     using p_matrix_t = complex_matrix::SquareMatrix<saot::Polynomial>;
@@ -201,30 +234,30 @@ public:
             const std::string& name,
             const std::vector<GateParameter>& params);
 
-    inline bool isConstantMatrix() const {
+    bool isConstantMatrix() const {
         return matrix.activeType == matrix_t::ActiveMatrixType::C;
     }
 
-    inline bool isParametrizedMatrix() const {
+    bool isParametrizedMatrix() const {
         return matrix.activeType == matrix_t::ActiveMatrixType::P;
     }
 
-    inline const std::vector<std::complex<double>>& cData() const {
+    const std::vector<std::complex<double>>& cData() const {
         assert(isConstantMatrix() && "calling cData()");
         return matrix.constantMatrix.data;
     }
 
-    inline std::vector<std::complex<double>>& cData() {
+    std::vector<std::complex<double>>& cData() {
         assert(isConstantMatrix() && "calling cData()");
         return matrix.constantMatrix.data;
     }
 
-    inline const std::vector<saot::Polynomial>& pData() const {
+    const std::vector<saot::Polynomial>& pData() const {
         assert(isParametrizedMatrix() && "calling pData()");
         return matrix.parametrizedMatrix.data;
     }
 
-    inline std::vector<saot::Polynomial>& pData() {
+    std::vector<saot::Polynomial>& pData() {
         assert(isParametrizedMatrix() && "calling pData()");
         return matrix.parametrizedMatrix.data;
     }
@@ -260,23 +293,24 @@ private:
 public:
     /// The canonical form of qubits is in ascending order
     std::vector<int> qubits;
+    QuantumGateType gateTy;
     GateMatrix gateMatrix;
 
-    QuantumGate() : qubits(), gateMatrix() {}
+    QuantumGate() : qubits(), gateTy(gUndef), gateMatrix() {}
 
     QuantumGate(const GateMatrix& gateMatrix, int q)
-        : gateMatrix(gateMatrix), qubits({q}) {
+        : gateMatrix(gateMatrix), gateTy(gUndef), qubits({q}) {
         assert(gateMatrix.nqubits == 1);
     }
 
     QuantumGate(const GateMatrix& gateMatrix, std::initializer_list<int> qubits)
-        : gateMatrix(gateMatrix), qubits(qubits) {
+        : gateMatrix(gateMatrix), gateTy(gUndef), qubits(qubits) {
         assert(gateMatrix.nqubits == qubits.size());
         sortQubits();
     }
 
     QuantumGate(const GateMatrix& gateMatrix, const std::vector<int>& qubits)
-        : gateMatrix(gateMatrix), qubits(qubits) {
+        : gateMatrix(gateMatrix), gateTy(gUndef), qubits(qubits) {
         assert(gateMatrix.nqubits == qubits.size());
         sortQubits();
     }

@@ -86,7 +86,7 @@ public:
     };
 
     int id;
-    unsigned nqubits;
+    int nqubits;
     std::vector<block_data> dataVector;
     std::unique_ptr<QuantumGate> quantumGate;
 

@@ -17,3 +17,6 @@ target_link_libraries(jit_playground saot simulation)
 
 add_executable(pg_polynomial "pg_polynomial.cpp")
 target_link_libraries(pg_polynomial saot simulation)
+
+add_executable(fpga_playground "fpga_playground.cpp")
+target_link_libraries(fpga_playground qasm saot simulation)

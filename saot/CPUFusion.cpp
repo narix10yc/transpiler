@@ -37,14 +37,6 @@ CPUFusionConfig CPUFusionConfig::Aggressive = CPUFusionConfig {
             .incrementScheme = true
         };
 
-CPUFusionConfig CPUFusionConfig::FpgaCanonicalForm = CPUFusionConfig {
-            .maxNQubits = 1,
-            .maxOpCount = 9999,
-            .zeroSkippingThreshold = 1e-8,
-            .allowMultipleTraverse = true,
-            .incrementScheme = false
-        };
-
 std::ostream& CPUFusionConfig::display(std::ostream& OS) const {
     OS << CYAN_FG << "======== Fusion Config: ========\n" << RESET;
     OS << "max nqubits:          " << maxNQubits << "\n";

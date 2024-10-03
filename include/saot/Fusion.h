@@ -8,8 +8,7 @@ namespace saot {
 
 class CircuitGraph;
 
-class CPUFusionConfig {
-public:
+struct CPUFusionConfig {
     int maxNQubits;
     int maxOpCount;
     double zeroSkippingThreshold;
@@ -19,8 +18,6 @@ public:
     static CPUFusionConfig TwoQubitOnly;
     static CPUFusionConfig Default;
     static CPUFusionConfig Aggressive;
-
-    static CPUFusionConfig FpgaCanonicalForm;
 
     static CPUFusionConfig Preset(int level) {
         if (level == 0)
@@ -39,6 +36,28 @@ public:
 };
 
 void applyCPUGateFusion(const CPUFusionConfig&, CircuitGraph&);
+
+enum FPGAGateCategory : unsigned {
+    fpgaGeneral = 0,
+    fpgaSingleQubit = 0b001,
+    fpgaUnitaryPerm = 0b010, // unitary permutation
+    // Non-computational is a special sub-class of unitary permutation where all
+    // non-zero entries are +1, -1, +i, -i.
+    fpgaNonComp = 0b110,
+    
+    // composite
+    fpgaSingleQubitUnitaryPerm = 0b011,
+    fpgaSingleQubitNonComp = 0b111,
+};
+
+struct FPGAFusionConfig {
+    int maxUnitaryPermutationSize;
+    bool ignoreSingleQubitNonCompGates;
+
+    static FPGAFusionConfig Default;
+};
+
+void applyFPGAGateFusion(const FPGAFusionConfig&, CircuitGraph&);
 
 } // namespace saot
 
