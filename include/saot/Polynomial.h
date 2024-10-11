@@ -199,7 +199,7 @@ public:
     /// @brief Remove Monomials whose coefficient is less than a given threshold
     /// @return updated *this
     Polynomial& removeSmallMonomials(double thres = 1e-8);
-    Polynomial& simplify(const std::vector<std::pair<int, double>>& varValues = {});
+    Polynomial& simplifySelf(const std::vector<std::pair<int, double>>& varValues = {});
 
     Polynomial& operator+=(const Monomial&);
 

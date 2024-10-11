@@ -26,10 +26,10 @@ public:
 
     GateNode(const GateMatrix& gateMatrix, const std::vector<int>& qubits)
         : id(idCount++),
-          nqubits(gateMatrix.nqubits),
+          nqubits(gateMatrix.nqubits()),
           gateMatrix(gateMatrix),
-          dataVector(gateMatrix.nqubits) {
-        assert(gateMatrix.nqubits == qubits.size());
+          dataVector(gateMatrix.nqubits()) {
+        assert(gateMatrix.nqubits() == qubits.size());
         for (unsigned i = 0; i < qubits.size(); i++)
             dataVector[i] = { qubits[i], nullptr, nullptr };
     }

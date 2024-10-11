@@ -125,14 +125,16 @@ IRGenerator::generateKernelDebug(
 
         double zeroSkipThres = _config.zeroSkipThres / K;
         double shareMatrixElemThres = _config.shareMatrixElemThres / K;
+        const std::vector<std::complex<double>>&
+            cdata = std::get<GateMatrix::c_matrix_t>(gate.gateMatrix._matrix).data;
         for (unsigned i = 0; i < matrix.size(); i++) {
             if (_config.forceDenseKernel) {
                 matrix[i].realFlag = 2;
                 matrix[i].imagFlag = 2;
                 continue;
             }
-            auto real = gate.gateMatrix.matrix.constantMatrix.data.at(i).real();
-            auto imag = gate.gateMatrix.matrix.constantMatrix.data.at(i).imag();
+            auto real = cdata.at(i).real();
+            auto imag = cdata.at(i).imag();
 
             if (std::abs(real) < zeroSkipThres)
                 matrix[i].realFlag = 0;

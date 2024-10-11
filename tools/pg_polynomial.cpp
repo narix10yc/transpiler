@@ -59,20 +59,16 @@ int main(int argc, char** argv) {
     Parser parser(argv[1]);
     auto qc = parser.parse();
     std::cerr << "Recovered:\n";
+    qc.print(std::cerr);
 
-    std::ofstream file(std::string(argv[1]) + ".rec");
-    qc.print(file);
+    // std::ofstream file(std::string(argv[1]) + ".rec");
+    // qc.print(file);
 
     auto graph = qc.toCircuitGraph();
     applyCPUGateFusion(CPUFusionConfig::Default, graph);
 
     auto* fusedGate = graph.getAllBlocks()[0]->quantumGate.get();
 
-    fusedGate->gateMatrix.printMatrix(std::cerr) << "\n";
-
-    for (auto& P : fusedGate->gateMatrix.pData()) {
-        P.removeSmallMonomials();
-    }
     fusedGate->gateMatrix.printMatrix(std::cerr) << "\n";
 
     // for (auto& P : fusedGate->gateMatrix.pData())

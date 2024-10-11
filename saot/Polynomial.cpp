@@ -293,7 +293,7 @@ Polynomial& Polynomial::removeSmallMonomials(double thres) {
     return *this;
 }
 
-Polynomial& Polynomial::simplify(const std::vector<std::pair<int, double>>& varValues) {
+Polynomial& Polynomial::simplifySelf(const std::vector<std::pair<int, double>>& varValues) {
     if (varValues.empty())
         return *this;
     for (auto& M : _monomials)

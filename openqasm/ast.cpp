@@ -6,8 +6,9 @@ using namespace openqasm::ast;
 saot::CircuitGraph RootNode::toCircuitGraph() const {
     saot::CircuitGraph graph;
     std::vector<int> qubits;
-    std::vector<double> params;
     for (const auto& s : stmts) {
+        saot::GateMatrix::params_t params;
+        int i = 0;
         auto gateApply = dynamic_cast<GateApplyStmt*>(s.get());
         if (gateApply == nullptr) {
             std::cerr << "skipping " << s->toString() << "\n";
@@ -17,11 +18,10 @@ saot::CircuitGraph RootNode::toCircuitGraph() const {
         for (const auto& t : gateApply->targets) {
             qubits.push_back(static_cast<unsigned>(t->getIndex()));
         }
-        params.clear();
         for (const auto& p : gateApply->parameters) {
             auto ev = p->getExprValue();
             assert(ev.isConstant);
-            params.push_back(ev.value);
+            params[i++] = ev.value;
         }
         auto matrix = saot::GateMatrix::FromName(gateApply->name, params);
         graph.addGate(matrix, qubits);

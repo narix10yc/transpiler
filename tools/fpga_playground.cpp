@@ -13,6 +13,8 @@ int main(int argc, char** argv) {
 
     auto G = qc.toCircuitGraph();
 
+    applyFPGAGateFusion(FPGAFusionConfig::Default, G);
+
     G.print(std::cerr);
 
 

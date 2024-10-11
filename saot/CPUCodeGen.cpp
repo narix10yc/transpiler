@@ -98,7 +98,7 @@ void CodeGeneratorCPU::generate(
         metaDataSS << "  const char* info;\n";
     metaDataSS << "  const " << realTy << "* mPtr;\n"
                << "};\n"
-               << "const static _meta_data_t_ _metaData[] = {\n";
+               << "static const _meta_data_t_ _metaData[] = {\n";
     
     auto allBlocks = graph.getAllBlocks();
     if (forceInOrder)
@@ -141,7 +141,9 @@ void CodeGeneratorCPU::generate(
         }
         
         metaDataSS << "(" << realTy << "[]){";
-        for (const auto& elem : block->quantumGate->getCMatrix().data)
+        const std::vector<std::complex<double>>&
+            cdata = std::get<GateMatrix::c_matrix_t>(block->quantumGate->gateMatrix._matrix).data;
+        for (const auto& elem : cdata)
             metaDataSS << std::setprecision(16) << elem.real() << ","
                        << std::setprecision(16) << elem.imag() << ", ";
         metaDataSS << "} },\n";

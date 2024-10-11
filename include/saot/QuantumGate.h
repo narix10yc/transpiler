@@ -5,6 +5,7 @@
 #include "saot/Polynomial.h"
 #include "utils/utils.h"
 #include <array>
+#include <optional>
 #include <variant>
 namespace saot {
 
@@ -20,6 +21,7 @@ enum GateType : int {
     gRX = -15,
     gRY = -16,
     gRZ = -17,
+    gU  = -18,
     
     // two-qubit gates
     gCX   = -100,
@@ -39,257 +41,58 @@ enum GateType : int {
     // to be defined by nqubits directly
 };
 
-// TODO: refactor to use std::variant
-// TODO: handle matmul between constant and parametrized gates
-struct matrix_t {
-    // parametrised matrix type
-    using p_matrix_t = complex_matrix::SquareMatrix<saot::Polynomial>;
-    // constant matrix type
-    using c_matrix_t = complex_matrix::SquareMatrix<std::complex<double>>;
-    union {
-        p_matrix_t parametrizedMatrix;
-        c_matrix_t constantMatrix;
-    };
-    enum class ActiveMatrixType { P, C, None } activeType;
+GateType String2GateType(const std::string& s);
+std::string GateType2String(GateType t);
 
-    matrix_t() : activeType(ActiveMatrixType::None) {}
-
-    size_t getSize() const {
-        switch (activeType) {
-        case ActiveMatrixType::P: return parametrizedMatrix.getSize();
-        case ActiveMatrixType::C: return constantMatrix.getSize();
-        default: return 0;
-        }
-    }
-
-    matrix_t(matrix_t&& other) : activeType(other.activeType) {
-        switch (other.activeType) {
-        case ActiveMatrixType::P:
-            new (&parametrizedMatrix) p_matrix_t(std::move(other.parametrizedMatrix));
-            break;
-        case ActiveMatrixType::C:
-            new (&constantMatrix) c_matrix_t(std::move(other.constantMatrix));
-            break;
-        default:
-            break;
-        }
-    }
-
-    matrix_t(const matrix_t& other) : activeType(other.activeType) {
-        switch (other.activeType) {
-        case ActiveMatrixType::P:
-            new (&parametrizedMatrix) p_matrix_t(other.parametrizedMatrix);
-            break;
-        case ActiveMatrixType::C:
-            new (&constantMatrix) c_matrix_t(other.constantMatrix);
-            break;
-        default:
-            break;
-        }
-    }
-
-    void destroyMatrix(ActiveMatrixType newActiveType = ActiveMatrixType::None) {
-        switch (activeType) {
-        case ActiveMatrixType::P:
-            parametrizedMatrix.~p_matrix_t();
-            break;
-        case ActiveMatrixType::C:
-            constantMatrix.~c_matrix_t();
-            break;
-        default:
-            break;
-        }
-        activeType = newActiveType;
-    }
-
-    matrix_t& operator=(const matrix_t& other) {
-        if (this == &other)
-            return *this;
-        destroyMatrix(other.activeType);
-        switch (other.activeType) {
-        case ActiveMatrixType::P:
-            new (&parametrizedMatrix) p_matrix_t(other.parametrizedMatrix);
-            break;
-        case ActiveMatrixType::C:
-            new (&constantMatrix) c_matrix_t(other.constantMatrix);
-            break;
-        default:
-            break;
-        }
-        return *this;
-    }
-
-    matrix_t& operator=(matrix_t&& other) {
-        if (this == &other)
-            return *this;
-        destroyMatrix(other.activeType);
-        switch (other.activeType) {
-        case ActiveMatrixType::P:
-            new (&parametrizedMatrix) p_matrix_t(std::move(other.parametrizedMatrix));
-            break;
-        case ActiveMatrixType::C:
-            new (&constantMatrix) c_matrix_t(std::move(other.constantMatrix));
-            break;
-        default:
-            break;
-        }
-        return *this;
-    }
-
-    matrix_t& operator=(const c_matrix_t& cMatrix) {
-        if (activeType == ActiveMatrixType::P)
-            parametrizedMatrix.~p_matrix_t();
-        activeType = ActiveMatrixType::C;
-        new (&constantMatrix) c_matrix_t(cMatrix);
-        return *this;
-    }
-
-    matrix_t& operator=(c_matrix_t&& cMatrix) {
-        if (activeType == ActiveMatrixType::P)
-            parametrizedMatrix.~p_matrix_t();
-        activeType = ActiveMatrixType::C;
-        new (&constantMatrix) c_matrix_t(std::move(cMatrix));
-        return *this;
-    }
-
-    matrix_t& operator=(const p_matrix_t& pMatrix) {
-        if (activeType == ActiveMatrixType::C)
-            constantMatrix.~c_matrix_t();
-        activeType = ActiveMatrixType::P;
-        new (&parametrizedMatrix) p_matrix_t(pMatrix);
-        return *this;
-    }
-
-    matrix_t& operator=(p_matrix_t&& pMatrix) {
-        if (activeType == ActiveMatrixType::C)
-            constantMatrix.~c_matrix_t();
-        activeType = ActiveMatrixType::P;
-        new (&parametrizedMatrix) p_matrix_t(std::move(pMatrix));
-        return *this;
-    }
-
-    ~matrix_t() {
-        destroyMatrix();
-    }
-};
-
-class GateParameter {
-public:
-    int variable;
-    double constant;
-    bool isConstant;
-
-    explicit GateParameter(int variable)
-        : variable(variable), isConstant(false) {}
-
-    explicit GateParameter(double constant)
-        : constant(constant), isConstant(true) {}
-
-    std::ostream& print(std::ostream& os) const {
-        if (isConstant)
-            return os << constant;
-        return os << "%" << variable;
-    }
-};
 
 /// @brief GateMatrix is a wrapper around constant and polynomial-based square
 /// matrices. It does NOT store qubits array, only the number of qubits
 /// Consistency requires \p matrix.size() is always a power of 2.
 class GateMatrix {
 public:
-    // specify gate matrix with name and parameters
-    struct name_and_param_t {
-        GateType ty;
-        std::array<std::variant<std::monostate, int, double>, 3> params;
-    };
+    // specify gate matrix with (up to three) parameters
+    using params_t = std::array<std::variant<std::monostate, int, double>, 3>;
+    // unitary permutation matrix type
+    using up_matrix_t = complex_matrix::UnitaryPermutationMatrix<double>;
     // parametrised matrix type
     using p_matrix_t = complex_matrix::SquareMatrix<saot::Polynomial>;
     // constant matrix type
     using c_matrix_t = complex_matrix::SquareMatrix<std::complex<double>>;
 public:
-    int nqubits;
-    size_t N;
-    std::variant<name_and_param_t, c_matrix_t, p_matrix_t> _matrix;
+    GateType gateTy;
+    std::variant<std::monostate, up_matrix_t, params_t, c_matrix_t, p_matrix_t> _matrix;
 
-    matrix_t matrix;
+    // effectively _matrix.index()
+    enum MatrixType : int {
+        mNotInitialized = 0,
+        mByParameters   = 1,
+        mUnitaryPerm    = 2,
+        mConstant       = 3,
+        mParametrized   = 4,
+    };
 
-    GateMatrix() : nqubits(0), N(0), matrix() {}
+    GateMatrix() : gateTy(gUndef), _matrix() {}
 
-    GateMatrix(const matrix_t::c_matrix_t& cMatrix) {
-        matrix = cMatrix;
-        updateNqubits();
-    }
+    GateMatrix(GateType gateTy, const params_t& params = {})
+        : gateTy(gateTy), _matrix(params) {}
+        
+    GateMatrix(const std::variant<std::monostate, up_matrix_t, params_t, c_matrix_t, p_matrix_t>& m)
+        : _matrix(m) { gateTy = GateType(nqubits()); }
+    
+    static GateMatrix FromName(const std::string& name, const params_t& params = {});
 
-    GateMatrix(matrix_t::c_matrix_t&& cMatrix) {
-        matrix = std::move(cMatrix);
-        updateNqubits();
-    }
+    // bool tryConvertSelfToUnitaryPerm();
 
-    GateMatrix(const matrix_t::p_matrix_t& pMatrix) {
-        matrix = pMatrix;
-        updateNqubits();
-    }
+    std::optional<up_matrix_t> getUnitaryPermMatrix() const;
 
-    GateMatrix(matrix_t::p_matrix_t&& pMatrix) {
-        matrix = std::move(pMatrix);
-        updateNqubits();
-    }
+    std::optional<c_matrix_t> getConstantMatrix(const std::vector<std::pair<int, double>>& = {}) const;
 
-    bool checkConsistency() const {
-        return (1 << nqubits == N)
-            && (matrix.getSize() == N);
-    }
+    p_matrix_t getParametrizedMatrix() const;
 
-    static GateMatrix FromName(
-            const std::string& name,
-            const std::vector<double>& params = {});
+    // GateMatrix convertToParametrizedMatrix() const;
 
-    static GateMatrix FromParameters(
-            const std::string& name,
-            const std::vector<GateParameter>& params);
-
-    bool isConstantMatrix() const {
-        return matrix.activeType == matrix_t::ActiveMatrixType::C;
-    }
-
-    bool isParametrizedMatrix() const {
-        return matrix.activeType == matrix_t::ActiveMatrixType::P;
-    }
-
-    const std::vector<std::complex<double>>& cData() const {
-        assert(isConstantMatrix() && "calling cData()");
-        return matrix.constantMatrix.data;
-    }
-
-    std::vector<std::complex<double>>& cData() {
-        assert(isConstantMatrix() && "calling cData()");
-        return matrix.constantMatrix.data;
-    }
-
-    const std::vector<saot::Polynomial>& pData() const {
-        assert(isParametrizedMatrix() && "calling pData()");
-        return matrix.parametrizedMatrix.data;
-    }
-
-    std::vector<saot::Polynomial>& pData() {
-        assert(isParametrizedMatrix() && "calling pData()");
-        return matrix.parametrizedMatrix.data;
-    }
-
-    void convertToParametrizedMatrix() {
-        if (isParametrizedMatrix())
-            return;
-        assert(isConstantMatrix());
-
-        size_t size = matrix.constantMatrix.getSize();
-        matrix_t::p_matrix_t pmat(size);
-        for (size_t i = 0; i < size*size; i++)
-            pmat.data[i] = saot::Polynomial::Constant(matrix.constantMatrix.data[i]);
-        pmat.updateSize();
-        matrix = std::move(pmat);
-    }
-
-    int updateNqubits();
+    // @brief Get number of qubits
+    int nqubits() const;
 
     /// @brief Approximate matrix elements. Change matrix in-place.
     /// @param level : optimization level. Level 0 turns off everything. Level 1
@@ -299,6 +102,22 @@ public:
     GateMatrix permute(const std::vector<int>& flags) const;
 
     std::ostream& printMatrix(std::ostream& os) const;
+
+    // preset unitary matrices
+    static const up_matrix_t MatrixX_up;
+    static const up_matrix_t MatrixY_up;
+    static const up_matrix_t MatrixZ_up;
+    static const up_matrix_t MatrixCX_up;
+    static const up_matrix_t MatrixCZ_up;
+
+    // preset constant matrices
+    static const c_matrix_t MatrixX_c;
+    static const c_matrix_t MatrixY_c;
+    static const c_matrix_t MatrixZ_c;
+    static const c_matrix_t MatrixH_c;
+
+    static const c_matrix_t MatrixCX_c;
+    static const c_matrix_t MatrixCZ_c;
 };
 
 class QuantumGate {
@@ -307,25 +126,24 @@ private:
 public:
     /// The canonical form of qubits is in ascending order
     std::vector<int> qubits;
-    GateType gateTy;
     GateMatrix gateMatrix;
 
     QuantumGate() : qubits(), gateMatrix() {}
 
     QuantumGate(const GateMatrix& gateMatrix, int q)
         : gateMatrix(gateMatrix), qubits({q}) {
-        assert(gateMatrix.nqubits == 1);
+        assert(gateMatrix.nqubits() == 1);
     }
 
     QuantumGate(const GateMatrix& gateMatrix, std::initializer_list<int> qubits)
         : gateMatrix(gateMatrix), qubits(qubits) {
-        assert(gateMatrix.nqubits == qubits.size());
+        assert(gateMatrix.nqubits() == qubits.size());
         sortQubits();
     }
 
     QuantumGate(const GateMatrix& gateMatrix, const std::vector<int>& qubits)
         : gateMatrix(gateMatrix), qubits(qubits) {
-        assert(gateMatrix.nqubits == qubits.size());
+        assert(gateMatrix.nqubits() == qubits.size());
         sortQubits();
     }
 
@@ -340,9 +158,7 @@ public:
     }
 
     bool checkConsistency() const {
-        return (gateMatrix.nqubits == qubits.size())
-            // && isQubitsSorted()
-            && gateMatrix.checkConsistency();
+        return (gateMatrix.nqubits() == qubits.size());
     }
 
     std::ostream& displayInfo(std::ostream& os) const;
@@ -358,16 +174,16 @@ public:
     void sortQubits();
 
     /// @brief A.lmatmul(B) will return BA 
-    QuantumGate lmatmul(const QuantumGate& other) const;
-
-    int opCount(double zeroSkippingThres = 1e-8);
-
-    matrix_t::c_matrix_t& getCMatrix() {
-        if (!gateMatrix.isConstantMatrix())
-            throw "calling getCMatrix for a not-constant matrix";
-        return gateMatrix.matrix.constantMatrix;
+    QuantumGate lmatmul(const QuantumGate& other) const {
+        auto ACopy = *this;
+        auto BCopy = other;
+        return ACopy.lmatmul(BCopy);
     }
 
+    QuantumGate lmatmul(QuantumGate& other);
+
+
+    int opCount(double zeroSkippingThres = 1e-8);
 };
 
 } // namespace saot

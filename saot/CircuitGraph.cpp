@@ -120,7 +120,7 @@ CircuitGraph::insertBlock(tile_iter_t it, GateBlock* block) {
 
 void CircuitGraph::addGate(
         const GateMatrix& matrix, const std::vector<int>& qubits) {
-    assert(matrix.nqubits == qubits.size());
+    assert(matrix.nqubits() == qubits.size());
 
     // update nqubits
     for (const auto& q : qubits) {

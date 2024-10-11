@@ -25,22 +25,32 @@ public:
     std::ostream& print(std::ostream& os) const override;
 };
 
+/// @brief '#'<number:int> '=' '{' ... '}'';'
+class ParameterDefStmt {
+public:
+    int refNumber;
+    GateMatrix gateMatrix;
+
+    ParameterDefStmt(int refNumber, const GateMatrix& gateMatrix = {})
+        : refNumber(refNumber), gateMatrix(gateMatrix) {}
+
+    std::ostream& print(std::ostream& os) const;
+};
+
 class GateApplyStmt : public CircuitCompatibleStmt {
 public:
     std::string name;
+    std::variant<std::monostate, int, GateMatrix::params_t> paramRefOrMatrix;
     std::vector<int> qubits;
-    int paramRefNumber;
-    std::vector<GateParameter> gateParams;
+
+    GateApplyStmt(const std::string& name)
+        : name(name), paramRefOrMatrix(), qubits() {}
 
     GateApplyStmt(
-            const std::string& name, const std::vector<int>& qubits,
-            int paramRefNumber = -1)
-        : name(name), qubits(qubits), paramRefNumber(paramRefNumber), gateParams() {}
-
-    GateApplyStmt(
-            const std::string& name, const std::vector<int>& qubits,
-            const std::vector<GateParameter>& gateParams)
-        : name(name), qubits(qubits), paramRefNumber(-1), gateParams(gateParams) {}
+            const std::string& name,
+            const std::variant<std::monostate, int, GateMatrix::params_t>& paramRefOrMatrix,
+            const std::vector<int>& qubits = {})
+        : name(name), paramRefOrMatrix(paramRefOrMatrix), qubits(qubits) {}
 
     std::ostream& print(std::ostream& os) const override;
 };
@@ -54,17 +64,6 @@ public:
     std::ostream& print(std::ostream& os) const override;
 };
 
-/// @brief '#'<number:int> '=' '{' ... '}'';'
-class ParameterDefStmt {
-public:
-    int refNumber;
-    GateMatrix gateMatrix;
-
-    ParameterDefStmt(int refNumber, const GateMatrix& gateMatrix = {})
-        : refNumber(refNumber), gateMatrix(gateMatrix) {}
-
-    std::ostream& print(std::ostream& os) const;
-};
 
 class QuantumCircuit {
 public:

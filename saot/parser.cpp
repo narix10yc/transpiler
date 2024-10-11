@@ -192,7 +192,6 @@ QuantumCircuit Parser::parse() {
         }
         if (tokenIt->type == TokenTy::Hash) {
             auto defStmt = _parseParameterDefStmt();
-            defStmt.gateMatrix.updateNqubits();
             qc.paramDefs.push_back(defStmt);
             displayParserLog("Parsed param def #" + std::to_string(defStmt.refNumber));
             continue;
@@ -287,43 +286,58 @@ QuantumCircuit& Parser::_parseCircuitBody(QuantumCircuit& qc) {
     return qc;
 }
 
-GateParameter Parser::_parseGateParameter() {
+GateMatrix::params_t Parser::_parseParams_t() {
+    GateMatrix::params_t p;
     if (tokenIt->type == TokenTy::Percent) {
         proceedWithType(TokenTy::Numeric);
-        int i = convertCurTokenToInt();
-        proceed();
-        return GateParameter(i);
+        p[0] = convertCurTokenToInt();
     }
-    assert(tokenIt->type == TokenTy::Numeric);
-    double n = convertCurTokenToFloat();
+    else if (tokenIt->type == TokenTy::Numeric)
+        p[0] = convertCurTokenToFloat();
+    else
+        return p;
+
+    if (!optionalProceedWithType(TokenTy::Comma))
+        return p;
     proceed();
-    return GateParameter(n);
+    if (tokenIt->type == TokenTy::Percent) {
+        proceedWithType(TokenTy::Numeric);
+        p[1] = convertCurTokenToInt();
+    }
+    else if (tokenIt->type == TokenTy::Numeric)
+        p[1] = convertCurTokenToFloat();
+    else
+        return p;    
+
+    if (!optionalProceedWithType(TokenTy::Comma))
+        return p;
+    proceed();
+    if (tokenIt->type == TokenTy::Percent) {
+        proceedWithType(TokenTy::Numeric);
+        p[2] = convertCurTokenToInt();
+    }
+    else if (tokenIt->type == TokenTy::Numeric)
+        p[2] = convertCurTokenToFloat();
+    else
+        return p;
+    proceed();
+    return p;
 }
 
 GateApplyStmt Parser::_parseGateApply() {
     assert(tokenIt->type == TokenTy::Identifier);
-    GateApplyStmt gate(tokenIt->str, {});
+    GateApplyStmt gate(tokenIt->str);
 
     if (optionalProceedWithType(TokenTy::L_RoundBraket)) {
-        if (optionalProceedWithType(TokenTy::Hash)) {
+        proceed();
+        if (tokenIt->type == TokenTy::Hash) {
             proceedWithType(TokenTy::Numeric);
-            gate.paramRefNumber = convertCurTokenToInt();
-            proceedWithType(TokenTy::R_RoundBraket);
+            gate.paramRefOrMatrix = convertCurTokenToInt();
         }
         else {
-            proceed(); // eat '('
-            while (true) {
-                gate.gateParams.push_back(_parseGateParameter());
-                if (tokenIt->type == TokenTy::Comma) {
-                    proceed();
-                    continue;
-                }
-                if (tokenIt->type == TokenTy::Numeric || tokenIt->type == TokenTy::Percent)
-                    continue;
-                if (tokenIt->type == TokenTy::R_RoundBraket)
-                    break;
-                throwParserError("Unexpected token " + TokenTyToString(tokenIt->type));
-            }
+            gate.paramRefOrMatrix = _parseParams_t();
+            if (tokenIt->type != TokenTy::R_RoundBraket)
+                throwParserError("Expect ')' to end gate parameter");
         }
     }
 
@@ -356,7 +370,7 @@ ParameterDefStmt Parser::_parseParameterDefStmt() {
     proceedWithType(TokenTy::L_CurlyBraket);
     proceed();
 
-    saot::matrix_t::p_matrix_t polyMatrix;
+    GateMatrix::p_matrix_t polyMatrix;
     while (true) {
         auto poly = _parseSaotPolynomial();
         poly.print(std::cerr) << "\n";
@@ -370,7 +384,7 @@ ParameterDefStmt Parser::_parseParameterDefStmt() {
         }
     }
     polyMatrix.updateSize();
-    defStmt.gateMatrix.matrix = std::move(polyMatrix);
+    defStmt.gateMatrix._matrix = std::move(polyMatrix);
     return defStmt;
 }
 

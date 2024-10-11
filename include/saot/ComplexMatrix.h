@@ -11,6 +11,9 @@
 
 namespace saot::complex_matrix {
 
+/// @brief A square matrix that each row or column has exactly one non-zero 
+/// entry of the form expi(phi).
+/// @param data The (i, data[i].first) entry of the matrix is expi(data[i].second)
 template<typename data_t>
 class UnitaryPermutationMatrix {
 public:
@@ -28,7 +31,7 @@ public:
     static UnitaryPermutationMatrix Identity(size_t size) {
         UnitaryPermutationMatrix m(size);
         for (size_t i = 0; i < size; i++)
-            m.data[i] = { i, 0.0 };
+            m.data[i] = std::make_pair<size_t, data_t>(i, 0.0);
         return m;
     }
 

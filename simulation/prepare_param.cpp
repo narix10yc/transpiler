@@ -87,8 +87,8 @@ Function* IRGenerator::generatePrepareParameter(const CircuitGraph& graph) {
         uint64_t numCompMatrixEntries = (1ULL << (2 * gateBlock->nqubits));
 
         const GateMatrix& gateMatrix = gateBlock->quantumGate->gateMatrix;
-        if (gateMatrix.isConstantMatrix()) {
-            const auto& cData = gateMatrix.cData();
+        if (const auto* cdata_p = std::get_if<GateMatrix::c_matrix_t>(&gateMatrix._matrix)) {
+            const auto& cData = cdata_p->data;
             for (uint64_t d = 0; d < numCompMatrixEntries; d++) {
                 std::string gepName;
                 Value* matPtrV;
@@ -105,8 +105,8 @@ Function* IRGenerator::generatePrepareParameter(const CircuitGraph& graph) {
                 builder.CreateStore(ConstantFP::get(scalarTy, cData[d].imag()), matPtrV);
             }
         } else {
-            assert(gateMatrix.isParametrizedMatrix());
-            const auto& pData = gateMatrix.pData();
+            assert(std::holds_alternative<GateMatrix::p_matrix_t>(gateMatrix._matrix));
+            const auto& pData = std::get<GateMatrix::p_matrix_t>(gateMatrix._matrix).data;
             for (uint64_t d = 0; d < numCompMatrixEntries; d++) {
                 auto polyV = generatePolynomial(pData[d], feeder);
                 std::string gepName;

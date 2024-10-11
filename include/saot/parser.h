@@ -259,7 +259,7 @@ protected:
 
     QuantumCircuit& _parseCircuitBody(QuantumCircuit& qc);
     
-    GateParameter _parseGateParameter();
+    GateMatrix::params_t _parseParams_t();
     GateApplyStmt _parseGateApply();
 
     ParameterDefStmt _parseParameterDefStmt();
