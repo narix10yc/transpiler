@@ -297,8 +297,7 @@ GateMatrix::params_t Parser::_parseParams_t() {
     else
         return p;
 
-    if (!optionalProceedWithType(TokenTy::Comma))
-        return p;
+    optionalProceedWithType(TokenTy::Comma);
     proceed();
     if (tokenIt->type == TokenTy::Percent) {
         proceedWithType(TokenTy::Numeric);
@@ -307,10 +306,9 @@ GateMatrix::params_t Parser::_parseParams_t() {
     else if (tokenIt->type == TokenTy::Numeric)
         p[1] = convertCurTokenToFloat();
     else
-        return p;    
-
-    if (!optionalProceedWithType(TokenTy::Comma))
         return p;
+
+    optionalProceedWithType(TokenTy::Comma);
     proceed();
     if (tokenIt->type == TokenTy::Percent) {
         proceedWithType(TokenTy::Numeric);
@@ -322,6 +320,14 @@ GateMatrix::params_t Parser::_parseParams_t() {
         return p;
     proceed();
     return p;
+}
+
+static int getNumActiveParams(const GateMatrix::params_t& params) {
+    for (int i = 0; i < params.size(); i++) {
+        if (params[i].index() == 0)
+            return i;
+    }
+    return params.size();
 }
 
 GateApplyStmt Parser::_parseGateApply() {
@@ -338,6 +344,8 @@ GateApplyStmt Parser::_parseGateApply() {
             gate.paramRefOrMatrix = _parseParams_t();
             if (tokenIt->type != TokenTy::R_RoundBraket)
                 throwParserError("Expect ')' to end gate parameter");
+            displayParserLog("Parsed " +
+                std::to_string(getNumActiveParams(std::get<GateMatrix::params_t>(gate.paramRefOrMatrix))) + " parameters");
         }
     }
 

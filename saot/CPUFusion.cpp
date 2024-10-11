@@ -54,6 +54,7 @@ std::ostream& CPUFusionConfig::display(std::ostream& OS) const {
 // convenient iterator types
 using tile_iter_t = std::list<std::array<GateBlock*, 36>>::iterator;
 
+namespace {
 GateBlock* computeCandidate(
         const GateBlock* lhs, const GateBlock* rhs, const CPUFusionConfig& config) {
     if (lhs == nullptr || rhs == nullptr)
@@ -98,11 +99,9 @@ GateBlock* computeCandidate(
             blockQubits.push_back(q);
         }
     }
-    
-    block->nqubits = block->dataVector.size();
 
     // check fusion condition
-    if (block->nqubits > config.maxNQubits) {
+    if (block->nqubits() > config.maxNQubits) {
         // std::cerr << CYAN_FG << "Rejected due to maxNQubits\n" << RESET;
         delete(block);
         return nullptr;
@@ -177,6 +176,7 @@ GateBlock* tryCrossWireFuse(const CPUFusionConfig& config, CircuitGraph& graph,
     }
     return nullptr;
 }
+} // anonymous namespace
 
 void saot::applyCPUGateFusion(const CPUFusionConfig& originalConfig, CircuitGraph& graph) {
     auto& tile = graph.tile();

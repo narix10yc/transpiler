@@ -174,14 +174,7 @@ public:
     void sortQubits();
 
     /// @brief A.lmatmul(B) will return BA 
-    QuantumGate lmatmul(const QuantumGate& other) const {
-        auto ACopy = *this;
-        auto BCopy = other;
-        return ACopy.lmatmul(BCopy);
-    }
-
-    QuantumGate lmatmul(QuantumGate& other);
-
+    QuantumGate lmatmul(const QuantumGate& other) const;
 
     int opCount(double zeroSkippingThres = 1e-8);
 };

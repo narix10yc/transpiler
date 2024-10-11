@@ -71,14 +71,10 @@ CircuitGraph::insertBlock(tile_iter_t it, GateBlock* block) {
     assert(block);
 
     const auto qubits = block->getQubits();
-    bool vacant = true;
-    for (const auto& q : qubits) {
-        if ((*it)[q] != nullptr) {
-            vacant = false;
-            break;
-        }
-    }
-    if (vacant) {
+    assert(!qubits.empty());
+
+    // try insert to current row
+    if (isRowVacant(it, block)) {
         // insert at it
         for (const auto& q : qubits) {
             assert((*it)[q] == nullptr);
@@ -87,6 +83,7 @@ CircuitGraph::insertBlock(tile_iter_t it, GateBlock* block) {
         return it;
     }
 
+    // try insert to next row
     it++;
     if (it == _tile.end()) {
         row_t row {nullptr};
@@ -94,15 +91,7 @@ CircuitGraph::insertBlock(tile_iter_t it, GateBlock* block) {
             row[q] = block;
         return _tile.insert(it, row);
     }
-
-    vacant = true;
-    for (const auto& q : qubits) {
-        if ((*it)[q] != nullptr) {
-            vacant = false;
-            break;
-        }
-    }
-    if (vacant) {
+    if (isRowVacant(it, block)) {
         // insert at it
         for (const auto& q : qubits) {
             assert((*it)[q] == nullptr);
@@ -111,12 +100,12 @@ CircuitGraph::insertBlock(tile_iter_t it, GateBlock* block) {
         return it;
     }
 
+    // insert to between current and next row
     row_t row {nullptr};
     for (const auto& q : qubits)
         row[q] = block;
     return _tile.insert(it, row);
 }
-
 
 void CircuitGraph::addGate(
         const GateMatrix& matrix, const std::vector<int>& qubits) {
@@ -309,7 +298,10 @@ void CircuitGraph::updateTileDownward() {
 }
 
 std::ostream& CircuitGraph::print(std::ostream& os, int verbose) const {
-    int width = static_cast<int>(std::log10(countBlocks())) + 1;
+    auto nBlocks = countBlocks();
+    if (nBlocks == 0)
+        return os << "<empty tile>\n";
+    int width = static_cast<int>(std::log10(nBlocks) + 1);
     if ((width & 1) == 0)
         width++;
 
@@ -354,9 +346,10 @@ std::vector<int> CircuitGraph::getBlockSizes() const {
     const auto allBlocks = getAllBlocks();
     int largestSize = 0;
     for (const auto* b : allBlocks) {
-        sizes[b->nqubits]++;
-        if (b->nqubits > largestSize)
-            largestSize = b->nqubits;
+        auto blockNQubits = b->nqubits();
+        sizes[blockNQubits]++;
+        if (blockNQubits > largestSize)
+            largestSize = blockNQubits;
     }
     sizes.resize(largestSize+1);
     return sizes;
@@ -366,15 +359,16 @@ std::vector<std::vector<int>> CircuitGraph::getBlockOpCountHistogram() const {
     const auto allBlocks = getAllBlocks();
     int largestSize = 0;
     for (const auto* b : allBlocks) {
-        if (b->nqubits > largestSize)
-            largestSize = b->nqubits;
+        auto blockNQubits = b->nqubits();
+        if (blockNQubits > largestSize)
+            largestSize = blockNQubits;
     }
     std::vector<std::vector<int>> hist(largestSize+1);
     for (unsigned q = 1; q < largestSize+1; q++)
         hist[q].resize(q, 0);
     
     for (const auto* b : allBlocks) {
-        const int q = b->nqubits;
+        const int q = b->nqubits();
         int catagory = 0;
         int opCount = b->quantumGate->opCount();
         while ((1 << (2 * catagory + 3)) < opCount)
@@ -403,7 +397,7 @@ std::ostream& CircuitGraph::displayInfo(std::ostream& os, int verbose) const {
         std::vector<std::vector<int>> vec(nqubits + 1);
         const auto allBlocks = getAllBlocks();
         for (const auto* block : allBlocks)
-            vec[block->nqubits].push_back(block->id);
+            vec[block->nqubits()].push_back(block->id);
         
         for (unsigned q = 1; q < vec.size(); q++) {
             if (vec[q].empty())

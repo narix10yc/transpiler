@@ -86,16 +86,13 @@ public:
     };
 
     int id;
-    int nqubits;
     std::vector<block_data> dataVector;
     std::unique_ptr<QuantumGate> quantumGate;
 
-    GateBlock(std::unique_ptr<QuantumGate> quantumGate = nullptr)
-            : id(idCount++), nqubits(0), dataVector(),
-              quantumGate(std::move(quantumGate)) {}
+    GateBlock() : id(idCount++), dataVector(), quantumGate(nullptr) {}
 
     GateBlock(GateNode* gateNode)
-           : id(idCount++), nqubits(gateNode->nqubits), dataVector(),
+           : id(idCount++), dataVector(),
              quantumGate(std::make_unique<QuantumGate>(gateNode->toQuantumGate())) {
         for (const auto& data : gateNode->dataVector)
             dataVector.push_back({data.qubit, gateNode, gateNode});
@@ -109,6 +106,8 @@ public:
 
     int connect(GateBlock* rhsBlock, int q = -1);
 
+    int nqubits() const { return dataVector.size(); }
+    
     std::vector<block_data>::iterator findQubit(unsigned q) {
         auto it = dataVector.begin();
         while (it != dataVector.end()) {
@@ -130,7 +129,7 @@ public:
     }
 
     bool hasSameTargets(const GateBlock& other) const {
-        if (nqubits != other.nqubits)
+        if (nqubits() != other.nqubits())
             return false;
         for (const auto& data : other.dataVector) {
             if (findQubit(data.qubit) == dataVector.end())
@@ -144,6 +143,10 @@ public:
         for (unsigned i = 0; i < dataVector.size(); i++)
             vec[i] = dataVector[i].qubit;
         return vec;
+    }
+
+    void internalFuse() {
+        assert(false && "Not Implemented");
     }
 };
 
@@ -168,6 +171,13 @@ public:
     /// @brief Erase empty rows in the tile
     void eraseEmptyRows();
 
+    bool isRowVacant(tile_iter_t it, const GateBlock* block) const {
+        for (const auto& q : block->getQubits())
+            if ((*it)[q] != nullptr)
+                return false;
+        return true;
+    }
+
     tile_iter_t repositionBlockUpward(tile_iter_t it, size_t q_);
     tile_iter_t repositionBlockUpward(tile_riter_t it, size_t q_) {
         return repositionBlockUpward(--(it.base()), q_);
@@ -181,6 +191,11 @@ public:
     void updateTileUpward();
     void updateTileDownward();
 
+    /// @brief Try to insert block to a specified row. Three outcome may happen:
+    /// - If \p it is vacant, insert \p block there. Otherwise,
+    /// - If \p it+1 is vacant, insert \p block there. Otherwise,
+    /// - Insert a separate row between \p it and \p it+1 and place \p block
+    ///   there.
     tile_iter_t insertBlock(tile_iter_t it, GateBlock* block);
 
     void addGate(const QuantumGate& gate) {

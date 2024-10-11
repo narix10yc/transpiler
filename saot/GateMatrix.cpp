@@ -114,6 +114,10 @@ GateMatrix GateMatrix::FromName(const std::string& name, const params_t& params)
         assert(getNumActiveParams(params) == 0 && "H gate has 0 parameter");
         return GateMatrix(gH);
     }
+    if (name == "p") {
+        assert(getNumActiveParams(params) == 1 && "P gate has 1 parameter");
+        return GateMatrix(gP, params);
+    }
     if (name == "rx") {
         assert(getNumActiveParams(params) == 1 && "RX gate has 1 parameter");
         return GateMatrix(gRX, params);
@@ -144,7 +148,7 @@ GateMatrix GateMatrix::FromName(const std::string& name, const params_t& params)
     return GateMatrix(gUndef);
 }
 
-
+namespace { // GateMatrix::nqubits definition
 inline int nqubits_params(GateType ty) {
     if (ty >= 1)
         return ty;
@@ -187,6 +191,7 @@ inline int nqubits_p(const GateMatrix::p_matrix_t& matrix) {
     assert(1 << nqubits == matrix.getSize());
     return nqubits;
 }
+} // anonymous namespace
 
 int GateMatrix::nqubits() const {
     if (const auto* p = std::get_if<params_t>(&_matrix))
@@ -252,6 +257,7 @@ GateMatrix GateMatrix::permute(const std::vector<int>& flags) const {
     return *this;
 }
 
+namespace { // GateMatrix::printMatrix definition
 inline std::ostream&
 printMatrix_params(std::ostream& os, const GateMatrix&) {
 
@@ -296,6 +302,7 @@ printMatrix_p(std::ostream& os, const GateMatrix::p_matrix_t& matrix) {
     }
     return os;
 }
+} // anonymous namespace
 
 std::ostream& GateMatrix::printMatrix(std::ostream& os) const {     
     return std::visit([this, &os](auto&& arg) -> std::ostream& {
@@ -319,6 +326,11 @@ std::optional<GateMatrix::up_matrix_t> GateMatrix::getUnitaryPermMatrix() const 
         case gX: return MatrixX_up;
         case gY: return MatrixY_up;
         case gZ: return MatrixZ_up;
+        case gP: {
+            const double* plambd = std::get_if<double>(&(*p)[0]);
+            assert(plambd && "");
+            return GateMatrix::up_matrix_t {{0, 0.0}, {1, *plambd}};
+        }
         case gCX: return MatrixCX_up;
         case gCZ: return MatrixCZ_up;
 
@@ -332,6 +344,7 @@ std::optional<GateMatrix::up_matrix_t> GateMatrix::getUnitaryPermMatrix() const 
     return std::nullopt;
 }
 
+namespace { // GateMatrix::getConstantMatrix definition
 inline GateMatrix::c_matrix_t getMatrixU_c(double theta, double lambd, double phi) {
     double ctheta = std::cos(theta);
     double stheta = std::sin(theta);
@@ -350,6 +363,15 @@ inline std::optional<GateMatrix::c_matrix_t> getConstantMatrix_params(
     case gY: return GateMatrix::MatrixY_c;
     case gZ: return GateMatrix::MatrixZ_c;
     case gH: return GateMatrix::MatrixH_c;
+    case gP: {
+        const double* p = std::get_if<double>(&params[0]);
+        if (p)
+            return GateMatrix::c_matrix_t({
+                { 1.0, 0.0 }, { 0.0, 0.0 },
+                { 0.0, 0.0 }, { std::cos(*p), std::sin(*p) }
+            });
+        return std::nullopt;
+    }
 
     case gU: {
         const double* p0 = std::get_if<double>(&params[0]);
@@ -385,6 +407,7 @@ inline std::optional<GateMatrix::c_matrix_t> getConstantMatrix_p(
     assert(false && "Not Implemented");
     return std::nullopt;
 }
+} // anonymous namespace
 
 std::optional<GateMatrix::c_matrix_t> GateMatrix::getConstantMatrix(
         const std::vector<std::pair<int, double>>& varValues) const {

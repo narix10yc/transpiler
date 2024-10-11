@@ -34,6 +34,8 @@ void QuantumGate::sortQubits() {
     gateMatrix = gateMatrix.permute(indices);
 }
 
+// helper functions in QuantumGate::lmatmul
+namespace {
 inline uint64_t parallel_extraction(uint64_t word, uint64_t mask, int bits = 64) {
     uint64_t out = 0;
     int outIdx = 0;
@@ -84,9 +86,9 @@ inline QuantumGate lmatmul_up_up(
     }
     return QuantumGate(GateMatrix(cUp), cQubits);
 }
+} // anonymous namespace
 
-
-QuantumGate QuantumGate::lmatmul(QuantumGate& other) {
+QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
     // Matrix Mul A @ B
     // A is other, B is this
     const int aNqubits = other.qubits.size();
@@ -135,15 +137,14 @@ QuantumGate QuantumGate::lmatmul(QuantumGate& other) {
     //     std::cerr << "(" << s.first << "," << s.second << "),";
     // std::cerr << "]\n";
 
-    const auto twiceNewNqubits = 2 * newNqubits;
-    const auto contractionBitwidth = sShift.size();
-
     // unitary perm gate matrix
     auto aUpMat = gateMatrix.getUnitaryPermMatrix();
     auto bUpMat = other.gateMatrix.getUnitaryPermMatrix();
     if (aUpMat.has_value() && bUpMat.has_value()) 
         return lmatmul_up_up(aUpMat.value(), bUpMat.value(), qubits, other.qubits);
     
+    const auto twiceNewNqubits = 2 * newNqubits;
+    const auto contractionBitwidth = sShift.size();
     // constant gate matrix
     auto aCMat = gateMatrix.getConstantMatrix();
     auto bCMat = other.gateMatrix.getConstantMatrix();

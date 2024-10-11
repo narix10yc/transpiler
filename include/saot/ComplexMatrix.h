@@ -36,8 +36,25 @@ public:
     }
 
     UnitaryPermutationMatrix permute(const std::vector<int>& flags) const {
-        assert(false && "Not Implemented");
-        return *this;
+        if (std::all_of(flags.begin(), flags.end(),
+                [&flags](int i) {
+                    return flags[i] == i;
+                }))
+            return UnitaryPermutationMatrix(*this);
+
+        const auto permuteIndex = [&flags, k=flags.size()](size_t idx) -> size_t {
+            size_t newIdx = 0;
+            for (unsigned b = 0; b < k; b++) {
+                newIdx += ((idx & (1ULL<<b)) >> b) << flags[b];
+            }
+            return newIdx;
+        };
+
+        UnitaryPermutationMatrix matrix(data.size());
+        for (size_t r = 0; r < data.size(); r++)
+            matrix.data[permuteIndex(r)] = { permuteIndex(data[r].first), data[r].second };
+
+        return matrix;
     }
 };
 

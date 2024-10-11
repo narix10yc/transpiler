@@ -131,7 +131,7 @@ void CodeGeneratorCPU::generate(
         metaDataSS << " { "
                    << "&" << kernelName << ", "
                    << block->quantumGate->opCount() << ", "
-                   << block->nqubits << ", ";
+                   << block->nqubits() << ", ";
 
         if (config.installTimer) {
             std::stringstream infoSS;

@@ -84,7 +84,7 @@ Function* IRGenerator::generatePrepareParameter(const CircuitGraph& graph) {
     const auto allBlocks = graph.getAllBlocks();
     for (unsigned i = 0; i < allBlocks.size(); i++) {
         GateBlock* gateBlock = allBlocks[i];
-        uint64_t numCompMatrixEntries = (1ULL << (2 * gateBlock->nqubits));
+        uint64_t numCompMatrixEntries = (1ULL << (2 * gateBlock->nqubits()));
 
         const GateMatrix& gateMatrix = gateBlock->quantumGate->gateMatrix;
         if (const auto* cdata_p = std::get_if<GateMatrix::c_matrix_t>(&gateMatrix._matrix)) {
