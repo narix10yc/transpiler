@@ -5,7 +5,6 @@
 #include <array>
 #include <set>
 #include <list>
-#include "saot/ast.h"
 #include "saot/QuantumGate.h"
 
 namespace saot {

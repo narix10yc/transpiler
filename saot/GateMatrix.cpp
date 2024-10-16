@@ -16,6 +16,7 @@ GateType String2GateType(const std::string& s) {
     if (s == "u3") return gU;
     if (s == "cx") return gCX;
     if (s == "cz") return gCZ;
+    if (s == "cp") return gCP;
 
     assert(false && "Unimplemented String2GateType");
     return gUndef;
@@ -31,6 +32,7 @@ std::string GateType2String(GateType t) {
 
     case gCX: return "cx";
     case gCZ: return "cz";
+    case gCP: return "cp";
     
     default:
         assert(false && "Unimplemented GateType2String");
@@ -142,6 +144,10 @@ GateMatrix GateMatrix::FromName(const std::string& name, const params_t& params)
     if (name == "cz") {
         assert(getNumActiveParams(params) == 0 && "CZ gate has 0 parameter");
         return GateMatrix(gCZ);
+    }
+    if (name == "cp") {
+        assert(getNumActiveParams(params) == 1 && "CP gate has 1 parameter");
+        return GateMatrix(gCP, params);
     }
 
     assert(false && "Unsupported gate");
@@ -321,6 +327,9 @@ std::ostream& GateMatrix::printMatrix(std::ostream& os) const {
 }
 
 std::optional<GateMatrix::up_matrix_t> GateMatrix::getUnitaryPermMatrix() const {
+    if (const auto* p = std::get_if<up_matrix_t>(&_matrix))
+        return *p;
+
     if (const auto* p = std::get_if<params_t>(&_matrix)) {
         switch (gateTy) {
         case gX: return MatrixX_up;
@@ -333,18 +342,41 @@ std::optional<GateMatrix::up_matrix_t> GateMatrix::getUnitaryPermMatrix() const 
         }
         case gCX: return MatrixCX_up;
         case gCZ: return MatrixCZ_up;
-
+        case gCP: {
+            const double* plambd = std::get_if<double>(&(*p)[0]);
+            assert(plambd);
+            return GateMatrix::up_matrix_t {{0, 0.0}, {0, 0.0}, {0, 0.0}, {1, *plambd}};
+        }
         default:
-            return std::nullopt;
+            break;
         }
     }
-    if (const auto* p = std::get_if<up_matrix_t>(&_matrix))
-        return *p;
+
+    if (const auto* p = std::get_if<c_matrix_t>(&_matrix)) {
+        const auto size = p->getSize();
+        GateMatrix::up_matrix_t upMat(size);
+        for (size_t r = 0; r < size; r++) {
+            bool rowFlag = false;
+            for (size_t c = 0; c < size; c++) {
+                const auto& cplx = p->data[r * size + c];
+                if (cplx != std::complex<double>{ 0.0, 0.0 }) {
+                    if (rowFlag)
+                        return std::nullopt;
+                    rowFlag = true;
+                    upMat.data[r] = { c, std::atan2(cplx.imag(), cplx.real()) };
+                }
+            }
+            if (!rowFlag)
+                return std::nullopt;
+        }
+        return upMat;
+    }
     
     return std::nullopt;
 }
 
-namespace { // GateMatrix::getConstantMatrix definition
+// GateMatrix::getConstantMatrix definition
+namespace {
 inline GateMatrix::c_matrix_t getMatrixU_c(double theta, double lambd, double phi) {
     double ctheta = std::cos(theta);
     double stheta = std::sin(theta);

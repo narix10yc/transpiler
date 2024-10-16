@@ -53,6 +53,7 @@ enum FPGAGateCategory : unsigned {
 struct FPGAFusionConfig {
     int maxUnitaryPermutationSize;
     bool ignoreSingleQubitNonCompGates;
+    bool multiTraverse;
 
     static FPGAFusionConfig Default;
 };

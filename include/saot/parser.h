@@ -255,6 +255,8 @@ protected:
         return false;
     }
 
+    double _parseRealNumber();
+    
     std::complex<double> _parseComplexNumber();
 
     QuantumCircuit& _parseCircuitBody(QuantumCircuit& qc);

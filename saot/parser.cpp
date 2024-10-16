@@ -291,34 +291,34 @@ GateMatrix::params_t Parser::_parseParams_t() {
     if (tokenIt->type == TokenTy::Percent) {
         proceedWithType(TokenTy::Numeric);
         p[0] = convertCurTokenToInt();
+        proceed();
     }
-    else if (tokenIt->type == TokenTy::Numeric)
-        p[0] = convertCurTokenToFloat();
+    else if (tokenIt->type == TokenTy::Numeric || tokenIt->type == TokenTy::Sub)
+        p[0] = _parseRealNumber();
     else
         return p;
 
     optionalProceedWithType(TokenTy::Comma);
-    proceed();
     if (tokenIt->type == TokenTy::Percent) {
         proceedWithType(TokenTy::Numeric);
-        p[1] = convertCurTokenToInt();
+        p[0] = convertCurTokenToInt();
+        proceed();
     }
-    else if (tokenIt->type == TokenTy::Numeric)
-        p[1] = convertCurTokenToFloat();
+    else if (tokenIt->type == TokenTy::Numeric || tokenIt->type == TokenTy::Sub)
+        p[0] = _parseRealNumber();
     else
         return p;
 
     optionalProceedWithType(TokenTy::Comma);
-    proceed();
     if (tokenIt->type == TokenTy::Percent) {
         proceedWithType(TokenTy::Numeric);
-        p[2] = convertCurTokenToInt();
+        p[0] = convertCurTokenToInt();
+        proceed();
     }
-    else if (tokenIt->type == TokenTy::Numeric)
-        p[2] = convertCurTokenToFloat();
+    else if (tokenIt->type == TokenTy::Numeric || tokenIt->type == TokenTy::Sub)
+        p[0] = _parseRealNumber();
     else
         return p;
-    proceed();
     return p;
 }
 
@@ -394,6 +394,29 @@ ParameterDefStmt Parser::_parseParameterDefStmt() {
     polyMatrix.updateSize();
     defStmt.gateMatrix._matrix = std::move(polyMatrix);
     return defStmt;
+}
+
+double Parser::_parseRealNumber() {
+    double m = 1.0;
+    while (true) {
+        if (tokenIt->type == TokenTy::Sub) {
+            proceed();
+            m *= -1.0;
+            continue;
+        }
+        if (tokenIt->type == TokenTy::Add) {
+            proceed();
+            continue;
+        }
+        break;
+    }
+    if (tokenIt->type == TokenTy::Numeric) {
+        double num = m * convertCurTokenToFloat();
+        proceed();
+        return num;
+    }
+    throwParserError("Unknown token when parsing real number");
+    return 0.0;
 }
 
 std::complex<double> Parser::_parseComplexNumber() {
