@@ -243,3 +243,8 @@ int QuantumGate::opCount(double thres) {
 
     // return -1;
 }
+
+// TODO: optimize it
+bool QuantumGate::isConvertibleToUnitaryPermGate() const {
+    return gateMatrix.getUnitaryPermMatrix().has_value();
+}

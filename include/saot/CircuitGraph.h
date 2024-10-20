@@ -137,6 +137,8 @@ public:
         return true;
     }
 
+    // TODO: This should be identical to quantumGate->qubits
+    // Find a way to remove the redundency
     std::vector<int> getQubits() const {
         std::vector<int> vec(dataVector.size());
         for (unsigned i = 0; i < dataVector.size(); i++)

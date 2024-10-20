@@ -63,12 +63,12 @@ public:
     std::variant<std::monostate, up_matrix_t, params_t, c_matrix_t, p_matrix_t> _matrix;
 
     // effectively _matrix.index()
-    enum MatrixType : int {
-        mNotInitialized = 0,
-        mByParameters   = 1,
-        mUnitaryPerm    = 2,
-        mConstant       = 3,
-        mParametrized   = 4,
+    enum MatrixKind : int {
+        MK_NotInitialized = 0,
+        MK_ByParameters   = 1,
+        MK_UnitaryPerm    = 2,
+        MK_Constant       = 3,
+        MK_Parametrized   = 4,
     };
 
     GateMatrix() : gateTy(gUndef), _matrix() {}
@@ -177,6 +177,8 @@ public:
     QuantumGate lmatmul(const QuantumGate& other) const;
 
     int opCount(double zeroSkippingThres = 1e-8);
+
+    bool isConvertibleToUnitaryPermGate() const;
 };
 
 } // namespace saot
