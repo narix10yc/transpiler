@@ -117,6 +117,7 @@ GateBlock* computeCandidate(
     // std::cerr << GREEN_FG << "Fusion accepted!\n" << RESET;
     block->quantumGate = std::make_unique<QuantumGate>(
             rhs->quantumGate->lmatmul(*(lhs->quantumGate)));
+
     return block;
 }
 } // anonymous namespace

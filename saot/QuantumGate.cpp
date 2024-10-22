@@ -60,7 +60,7 @@ inline QuantumGate lmatmul_up_up(
     for (const auto& q : aQubits)
         cQubits.push_back(q);
     for (const auto& q : bQubits) {
-        if (std::find(bQubits.begin(), bQubits.end(), q) == bQubits.end())
+        if (std::find(cQubits.begin(), cQubits.end(), q) == cQubits.end())
             cQubits.push_back(q);
     }
     std::sort(cQubits.begin(), cQubits.end());
@@ -207,6 +207,7 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
 }
 
 int QuantumGate::opCount(double thres) {
+    // return 99999;
     assert(false && "Not Implemented");
     // if (opCountCache >= 0)
     //     return opCountCache;

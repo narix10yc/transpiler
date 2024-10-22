@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <iostream>
+#include <cassert>
 
 namespace saot {
     class CircuitGraph;
@@ -33,21 +34,38 @@ public:
     int qIdx;
     int cycle;
 
+    MemoryInst() : op(MOp_NUL), qIdx(-1), cycle(-1) {}
+
     MemoryInst(MemoryOp op, int qIdx = -1, int cycle = -1)
         : op(op), qIdx(qIdx), cycle(cycle) {}
+    
+    bool isNull() const { return op == MOp_NUL; }
 
-    std::ostream& print(std::ostream&);
+    std::ostream& print(std::ostream&) const;
 
 };
 
 class GateInst {
 public:
     GateOp op;
-    int arg;
+    int gateID;
+    std::vector<int> qubits;
 
-    GateInst(GateOp op, int arg = -1) : op(op), arg(arg) {}
+    GateInst() : op(GOp_NUL), gateID(-1), qubits() {}
 
-    std::ostream& print(std::ostream&);
+    GateInst(GateOp op, int gateID, std::initializer_list<int> qubits = {})
+            : op(op), gateID(gateID), qubits(qubits) {
+        assert(op == GOp_NUL ^ gateID >= 0);
+    }
+
+    GateInst(GateOp op, int gateID, const std::vector<int>& qubits = {})
+            : op(op), gateID(gateID), qubits(qubits) {
+        assert(op == GOp_NUL ^ gateID >= 0);
+    }
+
+    bool isNull() const { return op == GOp_NUL; }
+
+    std::ostream& print(std::ostream&) const;
 };
 
 class Instruction {
@@ -55,17 +73,19 @@ public:
     MemoryInst memInst;
     GateInst gateInst;
 
-    Instruction(const MemoryInst& memInst, const GateInst& gateInst)
-        : gateInst(gateInst), memInst(memInst) {}
+    Instruction() : memInst(), gateInst() {}
 
-    std::ostream& print(std::ostream& os) {
+    Instruction(const MemoryInst& memInst, const GateInst& gateInst)
+        : memInst(memInst), gateInst(gateInst) {}
+
+    std::ostream& print(std::ostream& os) const {
         memInst.print(os) << " : ";
         gateInst.print(os) << "\n";
         return os;
     }
 
     bool isNull() const {
-        return memInst.op == MOp_NUL && gateInst.op == GOp_NUL;
+        return memInst.isNull() && gateInst.isNull();
     }
     
 };
@@ -74,7 +94,9 @@ struct FPGAInstGenConfig {
 public:
     int gridSize;
 
-static const FPGAInstGenConfig Default;
+static const FPGAInstGenConfig Grid2x2;
+static const FPGAInstGenConfig Grid3x3;
+static const FPGAInstGenConfig Grid4x4;
 };
 
 // top-level function to generate FPGA instructions from a CircuitGraph

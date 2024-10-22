@@ -4,26 +4,49 @@
 using namespace saot;
 using namespace saot::fpga;
 
-const FPGAInstGenConfig FPGAInstGenConfig::Default = {
+const FPGAInstGenConfig FPGAInstGenConfig::Grid2x2 = {
+    .gridSize = 2
+};
+
+const FPGAInstGenConfig FPGAInstGenConfig::Grid3x3 = {
+    .gridSize = 3
+};
+
+const FPGAInstGenConfig FPGAInstGenConfig::Grid4x4 = {
     .gridSize = 4
 };
 
 
-std::ostream& GateInst::print(std::ostream& os) {
+std::ostream& GateInst::print(std::ostream& os) const {
+    const auto printQubits = [&]() {
+        if (qubits.empty())
+            return;
+        auto it = qubits.begin();
+        os << *it;
+        while (++it != qubits.end())
+            os << " " << *it;
+    };
+
     switch (op) {
     case GOp_NUL:
         return os << "NUL";
-    case GOp_SQ:
-        return os << "GSQ " << arg;
-    case GOp_UP:
-        return os << "GUP " << arg;
+    case GOp_SQ: {
+        os << "GSQ <id=" << gateID << "> ";
+        printQubits();
+        return os;
+    }
+    case GOp_UP: {
+        os << "GUP <id=" << gateID << ", size=" << qubits.size() << "> ";
+        printQubits();
+        return os;
+    }
     default:
         return os << "<Unknown GateOp>";
     }
     return os;
 }
 
-std::ostream& MemoryInst::print(std::ostream& os) {
+std::ostream& MemoryInst::print(std::ostream& os) const {
     switch (op) {
     case MOp_NUL:
         return os << "NUL";
@@ -48,6 +71,7 @@ enum QubitKind : int {
     QK_Local = 0,
     QK_Row = 1,
     QK_Col = 2,
+    QK_Depth = 3,
 };
 
 struct QubitStatus {
@@ -65,15 +89,6 @@ int getNumberOfFullSwapCycles(int kindIdx) {
 
 class InstGenState {
 private:
-    struct pending_instruction_t {
-        MemoryInst memInst;
-        GateInst gateInst;
-        GateBlock* block;
-
-        pending_instruction_t(const MemoryInst& m, const GateInst& g, GateBlock* b)
-            : memInst(m), gateInst(g), block(b) {}
-    };
-
     enum available_block_kind_t {
         ABK_LocalSQ,     // local single-qubit
         ABK_NonLocalSQ,  // non-local single-qubit
@@ -108,7 +123,7 @@ private:
         }
         // initialize unlockedRowIndices
         for (unsigned q = 0; q < nqubits; q++) {
-            for (unsigned row = 0; row < nrows; row++) {
+            for (row = 0; row < nrows; row++) {
                 if (tileBlocks[nqubits * row + q] != nullptr)
                     break;
             }
@@ -116,17 +131,15 @@ private:
         }
         // initialize availables
         for (unsigned q = 0; q < nqubits; q++) {
-            row = unlockedRowIndices[q] + 1;
+            row = unlockedRowIndices[q];
             if (row >= nrows)
                 continue;
-            unlockedRowIndices[q]++;
             auto* cddBlock = tileBlocks[nqubits * row + q];
-            if (cddBlock == nullptr)
-                continue;
-            if (std::find(availables.begin(), availables.end(),
-                    [&cddBlock](const available_blocks_t avail) {
+            assert(cddBlock);
+            if (std::find_if(availables.begin(), availables.end(),
+                    [&cddBlock](const available_blocks_t& avail) {
                         return avail.block == cddBlock;
-                    }) == availables.end()) {
+                    }) != availables.end()) {
                 continue;
             }
             
@@ -140,6 +153,7 @@ private:
             if (acceptFlag)
                 availables.emplace_back(cddBlock);
         }
+        updateAvailables();
     }
 public:
     int gridSize;
@@ -154,9 +168,10 @@ public:
     InstGenState(const CircuitGraph& graph, int gridSize)
             : gridSize(gridSize),
               nrows(graph.tile().size()),
-              nqubits(graph.nqubits), 
-              tileBlocks(graph.tile().size() * graph.nqubits),
-              unlockedRowIndices(graph.tile().size()),
+              nqubits(graph.nqubits),
+              qubitKinds(nqubits),
+              tileBlocks(graph.tile().size() * nqubits),
+              unlockedRowIndices(nqubits),
               availables() { init(graph); }
 
     QubitStatus getQubitState(int q) const {
@@ -192,27 +207,41 @@ public:
     }
 
     void popBlock(GateBlock* block) {
-        auto it = std::find(availables.begin(), availables.end(), block);
+        auto it = std::find_if(availables.begin(), availables.end(),
+            [&block](const available_blocks_t& avail) {
+                return avail.block == block;
+            });
         assert(it != availables.end());
+        availables.erase(it);
 
+        // grab next availables
         std::vector<GateBlock*> candidateBlocks;
-        int row = unlockedRowIndices[block->dataVector[0].qubit];
         for (const auto& data : block->dataVector) {
             const auto& qubit = data.qubit;
-            assert(row == unlockedRowIndices[qubit]);
 
-            for (auto& updatedRow = unlockedRowIndices[qubit]; updatedRow < nrows; ++updatedRow) {
-                auto* cddBlock = tileBlocks[nrows * updatedRow + qubit];
-                if (cddBlock && cddBlock != block && 
-                        std::find(candidateBlocks.begin(), candidateBlocks.end(), cddBlock) == candidateBlocks.end()) {
-                    candidateBlocks.push_back(cddBlock);
+            GateBlock* cddBlock = nullptr;
+            for (auto& updatedRow = ++unlockedRowIndices[qubit]; updatedRow < nrows; ++updatedRow) {
+                auto idx = nqubits * updatedRow + qubit;
+                cddBlock = tileBlocks[idx];
+                if (cddBlock)
+                    break;
+            }
+            if (cddBlock &&
+                    std::find(candidateBlocks.begin(), candidateBlocks.end(), cddBlock) == candidateBlocks.end())
+                candidateBlocks.push_back(cddBlock);
+        }
+        for (const auto& b : candidateBlocks) {
+            bool insertFlag = true;
+            auto row = unlockedRowIndices[b->dataVector[0].qubit];
+            for (const auto& data : b->dataVector) {
+                if (unlockedRowIndices[data.qubit] != row) {
+                    insertFlag = false;
                     break;
                 }
             }
+            if (insertFlag)
+                availables.emplace_back(b);
         }
-        availables.erase(it);
-        for (auto& b : candidateBlocks)
-            availables.emplace_back(b);
         updateAvailables();
     }
 
@@ -226,12 +255,10 @@ public:
 
     std::vector<Instruction> generate() {
         std::vector<Instruction> instructions;
-        std::deque<pending_instruction_t> pendingInsts;
-
-        const auto popPendingInstruction = [&]() {
-            assert(!pendingInsts.empty());
-
-        };
+        // The minimum indices at which we can insert mem / gate instructions
+        int vacantMemIdx = 0;
+        int vacantGateIdx = 0;
+        int sqGateBarrierIdx = 0; // single-qubit gate
 
         const auto generateFullSwap = [&](int localQ, int nonLocalQ) {
             assert(qubitKinds[localQ] == QK_Local);
@@ -240,41 +267,49 @@ public:
             const int fullSwapQIdx = getQubitState(localQ).kindIdx;
             const MemoryOp fullSwapOp = 
                 (qubitKinds[nonLocalQ] == QK_Row) ? MOp_FSR : MOp_FSC;
+            
+            int insertIdx = std::max(vacantMemIdx, sqGateBarrierIdx);
             for (int cycle = 0; cycle < nFSCycles; cycle++) {
-                pendingInsts.emplace_back(
-                    MemoryInst(fullSwapOp, fullSwapQIdx, cycle), 
-                    GateInst(GOp_NUL), nullptr);
+                if (insertIdx < instructions.size()) {
+                    auto& inst = instructions[insertIdx];
+                    assert(inst.memInst.isNull());
+                    inst.memInst = MemoryInst(fullSwapOp, fullSwapQIdx, cycle);
+                } else {
+                    instructions.emplace_back(
+                        MemoryInst(fullSwapOp, fullSwapQIdx, cycle), GateInst());
+                }
+                ++insertIdx;
             }
+            vacantMemIdx = insertIdx;
             qubitKinds[localQ] = qubitKinds[nonLocalQ];
             qubitKinds[nonLocalQ] = QK_Local;
             updateAvailables();
         };
 
         const auto generateUPBlock = [&](GateBlock* b) {
+            popBlock(b);
 
+            if (vacantGateIdx == instructions.size()) {
+                instructions.emplace_back(
+                    MemoryInst(MOp_NUL), GateInst(GOp_UP, b->id, b->quantumGate->qubits));
+            } else {
+                auto& inst = instructions[vacantGateIdx];
+                assert(inst.gateInst.isNull());
+                inst.gateInst = GateInst(GOp_UP, b->id, b->quantumGate->qubits);
+            }
+            ++vacantGateIdx;
         };
 
         const auto generateLocalSQBlock = [&](GateBlock* b) {
+            popBlock(b);
             assert(b->quantumGate->qubits.size() == 1 &&
                 "SQ Block has more than 1 target qubits?");
             auto qubit = b->quantumGate->qubits[0];
             assert(qubitKinds[qubit] == QK_Local);
-            // auto qubitState = getQubitState(qubit);
-            while (true) {
-                if (pendingInsts.empty()) {
-                    pendingInsts.emplace_back(
-                    MemoryInst(MOp_NUL), GateInst(GOp_UP, qubit), b);
-                    return;
-                }
-                auto& frontPendingInst = pendingInsts.front();
-                if (frontPendingInst.gateInst.op == GOp_NUL) {
-                    frontPendingInst.gateInst = GateInst(GOp_UP, qubit);
-                    frontPendingInst.block = b;
-                    popPendingInstruction();
-                    return;
-                }
-                popPendingInstruction();
-            }
+
+            instructions.emplace_back(MemoryInst(), GateInst(GOp_SQ, b->id, {qubit}));
+            sqGateBarrierIdx = instructions.size();
+            vacantGateIdx = sqGateBarrierIdx;
         };
 
         const auto generateNonLocalSQBlock = [&](GateBlock* b) {
@@ -293,42 +328,38 @@ public:
                     break;
                 }
             }
-            pendingInsts.emplace_back(
-                MemoryInst(MOp_NUL), GateInst(GOp_UP, qubit), b);
+            generateLocalSQBlock(b);
         };
 
         while (!availables.empty()) {
-            if (pendingInsts.empty()) {
-                // prioritize non-local SQ than local SQ than UP
-                if (auto* b = findBlockWithKind(ABK_NonLocalSQ))
-                    generateNonLocalSQBlock(b);
-                else if (auto* b = findBlockWithKind(ABK_LocalSQ))
+            // if (vacantMemIdx < vacantGateIdx) {
+            //     if (auto* b = findBlockWithKind(ABK_LocalSQ))
+            //         generateLocalSQBlock(b);
+            //     else if (auto* b = findBlockWithKind(ABK_UnitaryPerm))
+            //         generateUPBlock(b);
+            //     else if (auto* b = findBlockWithKind(ABK_NonLocalSQ))
+            //         generateNonLocalSQBlock(b);
+            //     else
+            //         assert(false && "Unreachable");
+            // }
+            // else {
+                if (auto* b = findBlockWithKind(ABK_LocalSQ))
                     generateLocalSQBlock(b);
                 else if (auto* b = findBlockWithKind(ABK_UnitaryPerm))
                     generateUPBlock(b);
+                else if (auto* b = findBlockWithKind(ABK_NonLocalSQ))
+                    generateNonLocalSQBlock(b);
                 else
                     assert(false && "Unreachable");
-
-                continue;
-            }
-            // if pendingInsts is non-empty
-            assert(pendingInsts.front().memInst.op != MOp_NUL || 
-                   pendingInsts.front().gateInst.op != GOp_NUL);
-            if (pendingInsts.front().memInst.op == MOp_NUL) {
-
-                continue;
-            }
-
-
+            // }
         }
+        return instructions;
     }
-    
 };
-
 
 } // anonymous namespace
 
-std::vector<Instruction> genInstruction(
+std::vector<Instruction> saot::fpga::genInstruction(
         const CircuitGraph& graph, const FPGAInstGenConfig& config) {
     InstGenState state(graph, config.gridSize);
 
