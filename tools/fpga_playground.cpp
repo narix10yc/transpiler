@@ -15,17 +15,17 @@ int main(int argc, char** argv) {
     int nMemOnlyInst = 0;
     std::vector<fpga::Instruction> instructions;
 
-    openqasm::Parser qasmParser(argv[1], -1);
-    auto G = qasmParser.parse()->toCircuitGraph();
+    // openqasm::Parser qasmParser(argv[1], -1);
+    // auto G = qasmParser.parse()->toCircuitGraph();
 
-    // ast::Parser saotParser(argv[1]);
-    // auto G = saotParser.parse().toCircuitGraph();
+    ast::Parser saotParser(argv[1]);
+    auto G = saotParser.parse().toCircuitGraph();
 
-    // G.print(std::cerr);
+    G.print(std::cerr);
     std::cerr << "Before fusion there are " << G.countBlocks() << " blocks\n";
-    instructions = fpga::genInstruction(G, fpga::FPGAInstGenConfig::Grid4x4);
+    instructions = fpga::genInstruction(G, fpga::FPGAInstGenConfig::Grid2x2);
     for (const auto& i : instructions) {
-        // i.print(std::cerr);
+        i.print(std::cerr);
         if (!i.memInst.isNull())
             nMemInst++;
         if (!i.gateInst.isNull())
@@ -41,15 +41,15 @@ int main(int argc, char** argv) {
     applyFPGAGateFusion(FPGAFusionConfig::Default, G);
 
     G.relabelBlocks();
-    // G.print(std::cerr);
+    G.print(std::cerr);
     std::cerr << "After fusion there are " << G.countBlocks() << " blocks\n";
 
-    instructions = fpga::genInstruction(G, fpga::FPGAInstGenConfig::Grid4x4);
+    instructions = fpga::genInstruction(G, fpga::FPGAInstGenConfig::Grid2x2);
     nMemInst = 0;
     nGateInst = 0;
     nMemOnlyInst = 0;
     for (const auto& i : instructions) {
-        // i.print(std::cerr);
+        i.print(std::cerr);
         if (!i.memInst.isNull())
             nMemInst++;
         if (!i.gateInst.isNull())

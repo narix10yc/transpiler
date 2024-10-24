@@ -49,15 +49,15 @@ std::ostream& GateInst::print(std::ostream& os) const {
 std::ostream& MemoryInst::print(std::ostream& os) const {
     switch (op) {
     case MOp_NUL:
-        return os << "NUL";
+        return os << "NUL" << std::string(12, ' ');
     case MOp_SSR:
-        return os << "SSR " << qIdx << " " << cycle;
+        return os << "SSR " << qIdx << std::string(10, ' ');
     case MOp_SSC:
-        return os << "SSC " << qIdx << " " << cycle;
+        return os << "SSC " << qIdx << std::string(10, ' ');
     case MOp_FSC:
-        return os << "FSC " << qIdx << " " << cycle;
+        return os << "FSC <cycle=" << cycle << "> " << qIdx;
     case MOp_FSR:
-        return os << "FSR " << qIdx << " " << cycle;
+        return os << "FSR <cycle=" << cycle << "> " << qIdx;
     default:
         return os << "<Unknown MemOp>";
     }
@@ -72,6 +72,7 @@ enum QubitKind : int {
     QK_Row = 1,
     QK_Col = 2,
     QK_Depth = 3,
+    QK_OffChip = 4,
 };
 
 struct QubitStatus {
@@ -106,15 +107,16 @@ private:
     };
 
     void init(const CircuitGraph& graph) {
-        // initialize qubit kind
+        // initialize qubit statuses
+        qubitStatuses.reserve(nqubits);
         int nLocalQubits = nqubits - 2 * gridSize;
         assert(nLocalQubits > 0);
         for (int i = 0; i < nLocalQubits; i++)
-            qubitKinds[i] = QK_Local;
+            qubitStatuses[i] = QubitStatus(QK_Local, i);
         for (int i = 0; i < gridSize; i++)
-            qubitKinds[nLocalQubits + i] = QK_Row;
+            qubitStatuses[nLocalQubits + i] = QubitStatus(QK_Row, i);
         for (int i = 0; i < gridSize; i++)
-            qubitKinds[nLocalQubits + gridSize + i] = QK_Col;   
+            qubitStatuses[nLocalQubits + gridSize + i] = QubitStatus(QK_Col, 1);   
         // initialize node state
         int row = 0;
         for (auto it = graph.tile().begin(); it != graph.tile().end(); it++, row++) {
@@ -159,7 +161,7 @@ public:
     int gridSize;
     int nrows;
     int nqubits;
-    std::vector<QubitKind> qubitKinds;
+    std::vector<QubitStatus> qubitStatuses;
     std::vector<GateBlock*> tileBlocks;
     // unlockedRowIndices[q] gives the index of the last unlocked row in wire q
     std::vector<int> unlockedRowIndices;
@@ -169,21 +171,10 @@ public:
             : gridSize(gridSize),
               nrows(graph.tile().size()),
               nqubits(graph.nqubits),
-              qubitKinds(nqubits),
+              qubitStatuses(),
               tileBlocks(graph.tile().size() * nqubits),
               unlockedRowIndices(nqubits),
               availables() { init(graph); }
-
-    QubitStatus getQubitState(int q) const {
-        assert(q < qubitKinds.size());
-        auto kind = qubitKinds[q];
-        int count = 0;
-        for (int i = 0; i < q; i++) {
-            if (qubitKinds[i] == kind)
-                count++;
-        }
-        return QubitStatus(kind, count);
-    }
 
     // update availables depending on qubitKinds
     void updateAvailables() {
@@ -194,14 +185,14 @@ public:
                 else {
                     const auto& qubit = available.block->quantumGate->qubits[0];
                     assert(available.block->quantumGate->qubits.size() == 1);
-                    available.kind = (qubitKinds[qubit] == QK_Local) ? ABK_LocalSQ : ABK_NonLocalSQ;
+                    available.kind = (qubitStatuses[qubit].kind == QK_Local) ? ABK_LocalSQ : ABK_NonLocalSQ;
                 }
             }
             // only need to update single-qubit blocks now
             else if (available.kind == ABK_LocalSQ || available.kind == ABK_NonLocalSQ) {
                 const auto& qubit = available.block->quantumGate->qubits[0];
                 assert(available.block->quantumGate->qubits.size() == 1);
-                available.kind = (qubitKinds[qubit] == QK_Local) ? ABK_LocalSQ : ABK_NonLocalSQ;
+                available.kind = (qubitStatuses[qubit].kind == QK_Local) ? ABK_LocalSQ : ABK_NonLocalSQ;
             }
         }
     }
@@ -260,29 +251,37 @@ public:
         int vacantGateIdx = 0;
         int sqGateBarrierIdx = 0; // single-qubit gate
 
-        const auto generateFullSwap = [&](int localQ, int nonLocalQ) {
-            assert(qubitKinds[localQ] == QK_Local);
-            assert(qubitKinds[nonLocalQ] != QK_Local);
-            const int nFSCycles = getNumberOfFullSwapCycles(getQubitState(nonLocalQ).kindIdx);
-            const int fullSwapQIdx = getQubitState(localQ).kindIdx;
-            const MemoryOp fullSwapOp = 
-                (qubitKinds[nonLocalQ] == QK_Row) ? MOp_FSR : MOp_FSC;
-            
-            int insertIdx = std::max(vacantMemIdx, sqGateBarrierIdx);
-            for (int cycle = 0; cycle < nFSCycles; cycle++) {
-                if (insertIdx < instructions.size()) {
-                    auto& inst = instructions[insertIdx];
-                    assert(inst.memInst.isNull());
-                    inst.memInst = MemoryInst(fullSwapOp, fullSwapQIdx, cycle);
-                } else {
-                    instructions.emplace_back(
-                        MemoryInst(fullSwapOp, fullSwapQIdx, cycle), GateInst());
-                }
-                ++insertIdx;
+        const auto writeMemInst = [&](int idx, const MemoryInst& inst) {
+            if (idx < instructions.size()) {
+                assert(instructions[idx].memInst.isNull());
+                instructions[idx].memInst = inst;
+            } else {
+                assert(idx == instructions.size());
+                instructions.emplace_back(inst, GateInst());
             }
+        };
+
+        const auto generateFullSwap = [&](int localQ, int nonLocalQ) {
+            assert(qubitStatuses[localQ].kind == QK_Local);
+            assert(qubitStatuses[nonLocalQ].kind != QK_Local);
+            const int fullSwapQIdx = qubitStatuses[nonLocalQ].kindIdx;
+            const int nFSCycles = getNumberOfFullSwapCycles(fullSwapQIdx);
+            const int shuffleSwapQIdx = qubitStatuses[localQ].kindIdx;
+            const MemoryOp fullSwapOp = 
+                (qubitStatuses[nonLocalQ].kind == QK_Row) ? MOp_FSR : MOp_FSC;
+            const MemoryOp shuffleSwapOp = 
+                (qubitStatuses[nonLocalQ].kind == QK_Row) ? MOp_SSR : MOp_SSC;
+            int insertIdx = std::max(vacantMemIdx, sqGateBarrierIdx);
+            // full swaps + shuffle swap
+            for (int cycle = 0; cycle < nFSCycles; cycle++)
+                writeMemInst(insertIdx++, MemoryInst(fullSwapOp, fullSwapQIdx, cycle));
+            writeMemInst(insertIdx++, MemoryInst(shuffleSwapOp, shuffleSwapQIdx));
+
             vacantMemIdx = insertIdx;
-            qubitKinds[localQ] = qubitKinds[nonLocalQ];
-            qubitKinds[nonLocalQ] = QK_Local;
+            // swap qubit statuses
+            auto tmp = qubitStatuses[localQ];
+            qubitStatuses[localQ] = qubitStatuses[nonLocalQ];
+            qubitStatuses[nonLocalQ] = tmp;
             updateAvailables();
         };
 
@@ -305,7 +304,7 @@ public:
             assert(b->quantumGate->qubits.size() == 1 &&
                 "SQ Block has more than 1 target qubits?");
             auto qubit = b->quantumGate->qubits[0];
-            assert(qubitKinds[qubit] == QK_Local);
+            assert(qubitStatuses[qubit].kind == QK_Local);
 
             instructions.emplace_back(MemoryInst(), GateInst(GOp_SQ, b->id, {qubit}));
             sqGateBarrierIdx = instructions.size();
@@ -316,14 +315,14 @@ public:
             assert(b->quantumGate->qubits.size() == 1 &&
                 "SQ Block has more than 1 target qubits?");
             auto qubit = b->quantumGate->qubits[0];
-            assert(qubitKinds[qubit] != QK_Local);
+            assert(qubitStatuses[qubit].kind != QK_Local);
             // TODO: the ideal case is after full swap, there is a local SQ
             // block. However, we need deeper search since potentially many
             // UP gates are to be applied together with full swap insts.
 
             // For now, we always use the first (least significant) local qubit.
             for (int localQ = 0; localQ < nqubits; localQ++) {
-                if (qubitKinds[localQ] == QK_Local) {
+                if (qubitStatuses[localQ].kind == QK_Local) {
                     generateFullSwap(localQ, qubit);
                     break;
                 }
