@@ -1,8 +1,8 @@
-#include "openqasm/LegacyParser.h"
+#include "openqasm/parser.h"
 
 using namespace openqasm;
 
-std::unique_ptr<ast::Expression> LegacyParser::parseExpr() {
+std::unique_ptr<ast::Expression> Parser::parseExpr() {
     logDebug(2, "Expression: ready to parse; curToken = " + curToken.toString());
     
     auto lhs = parsePrimaryExpr();
@@ -23,7 +23,7 @@ std::unique_ptr<ast::Expression> LegacyParser::parseExpr() {
 }
 
 std::unique_ptr<ast::Expression> 
-LegacyParser::parseExprRHS(BinaryOp lhsBinop, std::unique_ptr<ast::Expression> &&lhs) {
+Parser::parseExprRHS(BinaryOp lhsBinop, std::unique_ptr<ast::Expression> &&lhs) {
     logDebug(3, "Expression: ready to parse rhs");
     auto rhs = parsePrimaryExpr();
     if (!rhs) {
@@ -54,7 +54,7 @@ LegacyParser::parseExprRHS(BinaryOp lhsBinop, std::unique_ptr<ast::Expression> &
     }
 }
 
-std::unique_ptr<ast::Expression> LegacyParser::parsePrimaryExpr() {
+std::unique_ptr<ast::Expression> Parser::parsePrimaryExpr() {
     UnaryOp unaryOp = UnaryOp::None;
     if (curToken.type == TokenTy::Add) {
         unaryOp = UnaryOp::Positive;
@@ -82,7 +82,7 @@ std::unique_ptr<ast::Expression> LegacyParser::parsePrimaryExpr() {
     return std::make_unique<ast::UnaryExpr>(unaryOp, std::move(expr));
 }
 
-std::unique_ptr<ast::NumericExpr> LegacyParser::parseNumericExpr() {
+std::unique_ptr<ast::NumericExpr> Parser::parseNumericExpr() {
     if (curToken.type != TokenTy::Numeric) {
         logError("Expect numerics when parsing Numerics Expression");
         return nullptr;
@@ -92,7 +92,7 @@ std::unique_ptr<ast::NumericExpr> LegacyParser::parseNumericExpr() {
     return expr;
 }
 
-std::unique_ptr<ast::Expression> LegacyParser::parseVariableExpr() {
+std::unique_ptr<ast::Expression> Parser::parseVariableExpr() {
     auto next = peek();
 
     if (next.type == TokenTy::L_RoundBraket) {
@@ -111,7 +111,7 @@ std::unique_ptr<ast::Expression> LegacyParser::parseVariableExpr() {
     return std::make_unique<ast::VariableExpr>(name);
 }
 
-std::unique_ptr<ast::SubscriptExpr> LegacyParser::parseSubscriptExpr() {
+std::unique_ptr<ast::SubscriptExpr> Parser::parseSubscriptExpr() {
     auto name = curToken.str;
     if (!expectNextToken(TokenTy::L_SquareBraket)) {
         logError("Subscript expr: expect '['");
@@ -135,7 +135,7 @@ std::unique_ptr<ast::SubscriptExpr> LegacyParser::parseSubscriptExpr() {
 }
 
 
-std::unique_ptr<ast::Expression> LegacyParser::parseParenExpr() {
+std::unique_ptr<ast::Expression> Parser::parseParenExpr() {
     nextToken(); // Eat '('
     auto expr = parseExpr();
     if (!expr) {

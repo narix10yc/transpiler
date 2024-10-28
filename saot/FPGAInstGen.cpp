@@ -307,8 +307,8 @@ public:
             assert(qubitStatuses[qubit].kind == QK_Local);
 
             instructions.emplace_back(MemoryInst(), GateInst(GOp_SQ, b->id, {qubit}));
-            sqGateBarrierIdx = instructions.size();
-            vacantGateIdx = sqGateBarrierIdx;
+            vacantGateIdx = instructions.size();
+            sqGateBarrierIdx = vacantGateIdx - 1;
         };
 
         const auto generateNonLocalSQBlock = [&](GateBlock* b) {
@@ -332,22 +332,21 @@ public:
 
         while (!availables.empty()) {
             // if (vacantMemIdx < vacantGateIdx) {
-            //     if (auto* b = findBlockWithKind(ABK_LocalSQ))
+            //     if (auto* b = findBlockWithKind(ABK_NonLocalSQ))
+            //         generateNonLocalSQBlock(b);
+            //     else if (auto* b = findBlockWithKind(ABK_LocalSQ))
             //         generateLocalSQBlock(b);
             //     else if (auto* b = findBlockWithKind(ABK_UnitaryPerm))
             //         generateUPBlock(b);
-            //     else if (auto* b = findBlockWithKind(ABK_NonLocalSQ))
-            //         generateNonLocalSQBlock(b);
             //     else
             //         assert(false && "Unreachable");
-            // }
-            // else {
-                if (auto* b = findBlockWithKind(ABK_UnitaryPerm))
+            // } else {
+                if (auto* b = findBlockWithKind(ABK_LocalSQ))
+                    generateLocalSQBlock(b);
+                else if (auto* b = findBlockWithKind(ABK_UnitaryPerm))
                     generateUPBlock(b);
                 else if (auto* b = findBlockWithKind(ABK_NonLocalSQ))
                     generateNonLocalSQBlock(b);
-                else if (auto* b = findBlockWithKind(ABK_LocalSQ))
-                    generateLocalSQBlock(b);
                 else
                     assert(false && "Unreachable");
             // }

@@ -161,26 +161,6 @@ public:
     }
 };
 
-class Lexer {
-public:
-    const char* bufferStart;
-    const char* bufferEnd;
-    size_t bufferLength;
-
-    const char* curPtr;
-
-    Lexer(const char* fileName) {
-        std::ifstream file(fileName);
-        assert(file.is_open());
-
-        bufferLength = file.tellg();
-        bufferStart = new char[bufferLength];
-        bufferEnd = bufferStart + bufferLength;
-
-        curPtr = bufferStart;
-    }
-};
-
 class LegacyParser {
 protected:
     int lineNumber;
@@ -295,7 +275,6 @@ public:
 
     QuantumCircuit parse();
 };
-
 
 
 

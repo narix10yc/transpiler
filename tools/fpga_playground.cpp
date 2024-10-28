@@ -3,7 +3,7 @@
 #include "saot/Parser.h"
 #include "saot/FPGAInst.h"
 
-#include "openqasm/LegacyParser.h"
+#include "openqasm/parser.h"
 
 using namespace saot;
 
@@ -15,17 +15,17 @@ int main(int argc, char** argv) {
     int nMemOnlyInst = 0;
     std::vector<fpga::Instruction> instructions;
 
-    // openqasm::LegacyParser qasmLegacyParser(argv[1], -1);
-    // auto G = qasmLegacyParser.parse()->toCircuitGraph();
+    openqasm::Parser qasmParser(argv[1], -1);
+    auto G = qasmParser.parse()->toCircuitGraph();
 
-    ast::LegacyParser saotLegacyParser(argv[1]);
-    auto G = saotLegacyParser.parse().toCircuitGraph();
+    // ast::LegacyParser saotLegacyParser(argv[1]);
+    // auto G = saotLegacyParser.parse().toCircuitGraph();
 
-    G.print(std::cerr);
+    // G.print(std::cerr);
     std::cerr << "Before fusion there are " << G.countBlocks() << " blocks\n";
     instructions = fpga::genInstruction(G, fpga::FPGAInstGenConfig::Grid2x2);
     for (const auto& i : instructions) {
-        i.print(std::cerr);
+        // i.print(std::cerr);
         if (!i.memInst.isNull())
             nMemInst++;
         if (!i.gateInst.isNull())
@@ -41,15 +41,15 @@ int main(int argc, char** argv) {
     applyFPGAGateFusion(FPGAFusionConfig::Default, G);
 
     G.relabelBlocks();
-    G.print(std::cerr);
+    // G.print(std::cerr);
     std::cerr << "After fusion there are " << G.countBlocks() << " blocks\n";
 
-    instructions = fpga::genInstruction(G, fpga::FPGAInstGenConfig::Grid2x2);
+    instructions = fpga::genInstruction(G, fpga::FPGAInstGenConfig::Grid4x4);
     nMemInst = 0;
     nGateInst = 0;
     nMemOnlyInst = 0;
     for (const auto& i : instructions) {
-        i.print(std::cerr);
+        // i.print(std::cerr);
         if (!i.memInst.isNull())
             nMemInst++;
         if (!i.gateInst.isNull())
