@@ -7,8 +7,8 @@ using namespace IOColor;
 using namespace saot;
 using namespace saot::ast;
 
-void Parser::throwParserError(const char* msg, std::ostream& os) const {
-    os << RED_FG << BOLD << "parser error: "
+void LegacyParser::throwLegacyParserError(const char* msg, std::ostream& os) const {
+    os << RED_FG << BOLD << "LegacyParser error: "
        << DEFAULT_FG << msg << RESET << "\n"
        << std::setw(5) << std::setfill(' ') << lineNumber << " | "
        << currentLine << "\n"
@@ -16,11 +16,11 @@ void Parser::throwParserError(const char* msg, std::ostream& os) const {
        << GREEN_FG << BOLD
        << std::string(static_cast<size_t>(tokenIt->colEnd - tokenIt->colStart), '^')
        << "\n" << RESET;
-    throw std::runtime_error("parser error");
+    throw std::runtime_error("LegacyParser error");
 }
 
-std::ostream& Parser::displayParserWarning(const char* msg, std::ostream& os) const {
-    return os << YELLOW_FG << BOLD << "parser warning: "
+std::ostream& LegacyParser::displayLegacyParserWarning(const char* msg, std::ostream& os) const {
+    return os << YELLOW_FG << BOLD << "LegacyParser warning: "
               << DEFAULT_FG << msg << RESET << "\n"
               << std::setw(5) << std::setfill(' ') << lineNumber << " | "
               << currentLine << "\n"
@@ -30,12 +30,12 @@ std::ostream& Parser::displayParserWarning(const char* msg, std::ostream& os) co
               << "\n" << RESET;
 }
 
-std::ostream& Parser::displayParserLog(const char* msg, std::ostream& os) const {
-    return os << CYAN_FG << BOLD << "parser log: "
+std::ostream& LegacyParser::displayLegacyParserLog(const char* msg, std::ostream& os) const {
+    return os << CYAN_FG << BOLD << "LegacyParser log: "
               << DEFAULT_FG << msg << RESET << "\n";
 }
 
-int Parser::readLine() {
+int LegacyParser::readLine() {
     if (file.eof()) {
         file.close();
         return -1;
@@ -69,7 +69,7 @@ int Parser::readLine() {
     return tokenVec.size();
 }
 
-Token Parser::parseToken(int col) {
+Token LegacyParser::parseToken(int col) {
     if (col >= lineLength)
         return Token(TokenTy::EndOfLine, "", lineLength, lineLength+1);
 
@@ -176,13 +176,13 @@ Token Parser::parseToken(int col) {
         assert(false && "parsed LineFeed Token?");
         return Token(TokenTy::LineFeed, "", colStart, colStart+1);
     default:
-        throwParserError("Unknown char " + std::to_string((int)(c)));
+        throwLegacyParserError("Unknown char " + std::to_string((int)(c)));
         assert(false && "Unknown char");
         return Token(TokenTy::Unknown, "", colStart, colStart+1);
     }
 }
 
-QuantumCircuit Parser::parse() {
+QuantumCircuit LegacyParser::parse() {
     readLine();
     QuantumCircuit qc;
     while (true) {
@@ -193,7 +193,7 @@ QuantumCircuit Parser::parse() {
         if (tokenIt->type == TokenTy::Hash) {
             auto defStmt = _parseParameterDefStmt();
             qc.paramDefs.push_back(defStmt);
-            displayParserLog("Parsed param def #" + std::to_string(defStmt.refNumber));
+            displayLegacyParserLog("Parsed param def #" + std::to_string(defStmt.refNumber));
             continue;
         }
         break;
@@ -201,8 +201,8 @@ QuantumCircuit Parser::parse() {
     return qc;
 }
 
-QuantumCircuit& Parser::_parseCircuitBody(QuantumCircuit& qc) {
-    displayParserLog("ready to parse circuit");
+QuantumCircuit& LegacyParser::_parseCircuitBody(QuantumCircuit& qc) {
+    displayLegacyParserLog("ready to parse circuit");
     int setNqubitsFlag = -1;
     int setNparamsFlag = -1;
     int setFlag = 0;
@@ -222,7 +222,7 @@ QuantumCircuit& Parser::_parseCircuitBody(QuantumCircuit& qc) {
                 else if (tokenIt->str == "nparams")
                     setFlag = 2;
                 else
-                    throwParserError("Unsupported circuit argument '" + tokenIt->str +
+                    throwLegacyParserError("Unsupported circuit argument '" + tokenIt->str +
                                      "' (expect either 'nqubits' or 'nparams')");
                 proceedWithType(TokenTy::Equal);
                 proceedWithType(TokenTy::Numeric);
@@ -230,31 +230,31 @@ QuantumCircuit& Parser::_parseCircuitBody(QuantumCircuit& qc) {
                 optionalProceedWithType(TokenTy::Comma);
                 if (setFlag == 1) {
                     if (setNqubitsFlag >= 0)
-                        displayParserWarning("Overwrite nqubits from " + std::to_string(setNqubitsFlag)
+                        displayLegacyParserWarning("Overwrite nqubits from " + std::to_string(setNqubitsFlag)
                                              + " to " + std::to_string(num));
                     qc.nqubits = num;
                     setNqubitsFlag = num;
-                    displayParserLog("nqubits updated to " + std::to_string(num));
+                    displayLegacyParserLog("nqubits updated to " + std::to_string(num));
                 }
                 else if (setFlag == 2) {
                     if (setNparamsFlag >= 0)
-                        displayParserWarning("Overwrite nparams from " + std::to_string(setNparamsFlag)
+                        displayLegacyParserWarning("Overwrite nparams from " + std::to_string(setNparamsFlag)
                                              + " to " + std::to_string(num));
                     qc.nparams = num;
                     setNparamsFlag = num;
-                    displayParserLog("nparams updated to " + std::to_string(num));
+                    displayLegacyParserLog("nparams updated to " + std::to_string(num));
                 }
                 continue;
             }
 
-            throwParserError("Unexpected token type " + TokenTyToString(tokenIt->type) + " when expecting an Identifier");
+            throwLegacyParserError("Unexpected token type " + TokenTyToString(tokenIt->type) + " when expecting an Identifier");
         }
     }
 
     proceedWithType(TokenTy::Identifier);
     qc.name = tokenIt->str;
     proceedWithType(TokenTy::L_CurlyBraket, true);
-    displayParserLog("Ready to parse circuit " + qc.name);
+    displayLegacyParserLog("Ready to parse circuit " + qc.name);
 
     while (true) {
         proceed();
@@ -269,7 +269,7 @@ QuantumCircuit& Parser::_parseCircuitBody(QuantumCircuit& qc) {
                 }
                 if (tokenIt->type == TokenTy::Semicolon)
                     break;
-                throwParserError("Unexpected token type " + TokenTyToString(tokenIt->type)
+                throwLegacyParserError("Unexpected token type " + TokenTyToString(tokenIt->type)
                                 + " when expecting either AtSymbol or Semicolon");
             }
             qc.stmts.push_back(std::make_unique<GateChainStmt>(chain));
@@ -279,14 +279,14 @@ QuantumCircuit& Parser::_parseCircuitBody(QuantumCircuit& qc) {
     } 
     
     if (tokenIt->type != TokenTy::R_CurlyBraket) {
-        throwParserError("Unexpected token " + tokenIt->to_string());
+        throwLegacyParserError("Unexpected token " + tokenIt->to_string());
     }
     proceed(); // eat '}'
-    displayParserLog("Parsed a circuit with " + std::to_string(qc.stmts.size()) + " chains");
+    displayLegacyParserLog("Parsed a circuit with " + std::to_string(qc.stmts.size()) + " chains");
     return qc;
 }
 
-GateMatrix::params_t Parser::_parseParams_t() {
+GateMatrix::params_t LegacyParser::_parseParams_t() {
     GateMatrix::params_t p;
     if (tokenIt->type == TokenTy::Percent) {
         proceedWithType(TokenTy::Numeric);
@@ -294,7 +294,7 @@ GateMatrix::params_t Parser::_parseParams_t() {
         proceed();
     }
     else if (tokenIt->type == TokenTy::Numeric || tokenIt->type == TokenTy::Sub)
-        p[0] = _parseRealNumber();
+        p[0] = _LegacyParserealNumber();
     else
         return p;
 
@@ -305,7 +305,7 @@ GateMatrix::params_t Parser::_parseParams_t() {
         proceed();
     }
     else if (tokenIt->type == TokenTy::Numeric || tokenIt->type == TokenTy::Sub)
-        p[0] = _parseRealNumber();
+        p[0] = _LegacyParserealNumber();
     else
         return p;
 
@@ -316,7 +316,7 @@ GateMatrix::params_t Parser::_parseParams_t() {
         proceed();
     }
     else if (tokenIt->type == TokenTy::Numeric || tokenIt->type == TokenTy::Sub)
-        p[0] = _parseRealNumber();
+        p[0] = _LegacyParserealNumber();
     else
         return p;
     return p;
@@ -330,7 +330,7 @@ static int getNumActiveParams(const GateMatrix::params_t& params) {
     return params.size();
 }
 
-GateApplyStmt Parser::_parseGateApply() {
+GateApplyStmt LegacyParser::_parseGateApply() {
     assert(tokenIt->type == TokenTy::Identifier);
     GateApplyStmt gate(tokenIt->str);
 
@@ -343,8 +343,8 @@ GateApplyStmt Parser::_parseGateApply() {
         else {
             gate.paramRefOrMatrix = _parseParams_t();
             if (tokenIt->type != TokenTy::R_RoundBraket)
-                throwParserError("Expect ')' to end gate parameter");
-            displayParserLog("Parsed " +
+                throwLegacyParserError("Expect ')' to end gate parameter");
+            displayLegacyParserLog("Parsed " +
                 std::to_string(getNumActiveParams(std::get<GateMatrix::params_t>(gate.paramRefOrMatrix))) + " parameters");
         }
     }
@@ -360,19 +360,19 @@ GateApplyStmt Parser::_parseGateApply() {
     }
     
     if (gate.qubits.empty())
-        throwParserError("Gate " + gate.name + " has no target");
+        throwLegacyParserError("Gate " + gate.name + " has no target");
     
-    displayParserLog("Parsed gate " + gate.name + " with " +
+    displayLegacyParserLog("Parsed gate " + gate.name + " with " +
                      std::to_string(gate.qubits.size()) + " targets");
     return gate;
 }
 
-ParameterDefStmt Parser::_parseParameterDefStmt() {
+ParameterDefStmt LegacyParser::_parseParameterDefStmt() {
     assert(tokenIt->type == TokenTy::Hash);
 
     proceedWithType(TokenTy::Numeric);
     ParameterDefStmt defStmt(convertCurTokenToInt());
-    displayParserLog("Ready to parse ParameterDef #" + std::to_string(defStmt.refNumber));
+    displayLegacyParserLog("Ready to parse ParameterDef #" + std::to_string(defStmt.refNumber));
 
     proceedWithType(TokenTy::Equal);
     proceedWithType(TokenTy::L_CurlyBraket);
@@ -396,7 +396,7 @@ ParameterDefStmt Parser::_parseParameterDefStmt() {
     return defStmt;
 }
 
-double Parser::_parseRealNumber() {
+double LegacyParser::_LegacyParserealNumber() {
     double m = 1.0;
     while (true) {
         if (tokenIt->type == TokenTy::Sub) {
@@ -415,11 +415,11 @@ double Parser::_parseRealNumber() {
         proceed();
         return num;
     }
-    throwParserError("Unknown token when parsing real number");
+    throwLegacyParserError("Unknown token when parsing real number");
     return 0.0;
 }
 
-std::complex<double> Parser::_parseComplexNumber() {
+std::complex<double> LegacyParser::_parseComplexNumber() {
     double m = 1.0;
     while (true) {
         if (tokenIt->type == TokenTy::Sub) {
@@ -443,7 +443,7 @@ std::complex<double> Parser::_parseComplexNumber() {
             proceed();
             return { 0.0, real };
         }
-        throwParserError("Expect purely imaginary number to end with 'i'");
+        throwLegacyParserError("Expect purely imaginary number to end with 'i'");
     }
     // just one part (pure real or pure imag)
     if (tokenIt->type != TokenTy::Add && tokenIt->type != TokenTy::Sub)
@@ -465,13 +465,13 @@ std::complex<double> Parser::_parseComplexNumber() {
     double imag = m * convertCurTokenToFloat();
     proceed();
     if (!(tokenIt->type == TokenTy::Identifier && tokenIt->str == "i"))
-        throwParserError("Expect complex number to end with 'i'");
+        throwLegacyParserError("Expect complex number to end with 'i'");
 
     proceed();
     return { real, imag };
 }
 
-saot::Polynomial Parser::_parseSaotPolynomial() {
+saot::Polynomial LegacyParser::_parseSaotPolynomial() {
     const auto parseCoef = [&]() -> std::complex<double> {
         if (tokenIt->type == TokenTy::Identifier) {
             if (tokenIt->str == "i") {
@@ -489,11 +489,11 @@ saot::Polynomial Parser::_parseSaotPolynomial() {
                 proceed();
                 return cplx;
             }
-            throwParserError("Expect ')'");
+            throwLegacyParserError("Expect ')'");
         }
         auto cplx = _parseComplexNumber();
         if (cplx.real() != 0.0 && cplx.imag() != 0.0) {
-            displayParserWarning("Expect complex number to be enclosed by '()'");
+            displayLegacyParserWarning("Expect complex number to be enclosed by '()'");
         }
         return cplx;
     };
@@ -502,13 +502,13 @@ saot::Polynomial Parser::_parseSaotPolynomial() {
         saot::VariableSumNode N;
         // 'cos' 'sin'
         if (tokenIt->type != TokenTy::Identifier)
-            throwParserError("Expect VariableSumNode to start with 'cos' or 'sin");
+            throwLegacyParserError("Expect VariableSumNode to start with 'cos' or 'sin");
         if (tokenIt->str == "cos")
             N.op = saot::VariableSumNode::CosOp;
         else if (tokenIt->str == "sin")
             N.op = saot::VariableSumNode::SinOp;
         else
-            throwParserError("Expect VariableSumNode to start with 'cos' or 'sin");
+            throwLegacyParserError("Expect VariableSumNode to start with 'cos' or 'sin");
         proceed();
 
         // optional '('
@@ -544,11 +544,11 @@ saot::Polynomial Parser::_parseSaotPolynomial() {
             if (tokenIt->type == TokenTy::R_RoundBraket)
                 proceed();
             else
-                throwParserError("Expect ')'");
+                throwLegacyParserError("Expect ')'");
         }
         else {
             if (nAdd > 0)
-                displayParserWarning("Expect multiple mul terms to be enclosed by '()'");
+                displayLegacyParserWarning("Expect multiple mul terms to be enclosed by '()'");
         }
         return N;
     };
@@ -558,7 +558,7 @@ saot::Polynomial Parser::_parseSaotPolynomial() {
         M.coef = parseCoef();
         if (tokenIt->type == TokenTy::Mul) {
             if (M.coef == std::complex<double>(1.0, 0.0))
-                displayParserWarning("Top-level '*'");
+                displayLegacyParserWarning("Top-level '*'");
             proceed();
         }
 
@@ -586,7 +586,7 @@ saot::Polynomial Parser::_parseSaotPolynomial() {
         }
         while (true) {
             if (tokenIt->type != TokenTy::Percent)
-                throwParserError("Expect '%' in parsing ExpiVars");
+                throwLegacyParserError("Expect '%' in parsing ExpiVars");
             proceedWithType(TokenTy::Numeric);
             M.insertExpiVar(convertCurTokenToInt());
             if (optionalProceedWithType(TokenTy::Add)) {
@@ -600,11 +600,11 @@ saot::Polynomial Parser::_parseSaotPolynomial() {
             if (tokenIt->type == TokenTy::R_RoundBraket)
                 proceed();
             else
-                throwParserError("Expect ')'");
+                throwLegacyParserError("Expect ')'");
         }
         else {
             if (M.expiVars().size() > 1)
-                displayParserWarning("Expect multiple expi terms to be enclosed by '()'");
+                displayLegacyParserWarning("Expect multiple expi terms to be enclosed by '()'");
         }
         return M;
     };

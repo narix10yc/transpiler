@@ -3,7 +3,7 @@
 #include "saot/Parser.h"
 #include "saot/FPGAInst.h"
 
-#include "openqasm/parser.h"
+#include "openqasm/LegacyParser.h"
 
 using namespace saot;
 
@@ -15,11 +15,11 @@ int main(int argc, char** argv) {
     int nMemOnlyInst = 0;
     std::vector<fpga::Instruction> instructions;
 
-    // openqasm::Parser qasmParser(argv[1], -1);
-    // auto G = qasmParser.parse()->toCircuitGraph();
+    // openqasm::LegacyParser qasmLegacyParser(argv[1], -1);
+    // auto G = qasmLegacyParser.parse()->toCircuitGraph();
 
-    ast::Parser saotParser(argv[1]);
-    auto G = saotParser.parse().toCircuitGraph();
+    ast::LegacyParser saotLegacyParser(argv[1]);
+    auto G = saotLegacyParser.parse().toCircuitGraph();
 
     G.print(std::cerr);
     std::cerr << "Before fusion there are " << G.countBlocks() << " blocks\n";

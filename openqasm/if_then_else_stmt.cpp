@@ -1,9 +1,9 @@
-#include "openqasm/parser.h"
+#include "openqasm/LegacyParser.h"
 
 using namespace openqasm;
 
 
-std::unique_ptr<ast::IfThenElseStmt> Parser::parseIfThenElseStmt() {
+std::unique_ptr<ast::IfThenElseStmt> LegacyParser::parseIfThenElseStmt() {
     logDebug(2, "IfThenElseStmt: ready to parse");
     nextToken(); // eat 'if'
     auto ifExpr = parseExpr();

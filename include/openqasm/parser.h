@@ -1,5 +1,5 @@
-#ifndef PARSER_H_
-#define PARSER_H_
+#ifndef LegacyParser_H_
+#define LegacyParser_H_
 
 #include <string>
 #include <memory>
@@ -9,25 +9,25 @@
 
 namespace openqasm {
 
-class Parser {
+class LegacyParser {
     int debugLevel;
     std::unique_ptr<Lexer> lexer;
     std::queue<Token> tokenBuf;
     Token curToken;
 public:
-    Parser(const std::string& fileName, int debugLevel=1) :
+    LegacyParser(const std::string& fileName, int debugLevel=1) :
         debugLevel(debugLevel),
         lexer(std::make_unique<Lexer>(fileName)),
         curToken(TokenTy::Unknown) {}
 
     void logError(std::string str) const { 
-        fprintf(stderr, "== Parser Error ==  %s\n", str.c_str());
+        fprintf(stderr, "== LegacyParser Error ==  %s\n", str.c_str());
     }
 
     void logDebug(int level, std::string msg) const {
         if (debugLevel < level) return;
         std::cerr << std::string(" ", level) <<
-            "[parser DEBUG " << level << "] " << msg << "\n";
+            "[LegacyParser DEBUG " << level << "] " << msg << "\n";
     }
 
     void nextToken() { 
@@ -122,4 +122,4 @@ private:
 
 } // namespace openqasm
 
-#endif // PARSER_H_
+#endif // LegacyParser_H_

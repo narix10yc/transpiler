@@ -13,7 +13,7 @@ FPGAFusionConfig FPGAFusionConfig::Default = FPGAFusionConfig {
         };
 
 FPGAGateCategory getFPGAGateCategory(const QuantumGate& gate) {
-    switch (gate.gateMatrix.gateTy){
+    switch (gate.gateMatrix.gateKind){
         case gX: return fpgaSingleQubitNonComp;
         case gY: return fpgaSingleQubitNonComp;
         case gZ: return fpgaSingleQubitNonComp;

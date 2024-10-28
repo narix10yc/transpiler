@@ -1,5 +1,5 @@
-#ifndef SAOT_PARSER_H
-#define SAOT_PARSER_H
+#ifndef SAOT_LegacyParser_H
+#define SAOT_LegacyParser_H
 
 #include <string>
 #include <iostream>
@@ -161,7 +161,27 @@ public:
     }
 };
 
-class Parser {
+class Lexer {
+public:
+    const char* bufferStart;
+    const char* bufferEnd;
+    size_t bufferLength;
+
+    const char* curPtr;
+
+    Lexer(const char* fileName) {
+        std::ifstream file(fileName);
+        assert(file.is_open());
+
+        bufferLength = file.tellg();
+        bufferStart = new char[bufferLength];
+        bufferEnd = bufferStart + bufferLength;
+
+        curPtr = bufferStart;
+    }
+};
+
+class LegacyParser {
 protected:
     int lineNumber;
     int lineLength;
@@ -171,19 +191,19 @@ protected:
     std::vector<Token> tokenVec;
     std::vector<Token>::const_iterator tokenIt;
 
-    void throwParserError(const char* msg, std::ostream& os = std::cerr) const;
-    void throwParserError(const std::string& msg, std::ostream& os = std::cerr) const {
-        return throwParserError(msg.c_str(), os);
+    void throwLegacyParserError(const char* msg, std::ostream& os = std::cerr) const;
+    void throwLegacyParserError(const std::string& msg, std::ostream& os = std::cerr) const {
+        return throwLegacyParserError(msg.c_str(), os);
     }
 
-    std::ostream& displayParserWarning(const char* msg, std::ostream& os = std::cerr) const;
-    std::ostream& displayParserWarning(const std::string& msg, std::ostream& os = std::cerr) const {
-        return displayParserWarning(msg.c_str(), os);
+    std::ostream& displayLegacyParserWarning(const char* msg, std::ostream& os = std::cerr) const;
+    std::ostream& displayLegacyParserWarning(const std::string& msg, std::ostream& os = std::cerr) const {
+        return displayLegacyParserWarning(msg.c_str(), os);
     }
 
-    std::ostream& displayParserLog(const char* msg, std::ostream& os = std::cerr) const;
-    std::ostream& displayParserLog(const std::string& msg, std::ostream& os = std::cerr) const {
-        return displayParserLog(msg.c_str(), os);
+    std::ostream& displayLegacyParserLog(const char* msg, std::ostream& os = std::cerr) const;
+    std::ostream& displayLegacyParserLog(const std::string& msg, std::ostream& os = std::cerr) const {
+        return displayLegacyParserLog(msg.c_str(), os);
     }
 
 
@@ -195,7 +215,7 @@ protected:
 
     double convertCurTokenToFloat() const {
         if (tokenIt->type != TokenTy::Numeric)
-            throwParserError("Expect a float, but got " + TokenTyToString(tokenIt->type));
+            throwLegacyParserError("Expect a float, but got " + TokenTyToString(tokenIt->type));
 
         int count = 0;
         for (const auto& c : tokenIt->str) {
@@ -203,17 +223,17 @@ protected:
                 count++;
         }
         if (count > 1)
-            throwParserError("Unable to parse '" + tokenIt->str + "' to float");
+            throwLegacyParserError("Unable to parse '" + tokenIt->str + "' to float");
         return std::stod(tokenIt->str);
     }
 
     int convertCurTokenToInt() const {
         if (tokenIt->type != TokenTy::Numeric)
-            throwParserError("Expect an integer, but got " + TokenTyToString(tokenIt->type));
+            throwLegacyParserError("Expect an integer, but got " + TokenTyToString(tokenIt->type));
     
         for (const auto& c : tokenIt->str) {
             if (c == '.') {
-                throwParserError("Unable to parse '" + tokenIt->str + "' to int");
+                throwLegacyParserError("Unable to parse '" + tokenIt->str + "' to int");
                 return -1;
             }
         }
@@ -234,7 +254,7 @@ protected:
                 std::stringstream ss;
                 ss << "Expecting token type " << TokenTyToString(ty) << ", "
                 << "but reached end of line";
-                throwParserError(ss.str());
+                throwLegacyParserError(ss.str());
             } else {
                 readLine();
             }
@@ -243,7 +263,7 @@ protected:
             std::stringstream ss;
             ss << "Expecting token type " << TokenTyToString(ty) << ", "
                << "but nextToken is " << (*tokenIt);
-            throwParserError(ss.str());
+            throwLegacyParserError(ss.str());
         }
     }
 
@@ -255,7 +275,7 @@ protected:
         return false;
     }
 
-    double _parseRealNumber();
+    double _LegacyParserealNumber();
     
     std::complex<double> _parseComplexNumber();
 
@@ -269,7 +289,7 @@ protected:
     saot::Polynomial _parseSaotPolynomial();
     // bool _parseStatement(RootNode&);
 public:
-    Parser(const std::string& fileName)
+    LegacyParser(const std::string& fileName)
         : lineNumber(0), currentLine(""), file(fileName),
           tokenVec(), tokenIt(tokenVec.cbegin()) {}
 
@@ -281,4 +301,4 @@ public:
 
 } // namespace saot::parse
 
-#endif // SAOT_PARSER_H
+#endif // SAOT_LegacyParser_H

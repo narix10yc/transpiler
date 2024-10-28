@@ -8,7 +8,7 @@
 using namespace IOColor;
 using namespace saot;
 
-GateType String2GateType(const std::string& s) {
+GateKind String2GateKind(const std::string& s) {
     if (s == "x") return gX;
     if (s == "y") return gY;
     if (s == "z") return gZ;
@@ -18,11 +18,11 @@ GateType String2GateType(const std::string& s) {
     if (s == "cz") return gCZ;
     if (s == "cp") return gCP;
 
-    assert(false && "Unimplemented String2GateType");
+    assert(false && "Unimplemented String2GateKind");
     return gUndef;
 }
 
-std::string GateType2String(GateType t) {
+std::string GateKind2String(GateKind t) {
     switch (t) {
     case gX: return "x";
     case gY: return "y";
@@ -35,7 +35,7 @@ std::string GateType2String(GateType t) {
     case gCP: return "cp";
     
     default:
-        assert(false && "Unimplemented GateType2String");
+        assert(false && "Unimplemented GateKind2String");
         return "undef";
     }
 }
@@ -155,7 +155,7 @@ GateMatrix GateMatrix::FromName(const std::string& name, const params_t& params)
 }
 
 namespace { // GateMatrix::nqubits definition
-inline int nqubits_params(GateType ty) {
+inline int nqubits_params(GateKind ty) {
     if (ty >= 1)
         return ty;
     switch (ty) {
@@ -175,7 +175,7 @@ inline int nqubits_params(GateType ty) {
         case gCP: return 2;
         
         default:
-            assert(false && "Unknown GateType nqubits");
+            assert(false && "Unknown GateKind nqubits");
             return 0;
     }
 }
@@ -201,7 +201,7 @@ inline int nqubits_p(const GateMatrix::p_matrix_t& matrix) {
 
 int GateMatrix::nqubits() const {
     if (const auto* p = std::get_if<params_t>(&_matrix))
-        return nqubits_params(gateTy);
+        return nqubits_params(gateKind);
     if (const auto* p = std::get_if<up_matrix_t>(&_matrix))
         return nqubits_up(*p);
     if (const auto* p = std::get_if<c_matrix_t>(&_matrix))
@@ -331,7 +331,7 @@ std::optional<GateMatrix::up_matrix_t> GateMatrix::getUnitaryPermMatrix() const 
         return *p;
 
     if (const auto* p = std::get_if<params_t>(&_matrix)) {
-        switch (gateTy) {
+        switch (gateKind) {
         case gX: return MatrixX_up;
         case gY: return MatrixY_up;
         case gZ: return MatrixZ_up;
@@ -389,7 +389,7 @@ inline GateMatrix::c_matrix_t getMatrixU_c(double theta, double lambd, double ph
 }
 
 inline std::optional<GateMatrix::c_matrix_t> getConstantMatrix_params(
-        GateType ty, const GateMatrix::params_t& params) {
+        GateKind ty, const GateMatrix::params_t& params) {
     switch (ty) {
     case gX: return GateMatrix::MatrixX_c;
     case gY: return GateMatrix::MatrixY_c;
@@ -444,7 +444,7 @@ inline std::optional<GateMatrix::c_matrix_t> getConstantMatrix_p(
 std::optional<GateMatrix::c_matrix_t> GateMatrix::getConstantMatrix(
         const std::vector<std::pair<int, double>>& varValues) const {
     if (const auto* p = std::get_if<params_t>(&_matrix))
-        return getConstantMatrix_params(gateTy, *p);
+        return getConstantMatrix_params(gateKind, *p);
     if (const auto* p = std::get_if<up_matrix_t>(&_matrix))
         return getConstantMatrix_up(*p);
     if (const auto* p = std::get_if<c_matrix_t>(&_matrix))

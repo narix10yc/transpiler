@@ -9,7 +9,7 @@
 #include <variant>
 namespace saot {
 
-enum GateType : int {
+enum GateKind : int {
     gUndef = 0,
 
     // single-qubit gates
@@ -41,8 +41,8 @@ enum GateType : int {
     // to be defined by nqubits directly
 };
 
-GateType String2GateType(const std::string& s);
-std::string GateType2String(GateType t);
+GateKind String2GateKind(const std::string& s);
+std::string GateKind2String(GateKind t);
 
 
 /// @brief GateMatrix is a wrapper around constant and polynomial-based square
@@ -59,7 +59,7 @@ public:
     // constant matrix type
     using c_matrix_t = complex_matrix::SquareMatrix<std::complex<double>>;
 public:
-    GateType gateTy;
+    GateKind gateKind;
     std::variant<std::monostate, up_matrix_t, params_t, c_matrix_t, p_matrix_t> _matrix;
 
     // effectively _matrix.index()
@@ -71,13 +71,13 @@ public:
         MK_Parametrized   = 4,
     };
 
-    GateMatrix() : gateTy(gUndef), _matrix() {}
+    GateMatrix() : gateKind(gUndef), _matrix() {}
 
-    GateMatrix(GateType gateTy, const params_t& params = {})
-        : gateTy(gateTy), _matrix(params) {}
+    GateMatrix(GateKind gateKind, const params_t& params = {})
+        : gateKind(gateKind), _matrix(params) {}
         
     GateMatrix(const std::variant<std::monostate, up_matrix_t, params_t, c_matrix_t, p_matrix_t>& m)
-        : _matrix(m) { gateTy = GateType(nqubits()); }
+        : _matrix(m) { gateKind = GateKind(nqubits()); }
     
     static GateMatrix FromName(const std::string& name, const params_t& params = {});
 

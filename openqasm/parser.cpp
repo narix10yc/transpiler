@@ -1,8 +1,8 @@
-#include "openqasm/parser.h"
+#include "openqasm/LegacyParser.h"
 
 using namespace openqasm;
 
-std::unique_ptr<ast::RootNode> Parser::parse() {
+std::unique_ptr<ast::RootNode> LegacyParser::parse() {
     auto root = std::make_unique<ast::RootNode>();
 
     if (!lexer->openFile()) {
@@ -27,7 +27,7 @@ std::unique_ptr<ast::RootNode> Parser::parse() {
     return root;
 }
 
-std::unique_ptr<ast::Statement> Parser::parseStmt() {
+std::unique_ptr<ast::Statement> LegacyParser::parseStmt() {
     std::unique_ptr<ast::Statement> stmt;
     skipSeparators();
 
@@ -62,7 +62,7 @@ std::unique_ptr<ast::Statement> Parser::parseStmt() {
     return stmt;
 }
 
-std::unique_ptr<ast::VersionStmt> Parser::parseVersionStmt() {
+std::unique_ptr<ast::VersionStmt> LegacyParser::parseVersionStmt() {
     nextToken();
     if (curToken.type != TokenTy::Numeric) {
         logError("Expect version string to be a numerics");
@@ -73,7 +73,7 @@ std::unique_ptr<ast::VersionStmt> Parser::parseVersionStmt() {
     return std::make_unique<ast::VersionStmt>(value);
 }
 
-std::unique_ptr<ast::QRegStmt> Parser::parseQRegStmt() {
+std::unique_ptr<ast::QRegStmt> LegacyParser::parseQRegStmt() {
     if (!expectNextToken(TokenTy::Identifier)) 
         return nullptr;
 
@@ -92,7 +92,7 @@ std::unique_ptr<ast::QRegStmt> Parser::parseQRegStmt() {
     return stmt;
 }
 
-std::unique_ptr<ast::CRegStmt> Parser::parseCRegStmt() {
+std::unique_ptr<ast::CRegStmt> LegacyParser::parseCRegStmt() {
     if (!expectNextToken(TokenTy::Identifier)) 
         return nullptr;
         
@@ -112,7 +112,7 @@ std::unique_ptr<ast::CRegStmt> Parser::parseCRegStmt() {
     return stmt;
 }
 
-std::unique_ptr<ast::GateApplyStmt> Parser::parseGateApplyStmt() {
+std::unique_ptr<ast::GateApplyStmt> LegacyParser::parseGateApplyStmt() {
     auto stmt = std::make_unique<ast::GateApplyStmt>(curToken.str);
     nextToken(); // eat the identifier
     logDebug(2, "parsing GateApplyStmt " + stmt->name);

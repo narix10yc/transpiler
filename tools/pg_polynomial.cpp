@@ -56,8 +56,8 @@ int main(int argc, char** argv) {
 
     assert(argc > 1);
 
-    Parser parser(argv[1]);
-    auto qc = parser.parse();
+    LegacyParser LegacyParser(argv[1]);
+    auto qc = LegacyParser.parse();
     std::cerr << "Recovered:\n";
     qc.print(std::cerr);
 

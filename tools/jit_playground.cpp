@@ -22,8 +22,8 @@ int main(int argc, char** argv) {
 
     assert(argc > 1);
 
-    Parser parser(argv[1]);
-    auto qc = parser.parse();
+    LegacyParser LegacyParser(argv[1]);
+    auto qc = LegacyParser.parse();
     std::cerr << "Recovered:\n";
 
     std::ofstream file(std::string(argv[1]) + ".rec");
@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
 
     fusedGate->gateMatrix.printMatrix(std::cerr) << "\n";
 
-    for (auto& P : fusedGate->gateMatrix.pData()) {
+    for (auto& P : fusedGate->gateMatrix.getParametrizedMatrix().data) {
         P.removeSmallMonomials();
     }
     fusedGate->gateMatrix.printMatrix(std::cerr) << "\n";

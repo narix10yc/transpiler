@@ -342,12 +342,12 @@ public:
             //         assert(false && "Unreachable");
             // }
             // else {
-                if (auto* b = findBlockWithKind(ABK_LocalSQ))
-                    generateLocalSQBlock(b);
-                else if (auto* b = findBlockWithKind(ABK_UnitaryPerm))
+                if (auto* b = findBlockWithKind(ABK_UnitaryPerm))
                     generateUPBlock(b);
                 else if (auto* b = findBlockWithKind(ABK_NonLocalSQ))
                     generateNonLocalSQBlock(b);
+                else if (auto* b = findBlockWithKind(ABK_LocalSQ))
+                    generateLocalSQBlock(b);
                 else
                     assert(false && "Unreachable");
             // }
@@ -364,3 +364,4 @@ std::vector<Instruction> saot::fpga::genInstruction(
 
     return state.generate();
 }
+

@@ -1,4 +1,4 @@
-// #include "openqasm/parser.h"
+// #include "openqasm/LegacyParser.h"
 // #include "saot/CircuitGraph.h"
 // #include "saot/cpu.h"
 // #include "utils/iocolor.h"

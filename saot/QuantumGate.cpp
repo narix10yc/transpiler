@@ -206,43 +206,50 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
     return QuantumGate(GateMatrix(cPMat), allQubits);
 }
 
+// QuantumGate::opCount helper functions
+namespace {
+
+inline int opCount_c(const GateMatrix::c_matrix_t& mat, double thres) {
+    int count = 0;
+    for (const auto& data : mat.data) {
+        if (std::abs(data.real()) >= thres)
+            ++count;
+        if (std::abs(data.imag()) >= thres)
+            ++count;
+    }
+    return 2 * count;
+}
+
+inline int opCount_p(const GateMatrix::p_matrix_t& mat, double thres) {
+    int count = 0;
+    for (const auto& data : mat.data) {
+        auto ev = data.getValue();
+        if (ev.first) {
+            if (std::abs(ev.second.real()) >= thres)
+                ++count;
+            if (std::abs(ev.second.imag()) >= thres)
+                ++count;
+        } else
+            count += 2;
+    }
+    return 2 * count;
+}
+
+} // anonymous namespace
+
 int QuantumGate::opCount(double thres) {
-    // return 99999;
-    assert(false && "Not Implemented");
-    // if (opCountCache >= 0)
-    //     return opCountCache;
+    if (opCountCache >= 0)
+        return opCountCache;
 
-    // int count = 0;
-    // double normalizedThres = thres / std::pow(2.0, gateMatrix.nqubits);
-    // if (gateMatrix.isConstantMatrix()) {
-    //     for (const auto& data : gateMatrix.matrix.constantMatrix.data) {
-    //         if (std::abs(data.real()) >= normalizedThres)
-    //             count++;
-    //         if (std::abs(data.imag()) >= normalizedThres)
-    //             count++;
-    //     }
-    //     opCountCache = 2 * count;
-    //     return opCountCache;
-    // }
-    // else {
-    //     assert(gateMatrix.isParametrizedMatrix());
-    //     for (const auto& data : gateMatrix.matrix.parametrizedMatrix.data) {
-    //         auto ev = data.getValue();
-    //         if (ev.first) {
-    //             if (std::abs(ev.second.real()) >= normalizedThres)
-    //                 count++;
-    //             if (std::abs(ev.second.imag()) >= normalizedThres)
-    //                 count++;
-    //         } else {
-    //             count += 2;
-    //         }
-    //     }
-    //     opCountCache = 2 * count;
-    //     return opCountCache;
-    // }
-    // assert(false && "Unreachable");
+    double normalizedThres = thres / std::pow(2.0, gateMatrix.nqubits());
+    if (const auto* p = std::get_if<GateMatrix::c_matrix_t>(&gateMatrix._matrix))
+        return opCountCache = opCount_c(*p, normalizedThres);
+    if (const auto* p = std::get_if<GateMatrix::p_matrix_t>(&gateMatrix._matrix))
+        return opCountCache = opCount_p(*p, normalizedThres);
 
-    // return -1;
+    assert(false && "opCount Not Implemented");
+
+    return -1;
 }
 
 // TODO: optimize it
