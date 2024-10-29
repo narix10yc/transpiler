@@ -279,6 +279,9 @@ public:
 
             vacantMemIdx = insertIdx;
             // swap qubit statuses
+            if (fullSwapQIdx != 0) {
+                // auto it = std::find_if(qubitStatuses.begin(), qubitStatuses.end(), [&](const QubitStatus& S) { return S.kind == qubitStatuses[nonLocalQ].kind && S.kindIdx == 0; });
+            }
             auto tmp = qubitStatuses[localQ];
             qubitStatuses[localQ] = qubitStatuses[nonLocalQ];
             qubitStatuses[nonLocalQ] = tmp;

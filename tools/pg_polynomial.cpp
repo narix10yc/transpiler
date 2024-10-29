@@ -1,4 +1,4 @@
-#include "saot/Parser.h"
+#include "saot/NewParser.h"
 #include "saot/QuantumGate.h"
 #include "saot/CircuitGraph.h"
 #include "saot/Fusion.h"
@@ -6,16 +6,15 @@
 #include "saot/Polynomial.h"
 #include "simulation/ir_generator.h"
 
-#include "llvm/Passes/PassBuilder.h"
-
+// #include "llvm/Passes/PassBuilder.h"
 
 using namespace saot;
-using namespace saot::ast;
+using namespace saot::parse;
 using namespace simulation;
 
 int main(int argc, char** argv) {
-    std::vector<std::pair<int, double>> varValues {
-        {0, 1.1}, {1, 0.4}, {2, 0.1}, {3, -0.3}, {4, -0.9}, {5, 1.9}};
+    // std::vector<std::pair<int, double>> varValues {
+        // {0, 1.1}, {1, 0.4}, {2, 0.1}, {3, -0.3}, {4, -0.9}, {5, 1.9}};
 
     // auto mat1 = GateMatrix::FromParameters("u1q", std::vector<GateParameter>{GateParameter(0), GateParameter(1), GateParameter(2)});
     // auto mat2 = GateMatrix::FromParameters("u1q", std::vector<GateParameter>{GateParameter(3), GateParameter(4), GateParameter(5)});
@@ -56,27 +55,27 @@ int main(int argc, char** argv) {
 
     assert(argc > 1);
 
-    LegacyParser LegacyParser(argv[1]);
-    auto qc = LegacyParser.parse();
+    Parser parser(argv[1]);
+    auto qc = parser.parse();
     std::cerr << "Recovered:\n";
     qc.print(std::cerr);
 
     // std::ofstream file(std::string(argv[1]) + ".rec");
     // qc.print(file);
 
-    auto graph = qc.toCircuitGraph();
-    applyCPUGateFusion(CPUFusionConfig::Default, graph);
+    // auto graph = qc.toCircuitGraph();
+    // applyCPUGateFusion(CPUFusionConfig::Default, graph);
 
-    auto* fusedGate = graph.getAllBlocks()[0]->quantumGate.get();
+    // auto* fusedGate = graph.getAllBlocks()[0]->quantumGate.get();
 
-    fusedGate->gateMatrix.printMatrix(std::cerr) << "\n";
+    // fusedGate->gateMatrix.printMatrix(std::cerr) << "\n";
 
     // for (auto& P : fusedGate->gateMatrix.pData())
         // P.simplify(varValues);
-    fusedGate->gateMatrix.printMatrix(std::cerr);
+    // fusedGate->gateMatrix.printMatrix(std::cerr);
 
-    auto QC = QuantumCircuit::FromCircuitGraph(graph);
-    QC.print(std::cerr);
+    // auto QC = QuantumCircuit::FromCircuitGraph(graph);
+    // QC.print(std::cerr);
  
     
 

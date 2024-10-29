@@ -4,28 +4,11 @@
 #include <fstream>
 #include <cassert>
 
+namespace saot {
+    class CircuitGraph;
+}
+
 namespace saot::parse {
-
-class Lexer {
-public:
-    const char* bufferStart;
-    const char* bufferEnd;
-    size_t bufferLength;
-
-    const char* curPtr;
-
-    Lexer(const char* fileName) {
-        std::ifstream file(fileName);
-        assert(file.is_open());
-
-        bufferLength = file.tellg();
-        bufferStart = new char[bufferLength];
-        bufferEnd = bufferStart + bufferLength;
-
-        curPtr = bufferStart;
-    }
-};
-
 
 enum TokenKind : int {
     tk_Eof = -1,
@@ -75,9 +58,43 @@ enum TokenKind : int {
 };
 
 class Token {
+public:
     TokenKind kind;
+    const char* memRefBegin;
+    const char* memRefEnd;
+
+    Token(TokenKind kind)
+        : kind(kind), memRefBegin(nullptr), memRefEnd(nullptr) {}
+        
+    Token(TokenKind kind, const char* memRefBegin, const char* memRefEnd)
+        : kind(kind), memRefBegin(memRefBegin), memRefEnd(memRefEnd) {}
+    
 
 };
+
+class Lexer {
+public:
+    const char* bufferBegin;
+    const char* bufferEnd;
+    size_t bufferLength;
+
+    const char* curPtr;
+
+    Lexer(const char* fileName) {
+        std::ifstream file(fileName);
+        assert(file.is_open());
+
+        bufferLength = file.tellg();
+        bufferBegin = new char[bufferLength];
+        bufferEnd = bufferStart + bufferLength;
+
+        curPtr = bufferStart;
+    }
+
+    void lex(Token& tok);
+};
+
+
 
 
 class Parser {
@@ -86,6 +103,7 @@ class Parser {
 public:
     Parser(const char* fileName) : lexer(fileName) {}
 
+    CircuitGraph parse();
 
 };
 
