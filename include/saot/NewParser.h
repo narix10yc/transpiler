@@ -1,11 +1,21 @@
 #ifndef SAOT_NEWPARSER_H
 #define SAOT_NEWPARSER_H
 
+#include <iostream>
 #include <fstream>
 #include <cassert>
+#include <complex>
+
+#include "utils/iocolor.h"
 
 namespace saot {
     class CircuitGraph;
+}
+
+namespace saot::ast {
+    class GateApplyStmt;
+    class GateChainStmt;
+    class QuantumCircuit;
 }
 
 namespace saot::parse {
@@ -57,20 +67,43 @@ enum TokenKind : int {
     tk_Any = -1001,
 };
 
+std::string getNameOfTokenKind(TokenKind);
+
 class Token {
 public:
     TokenKind kind;
     const char* memRefBegin;
     const char* memRefEnd;
 
-    Token(TokenKind kind)
+    Token(TokenKind kind = tk_Unknown)
         : kind(kind), memRefBegin(nullptr), memRefEnd(nullptr) {}
         
     Token(TokenKind kind, const char* memRefBegin, const char* memRefEnd)
         : kind(kind), memRefBegin(memRefBegin), memRefEnd(memRefEnd) {}
     
+    std::ostream& print(std::ostream& = std::cerr) const;
 
+    bool is(TokenKind k) { return kind == k; }
+    bool isNot(TokenKind k) { return kind != k; }
+
+    // is the token the literal 'i'
+    bool isI() {
+        return kind == tk_Identifier
+            && memRefBegin + 1 == memRefEnd
+            && *memRefBegin == 'i';
+    }
+
+    double toDouble() const {
+        assert(memRefBegin < memRefEnd);
+        return std::stod(std::string(memRefBegin, memRefEnd));
+    }
+
+    int toInt() const {
+        assert(memRefBegin < memRefEnd);
+        return std::stoi(std::string(memRefBegin, memRefEnd));
+    }
 };
+
 
 class Lexer {
 public:
@@ -80,18 +113,38 @@ public:
 
     const char* curPtr;
 
+    int line;
+    const char* lineBegin;
+
     Lexer(const char* fileName) {
-        std::ifstream file(fileName);
+        std::ifstream file(fileName, std::ifstream::binary);
         assert(file.is_open());
 
+        file.seekg(0, file.end);
         bufferLength = file.tellg();
-        bufferBegin = new char[bufferLength];
-        bufferEnd = bufferStart + bufferLength;
+        file.seekg(0, file.beg);
 
-        curPtr = bufferStart;
+        bufferBegin = new char[bufferLength];
+        bufferEnd = bufferBegin + bufferLength;
+        file.read(const_cast<char*>(bufferBegin), bufferLength);
+        file.close();
+
+        curPtr = bufferBegin;
+        line = 1;
+        lineBegin = bufferBegin;
     }
 
     void lex(Token& tok);
+
+    void skipLine();
+
+    struct line_info_t {
+        int line;
+        const char* memRefBegin;
+        const char* memRefEnd;
+    };
+
+    line_info_t getCurLineInfo() const;
 };
 
 
@@ -100,8 +153,86 @@ public:
 class Parser {
     Lexer lexer;
 
+    Token curToken;
+    Token nextToken;
+
+    std::complex<double> parseComplexNumber();
+
 public:
-    Parser(const char* fileName) : lexer(fileName) {}
+    Parser(const char* fileName) : lexer(fileName) {
+        lexer.lex(curToken);
+        lexer.lex(nextToken);
+    }
+
+    void printLocation(std::ostream& os = std::cerr) const;
+
+    std::ostream& logErr() const {
+        return std::cerr << IOColor::RED_FG << IOColor::BOLD
+                         << "Parser Error: " << IOColor::RESET;
+    }
+
+    void failAndExit() const {
+        std::cerr << IOColor::RED_FG << IOColor::BOLD 
+                  << "Parsing failed. Exiting...\n" << IOColor::RESET;
+        exit(1);
+    }
+
+    void skipLineBreaks() {
+        while (curToken.is(tk_LineFeed))
+            advance(tk_LineFeed);
+    }
+
+    void advance() {
+        curToken = nextToken;
+        lexer.lex(nextToken);
+    }
+
+    void advance(TokenKind kind) {
+        assert(curToken.is(kind) && "kind mismatch in 'advance'");
+        advance();
+    }
+
+    bool optionalAdvance(TokenKind kind) {
+        if (curToken.is(kind)) {
+            advance();
+            return true;
+        }
+        return false;
+    }
+
+    void requiredAdvance(TokenKind kind, const char* msg = nullptr) {
+        if (curToken.is(kind)) {
+            advance();
+            return;
+        }
+
+        auto& os = logErr();
+        if (msg)
+            os << msg;
+        else
+            os << "Require TokenKind '" << getNameOfTokenKind(kind) << "'";
+        os << " (Got '" << getNameOfTokenKind(curToken.kind) << "')\n";
+        printLocation(os);
+        failAndExit();
+    }
+
+    void requireCurTokenIs(TokenKind kind, const char* msg = nullptr) {
+        if (curToken.is(kind))
+            return;
+        auto& os = logErr();
+        if (msg)
+            os << msg;
+        else
+            os << "Require curToken is '" << getNameOfTokenKind(kind) << "'";
+        os << " (Got '" << getNameOfTokenKind(curToken.kind) << "')\n";
+        printLocation(os);
+        failAndExit(); 
+    }
+
+
+    ast::GateApplyStmt parseGateApply();
+    ast::GateChainStmt parseGateChain();
+    ast::QuantumCircuit parseQuantumCircuit();
 
     CircuitGraph parse();
 

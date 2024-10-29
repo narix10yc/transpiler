@@ -156,7 +156,7 @@ public:
         }
     }
 
-    friend std::ostream& operator<<(std::ostream& os, const Token& token) {
+    friend std::ostream& operator<<(std::ostream& os, const saot::ast::Token& token) {
         return os << token.to_string();
     }
 };
