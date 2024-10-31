@@ -126,16 +126,16 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
         }
     }
 
-    std::cerr << "aShift: [";
-    for (const auto& s : aShift)
-        std::cerr << s << ",";
-    std::cerr << "]\n" << "bShift: [";
-    for (const auto& s : bShift)
-        std::cerr << s << ",";
-    std::cerr << "]\n" << "sShift: [";
-    for (const auto& s : sShift)
-        std::cerr << "(" << s.first << "," << s.second << "),";
-    std::cerr << "]\n";
+    // std::cerr << "aShift: [";
+    // for (const auto& s : aShift)
+    //     std::cerr << s << ",";
+    // std::cerr << "]\n" << "bShift: [";
+    // for (const auto& s : bShift)
+    //     std::cerr << s << ",";
+    // std::cerr << "]\n" << "sShift: [";
+    // for (const auto& s : sShift)
+    //     std::cerr << "(" << s.first << "," << s.second << "),";
+    // std::cerr << "]\n";
 
     // unitary perm gate matrix
     auto aUpMat = gateMatrix.getUnitaryPermMatrix();

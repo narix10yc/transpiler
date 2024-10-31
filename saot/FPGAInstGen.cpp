@@ -68,6 +68,8 @@ std::ostream& MemoryInst::print(std::ostream& os) const {
 namespace {
 
 enum QubitKind : int {
+    QK_Unknown = -1,
+
     QK_Local = 0,
     QK_Row = 1,
     QK_Col = 2,
@@ -80,7 +82,21 @@ struct QubitStatus {
     // the index of this qubit among all qubits with the same kind
     int kindIdx;
 
+    QubitStatus() : kind(QK_Unknown), kindIdx(0) {}
     QubitStatus(QubitKind kind, int kindIdx) : kind(kind), kindIdx(kindIdx) {}
+
+    std::ostream& print(std::ostream& os) const {
+        os << "(";
+        switch (kind) {
+            case QK_Local: os << "loc"; break;
+            case QK_Row: os << "row"; break;
+            case QK_Col: os << "col"; break;
+            case QK_Depth: os << "dep"; break;
+            default: break;
+        }
+        os << ", " << kindIdx << ")";
+        return os;
+    }
 };
 
 // 0, 1, 2, 4
@@ -108,7 +124,6 @@ private:
 
     void init(const CircuitGraph& graph) {
         // initialize qubit statuses
-        qubitStatuses.reserve(nqubits);
         int nLocalQubits = nqubits - 2 * gridSize;
         assert(nLocalQubits > 0);
         for (int i = 0; i < nLocalQubits; i++)
@@ -116,7 +131,7 @@ private:
         for (int i = 0; i < gridSize; i++)
             qubitStatuses[nLocalQubits + i] = QubitStatus(QK_Row, i);
         for (int i = 0; i < gridSize; i++)
-            qubitStatuses[nLocalQubits + gridSize + i] = QubitStatus(QK_Col, 1);   
+            qubitStatuses[nLocalQubits + gridSize + i] = QubitStatus(QK_Col, i);   
         // initialize node state
         int row = 0;
         for (auto it = graph.tile().begin(); it != graph.tile().end(); it++, row++) {
@@ -171,10 +186,19 @@ public:
             : gridSize(gridSize),
               nrows(graph.tile().size()),
               nqubits(graph.nqubits),
-              qubitStatuses(),
+              qubitStatuses(graph.nqubits),
               tileBlocks(graph.tile().size() * nqubits),
               unlockedRowIndices(nqubits),
               availables() { init(graph); }
+
+    std::ostream& printQubitStatuses(std::ostream& os) const {
+        auto it = qubitStatuses.cbegin();
+        it->print(os << "0:");
+        int i = 1;
+        while (++it != qubitStatuses.cend())
+            it->print(os << ", " << i << ":");
+        return os;
+    }
 
     // update availables depending on qubitKinds
     void updateAvailables() {
@@ -280,11 +304,23 @@ public:
             vacantMemIdx = insertIdx;
             // swap qubit statuses
             if (fullSwapQIdx != 0) {
-                // auto it = std::find_if(qubitStatuses.begin(), qubitStatuses.end(), [&](const QubitStatus& S) { return S.kind == qubitStatuses[nonLocalQ].kind && S.kindIdx == 0; });
+                // permute nonLocalQ -> kind[0] -> localQ
+                auto it = std::find_if(qubitStatuses.begin(), qubitStatuses.end(),
+                    [kind=qubitStatuses[nonLocalQ].kind](const QubitStatus& S) {
+                        return S.kind == kind && S.kindIdx == 0;
+                    });
+                assert(it != qubitStatuses.end());
+                auto tmp = *it;
+                *it = qubitStatuses[nonLocalQ];
+                qubitStatuses[nonLocalQ] = qubitStatuses[localQ];
+                qubitStatuses[localQ] = tmp;
             }
-            auto tmp = qubitStatuses[localQ];
-            qubitStatuses[localQ] = qubitStatuses[nonLocalQ];
-            qubitStatuses[nonLocalQ] = tmp;
+            else {
+                // swap nonLocalQ and localQ
+                auto tmp = qubitStatuses[localQ];
+                qubitStatuses[localQ] = qubitStatuses[nonLocalQ];
+                qubitStatuses[nonLocalQ] = tmp;
+            }
             updateAvailables();
         };
 
