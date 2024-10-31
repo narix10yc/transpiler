@@ -1,4 +1,5 @@
-#include "saot/Parser.h"
+#include "saot/NewParser.h"
+#include "saot/ast.h"
 #include "saot/QuantumGate.h"
 #include "saot/CircuitGraph.h"
 #include "saot/Fusion.h"
@@ -9,8 +10,6 @@
 using namespace saot;
 
 using namespace saot::ast;
-using namespace saot;
-using namespace saot;
 using namespace simulation;
 
 using namespace llvm;
@@ -22,8 +21,8 @@ int main(int argc, char** argv) {
 
     assert(argc > 1);
 
-    LegacyParser LegacyParser(argv[1]);
-    auto qc = LegacyParser.parse();
+    parse::Parser parser(argv[1]);
+    auto qc = parser.parseQuantumCircuit();
     std::cerr << "Recovered:\n";
 
     std::ofstream file(std::string(argv[1]) + ".rec");
@@ -32,29 +31,33 @@ int main(int argc, char** argv) {
     auto graph = qc.toCircuitGraph();
     applyCPUGateFusion(CPUFusionConfig::Default, graph);
 
-    auto* fusedGate = graph.getAllBlocks()[0]->quantumGate.get();
-
+    auto& fusedGate = graph.getAllBlocks()[0]->quantumGate;
     fusedGate->gateMatrix.printMatrix(std::cerr) << "\n";
 
-    for (auto& P : fusedGate->gateMatrix.getParametrizedMatrix().data) {
-        P.removeSmallMonomials();
-    }
-    fusedGate->gateMatrix.printMatrix(std::cerr) << "\n";
+    // auto pMat = fusedGate->gateMatrix.getParametrizedMatrix();
+    // pMat.
+
+    // fusedGate->gateMatrix.printMatrix(std::cerr) << "\n";
+
+    // for (auto& P : fusedGate->gateMatrix.getParametrizedMatrix().data) {
+        // P.removeSmallMonomials();
+    // }
+    // fusedGate->gateMatrix.printMatrix(std::cerr) << "\n";
 
     // for (auto& P : fusedGate->gateMatrix.pData())
         // P.simplify(varValues);
-    fusedGate->gateMatrix.printMatrix(std::cerr);
+    // fusedGate->gateMatrix.printMatrix(std::cerr);
 
-    IRGenerator G;
-    Function* func = G.generatePrepareParameter(graph);
-    G.dumpToStderr();
+    // IRGenerator G;
+    // Function* func = G.generatePrepareParameter(graph);
+    // G.dumpToStderr();
 
-    G.applyLLVMOptimization(OptimizationLevel::O2);
-    G.dumpToStderr();
+    // G.applyLLVMOptimization(OptimizationLevel::O2);
+    // G.dumpToStderr();
 
-    // JIT
-    jit::JitEngine jitEngine(G);
-    jitEngine.dumpNativeAssembly(llvm::errs());
+    // // JIT
+    // jit::JitEngine jitEngine(G);
+    // jitEngine.dumpNativeAssembly(llvm::errs());
 
 
     return 0;

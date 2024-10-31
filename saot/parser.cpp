@@ -286,8 +286,8 @@ QuantumCircuit& LegacyParser::_parseCircuitBody(QuantumCircuit& qc) {
     return qc;
 }
 
-GateMatrix::params_t LegacyParser::_parseParams_t() {
-    GateMatrix::params_t p;
+GateMatrix::gate_params_t LegacyParser::_parseParams_t() {
+    GateMatrix::gate_params_t p;
     if (tokenIt->type == TokenTy::Percent) {
         proceedWithType(TokenTy::Numeric);
         p[0] = convertCurTokenToInt();
@@ -322,7 +322,7 @@ GateMatrix::params_t LegacyParser::_parseParams_t() {
     return p;
 }
 
-static int getNumActiveParams(const GateMatrix::params_t& params) {
+static int getNumActiveParams(const GateMatrix::gate_params_t& params) {
     for (int i = 0; i < params.size(); i++) {
         if (params[i].index() == 0)
             return i;
@@ -345,7 +345,7 @@ GateApplyStmt LegacyParser::_parseGateApply() {
             if (tokenIt->type != TokenTy::R_RoundBraket)
                 throwLegacyParserError("Expect ')' to end gate parameter");
             displayLegacyParserLog("Parsed " +
-                std::to_string(getNumActiveParams(std::get<GateMatrix::params_t>(gate.paramRefOrMatrix))) + " parameters");
+                std::to_string(getNumActiveParams(std::get<GateMatrix::gate_params_t>(gate.paramRefOrMatrix))) + " parameters");
         }
     }
 

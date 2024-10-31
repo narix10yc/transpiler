@@ -33,12 +33,20 @@ public:
             addVar(v);
     }
     
-    static inline VariableSumNode Cosine(
+    static VariableSumNode Cosine(int var, double constant = 0.0) {
+        return VariableSumNode({var}, constant, CosOp);
+    }
+
+    static VariableSumNode Cosine(
             std::initializer_list<int> vars, double constant = 0.0) {
         return VariableSumNode(vars, constant, CosOp);
     }
 
-    static inline VariableSumNode Sine(
+    static VariableSumNode Sine(int var, double constant = 0.0) {
+        return VariableSumNode({var}, constant, SinOp);
+    }
+
+    static VariableSumNode Sine(
             std::initializer_list<int> vars, double constant = 0.0) {
         return VariableSumNode(vars, constant, SinOp);
     }
@@ -67,7 +75,7 @@ public:
     public:
         int var;
         bool isPlus;
-        ExpiVar(int var, bool isPlus) : var(var), isPlus(isPlus) {}
+        ExpiVar(int var, bool isPlus = true) : var(var), isPlus(isPlus) {}
         
         bool operator<(const ExpiVar& E) const {
             if (var < E.var)
@@ -99,7 +107,12 @@ private:
 public:
     std::complex<double> coef;
 
-    Monomial(const std::complex<double>& coef = { 1.0, 0.0 }) : coef(coef), _mulTerms(), _expiVars() {}
+    Monomial() : coef(1.0, 0.0), _mulTerms(), _expiVars() {}
+
+    Monomial(double re, double im) : coef(re, im), _mulTerms(), _expiVars() {}
+
+    Monomial(const std::complex<double>& coef)
+        : coef(coef), _mulTerms(), _expiVars() {}
 
     Monomial(const std::complex<double>& coef,
              const std::vector<VariableSumNode>& mulTerms,
@@ -115,6 +128,21 @@ public:
         return Monomial(v, {}, {});
     }
 
+    // cos(var)
+    static Monomial Cosine(int var) {
+        return Monomial({1.0, 0.0}, {VariableSumNode::Cosine(var)}, {});
+    }
+
+    // sin(var)
+    static Monomial Sine(int var) {
+        return Monomial({1.0, 0.0}, {VariableSumNode::Sine(var)}, {});
+    }
+
+    // expi(var)
+    static Monomial Expi(int var) {
+        return Monomial({1.0, 0.0}, {}, { var });
+    }
+
     bool isConstant() const { return _expiVars.empty() && _mulTerms.empty(); }
     int compare(const Monomial&) const;
     bool operator<(const Monomial& M) const { return compare(M) < 0; }
@@ -128,9 +156,13 @@ public:
     std::vector<ExpiVar>& expiVars() { return _expiVars; }
     const std::vector<ExpiVar>& expiVars() const { return _expiVars; }
 
-    void insertMulTerm(const VariableSumNode& N) {
-        auto it = std::lower_bound(_mulTerms.begin(), _mulTerms.end(), N);
-        _mulTerms.insert(it, N);
+    void insertMulTerm(const VariableSumNode& node) {
+        if (_mulTerms.empty()) {
+            _mulTerms.push_back(node);
+            return;
+        }
+        auto it = std::lower_bound(_mulTerms.begin(), _mulTerms.end(), node);
+        _mulTerms.insert(it, node);
     }
 
     void insertExpiVar(const ExpiVar& E) {
@@ -151,7 +183,17 @@ public:
         return insertExpiVar(ExpiVar(v, isPlus));
     }
 
+    Monomial& operator*=(const std::complex<double>& v) {
+        coef *= v;
+        return *this;
+    }
+    
     Monomial& operator*=(const Monomial&);
+
+    Monomial operator*(const std::complex<double>& v) const {
+        return Monomial(*this) *= v;
+    }
+
     Monomial operator*(const Monomial& M) const {
         return Monomial(*this) *= M;
     }
@@ -166,13 +208,20 @@ class Polynomial : public CasNode {
     std::vector<Monomial> _monomials;
 public:
     Polynomial() : _monomials() {}
+
+    Polynomial(double re, double im) : _monomials({{re, im}}) {}
+
+    Polynomial(const std::complex<double>& value) : _monomials({{value}}) {}
+
     Polynomial(const Monomial& M) : _monomials({M}) {}
+
     Polynomial(std::initializer_list<Monomial> Ms) : _monomials() {
         for (const auto& M : Ms)
             insertMonomial(M);
     }
 
     std::vector<Monomial>& monomials() { return _monomials; }
+    
     const std::vector<Monomial>& monomials() const { return _monomials; }
 
     void insertMonomial(const Monomial& M) {
@@ -213,9 +262,18 @@ public:
         return Polynomial(*this) += P;
     }
 
-    Polynomial& operator*=(const Monomial& M) {
+    Polynomial& operator*=(const std::complex<double>& v) {
         for (auto& m : _monomials)
-            m *= M;
+            m *= v;
+        return *this;
+    }
+
+    Polynomial& operator*=(const Monomial& M) {
+        auto size = _monomials.size();
+        // we cannot use range-based iteration here as multiplication can
+        // insert more terms
+        for (unsigned i = 0; i < size; i++)
+            _monomials[i] *= M;
         return *this;
     }
 
@@ -223,6 +281,14 @@ public:
         for (const auto& M : P._monomials)
             operator*=(M);
         return *this;
+    }
+
+    Polynomial operator*(const std::complex<double>& v) const {
+        return Polynomial(*this) *= v;
+    }
+
+    Polynomial operator*(const Monomial& M) const {
+        return Polynomial(*this) *= M;
     }
 
     Polynomial operator*(const Polynomial& P) const {

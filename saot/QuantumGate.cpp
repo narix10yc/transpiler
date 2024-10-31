@@ -126,16 +126,16 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
         }
     }
 
-    // std::cerr << "aShift: [";
-    // for (const auto& s : aShift)
-    //     std::cerr << s << ",";
-    // std::cerr << "]\n" << "bShift: [";
-    // for (const auto& s : bShift)
-    //     std::cerr << s << ",";
-    // std::cerr << "]\n" << "sShift: [";
-    // for (const auto& s : sShift)
-    //     std::cerr << "(" << s.first << "," << s.second << "),";
-    // std::cerr << "]\n";
+    std::cerr << "aShift: [";
+    for (const auto& s : aShift)
+        std::cerr << s << ",";
+    std::cerr << "]\n" << "bShift: [";
+    for (const auto& s : bShift)
+        std::cerr << s << ",";
+    std::cerr << "]\n" << "sShift: [";
+    for (const auto& s : sShift)
+        std::cerr << "(" << s.first << "," << s.second << "),";
+    std::cerr << "]\n";
 
     // unitary perm gate matrix
     auto aUpMat = gateMatrix.getUnitaryPermMatrix();
@@ -181,8 +181,8 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
     auto bPMat = other.gateMatrix.getParametrizedMatrix();
     GateMatrix::p_matrix_t cPMat(1 << newNqubits);
     for (size_t i = 0; i < (1 << twiceNewNqubits); i++) {
-        auto aPtrStart = aPMat.data.data();
-        auto bPtrStart = bPMat.data.data();
+        const auto* aPtrStart = aPMat.data.data();
+        const auto* bPtrStart = bPMat.data.data();
         for (unsigned bit = 0; bit < twiceNewNqubits; bit++) {
             if ((i & (1 << bit)) != 0) {
                 aPtrStart += aShift[bit];
@@ -192,15 +192,17 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
 
         cPMat.data[i] = Polynomial();
         for (size_t j = 0; j < (1 << contractionBitwidth); j++) {
-            auto* aPtr = aPtrStart;
-            auto* bPtr = bPtrStart;
+            const Polynomial* aPtr = aPtrStart;
+            const Polynomial* bPtr = bPtrStart;
             for (unsigned bit = 0; bit < contractionBitwidth; bit++) {
                 if ((j & (1 << bit)) != 0) {
                     aPtr += sShift[bit].first;
                     bPtr += sShift[bit].second;
                 }
             }
-            cPMat.data[i] += (*aPtr) * (*bPtr);
+            const Polynomial polyA(*aPtr);
+            const Polynomial polyB(*bPtr);
+            cPMat.data[i] += polyA * polyB;
         }
     }
     return QuantumGate(GateMatrix(cPMat), allQubits);

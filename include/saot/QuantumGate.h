@@ -45,22 +45,19 @@ GateKind String2GateKind(const std::string& s);
 std::string GateKind2String(GateKind t);
 
 
-/// @brief GateMatrix is a wrapper around constant and polynomial-based square
-/// matrices. It does NOT store qubits array, only the number of qubits
-/// Consistency requires \p matrix.size() is always a power of 2.
 class GateMatrix {
 public:
     // specify gate matrix with (up to three) parameters
-    using params_t = std::array<std::variant<std::monostate, int, double>, 3>;
+    using gate_params_t = std::array<std::variant<std::monostate, int, double>, 3>;
     // unitary permutation matrix type
     using up_matrix_t = complex_matrix::UnitaryPermutationMatrix<double>;
-    // parametrised matrix type
-    using p_matrix_t = complex_matrix::SquareMatrix<saot::Polynomial>;
     // constant matrix type
     using c_matrix_t = complex_matrix::SquareMatrix<std::complex<double>>;
+    // parametrised matrix type
+    using p_matrix_t = complex_matrix::SquareMatrix<saot::Polynomial>;
 public:
     GateKind gateKind;
-    std::variant<std::monostate, up_matrix_t, params_t, c_matrix_t, p_matrix_t> _matrix;
+    std::variant<std::monostate, up_matrix_t, gate_params_t, c_matrix_t, p_matrix_t> _matrix;
 
     // effectively _matrix.index()
     enum MatrixKind : int {
@@ -73,19 +70,20 @@ public:
 
     GateMatrix() : gateKind(gUndef), _matrix() {}
 
-    GateMatrix(GateKind gateKind, const params_t& params = {})
+    GateMatrix(GateKind gateKind, const gate_params_t& params = {})
         : gateKind(gateKind), _matrix(params) {}
         
-    GateMatrix(const std::variant<std::monostate, up_matrix_t, params_t, c_matrix_t, p_matrix_t>& m)
+    GateMatrix(const std::variant<std::monostate, up_matrix_t, gate_params_t, c_matrix_t, p_matrix_t>& m)
         : _matrix(m) { gateKind = GateKind(nqubits()); }
     
-    static GateMatrix FromName(const std::string& name, const params_t& params = {});
+    static GateMatrix FromName(const std::string& name, const gate_params_t& params = {});
 
     // bool tryConvertSelfToUnitaryPerm();
 
     std::optional<up_matrix_t> getUnitaryPermMatrix() const;
 
-    std::optional<c_matrix_t> getConstantMatrix(const std::vector<std::pair<int, double>>& = {}) const;
+    std::optional<c_matrix_t>
+    getConstantMatrix(const std::vector<std::pair<int, double>>& = {}) const;
 
     p_matrix_t getParametrizedMatrix() const;
 
@@ -118,6 +116,16 @@ public:
 
     static const c_matrix_t MatrixCX_c;
     static const c_matrix_t MatrixCZ_c;
+
+    // preset parametrized matrices
+    static const p_matrix_t MatrixX_p;
+    static const p_matrix_t MatrixY_p;
+    static const p_matrix_t MatrixZ_p;
+    static const p_matrix_t MatrixH_p;
+
+    static const p_matrix_t MatrixCX_p;
+    static const p_matrix_t MatrixCZ_p;
+
 };
 
 class QuantumGate {

@@ -1,4 +1,5 @@
 #include "saot/NewParser.h"
+#include "saot/ast.h"
 #include "saot/QuantumGate.h"
 #include "saot/CircuitGraph.h"
 #include "saot/Fusion.h"
@@ -56,7 +57,7 @@ int main(int argc, char** argv) {
     assert(argc > 1);
 
     Parser parser(argv[1]);
-    auto qc = parser.parse();
+    auto qc = parser.parseQuantumCircuit();
     std::cerr << "Recovered:\n";
     qc.print(std::cerr);
 

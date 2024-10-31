@@ -232,10 +232,8 @@ public:
 
     ast::GateApplyStmt parseGateApply();
     ast::GateChainStmt parseGateChain();
+    
     ast::QuantumCircuit parseQuantumCircuit();
-
-    CircuitGraph parse();
-
 };
 
 } // namespace saot::parse

@@ -236,8 +236,8 @@ GateApplyStmt Parser::parseGateApply() {
         }
         else {
             // up to 3 parameters
-            stmt.paramRefOrMatrix = GateMatrix::params_t();
-            auto& parameters = std::get<GateMatrix::params_t>(stmt.paramRefOrMatrix);
+            stmt.paramRefOrMatrix = GateMatrix::gate_params_t();
+            auto& parameters = std::get<GateMatrix::gate_params_t>(stmt.paramRefOrMatrix);
             for (int i = 0; i < 4; i++) {
                 if (curToken.is(tk_Numeric)) {
                     parameters[i] = curToken.toDouble();
@@ -304,15 +304,10 @@ QuantumCircuit Parser::parseQuantumCircuit() {
     // circuit body
     while (true) {
         if (optionalAdvance(tk_R_CurlyBraket))
-            return circuit;
+            break;
         circuit.stmts.push_back(std::make_unique<GateChainStmt>(parseGateChain()));
         skipLineBreaks();
     }
-}
-
-saot::CircuitGraph Parser::parse() {
-    auto circuit = parseQuantumCircuit();
-    circuit.print(std::cerr);
-
-    return CircuitGraph();
+    
+    return circuit;
 }

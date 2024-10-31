@@ -7,7 +7,7 @@ saot::CircuitGraph RootNode::toCircuitGraph() const {
     saot::CircuitGraph graph;
     std::vector<int> qubits;
     for (const auto& s : stmts) {
-        saot::GateMatrix::params_t params;
+        saot::GateMatrix::gate_params_t params;
         int i = 0;
         auto gateApply = dynamic_cast<GateApplyStmt*>(s.get());
         if (gateApply == nullptr) {

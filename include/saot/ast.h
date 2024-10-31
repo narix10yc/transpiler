@@ -40,7 +40,7 @@ public:
 class GateApplyStmt : public CircuitCompatibleStmt {
 public:
     std::string name;
-    std::variant<std::monostate, int, GateMatrix::params_t> paramRefOrMatrix;
+    std::variant<std::monostate, int, GateMatrix::gate_params_t> paramRefOrMatrix;
     std::vector<int> qubits;
 
     GateApplyStmt(const std::string& name)
@@ -48,7 +48,7 @@ public:
 
     GateApplyStmt(
             const std::string& name,
-            const std::variant<std::monostate, int, GateMatrix::params_t>& paramRefOrMatrix,
+            const std::variant<std::monostate, int, GateMatrix::gate_params_t>& paramRefOrMatrix,
             const std::vector<int>& qubits = {})
         : name(name), paramRefOrMatrix(paramRefOrMatrix), qubits(qubits) {}
 

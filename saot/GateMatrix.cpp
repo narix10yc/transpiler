@@ -8,12 +8,12 @@
 using namespace IOColor;
 using namespace saot;
 
-GateKind String2GateKind(const std::string& s) {
+GateKind saot::String2GateKind(const std::string& s) {
     if (s == "x") return gX;
     if (s == "y") return gY;
     if (s == "z") return gZ;
     if (s == "h") return gH;
-    if (s == "u3") return gU;
+    if (s == "u3" || s == "u1q") return gU;
     if (s == "cx") return gCX;
     if (s == "cz") return gCZ;
     if (s == "cp") return gCP;
@@ -22,13 +22,13 @@ GateKind String2GateKind(const std::string& s) {
     return gUndef;
 }
 
-std::string GateKind2String(GateKind t) {
+std::string saot::GateKind2String(GateKind t) {
     switch (t) {
     case gX: return "x";
     case gY: return "y";
     case gZ: return "z";
     case gH: return "h";
-    case gU: return "u3";
+    case gU: return "u1q";
 
     case gCX: return "cx";
     case gCZ: return "cz";
@@ -40,58 +40,103 @@ std::string GateKind2String(GateKind t) {
     }
 }
 
-// static matrices
-const GateMatrix::up_matrix_t GateMatrix::MatrixX_up = GateMatrix::up_matrix_t({
+using p_matrix_t = GateMatrix::p_matrix_t;
+using up_matrix_t = GateMatrix::up_matrix_t;
+using c_matrix_t = GateMatrix::c_matrix_t;
+using gate_params_t = GateMatrix::gate_params_t;
+
+#pragma region Static UP Matrices
+const up_matrix_t GateMatrix::MatrixX_up = up_matrix_t({
     {1, 0.0}, {0, 0.0}
 });
 
-const GateMatrix::up_matrix_t GateMatrix::MatrixY_up = GateMatrix::up_matrix_t({
+const up_matrix_t GateMatrix::MatrixY_up = up_matrix_t({
     {1, -M_PI_2}, {0, M_PI}
 });
 
-const GateMatrix::up_matrix_t GateMatrix::MatrixZ_up = GateMatrix::up_matrix_t({
+const up_matrix_t GateMatrix::MatrixZ_up = up_matrix_t({
     {0, 0.0}, {1, M_PI}
 });
 
-const GateMatrix::up_matrix_t GateMatrix::MatrixCX_up = GateMatrix::up_matrix_t({
+const up_matrix_t GateMatrix::MatrixCX_up = up_matrix_t({
     {0, 0.0}, {3, 0.0}, {2, 0.0}, {1, 0.0}
 });
 
-const GateMatrix::up_matrix_t GateMatrix::MatrixCZ_up = GateMatrix::up_matrix_t({
+const up_matrix_t GateMatrix::MatrixCZ_up = up_matrix_t({
     {0, 0.0}, {1, 0.0}, {2, 0.0}, {3, M_PI}
 });
 
-const GateMatrix::c_matrix_t GateMatrix::MatrixX_c = GateMatrix::c_matrix_t({
+#pragma endregion
+
+#pragma region Static Constant Matrices
+const c_matrix_t GateMatrix::MatrixX_c = c_matrix_t({
     {0.0, 0.0}, {1.0, 0.0}, {1.0, 0.0}, {0.0, 0.0}
 });
 
-const GateMatrix::c_matrix_t GateMatrix::MatrixY_c({
+const c_matrix_t GateMatrix::MatrixY_c({
     {0.0, 0.0}, {0.0, -1.0}, {0.0, 1.0}, {0.0, 0.0}
 });
 
-const GateMatrix::c_matrix_t GateMatrix::MatrixZ_c = GateMatrix::c_matrix_t({
+const c_matrix_t GateMatrix::MatrixZ_c = c_matrix_t({
     {1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {-1.0, 0.0}
 });
 
-const GateMatrix::c_matrix_t GateMatrix::MatrixH_c = GateMatrix::c_matrix_t({
+const c_matrix_t GateMatrix::MatrixH_c = c_matrix_t({
     {M_SQRT1_2, 0.0}, {M_SQRT1_2, 0.0}, {M_SQRT1_2, 0.0}, {-M_SQRT1_2, 0.0}
 });
 
-const GateMatrix::c_matrix_t GateMatrix::MatrixCX_c = GateMatrix::c_matrix_t({
+
+const c_matrix_t GateMatrix::MatrixCX_c = c_matrix_t({
     {1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0},
     {0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {1.0, 0.0},
     {0.0, 0.0}, {0.0, 0.0}, {1.0, 0.0}, {0.0, 0.0},
     {0.0, 0.0}, {1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0},
 });
 
-const GateMatrix::c_matrix_t GateMatrix::MatrixCZ_c = GateMatrix::c_matrix_t({
+const c_matrix_t GateMatrix::MatrixCZ_c = c_matrix_t({
     {1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0},
     {0.0, 0.0}, {1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0},
     {0.0, 0.0}, {0.0, 0.0}, {1.0, 0.0}, {0.0, 0.0},
     {0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {-1.0, 0.0},
 });
 
-int getNumActiveParams(const GateMatrix::params_t& params) {
+#pragma endregion
+
+#pragma region Static Parametrized Matrices
+const p_matrix_t GateMatrix::MatrixX_p = p_matrix_t({
+    {0.0, 0.0}, {1.0, 0.0}, {1.0, 0.0}, {0.0, 0.0}
+});
+
+const p_matrix_t GateMatrix::MatrixY_p({
+    {0.0, 0.0}, {0.0, -1.0}, {0.0, 1.0}, {0.0, 0.0}
+});
+
+const p_matrix_t GateMatrix::MatrixZ_p = p_matrix_t({
+    {1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {-1.0, 0.0}
+});
+
+const p_matrix_t GateMatrix::MatrixH_p = p_matrix_t({
+    {M_SQRT1_2, 0.0}, {M_SQRT1_2, 0.0}, {M_SQRT1_2, 0.0}, {-M_SQRT1_2, 0.0}
+});
+
+
+const p_matrix_t GateMatrix::MatrixCX_p = p_matrix_t({
+    {1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0},
+    {0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {1.0, 0.0},
+    {0.0, 0.0}, {0.0, 0.0}, {1.0, 0.0}, {0.0, 0.0},
+    {0.0, 0.0}, {1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0},
+});
+
+const p_matrix_t GateMatrix::MatrixCZ_p = p_matrix_t({
+    {1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0},
+    {0.0, 0.0}, {1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0},
+    {0.0, 0.0}, {0.0, 0.0}, {1.0, 0.0}, {0.0, 0.0},
+    {0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {-1.0, 0.0},
+});
+
+#pragma endregion
+
+int getNumActiveParams(const gate_params_t& params) {
     for (int i = 0; i < params.size(); i++) {
         if (params[i].index() == 0)
             return i;
@@ -99,7 +144,7 @@ int getNumActiveParams(const GateMatrix::params_t& params) {
     return params.size();
 }
 
-GateMatrix GateMatrix::FromName(const std::string& name, const params_t& params) {
+GateMatrix GateMatrix::FromName(const std::string& name, const gate_params_t& params) {
     if (name == "x") {
         assert(getNumActiveParams(params) == 0 && "X gate has 0 parameter");
         return GateMatrix(gX);
@@ -132,8 +177,8 @@ GateMatrix GateMatrix::FromName(const std::string& name, const params_t& params)
         assert(getNumActiveParams(params) == 1 && "RZ gate has 1 parameter");
         return GateMatrix(gRZ, params);
     }
-    if (name == "u3") {
-        assert(getNumActiveParams(params) == 3 && "U3 gate has 3 parameters");
+    if (name == "u3" || name == "u1q") {
+        assert(getNumActiveParams(params) == 3 && "U3 (U1q) gate has 3 parameters");
         return GateMatrix(gU, params);
     }
 
@@ -153,6 +198,7 @@ GateMatrix GateMatrix::FromName(const std::string& name, const params_t& params)
     assert(false && "Unsupported gate");
     return GateMatrix(gUndef);
 }
+
 
 namespace { // GateMatrix::nqubits definition
 inline int nqubits_params(GateKind ty) {
@@ -180,19 +226,19 @@ inline int nqubits_params(GateKind ty) {
     }
 }
 
-inline int nqubits_up(const GateMatrix::up_matrix_t& matrix) {
+inline int nqubits_up(const up_matrix_t& matrix) {
     int nqubits = std::log2(matrix.data.size());
     assert((1 << nqubits) == matrix.data.size());
     return nqubits;
 }
 
-inline int nqubits_c(const GateMatrix::c_matrix_t& matrix) {
+inline int nqubits_c(const c_matrix_t& matrix) {
     int nqubits = std::log2(matrix.getSize());
     assert(1 << nqubits == matrix.getSize());
     return nqubits;
 }
 
-inline int nqubits_p(const GateMatrix::p_matrix_t& matrix) {
+inline int nqubits_p(const p_matrix_t& matrix) {
     int nqubits = std::log2(matrix.getSize());
     assert(1 << nqubits == matrix.getSize());
     return nqubits;
@@ -200,7 +246,7 @@ inline int nqubits_p(const GateMatrix::p_matrix_t& matrix) {
 } // anonymous namespace
 
 int GateMatrix::nqubits() const {
-    if (const auto* p = std::get_if<params_t>(&_matrix))
+    if (const auto* p = std::get_if<gate_params_t>(&_matrix))
         return nqubits_params(gateKind);
     if (const auto* p = std::get_if<up_matrix_t>(&_matrix))
         return nqubits_up(*p);
@@ -250,7 +296,7 @@ permute_params(const GateMatrix& gateMatrix, const std::vector<int>& flags) {
 }
 
 GateMatrix GateMatrix::permute(const std::vector<int>& flags) const {
-    if (const auto* p = std::get_if<params_t>(&_matrix))
+    if (const auto* p = std::get_if<gate_params_t>(&_matrix))
         return permute_params(*this, flags);
     if (const auto* p = std::get_if<up_matrix_t>(&_matrix))
         return GateMatrix(p->permute(flags));
@@ -267,17 +313,17 @@ namespace { // GateMatrix::printMatrix definition
 inline std::ostream&
 printMatrix_params(std::ostream& os, const GateMatrix&) {
 
-    return os;
+    return os << "print params_t matrix\n";
 }
 
 inline std::ostream&
-printMatrix_up(std::ostream& os, const GateMatrix::up_matrix_t&) {
+printMatrix_up(std::ostream& os, const up_matrix_t&) {
 
-    return os;
+    return os << "print up_t matrix\n";
 }
 
 inline std::ostream&
-printMatrix_c(std::ostream& os, const GateMatrix::c_matrix_t& matrix) {
+printMatrix_c(std::ostream& os, const c_matrix_t& matrix) {
     const auto& data = matrix.data;
     size_t N = data.size();
     os << "[";
@@ -297,7 +343,7 @@ printMatrix_c(std::ostream& os, const GateMatrix::c_matrix_t& matrix) {
 }
 
 inline std::ostream&
-printMatrix_p(std::ostream& os, const GateMatrix::p_matrix_t& matrix) {
+printMatrix_p(std::ostream& os, const p_matrix_t& matrix) {
     const auto& data = matrix.data;
     size_t N = data.size();
     for (size_t r = 0; r < N; r++) {
@@ -313,7 +359,7 @@ printMatrix_p(std::ostream& os, const GateMatrix::p_matrix_t& matrix) {
 std::ostream& GateMatrix::printMatrix(std::ostream& os) const {     
     return std::visit([this, &os](auto&& arg) -> std::ostream& {
         using T = std::decay_t<decltype(arg)>;
-        if constexpr (std::is_same_v<T, params_t>)
+        if constexpr (std::is_same_v<T, gate_params_t>)
             return printMatrix_params(os, *this);
         if constexpr (std::is_same_v<T, up_matrix_t>)
             return printMatrix_up(os, arg);
@@ -326,11 +372,11 @@ std::ostream& GateMatrix::printMatrix(std::ostream& os) const {
     }, _matrix);
 }
 
-std::optional<GateMatrix::up_matrix_t> GateMatrix::getUnitaryPermMatrix() const {
+std::optional<up_matrix_t> GateMatrix::getUnitaryPermMatrix() const {
     if (const auto* p = std::get_if<up_matrix_t>(&_matrix))
         return *p;
 
-    if (const auto* p = std::get_if<params_t>(&_matrix)) {
+    if (const auto* p = std::get_if<gate_params_t>(&_matrix)) {
         switch (gateKind) {
         case gX: return MatrixX_up;
         case gY: return MatrixY_up;
@@ -338,14 +384,14 @@ std::optional<GateMatrix::up_matrix_t> GateMatrix::getUnitaryPermMatrix() const 
         case gP: {
             const double* plambd = std::get_if<double>(&(*p)[0]);
             assert(plambd && "");
-            return GateMatrix::up_matrix_t {{0, 0.0}, {1, *plambd}};
+            return up_matrix_t {{0, 0.0}, {1, *plambd}};
         }
         case gCX: return MatrixCX_up;
         case gCZ: return MatrixCZ_up;
         case gCP: {
             const double* plambd = std::get_if<double>(&(*p)[0]);
             assert(plambd);
-            return GateMatrix::up_matrix_t {{0, 0.0}, {0, 0.0}, {0, 0.0}, {1, *plambd}};
+            return up_matrix_t {{0, 0.0}, {0, 0.0}, {0, 0.0}, {1, *plambd}};
         }
         default:
             break;
@@ -354,7 +400,7 @@ std::optional<GateMatrix::up_matrix_t> GateMatrix::getUnitaryPermMatrix() const 
 
     if (const auto* p = std::get_if<c_matrix_t>(&_matrix)) {
         const auto size = p->getSize();
-        GateMatrix::up_matrix_t upMat(size);
+        up_matrix_t upMat(size);
         for (size_t r = 0; r < size; r++) {
             bool rowFlag = false;
             for (size_t c = 0; c < size; c++) {
@@ -377,10 +423,10 @@ std::optional<GateMatrix::up_matrix_t> GateMatrix::getUnitaryPermMatrix() const 
 
 // GateMatrix::getConstantMatrix definition
 namespace {
-inline GateMatrix::c_matrix_t getMatrixU_c(double theta, double lambd, double phi) {
+inline c_matrix_t getMatrixU_c(double theta, double lambd, double phi) {
     double ctheta = std::cos(theta);
     double stheta = std::sin(theta);
-    return GateMatrix::c_matrix_t({
+    return c_matrix_t({
         { ctheta, 0.0 },
         { -std::cos(lambd) * stheta, -std::sin(lambd) * stheta },
         { std::cos(phi) * stheta, std::sin(phi) * stheta },
@@ -388,8 +434,8 @@ inline GateMatrix::c_matrix_t getMatrixU_c(double theta, double lambd, double ph
     });
 }
 
-inline std::optional<GateMatrix::c_matrix_t> getConstantMatrix_params(
-        GateKind ty, const GateMatrix::params_t& params) {
+inline std::optional<c_matrix_t>
+getConstantMatrix_params(GateKind ty, const gate_params_t& params) {
     switch (ty) {
     case gX: return GateMatrix::MatrixX_c;
     case gY: return GateMatrix::MatrixY_c;
@@ -398,7 +444,7 @@ inline std::optional<GateMatrix::c_matrix_t> getConstantMatrix_params(
     case gP: {
         const double* p = std::get_if<double>(&params[0]);
         if (p)
-            return GateMatrix::c_matrix_t({
+            return c_matrix_t({
                 { 1.0, 0.0 }, { 0.0, 0.0 },
                 { 0.0, 0.0 }, { std::cos(*p), std::sin(*p) }
             });
@@ -423,8 +469,8 @@ inline std::optional<GateMatrix::c_matrix_t> getConstantMatrix_params(
     }
 }
 
-inline GateMatrix::c_matrix_t getConstantMatrix_up(const GateMatrix::up_matrix_t& up) {
-    GateMatrix::c_matrix_t cmat(up.getSize());
+inline c_matrix_t getConstantMatrix_up(const up_matrix_t& up) {
+    c_matrix_t cmat(up.getSize());
     for (unsigned i = 0; i < up.getSize(); i++) {
         const auto& idx = up.data[i].first;
         const auto& phase = up.data[i].second;
@@ -433,17 +479,17 @@ inline GateMatrix::c_matrix_t getConstantMatrix_up(const GateMatrix::up_matrix_t
     return cmat;
 }
 
-inline std::optional<GateMatrix::c_matrix_t> getConstantMatrix_p(
-        const GateMatrix::p_matrix_t& pmat,
+inline std::optional<c_matrix_t> getConstantMatrix_p(
+        const p_matrix_t& pmat,
         const std::vector<std::pair<int, double>>& varValues) {
     assert(false && "Not Implemented");
     return std::nullopt;
 }
 } // anonymous namespace
 
-std::optional<GateMatrix::c_matrix_t> GateMatrix::getConstantMatrix(
+std::optional<c_matrix_t> GateMatrix::getConstantMatrix(
         const std::vector<std::pair<int, double>>& varValues) const {
-    if (const auto* p = std::get_if<params_t>(&_matrix))
+    if (const auto* p = std::get_if<gate_params_t>(&_matrix))
         return getConstantMatrix_params(gateKind, *p);
     if (const auto* p = std::get_if<up_matrix_t>(&_matrix))
         return getConstantMatrix_up(*p);
@@ -456,9 +502,101 @@ std::optional<GateMatrix::c_matrix_t> GateMatrix::getConstantMatrix(
     return std::nullopt;
 }
 
-GateMatrix::p_matrix_t GateMatrix::getParametrizedMatrix() const {
+// GateMatrix::getParametrizedMatrix() definition
+namespace {
+
+inline p_matrix_t matCvt_gp_to_p(GateKind kind, const gate_params_t& params) {
+    switch (kind) {
+    case gX: return GateMatrix::MatrixX_p;
+    case gY: return GateMatrix::MatrixY_p;
+    case gZ: return GateMatrix::MatrixZ_p;
+    case gH: return GateMatrix::MatrixH_p;
+    case gP: {
+        const double* pC = std::get_if<double>(&params[0]);
+        const int* pV = std::get_if<int>(&params[0]);
+        assert(pC || pV);
+        if (pC)
+            return p_matrix_t({
+                { 1.0, 0.0 }, { 0.0, 0.0 },
+                { 0.0, 0.0 }, { std::cos(*pV), std::sin(*pV) }
+            });
+        return p_matrix_t({
+                { 1.0, 0.0 },
+                { 0.0, 0.0 },
+                { 0.0, 0.0 },
+                { Monomial::Expi(*pV) } // expi(theta)
+        });
+    }
+
+    case gU: {
+        const double* p0C = std::get_if<double>(&params[0]);
+        const double* p1C = std::get_if<double>(&params[1]);
+        const double* p2C = std::get_if<double>(&params[2]);
+        const int* p0V = std::get_if<int>(&params[0]);
+        const int* p1V = std::get_if<int>(&params[1]);
+        const int* p2V = std::get_if<int>(&params[2]);
+        assert(p0C || p0V);
+        assert(p1C || p1V);
+        assert(p2C || p2V);
+
+        p_matrix_t pmat { {1.0, 0.0}, {-1.0, 0.0}, {1.0, 0.0}, {1.0, 0.0} };
+        // theta
+        if (p0C) {
+            pmat.data[0] *= std::complex<double>(std::cos(*p0C), 0.0);
+            pmat.data[1] *= std::complex<double>(std::sin(*p0C), 0.0);
+            pmat.data[2] *= std::complex<double>(std::sin(*p0C), 0.0);
+            pmat.data[3] *= std::complex<double>(std::cos(*p0C), 0.0);
+        } else {
+            pmat.data[0] *= Monomial::Cosine(*p0V);
+            pmat.data[1] *= Monomial::Sine(*p0V);
+            pmat.data[2] *= Monomial::Sine(*p0V);
+            pmat.data[3] *= Monomial::Cosine(*p0V);
+        }
+        // phi
+        if (p1C) {
+            pmat.data[2] *= std::complex<double>(std::cos(*p1C), std::sin(*p1C));
+            pmat.data[3] *= std::complex<double>(std::cos(*p1C), std::sin(*p1C));
+        } else {
+            pmat.data[2] *= Monomial::Expi(*p1V);
+            pmat.data[3] *= Monomial::Expi(*p1V);
+        }
+        // lambda
+        if (p2C) {
+            pmat.data[1] *= std::complex<double>(std::cos(*p2C), std::sin(*p2C));
+            pmat.data[3] *= std::complex<double>(std::cos(*p2C), std::sin(*p2C));
+        } else {
+            pmat.data[1] *= Monomial::Expi(*p2V);
+            pmat.data[3] *= Monomial::Expi(*p2V);
+        }
+        return pmat;
+    }
+
+    case gCX: return GateMatrix::MatrixCX_p;
+    case gCZ: return GateMatrix::MatrixCZ_p;
+
+    default:
+        assert(false && "Unsupported constant matrix yet");
+        return {};
+    }
+}
+
+inline p_matrix_t
+getParametrizedMatrix_c(const c_matrix_t& cmat) {
+    auto size = cmat.getSize();
+    p_matrix_t pmat(size);
+    for (size_t i = 0; i < size; i++)
+        pmat.data[i] = Polynomial(cmat.data[i]);
+    return pmat;
+}
+
+} // anynomous namespace
+
+p_matrix_t GateMatrix::getParametrizedMatrix() const {
+    if (const auto *p = std::get_if<gate_params_t>(&_matrix))
+        return matCvt_gp_to_p(gateKind, *p);
     if (const auto *p = std::get_if<p_matrix_t>(&_matrix))
         return *p;
-    assert(0 && "Not Implemented");
-    return {};
+    auto cmat = getConstantMatrix();
+    assert(cmat.has_value());
+    return getParametrizedMatrix_c(cmat.value());
 }

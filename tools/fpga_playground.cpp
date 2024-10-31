@@ -1,6 +1,6 @@
 #include "saot/Fusion.h"
 #include "saot/CircuitGraph.h"
-#include "saot/Parser.h"
+#include "saot/NewParser.h"
 #include "saot/FPGAInst.h"
 
 #include "openqasm/parser.h"

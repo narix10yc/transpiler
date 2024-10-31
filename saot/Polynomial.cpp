@@ -213,11 +213,11 @@ Polynomial& Polynomial::operator+=(const Monomial& M) {
     return *this;
 }
 
-Monomial& Monomial::operator*=(const Monomial& M) {
-    coef *= M.coef;
-    for (const auto& t : M._mulTerms)
+Monomial& Monomial::operator*=(const Monomial& monomial) {
+    coef *= monomial.coef;
+    for (const auto& t : monomial._mulTerms)
         insertMulTerm(t);
-    for (const auto& v : M._expiVars)
+    for (const auto& v : monomial._expiVars)
         insertExpiVar(v);
     return *this;
 }
