@@ -157,6 +157,9 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
         bBeginPtrPdepMask |= (1ULL << (i + cNqubits));
     }
     int contractionWidth = aSharedQubitShifts.size();
+    std::vector<int> cQubits;
+    for (const auto& tQubit : targetQubits)
+        cQubits.push_back(tQubit.q);
 
     std::cerr << CYAN_FG << "Debug:\n";
     utils::printVector(aQubits, std::cerr << "aQubits: ") << "\n";
@@ -170,7 +173,7 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
     utils::printVector(bSharedQubitShifts, std::cerr << "b shifts: ") << "\n";
     std::cerr << "contraction width = " << contractionWidth << "\n";
     std::cerr << RESET;
-    
+
     // unitary perm gate matrix
     // {
     // auto aUpMat = gateMatrix.getUnitaryPermMatrix();
@@ -179,47 +182,38 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
     //     return lmatmul_up_up(aUpMat.value(), bUpMat.value(), qubits, other.qubits);
     // }
 
-    // const auto twiceNewNqubits = 2 * newNqubits;
-    // const auto contractionBitwidth = sShift.size();
-    // // constant gate matrix
-    // {
-    // auto aCMat = gateMatrix.getConstantMatrix();
-    // auto bCMat = other.gateMatrix.getConstantMatrix();
-    // if (aCMat.has_value() && bCMat.has_value()) {
-    //     GateMatrix::c_matrix_t newCMatrix(1 << newNqubits);
-    //     for (size_t i = 0; i < (1 << twiceNewNqubits); i++) {
-    //         auto aPtrStart = aCMat.value().data.data();
-    //         auto bPtrStart = bCMat.value().data.data();
-    //         for (unsigned bit = 0; bit < twiceNewNqubits; bit++) {
-    //             if ((i & (1 << bit)) != 0) {
-    //                 aPtrStart += aShift[bit];
-    //                 bPtrStart += bShift[bit];
-    //             }
-    //         }
+    // const matrix
+    {
+    auto aOptCMat = other.gateMatrix.getConstantMatrix();
+    auto bOptCMat = gateMatrix.getConstantMatrix();
+    if (aOptCMat.has_value() && bOptCMat.has_value()) {
+        const auto& aCMat = aOptCMat.value();
+        const auto& bCMat = bOptCMat.value();
+        GateMatrix::c_matrix_t cCMat(1 << cNqubits);
+        // main loop
+        for (uint64_t i = 0ULL; i < (1ULL << (2 * cNqubits)); i++) {
+            uint64_t aIdx = utils::pdep64(i, aBeginPtrPdepMask) << contractionWidth;
+            uint64_t bIdx = utils::pdep64(i, bBeginPtrPdepMask);
 
-    //         newCMatrix.data[i] = {0.0, 0.0};
-    //         for (size_t j = 0; j < (1 << contractionBitwidth); j++) {
-    //             auto aPtr = aPtrStart;
-    //             auto bPtr = bPtrStart;
-    //             for (unsigned bit = 0; bit < contractionBitwidth; bit++) {
-    //                 if ((j & (1 << bit)) != 0) {
-    //                     aPtr += sShift[bit].first;
-    //                     bPtr += sShift[bit].second;
-    //                 }
-    //             }
-    //             newCMatrix.data[i] += (*aPtr) * (*bPtr);
-    //         }
-    //     }
-    //     return QuantumGate(GateMatrix(newCMatrix), allQubits);
-    // }
-    // }
+            // std::cerr << "Ready to update cmat[" << i << "]\n";
+
+            for (uint64_t s = 0; s < (1ULL << contractionWidth); s++) {
+                for (unsigned bit = 0; bit < contractionWidth; bit++) {
+                    if (s & (1 << bit)) {
+                        aIdx += aSharedQubitShifts[bit];
+                        bIdx += bSharedQubitShifts[bit];
+                    }
+                }
+                cCMat.data[i] += aCMat.data[aIdx] * bCMat.data[bIdx];
+            }
+        }
+        return QuantumGate(GateMatrix(cCMat), cQubits);
+    }
+    }
 
     // otherwise, parametrised matrix
     auto aPMat = other.gateMatrix.getParametrizedMatrix();
     auto bPMat = gateMatrix.getParametrizedMatrix();
-    // std::cerr << "aEdgeSize " << aPMat.edgeSize() << "\n"
-            //   << "bEdgeSize " << bPMat.edgeSize() << "\n";
-
     GateMatrix::p_matrix_t cPMat(1 << cNqubits);
     // main loop
     for (uint64_t i = 0ULL; i < (1ULL << (2 * cNqubits)); i++) {
@@ -243,12 +237,8 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
             // cPMat.data[i] += aPoly * bPoly;
             // cPMat.data[i].print(std::cerr << "  cmat[i] = ") << "\n";
         }
-
     }
-    std::vector<int> cQubits;
-    for (const auto& tQubit : targetQubits)
-        cQubits.push_back(tQubit.q);
-    
+
     return QuantumGate(GateMatrix(cPMat), cQubits);
 }
 

@@ -27,13 +27,11 @@ int main(int argc, char** argv) {
     QuantumGate gate2(mat2, {0});
     QuantumGate gate3(GateMatrix::FromName("cx"), {0, 1});
 
-    gateI.gateMatrix.printMatrix(std::cerr) << "\n";
+    gateI.gateMatrix.printParametrizedMatrix(std::cerr) << "\n";
     gate3.gateMatrix.printParametrizedMatrix(std::cerr) << "\n";
     auto gate = gate3.lmatmul(gateI);
-    gate.gateMatrix.printMatrix(std::cerr) << "\n";    
+    gate.gateMatrix.printParametrizedMatrix(std::cerr) << "\n";    
 
-
-   
     // Monomial m1;
     // m1.insertMulTerm(VariableSumNode::Cosine({0, 2}, 1.2));
     // m1.insertExpiVar(3, false);
