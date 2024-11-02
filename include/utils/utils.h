@@ -60,14 +60,29 @@ print_complex(std::ostream& os, std::complex<double> c, int precision=3) {
 
 
 template<typename T>
-static std::ostream& printVector(const std::vector<T>& v, std::ostream& os = std::cerr) {
+static std::ostream& printVector(
+        const std::vector<T>& v, std::ostream& os = std::cerr) {
     if (v.empty())
         return os << "[]";
-    os << "[";
-    for (unsigned i = 0; i < v.size() - 1; i++)
-        os << v[i] << ",";
-    os << v.back() << "]";
-    return os;
+    auto it = v.cbegin();
+    os << "[" << *it;
+    while (++it != v.cend())
+        os << "," << *it; 
+    return os << "]";
+}
+
+// The printer is expected to take inputs (const T&, std::ostream&)
+template<typename T, typename Printer_T>
+static std::ostream& printVectorWithPrinter(
+        const std::vector<T>& v, Printer_T f,
+        std::ostream& os = std::cerr) {
+    if (v.empty())
+        return os << "[]";
+    auto it = v.cbegin();
+    f(*it, os << "[");
+    while (++it != v.cend())
+        f(*it, os << ",");
+    return os << "]";
 }
 
 template<typename T = uint64_t>
@@ -84,7 +99,31 @@ static T insertOneToBit(T x, int bit) {
     return (x & maskLo) | ((x & maskHi) << 1) | (1 << bit);
 }
 
+static uint64_t pdep64(uint64_t src, uint64_t mask) {
+    unsigned k = 0;
+    uint64_t dst = 0ULL;
+    for (unsigned i = 0; i < 64; ++i) {
+        if (mask & (1ULL << i)) {
+            if (src & (1ULL << i))
+                dst |= (1 << k);
+            ++k;
+        }
+    }
+    return dst;
+}
 
+static uint64_t pdep64(uint64_t src, uint64_t mask, int nbits) {
+    unsigned k = 0;
+    uint64_t dst = 0ULL;
+    for (unsigned i = 0; i < nbits; ++i) {
+        if (mask & (1ULL << i)) {
+            if (src & (1ULL << i))
+                dst |= (1 << k);
+            ++k;
+        }
+    }
+    return dst;
+}
 
 } // namespace utils
 

@@ -88,7 +88,7 @@ public:
         }
     }
     
-    size_t getSize() const { return size; }
+    size_t edgeSize() const { return size; }
     
     bool checkSizeMatch() const {
         return data.size() == size * size;

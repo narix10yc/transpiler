@@ -7,10 +7,27 @@
 
 namespace saot {
     class CircuitGraph;
-}
+    class QuantumGate;
+    class GateBlock;
+} // namespace saot
 
 namespace saot::fpga {
 
+enum FPGAGateCategory : unsigned {
+    fpgaGeneral = 0,
+    fpgaSingleQubit = 0b0001,
+    fpgaUnitaryPerm = 0b0010, // unitary permutation
+    // Non-computational is a special sub-class of unitary permutation where all
+    // non-zero entries are +1, -1, +i, -i.
+    fpgaNonComp = 0b0110,
+    fpgaRealOnly = 0b1000,
+    
+    // composite
+    fpgaSingleQubitUnitaryPerm = 0b0011,
+    fpgaSingleQubitNonComp = 0b0111,
+};
+
+FPGAGateCategory getFPGAGateCategory(const QuantumGate& gate);
 
 enum GateOp : int {
     GOp_NUL = 0,
@@ -26,6 +43,8 @@ enum MemoryOp : int {
 
     MOp_FSR = 3,    // Full Swap Row
     MOp_FSC = 4,    // Full Swap Col
+
+    MOp_EXT = 5,    // External 
 };
 
 class MemoryInst {
@@ -48,25 +67,39 @@ public:
 class GateInst {
 public:
     GateOp op;
-    int gateID;
-    std::vector<int> qubits;
+    GateBlock* block;
 
-    GateInst() : op(GOp_NUL), gateID(-1), qubits() {}
+    GateInst() : op(GOp_NUL), block(nullptr) {}
 
-    GateInst(GateOp op, int gateID, std::initializer_list<int> qubits = {})
-            : op(op), gateID(gateID), qubits(qubits) {
-        assert(op == GOp_NUL ^ gateID >= 0);
-    }
-
-    GateInst(GateOp op, int gateID, const std::vector<int>& qubits = {})
-            : op(op), gateID(gateID), qubits(qubits) {
-        assert(op == GOp_NUL ^ gateID >= 0);
+    GateInst(GateOp op, GateBlock* block)
+            : op(op), block(block) {
+        assert((op == GOp_NUL) ^ (block != nullptr));
     }
 
     bool isNull() const { return op == GOp_NUL; }
 
     std::ostream& print(std::ostream&) const;
 };
+
+
+struct FPGACostConfig {
+    // memOp with no gateOp
+    uint64_t nCyclesMemOpOnly;
+    // single-qubit gateOp with real gate
+    uint64_t nCyclesRealGate;
+    // unitary-perm gateOp
+    uint64_t nCyclesUnitaryPerm;
+    // single-qubit gateOp
+    uint64_t nCyclesGeneral;
+
+    FPGACostConfig(uint64_t nCyclesMemOpOnly, uint64_t nCyclesRealGate,
+                   uint64_t nCyclesUnitaryPerm, uint64_t nCyclesGeneral)
+        : nCyclesMemOpOnly(nCyclesMemOpOnly),
+          nCyclesRealGate(nCyclesRealGate),
+          nCyclesUnitaryPerm(nCyclesUnitaryPerm),
+          nCyclesGeneral(nCyclesGeneral) {}
+};
+
 
 class Instruction {
 public:
@@ -87,6 +120,8 @@ public:
     bool isNull() const {
         return memInst.isNull() && gateInst.isNull();
     }
+
+    uint64_t cost(const FPGACostConfig&) const;
     
 };
 

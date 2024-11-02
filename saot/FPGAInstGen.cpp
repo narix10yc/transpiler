@@ -19,7 +19,8 @@ const FPGAInstGenConfig FPGAInstGenConfig::Grid4x4 = {
 
 std::ostream& GateInst::print(std::ostream& os) const {
     const auto printQubits = [&]() {
-        if (qubits.empty())
+        auto qubits = block->getQubits();
+        if (block->getQubits().empty())
             return;
         auto it = qubits.begin();
         os << *it;
@@ -31,12 +32,12 @@ std::ostream& GateInst::print(std::ostream& os) const {
     case GOp_NUL:
         return os << "NUL";
     case GOp_SQ: {
-        os << "GSQ <id=" << gateID << "> ";
+        os << "GSQ <id=" << block->id << "> ";
         printQubits();
         return os;
     }
     case GOp_UP: {
-        os << "GUP <id=" << gateID << ", size=" << qubits.size() << "> ";
+        os << "GUP <id=" << block->id << ", size=" << block->dataVector.size() << "> ";
         printQubits();
         return os;
     }
@@ -58,11 +59,25 @@ std::ostream& MemoryInst::print(std::ostream& os) const {
         return os << "FSC <cycle=" << cycle << "> " << qIdx;
     case MOp_FSR:
         return os << "FSR <cycle=" << cycle << "> " << qIdx;
+    case MOp_EXT:
+        return os << "EXT " << qIdx << std::string(10, ' ');
     default:
         return os << "<Unknown MemOp>";
     }
 }
 
+uint64_t Instruction::cost(const FPGACostConfig& config) const {
+    if (gateInst.isNull())
+        return config.nCyclesMemOpOnly;
+    
+    if (gateInst.op == GOp_UP)
+        return config.nCyclesUnitaryPerm;
+    assert(gateInst.op == GOp_SQ);
+
+    if (fpga::getFPGAGateCategory(*gateInst.block->quantumGate) & fpga::fpgaRealOnly)
+        return config.nCyclesRealGate;
+    return config.nCyclesGeneral;
+}
 
 // helper methods to saot::fpga::genInstruction
 namespace {
@@ -329,11 +344,11 @@ public:
 
             if (vacantGateIdx == instructions.size()) {
                 instructions.emplace_back(
-                    MemoryInst(MOp_NUL), GateInst(GOp_UP, b->id, b->quantumGate->qubits));
+                    MemoryInst(MOp_NUL), GateInst(GOp_UP, b));
             } else {
                 auto& inst = instructions[vacantGateIdx];
                 assert(inst.gateInst.isNull());
-                inst.gateInst = GateInst(GOp_UP, b->id, b->quantumGate->qubits);
+                inst.gateInst = GateInst(GOp_UP, b);
             }
             ++vacantGateIdx;
         };
@@ -345,7 +360,7 @@ public:
             auto qubit = b->quantumGate->qubits[0];
             assert(qubitStatuses[qubit].kind == QK_Local);
 
-            instructions.emplace_back(MemoryInst(), GateInst(GOp_SQ, b->id, {qubit}));
+            instructions.emplace_back(MemoryInst(), GateInst(GOp_SQ, b));
             vacantGateIdx = instructions.size();
             sqGateBarrierIdx = vacantGateIdx - 1;
         };
@@ -370,6 +385,13 @@ public:
         };
 
         while (!availables.empty()) {
+            for (const auto& avail : availables) {
+                // omit non-comp gates
+                if (fpga::getFPGAGateCategory(*avail.block->quantumGate) & fpga::fpgaNonComp) {
+                    popBlock(avail.block);
+                    continue;
+                }
+            }
             // if (vacantMemIdx < vacantGateIdx) {
             //     if (auto* b = findBlockWithKind(ABK_NonLocalSQ))
             //         generateNonLocalSQBlock(b);

@@ -101,7 +101,12 @@ public:
 
     std::ostream& printMatrix(std::ostream& os) const;
 
+    std::ostream& printParametrizedMatrix(std::ostream& os) const;
+
     // preset unitary matrices
+    static const up_matrix_t MatrixI1_up;
+    static const up_matrix_t MatrixI2_up;
+
     static const up_matrix_t MatrixX_up;
     static const up_matrix_t MatrixY_up;
     static const up_matrix_t MatrixZ_up;
@@ -109,6 +114,9 @@ public:
     static const up_matrix_t MatrixCZ_up;
 
     // preset constant matrices
+    static const c_matrix_t MatrixI1_c;
+    static const c_matrix_t MatrixI2_c;
+
     static const c_matrix_t MatrixX_c;
     static const c_matrix_t MatrixY_c;
     static const c_matrix_t MatrixZ_c;
@@ -118,6 +126,9 @@ public:
     static const c_matrix_t MatrixCZ_c;
 
     // preset parametrized matrices
+    static const p_matrix_t MatrixI1_p;
+    static const p_matrix_t MatrixI2_p;
+
     static const p_matrix_t MatrixX_p;
     static const p_matrix_t MatrixY_p;
     static const p_matrix_t MatrixZ_p;
@@ -181,7 +192,7 @@ public:
 
     void sortQubits();
 
-    /// @brief A.lmatmul(B) will return BA 
+    /// @brief B.lmatmul(A) will return AB
     QuantumGate lmatmul(const QuantumGate& other) const;
 
     int opCount(double zeroSkippingThres = 1e-8);

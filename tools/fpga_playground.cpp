@@ -1,4 +1,5 @@
 #include "saot/Fusion.h"
+#include "saot/ast.h"
 #include "saot/CircuitGraph.h"
 #include "saot/NewParser.h"
 #include "saot/FPGAInst.h"
@@ -15,11 +16,11 @@ int main(int argc, char** argv) {
     int nMemOnlyInst = 0;
     std::vector<fpga::Instruction> instructions;
 
-    openqasm::Parser qasmParser(argv[1], -1);
-    auto G = qasmParser.parse()->toCircuitGraph();
+    // openqasm::Parser qasmParser(argv[1], -1);
+    // auto G = qasmParser.parse()->toCircuitGraph();
 
-    // ast::LegacyParser saotLegacyParser(argv[1]);
-    // auto G = saotLegacyParser.parse().toCircuitGraph();
+    parse::Parser saotParser(argv[1]);
+    auto G = saotParser.parseQuantumCircuit().toCircuitGraph();
 
     // G.print(std::cerr);
     std::cerr << "Before fusion there are " << G.countBlocks() << " blocks\n";

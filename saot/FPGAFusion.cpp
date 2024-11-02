@@ -1,3 +1,4 @@
+#include "saot/FPGAInst.h"
 #include "saot/Fusion.h"
 #include "saot/CircuitGraph.h"
 #include "saot/QuantumGate.h"
@@ -12,40 +13,21 @@ FPGAFusionConfig FPGAFusionConfig::Default = FPGAFusionConfig {
             .multiTraverse = true,
         };
 
-FPGAGateCategory getFPGAGateCategory(const QuantumGate& gate) {
-    switch (gate.gateMatrix.gateKind){
-        case gX: return fpgaSingleQubitNonComp;
-        case gY: return fpgaSingleQubitNonComp;
-        case gZ: return fpgaSingleQubitNonComp;
-        case gP: return fpgaSingleQubitUnitaryPerm;
-        case gH: return fpgaSingleQubit;
-        case gCX: return fpgaNonComp;
-        case gCZ: return fpgaNonComp;
-        case gCP: return fpgaUnitaryPerm;
-        default: break; 
-    }
+// getFPGAGateCategory
 
-    if (const auto* p = std::get_if<GateMatrix::up_matrix_t>(&gate.gateMatrix._matrix))
-        return fpgaUnitaryPerm;
-
-    // TODO: handle general gates
-    return fpgaGeneral;
-}
-
-inline bool isUnitaryPermBlock(const GateBlock* block) {
-    assert(block != nullptr);
-    return (getFPGAGateCategory(*block->quantumGate) & fpgaUnitaryPerm) == fpgaUnitaryPerm;
-}
-
-inline bool isSingleQubitNonCompBlock(const GateBlock* block) {
-    assert(block != nullptr);
-    return (getFPGAGateCategory(*block->quantumGate) & fpgaSingleQubitNonComp) == fpgaSingleQubitNonComp;
-}
 
 using tile_iter_t = std::list<std::array<GateBlock*, 36>>::iterator;
 
 
 namespace {
+inline bool isSingleQubitNonCompBlock(const GateBlock* b) {
+    return fpga::getFPGAGateCategory(*b->quantumGate) & fpga::fpgaSingleQubitNonComp;
+}
+
+inline bool isUnitaryPermBlock(const GateBlock* b) {
+    return fpga::getFPGAGateCategory(*b->quantumGate) & fpga::fpgaUnitaryPerm;
+}
+
 GateBlock* computeCandidate(
         const GateBlock* lhs, const GateBlock* rhs, const FPGAFusionConfig& config) {
     if (lhs == nullptr || rhs == nullptr)

@@ -46,6 +46,14 @@ using c_matrix_t = GateMatrix::c_matrix_t;
 using gate_params_t = GateMatrix::gate_params_t;
 
 #pragma region Static UP Matrices
+const up_matrix_t GateMatrix::MatrixI1_up {
+    {0, 0.0}, {1, 0.0}
+};
+
+const up_matrix_t GateMatrix::MatrixI2_up {
+    {0, 0.0}, {1, 0.0}, {2, 0.0}, {3, 0.0}
+};
+
 const up_matrix_t GateMatrix::MatrixX_up = up_matrix_t({
     {1, 0.0}, {0, 0.0}
 });
@@ -69,6 +77,18 @@ const up_matrix_t GateMatrix::MatrixCZ_up = up_matrix_t({
 #pragma endregion
 
 #pragma region Static Constant Matrices
+const c_matrix_t GateMatrix::MatrixI1_c = {
+    {1.0, 0.0}, {0.0, 0.0},
+    {0.0, 0.0}, {1.0, 0.0}
+};
+
+const c_matrix_t GateMatrix::MatrixI2_c = c_matrix_t({
+    {1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0},
+    {0.0, 0.0}, {1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0},
+    {0.0, 0.0}, {0.0, 0.0}, {1.0, 0.0}, {0.0, 0.0},
+    {0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {1.0, 0.0}
+});
+
 const c_matrix_t GateMatrix::MatrixX_c = c_matrix_t({
     {0.0, 0.0}, {1.0, 0.0}, {1.0, 0.0}, {0.0, 0.0}
 });
@@ -103,6 +123,18 @@ const c_matrix_t GateMatrix::MatrixCZ_c = c_matrix_t({
 #pragma endregion
 
 #pragma region Static Parametrized Matrices
+const p_matrix_t GateMatrix::MatrixI1_p = {
+    {1.0, 0.0}, {0.0, 0.0},
+    {0.0, 0.0}, {1.0, 0.0}
+};
+
+const p_matrix_t GateMatrix::MatrixI2_p = {
+    {1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0},
+    {0.0, 0.0}, {1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0},
+    {0.0, 0.0}, {0.0, 0.0}, {1.0, 0.0}, {0.0, 0.0},
+    {0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {1.0, 0.0}
+};
+
 const p_matrix_t GateMatrix::MatrixX_p = p_matrix_t({
     {0.0, 0.0}, {1.0, 0.0}, {1.0, 0.0}, {0.0, 0.0}
 });
@@ -120,12 +152,12 @@ const p_matrix_t GateMatrix::MatrixH_p = p_matrix_t({
 });
 
 
-const p_matrix_t GateMatrix::MatrixCX_p = p_matrix_t({
+const p_matrix_t GateMatrix::MatrixCX_p {
     {1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0},
     {0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {1.0, 0.0},
     {0.0, 0.0}, {0.0, 0.0}, {1.0, 0.0}, {0.0, 0.0},
     {0.0, 0.0}, {1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0},
-});
+};
 
 const p_matrix_t GateMatrix::MatrixCZ_p = p_matrix_t({
     {1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0},
@@ -233,14 +265,14 @@ inline int nqubits_up(const up_matrix_t& matrix) {
 }
 
 inline int nqubits_c(const c_matrix_t& matrix) {
-    int nqubits = std::log2(matrix.getSize());
-    assert(1 << nqubits == matrix.getSize());
+    int nqubits = std::log2(matrix.edgeSize());
+    assert(1 << nqubits == matrix.edgeSize());
     return nqubits;
 }
 
 inline int nqubits_p(const p_matrix_t& matrix) {
-    int nqubits = std::log2(matrix.getSize());
-    assert(1 << nqubits == matrix.getSize());
+    int nqubits = std::log2(matrix.edgeSize());
+    assert(1 << nqubits == matrix.edgeSize());
     return nqubits;
 }
 } // anonymous namespace
@@ -325,16 +357,16 @@ printMatrix_up(std::ostream& os, const up_matrix_t&) {
 inline std::ostream&
 printMatrix_c(std::ostream& os, const c_matrix_t& matrix) {
     const auto& data = matrix.data;
-    size_t N = data.size();
+    auto edgeSize = matrix.edgeSize();
     os << "[";
-    for (size_t r = 0; r < N; r++) {
-        for (size_t c = 0; c < N; c++) {
-            utils::print_complex(os, data[r * N + c], 3);
-            if (c != N-1 || r != N-1)
+    for (size_t r = 0; r < edgeSize; r++) {
+        for (size_t c = 0; c < edgeSize; c++) {
+            utils::print_complex(os, data[r * edgeSize + c], 3);
+            if (c != edgeSize-1 || r != edgeSize-1)
                 os << ",";
             os << " ";
         }
-        if (r == N-1)
+        if (r == edgeSize-1)
             os << "]\n";
         else 
             os << "\n ";
@@ -344,12 +376,12 @@ printMatrix_c(std::ostream& os, const c_matrix_t& matrix) {
 
 inline std::ostream&
 printMatrix_p(std::ostream& os, const p_matrix_t& matrix) {
+    auto edgeSize = matrix.edgeSize();
     const auto& data = matrix.data;
-    size_t N = data.size();
-    for (size_t r = 0; r < N; r++) {
-        for (size_t c = 0; c < N; c++) {
+    for (size_t r = 0; r < edgeSize; r++) {
+        for (size_t c = 0; c < edgeSize; c++) {
             os << "[" << r << "," << c << "]: ";
-            data[r*N + c].print(os) << "\n";
+            data[r*edgeSize + c].print(os) << "\n";
         }
     }
     return os;
@@ -370,6 +402,10 @@ std::ostream& GateMatrix::printMatrix(std::ostream& os) const {
         assert(false && "Unknown matrix type");
         return os;
     }, _matrix);
+}
+
+std::ostream& GateMatrix::printParametrizedMatrix(std::ostream& os) const {
+    return printMatrix_p(os, getParametrizedMatrix());
 }
 
 std::optional<up_matrix_t> GateMatrix::getUnitaryPermMatrix() const {
@@ -399,12 +435,12 @@ std::optional<up_matrix_t> GateMatrix::getUnitaryPermMatrix() const {
     }
 
     if (const auto* p = std::get_if<c_matrix_t>(&_matrix)) {
-        const auto size = p->getSize();
-        up_matrix_t upMat(size);
-        for (size_t r = 0; r < size; r++) {
+        const auto edgeSize = p->edgeSize();
+        up_matrix_t upMat(edgeSize);
+        for (size_t r = 0; r < edgeSize; r++) {
             bool rowFlag = false;
-            for (size_t c = 0; c < size; c++) {
-                const auto& cplx = p->data[r * size + c];
+            for (size_t c = 0; c < edgeSize; c++) {
+                const auto& cplx = p->data[r * edgeSize + c];
                 if (cplx != std::complex<double>{ 0.0, 0.0 }) {
                     if (rowFlag)
                         return std::nullopt;
@@ -423,7 +459,7 @@ std::optional<up_matrix_t> GateMatrix::getUnitaryPermMatrix() const {
 
 // GateMatrix::getConstantMatrix definition
 namespace {
-inline c_matrix_t getMatrixU_c(double theta, double lambd, double phi) {
+inline c_matrix_t getMatrixU_c(double theta, double phi, double lambd) {
     double ctheta = std::cos(theta);
     double stheta = std::sin(theta);
     return c_matrix_t({
@@ -462,6 +498,18 @@ getConstantMatrix_params(GateKind ty, const gate_params_t& params) {
 
     case gCX: return GateMatrix::MatrixCX_c;
     case gCZ: return GateMatrix::MatrixCZ_c;
+
+    case gCP: {
+        const double* p0 = std::get_if<double>(&params[0]);
+        if (p0)
+            return c_matrix_t({
+                { 1.0, 0.0 }, { 0.0, 0.0 }, { 0.0, 0.0 }, { 0.0, 0.0 },
+                { 0.0, 0.0 }, { 1.0, 0.0 }, { 0.0, 0.0 }, { 0.0, 0.0 },
+                { 0.0, 0.0 }, { 0.0, 0.0 }, { 1.0, 0.0 }, { 0.0, 0.0 },
+                { 0.0, 0.0 }, { 0.0, 0.0 }, { 0.0, 0.0 }, { std::cos(*p0), std::sin(*p0) },
+            });
+        return std::nullopt;
+    }
 
     default:
         assert(false && "Unsupported constant matrix yet");
@@ -582,9 +630,9 @@ inline p_matrix_t matCvt_gp_to_p(GateKind kind, const gate_params_t& params) {
 
 inline p_matrix_t
 getParametrizedMatrix_c(const c_matrix_t& cmat) {
-    auto size = cmat.getSize();
-    p_matrix_t pmat(size);
-    for (size_t i = 0; i < size; i++)
+    auto edgeSize = cmat.edgeSize();
+    p_matrix_t pmat(edgeSize);
+    for (size_t i = 0; i < edgeSize * edgeSize; i++)
         pmat.data[i] = Polynomial(cmat.data[i]);
     return pmat;
 }

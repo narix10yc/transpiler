@@ -7,6 +7,7 @@
 namespace saot {
 
 class CircuitGraph;
+class QuantumGate;
 
 struct CPUFusionConfig {
     int maxNQubits;
@@ -37,18 +38,6 @@ struct CPUFusionConfig {
 
 void applyCPUGateFusion(const CPUFusionConfig&, CircuitGraph&);
 
-enum FPGAGateCategory : unsigned {
-    fpgaGeneral = 0,
-    fpgaSingleQubit = 0b001,
-    fpgaUnitaryPerm = 0b010, // unitary permutation
-    // Non-computational is a special sub-class of unitary permutation where all
-    // non-zero entries are +1, -1, +i, -i.
-    fpgaNonComp = 0b110,
-    
-    // composite
-    fpgaSingleQubitUnitaryPerm = 0b011,
-    fpgaSingleQubitNonComp = 0b111,
-};
 
 struct FPGAFusionConfig {
     int maxUnitaryPermutationSize;

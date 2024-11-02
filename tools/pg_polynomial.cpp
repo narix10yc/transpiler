@@ -14,27 +14,24 @@ using namespace saot::parse;
 using namespace simulation;
 
 int main(int argc, char** argv) {
-    // std::vector<std::pair<int, double>> varValues {
-        // {0, 1.1}, {1, 0.4}, {2, 0.1}, {3, -0.3}, {4, -0.9}, {5, 1.9}};
+    std::vector<std::pair<int, double>> varValues {
+        {0, 1.1}, {1, 0.4}, {2, 0.1}, {3, -0.3}, {4, -0.9}, {5, 1.9}};
 
-    // auto mat1 = GateMatrix::FromParameters("u1q", std::vector<GateParameter>{GateParameter(0), GateParameter(1), GateParameter(2)});
-    // auto mat2 = GateMatrix::FromParameters("u1q", std::vector<GateParameter>{GateParameter(3), GateParameter(4), GateParameter(5)});
+    auto mat1 = GateMatrix::FromName("u1q", {0, 1, 2});
+    auto mat2 = GateMatrix::FromName("u1q", {3, 4, 5});
 
-    // mat1.printMatrix(std::cerr) << "\n";
+    mat1.printParametrizedMatrix(std::cerr) << "\n";
 
-    // QuantumGate gate1(mat1, {1});
-    // QuantumGate gate2(mat2, {1});
+    QuantumGate gateI(GateMatrix(GateMatrix::MatrixI1_c), 0);
+    QuantumGate gate1(mat1, {0});
+    QuantumGate gate2(mat2, {0});
+    QuantumGate gate3(GateMatrix::FromName("cx"), {0, 1});
 
-    // auto gate = gate1.lmatmul(gate2);
-    // gate.gateMatrix.printMatrix(std::cerr) << "\n";
+    gateI.gateMatrix.printMatrix(std::cerr) << "\n";
+    gate3.gateMatrix.printParametrizedMatrix(std::cerr) << "\n";
+    auto gate = gate3.lmatmul(gateI);
+    gate.gateMatrix.printMatrix(std::cerr) << "\n";    
 
-
-
-    // for (auto& P : gate.gateMatrix.pData())
-    //     P.simplify(varValues);
-    
-
-    // gate.gateMatrix.printMatrix(std::cerr);
 
    
     // Monomial m1;
@@ -54,12 +51,12 @@ int main(int argc, char** argv) {
 
 
 
-    assert(argc > 1);
+    // assert(argc > 1);
 
-    Parser parser(argv[1]);
-    auto qc = parser.parseQuantumCircuit();
-    std::cerr << "Recovered:\n";
-    qc.print(std::cerr);
+    // Parser parser(argv[1]);
+    // auto qc = parser.parseQuantumCircuit();
+    // std::cerr << "Recovered:\n";
+    // qc.print(std::cerr);
 
     // std::ofstream file(std::string(argv[1]) + ".rec");
     // qc.print(file);
