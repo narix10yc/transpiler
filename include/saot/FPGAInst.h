@@ -16,7 +16,10 @@ namespace saot::fpga {
 enum FPGAGateCategory : unsigned {
     fpgaGeneral = 0,
     fpgaSingleQubit = 0b0001,
-    fpgaUnitaryPerm = 0b0010, // unitary permutation
+    
+    // unitary permutation
+    fpgaUnitaryPerm = 0b0010,
+    
     // Non-computational is a special sub-class of unitary permutation where all
     // non-zero entries are +1, -1, +i, -i.
     fpgaNonComp = 0b0110,
@@ -84,20 +87,20 @@ public:
 
 struct FPGACostConfig {
     // memOp with no gateOp
-    uint64_t nCyclesMemOpOnly;
+    double tMemOpOnly;
     // single-qubit gateOp with real gate
-    uint64_t nCyclesRealGate;
+    double tRealGate;
     // unitary-perm gateOp
-    uint64_t nCyclesUnitaryPerm;
+    double tUnitaryPerm;
     // single-qubit gateOp
-    uint64_t nCyclesGeneral;
+    double tGeneral;
 
-    FPGACostConfig(uint64_t nCyclesMemOpOnly, uint64_t nCyclesRealGate,
-                   uint64_t nCyclesUnitaryPerm, uint64_t nCyclesGeneral)
-        : nCyclesMemOpOnly(nCyclesMemOpOnly),
-          nCyclesRealGate(nCyclesRealGate),
-          nCyclesUnitaryPerm(nCyclesUnitaryPerm),
-          nCyclesGeneral(nCyclesGeneral) {}
+    FPGACostConfig(double tMemOpOnly, double tRealGate,
+                   double tUnitaryPerm, double tGeneral)
+        : tMemOpOnly(tMemOpOnly),
+          tRealGate(tRealGate),
+          tUnitaryPerm(tUnitaryPerm),
+          tGeneral(tGeneral) {}
 };
 
 

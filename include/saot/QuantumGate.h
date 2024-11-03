@@ -198,6 +198,8 @@ public:
     int opCount(double zeroSkippingThres = 1e-8);
 
     bool isConvertibleToUnitaryPermGate() const;
+
+    bool approximateGateMatrix(double thres);
 };
 
 } // namespace saot

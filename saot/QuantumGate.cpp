@@ -131,48 +131,48 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
     }
 
     int cNqubits = targetQubits.size();
-    uint64_t aBeginPtrPdepMask = 0ULL;
-    uint64_t bBeginPtrPdepMask = 0ULL;
+    uint64_t aPdepMask = 0ULL;
+    uint64_t bPdepMask = 0ULL;
+    uint64_t aZeroingMask = ~0ULL;
+    uint64_t bZeroingMask = ~0ULL;
     std::vector<uint64_t> aSharedQubitShifts, bSharedQubitShifts;
     for (unsigned i = 0; i < cNqubits; ++i) {
         int aIdx = targetQubits[i].aIdx;
         int bIdx = targetQubits[i].bIdx;
+        // shared qubit: set zeroing masks and shifts
         if (aIdx >= 0 && bIdx >= 0) {
-            // shared qubit
-            aBeginPtrPdepMask |= (1ULL << (i + cNqubits));
-            bBeginPtrPdepMask |= (1ULL << i);
-            aSharedQubitShifts.emplace_back(1ULL << i);
-            bSharedQubitShifts.emplace_back(1ULL << (i + cNqubits));
-            continue;
+            aZeroingMask ^= (1ULL << aIdx);
+            bZeroingMask ^= (1ULL << (bIdx + bNqubits));
+            aSharedQubitShifts.emplace_back(1ULL << aIdx);
+            bSharedQubitShifts.emplace_back(1ULL << (bIdx + bNqubits));
         }
 
-        if (aIdx >= 0) {
-            // a only
-            aBeginPtrPdepMask |= (1ULL << i);
-            aBeginPtrPdepMask |= (1ULL << (i + cNqubits));
-            continue;
-        }
-        // b only
-        bBeginPtrPdepMask |= (1ULL << i);
-        bBeginPtrPdepMask |= (1ULL << (i + cNqubits));
+        if (aIdx >= 0)
+            aPdepMask |= (1 << i) + (1 << (i + cNqubits));
+
+        if (bIdx >= 0)
+            bPdepMask |= (1 << i) + (1 << (i + cNqubits));
+
     }
     int contractionWidth = aSharedQubitShifts.size();
     std::vector<int> cQubits;
     for (const auto& tQubit : targetQubits)
         cQubits.push_back(tQubit.q);
 
-    std::cerr << CYAN_FG << "Debug:\n";
-    utils::printVector(aQubits, std::cerr << "aQubits: ") << "\n";
-    utils::printVector(bQubits, std::cerr << "bQubits: ") << "\n";
-    utils::printVectorWithPrinter(targetQubits, [](const target_qubit_t& q, std::ostream& os) {
-        os << "(" << q.q << "," << q.aIdx << "," << q.bIdx << ")";
-    }, std::cerr << "target qubits: ") << "\n";
-    std::cerr << "aPdepMask: " << std::bitset<10>(aBeginPtrPdepMask) << "\n"
-              << "bPdepMask: " << std::bitset<10>(bBeginPtrPdepMask) << "\n";
-    utils::printVector(aSharedQubitShifts, std::cerr << "a shifts: ") << "\n";
-    utils::printVector(bSharedQubitShifts, std::cerr << "b shifts: ") << "\n";
-    std::cerr << "contraction width = " << contractionWidth << "\n";
-    std::cerr << RESET;
+    // std::cerr << CYAN_FG << "Debug:\n";
+    // utils::printVector(aQubits, std::cerr << "aQubits: ") << "\n";
+    // utils::printVector(bQubits, std::cerr << "bQubits: ") << "\n";
+    // utils::printVectorWithPrinter(targetQubits, [](const target_qubit_t& q, std::ostream& os) {
+    //     os << "(" << q.q << "," << q.aIdx << "," << q.bIdx << ")";
+    // }, std::cerr << "target qubits: ") << "\n";
+    // std::cerr << "aPdepMask: " << std::bitset<10>(aPdepMask) << "\n"
+    //           << "bPdepMask: " << std::bitset<10>(bPdepMask) << "\n"
+    //           << "aZeroingMask: " << std::bitset<10>(aZeroingMask) << "\n"
+    //           << "bZeroingMask: " << std::bitset<10>(bZeroingMask) << "\n";
+    // utils::printVector(aSharedQubitShifts, std::cerr << "a shifts: ") << "\n";
+    // utils::printVector(bSharedQubitShifts, std::cerr << "b shifts: ") << "\n";
+    // std::cerr << "contraction width = " << contractionWidth << "\n";
+    // std::cerr << RESET;
 
     // unitary perm gate matrix
     // {
@@ -192,18 +192,28 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
         GateMatrix::c_matrix_t cCMat(1 << cNqubits);
         // main loop
         for (uint64_t i = 0ULL; i < (1ULL << (2 * cNqubits)); i++) {
-            uint64_t aIdx = utils::pdep64(i, aBeginPtrPdepMask) << contractionWidth;
-            uint64_t bIdx = utils::pdep64(i, bBeginPtrPdepMask);
+            uint64_t aIdxBegin = utils::pdep64(i, aPdepMask) & aZeroingMask;
+            uint64_t bIdxBegin = utils::pdep64(i, bPdepMask) & bZeroingMask;
 
             // std::cerr << "Ready to update cmat[" << i << "]\n";
+            // std::cerr << "  aIdxBegin: " << utils::as0b(i, 2 * cNqubits)
+            //           << " -> " << utils::as0b(utils::pdep64(i, aPdepMask), 2 * aNqubits)
+            //           << " -> " << utils::as0b(aIdxBegin, 2 * aNqubits) << " = " << aIdxBegin << "\n";
+            // std::cerr << "  bIdxBegin: " << utils::as0b(i, 2 * cNqubits)
+            //           << " -> " << utils::as0b(utils::pdep64(i, bPdepMask), 2 * bNqubits)
+            //           << " -> " << utils::as0b(bIdxBegin, 2 * bNqubits) << " = " << bIdxBegin << "\n";
 
             for (uint64_t s = 0; s < (1ULL << contractionWidth); s++) {
+                uint64_t aIdx = aIdxBegin;
+                uint64_t bIdx = bIdxBegin;
                 for (unsigned bit = 0; bit < contractionWidth; bit++) {
                     if (s & (1 << bit)) {
                         aIdx += aSharedQubitShifts[bit];
                         bIdx += bSharedQubitShifts[bit];
                     }
                 }
+                // std::cerr << "  aIdx = " << aIdx << ": " << aCMat.data[aIdx] << "; ";
+                // std::cerr << "  bIdx = " << bIdx << ": " << bCMat.data[bIdx] << "\n";
                 cCMat.data[i] += aCMat.data[aIdx] * bCMat.data[bIdx];
             }
         }
@@ -217,25 +227,19 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
     GateMatrix::p_matrix_t cPMat(1 << cNqubits);
     // main loop
     for (uint64_t i = 0ULL; i < (1ULL << (2 * cNqubits)); i++) {
-        uint64_t aIdx = utils::pdep64(i, aBeginPtrPdepMask) << contractionWidth;
-        uint64_t bIdx = utils::pdep64(i, bBeginPtrPdepMask);
-
-        // std::cerr << "Ready to update cmat[" << i << "]\n";
+        uint64_t aIdxBegin = utils::pdep64(i, aPdepMask) & aZeroingMask;
+        uint64_t bIdxBegin = utils::pdep64(i, bPdepMask) & bZeroingMask;
 
         for (uint64_t s = 0; s < (1ULL << contractionWidth); s++) {
+            uint64_t aIdx = aIdxBegin;
+            uint64_t bIdx = bIdxBegin;
             for (unsigned bit = 0; bit < contractionWidth; bit++) {
                 if (s & (1 << bit)) {
                     aIdx += aSharedQubitShifts[bit];
                     bIdx += bSharedQubitShifts[bit];
                 }
             }
-            // const auto aPoly = aPMat.data[aIdx];
-            // aPoly.print(std::cerr << "  aIdx = " << aIdx << ": ") << "; ";
-            // const auto bPoly = bPMat.data[bIdx];
-            // bPoly.print(std::cerr << "  bIdx = " << bIdx << ": ") << "\n";
             cPMat.data[i] += aPMat.data[aIdx] * bPMat.data[bIdx];
-            // cPMat.data[i] += aPoly * bPoly;
-            // cPMat.data[i].print(std::cerr << "  cmat[i] = ") << "\n";
         }
     }
 
@@ -244,7 +248,6 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
 
 // QuantumGate::opCount helper functions
 namespace {
-
 inline int opCount_c(const GateMatrix::c_matrix_t& mat, double thres) {
     int count = 0;
     for (const auto& data : mat.data) {
@@ -291,4 +294,46 @@ int QuantumGate::opCount(double thres) {
 // TODO: optimize it
 bool QuantumGate::isConvertibleToUnitaryPermGate() const {
     return gateMatrix.getUnitaryPermMatrix().has_value();
+}
+
+bool QuantumGate::approximateGateMatrix(double thres) {
+    const auto approxCplx = [thres=thres](std::complex<double>& cplx) -> bool {
+        bool flag = false;
+        if (std::abs(cplx.real()) < thres) {
+            cplx.real(0.0);
+            flag = true;
+        }
+        else if (std::abs(cplx.real() - 1.0) < thres) {
+            cplx.real(1.0);
+            flag = true;
+        }
+        else if (std::abs(cplx.real() + 1.0) < thres) {
+            cplx.real(-1.0);
+            flag = true;
+        }
+        
+        if (std::abs(cplx.imag()) < thres) {
+            cplx.imag(0.0);
+            flag = true;
+        }
+        else if (std::abs(cplx.imag() - 1.0) < thres) {
+            cplx.imag(1.0);
+            flag = true;
+        }
+        else if (std::abs(cplx.imag() + 1.0) < thres) {
+            cplx.imag(-1.0);
+            flag = true;
+        }
+        return flag;
+    };
+
+    auto* p = std::get_if<GateMatrix::c_matrix_t>(&gateMatrix._matrix);
+    if (p == nullptr)
+        return false;
+    bool flag = false;
+    for (auto& data : p->data) {
+        if (approxCplx(data))
+            flag = true;
+    }
+    return flag;
 }

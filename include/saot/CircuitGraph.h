@@ -166,6 +166,9 @@ public:
     CircuitGraph()
         : _tile(1, {nullptr}), nqubits(0) {}
 
+    static CircuitGraph QFTCircuit(int nqubits);
+    static CircuitGraph ALACircuit(int nqubits, int nrounds);
+
     tile_t& tile() { return _tile; }
     const tile_t& tile() const { return _tile; }
 

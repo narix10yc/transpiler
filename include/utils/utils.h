@@ -6,6 +6,7 @@
 #include <iostream>
 #include <algorithm>
 #include <iomanip>
+#include <cassert>
 
 namespace utils {
 
@@ -124,6 +125,21 @@ static uint64_t pdep64(uint64_t src, uint64_t mask, int nbits) {
     }
     return dst;
 }
+
+class as0b {
+    uint64_t v;
+    int nbits;
+public:
+    as0b(uint64_t v, int nbits) : v(v), nbits(nbits) {
+        assert(nbits > 0 && nbits <= 64);
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, const as0b& n) {
+        for (int i = n.nbits-1; i >= 0; --i)
+            os.put((n.v & (1 << i)) ? '1' : '0');
+        return os;
+    }
+};
 
 } // namespace utils
 

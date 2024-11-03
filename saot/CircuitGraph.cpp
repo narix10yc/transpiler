@@ -66,6 +66,24 @@ int GateBlock::connect(GateBlock* rhsBlock, int q) {
     return count;
 }
 
+CircuitGraph CircuitGraph::QFTCircuit(int nqubits) {
+    CircuitGraph graph;
+    for (int q = 0; q < nqubits; ++q) {
+        graph.addGate(GateMatrix(GateMatrix::MatrixH_c), { q });
+        for (int l = q+1; l < nqubits; ++l) {
+            double angle = M_PI_2 * std::pow(2.0, q-l);
+            graph.addGate(GateMatrix::FromName("cp", {angle}), {q, l});
+        }
+    }
+    return graph;
+}
+
+CircuitGraph CircuitGraph::ALACircuit(int nqubits, int nrounds) {
+    assert(0 && "Not Implemented");
+    CircuitGraph graph;
+    return graph;
+}
+
 CircuitGraph::tile_iter_t
 CircuitGraph::insertBlock(tile_iter_t it, GateBlock* block) {
     assert(block);

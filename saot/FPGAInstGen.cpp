@@ -68,15 +68,15 @@ std::ostream& MemoryInst::print(std::ostream& os) const {
 
 uint64_t Instruction::cost(const FPGACostConfig& config) const {
     if (gateInst.isNull())
-        return config.nCyclesMemOpOnly;
+        return config.tMemOpOnly;
     
     if (gateInst.op == GOp_UP)
-        return config.nCyclesUnitaryPerm;
+        return config.tUnitaryPerm;
     assert(gateInst.op == GOp_SQ);
 
     if (fpga::getFPGAGateCategory(*gateInst.block->quantumGate) & fpga::fpgaRealOnly)
-        return config.nCyclesRealGate;
-    return config.nCyclesGeneral;
+        return config.tRealGate;
+    return config.tGeneral;
 }
 
 // helper methods to saot::fpga::genInstruction
@@ -385,13 +385,20 @@ public:
         };
 
         while (!availables.empty()) {
+            // handle non-comp gates (omit them for now)
+            bool nonCompFlag = false;
             for (const auto& avail : availables) {
                 // omit non-comp gates
                 if (fpga::getFPGAGateCategory(*avail.block->quantumGate) & fpga::fpgaNonComp) {
+                    // std::cerr << "Ignored block " << avail.block->id << " because it is non-comp\n";
                     popBlock(avail.block);
-                    continue;
+                    nonCompFlag = true;
+                    break;
                 }
             }
+            if (nonCompFlag)
+                continue;
+                
             // if (vacantMemIdx < vacantGateIdx) {
             //     if (auto* b = findBlockWithKind(ABK_NonLocalSQ))
             //         generateNonLocalSQBlock(b);

@@ -17,19 +17,17 @@ int main(int argc, char** argv) {
     std::vector<std::pair<int, double>> varValues {
         {0, 1.1}, {1, 0.4}, {2, 0.1}, {3, -0.3}, {4, -0.9}, {5, 1.9}};
 
-    auto mat1 = GateMatrix::FromName("u1q", {0, 1, 2});
+    auto matCX = GateMatrix::FromName("cx", {});
     auto mat2 = GateMatrix::FromName("u1q", {3, 4, 5});
 
-    mat1.printParametrizedMatrix(std::cerr) << "\n";
+    QuantumGate gate1(matCX, {0, 1});
+    QuantumGate gate2(matCX, {2, 1});
 
-    QuantumGate gateI(GateMatrix(GateMatrix::MatrixI1_c), 0);
-    QuantumGate gate1(mat1, {0});
-    QuantumGate gate2(mat2, {0});
-    QuantumGate gate3(GateMatrix::FromName("cx"), {0, 1});
+    gate1.gateMatrix.printParametrizedMatrix(std::cerr) << "\n";    
+    gate2.gateMatrix.printParametrizedMatrix(std::cerr) << "\n";    
 
-    gateI.gateMatrix.printParametrizedMatrix(std::cerr) << "\n";
-    gate3.gateMatrix.printParametrizedMatrix(std::cerr) << "\n";
-    auto gate = gate3.lmatmul(gateI);
+
+    auto gate = gate2.lmatmul(gate1);
     gate.gateMatrix.printParametrizedMatrix(std::cerr) << "\n";    
 
     // Monomial m1;
