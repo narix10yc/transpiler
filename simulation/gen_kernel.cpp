@@ -125,8 +125,9 @@ IRGenerator::generateKernelDebug(
 
         double zeroSkipThres = _config.zeroSkipThres / K;
         double shareMatrixElemThres = _config.shareMatrixElemThres / K;
-        const std::vector<std::complex<double>>&
-            cdata = std::get<GateMatrix::c_matrix_t>(gate.gateMatrix._matrix).data;
+        const auto* cMat = gate.gateMatrix.getConstantMatrix();
+        assert(cMat);
+        const auto& cdata = cMat->data;
         for (unsigned i = 0; i < matrix.size(); i++) {
             if (_config.forceDenseKernel) {
                 matrix[i].realFlag = 2;

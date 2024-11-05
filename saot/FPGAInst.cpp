@@ -6,9 +6,9 @@ using namespace saot::fpga;
 
 namespace {
 bool isRealOnlyGate(const QuantumGate& gate) {
-    auto cMat = gate.gateMatrix.getConstantMatrix();
-    assert(cMat.has_value());
-    for (const auto& cplx : cMat.value().data) {
+    const auto* cMat = gate.gateMatrix.getConstantMatrix();
+    assert(cMat);
+    for (const auto& cplx : cMat->data) {
         if (cplx.imag() != 0.0)
             return false;
     }
@@ -28,7 +28,7 @@ FPGAGateCategory saot::fpga::getFPGAGateCategory(const QuantumGate& gate) {
         case gCZ: cate = fpgaNonComp; break;
         case gCP: cate = fpgaUnitaryPerm; break;
         default: {
-            if (const auto* p = std::get_if<GateMatrix::up_matrix_t>(&gate.gateMatrix._matrix)) {
+            if (const auto* p = gate.gateMatrix.getUnitaryPermMatrix()) {
                 cate = fpgaUnitaryPerm;
                 break;
             }

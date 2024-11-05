@@ -141,8 +141,9 @@ void CodeGeneratorCPU::generate(
         }
         
         metaDataSS << "(" << realTy << "[]){";
-        const std::vector<std::complex<double>>&
-            cdata = std::get<GateMatrix::c_matrix_t>(block->quantumGate->gateMatrix._matrix).data;
+        const auto* cMat = block->quantumGate->gateMatrix.getConstantMatrix();
+        assert(cMat);
+        const auto& cdata = cMat->data;
         for (const auto& elem : cdata)
             metaDataSS << std::setprecision(16) << elem.real() << ","
                        << std::setprecision(16) << elem.imag() << ", ";

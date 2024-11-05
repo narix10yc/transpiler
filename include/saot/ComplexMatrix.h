@@ -66,50 +66,54 @@ public:
 /// @tparam data_t 
 template<typename data_t>
 class SquareMatrix {
-    size_t size;
+    size_t _edgeSize;
 public:
     std::vector<data_t> data;
 
-    SquareMatrix() : size(0), data() {}
-    SquareMatrix(size_t size) : size(size), data(size * size) {}
+    SquareMatrix() : _edgeSize(0), data() {}
+
+    SquareMatrix(size_t edgeSize)
+            : _edgeSize(edgeSize), data(edgeSize * edgeSize) {}
+    
     SquareMatrix(const std::vector<data_t>& data)
-            : size(std::sqrt(data.size())), data(data) {
+            : _edgeSize(std::sqrt(data.size())), data(data) {
         assert(checkSizeMatch());
     }
+
     SquareMatrix(std::initializer_list<data_t> data)
-            : size(std::sqrt(data.size())), data(data) {
+            : _edgeSize(std::sqrt(data.size())), data(data) {
         assert(checkSizeMatch());
     }
 
     void updateSize() {
-        if (size * size != data.size()) {
-            size = std::sqrt(data.size());
-            assert(size * size == data.size());
+        if (_edgeSize * _edgeSize != data.size()) {
+            _edgeSize = std::sqrt(data.size());
+            assert(_edgeSize * _edgeSize == data.size());
         }
     }
     
-    size_t edgeSize() const { return size; }
+    size_t edgeSize() const { return _edgeSize; }
     
     bool checkSizeMatch() const {
-        return data.size() == size * size;
+        return data.size() == _edgeSize * _edgeSize;
     }
 
-    static SquareMatrix Identity(size_t size) {
-        SquareMatrix m(size);
-        for (size_t r = 0; r < size; r++)
-            m.data[r*size + r].real = 1;
+    static SquareMatrix Identity(size_t edgeSize) {
+        SquareMatrix m(edgeSize);
+        for (size_t r = 0; r < edgeSize; r++)
+            m.data[r*edgeSize + r].real = 1;
         return m;
     }
 
     SquareMatrix matmul(const SquareMatrix& other) {
-        assert(size == other.size);
+        assert(_edgeSize == other.edgeSize());
 
-        SquareMatrix m(size);
-        for (size_t i = 0; i < size; i++) {
-        for (size_t j = 0; j < size; j++) {
-        for (size_t k = 0; k < size; k++) {
+        SquareMatrix m(_edgeSize);
+        for (size_t i = 0; i < _edgeSize; i++) {
+        for (size_t j = 0; j < _edgeSize; j++) {
+        for (size_t k = 0; k < _edgeSize; k++) {
             // C_{ij} = A_{ik} B_{kj}
-            m.data[i*size + j] += data[i*size + k] * other.data[k*size + j];
+            m.data[i*_edgeSize + j] += data[i*_edgeSize + k] * other.data[k*_edgeSize + j];
         } } }
         return m;
     }
@@ -176,11 +180,11 @@ public:
             return newIdx;
         };
 
-        SquareMatrix matrix(size);
-        for (size_t r = 0; r < size; r++) {
-            for (size_t c = 0; c < size; c++) {
-                auto idxNew = permuteIndex(r) * size + permuteIndex(c);
-                auto idxOld = r * size + c;
+        SquareMatrix matrix(_edgeSize);
+        for (size_t r = 0; r < _edgeSize; r++) {
+            for (size_t c = 0; c < _edgeSize; c++) {
+                auto idxNew = permuteIndex(r) * _edgeSize + permuteIndex(c);
+                auto idxOld = r * _edgeSize + c;
                 matrix.data[idxNew] = data[idxOld];
             }
         }

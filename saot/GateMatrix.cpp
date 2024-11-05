@@ -45,6 +45,36 @@ using up_matrix_t = GateMatrix::up_matrix_t;
 using c_matrix_t = GateMatrix::c_matrix_t;
 using gate_params_t = GateMatrix::gate_params_t;
 
+std::ostream& saot::printConstantMatrix(std::ostream& os, const c_matrix_t& cMat) {
+    const auto edgeSize = cMat.edgeSize();
+    const auto& data = cMat.data;
+    os << "[";
+    for (size_t r = 0; r < edgeSize; r++) {
+        for (size_t c = 0; c < edgeSize; c++) {
+            utils::print_complex(os, data[r * edgeSize + c], 3);
+            if (c != edgeSize-1 || r != edgeSize-1)
+                os << ",";
+            os << " ";
+        }
+        if (r == edgeSize-1)
+            os << "]\n";
+        else 
+            os << "\n ";
+    }
+    return os;
+}
+
+std::ostream& saot::printParametrizedMatrix(std::ostream& os, const p_matrix_t& pMat) {
+    auto edgeSize = pMat.edgeSize();
+    for (size_t r = 0; r < edgeSize; r++) {
+        for (size_t c = 0; c < edgeSize; c++) {
+            os << "[" << r << "," << c << "]: ";
+            pMat.data[r*edgeSize + c].print(os) << "\n";
+        }
+    }
+    return os;
+}
+
 #pragma region Static UP Matrices
 const up_matrix_t GateMatrix::MatrixI1_up {
     {0, 0.0}, {1, 0.0}
@@ -169,11 +199,39 @@ const p_matrix_t GateMatrix::MatrixCZ_p = p_matrix_t({
 #pragma endregion
 
 int getNumActiveParams(const gate_params_t& params) {
-    for (int i = 0; i < params.size(); i++) {
+    unsigned s = params.size();
+    for (unsigned i = 0; i < s; i++) {
         if (params[i].index() == 0)
             return i;
     }
-    return params.size();
+    return s;
+}
+
+GateMatrix::GateMatrix(const up_matrix_t& upMat) : cache(), gateParameters() {
+    auto size = upMat.getSize();
+    gateKind = static_cast<GateKind>(static_cast<int>(std::log2(size)));
+    assert(1 << static_cast<int>(gateKind) == size);
+
+    cache.upMat = upMat;
+    cache.isConvertibleToUpMat = Convertible;
+}
+
+GateMatrix::GateMatrix(const c_matrix_t& cMat) : cache(), gateParameters() {
+    auto size = cMat.edgeSize();
+    gateKind = static_cast<GateKind>(static_cast<int>(std::log2(size)));
+    assert(1 << static_cast<int>(gateKind) == size);
+
+    cache.cMat = cMat;
+    cache.isConvertibleToCMat = Convertible;
+}
+
+GateMatrix::GateMatrix(const p_matrix_t& pMat) : cache(), gateParameters() {
+    auto size = pMat.edgeSize();
+    gateKind = static_cast<GateKind>(static_cast<int>(std::log2(size)));
+    assert(1 << static_cast<int>(gateKind) == size);
+
+    cache.pMat = pMat;
+    cache.isConvertibleToPMat = Convertible;
 }
 
 GateMatrix GateMatrix::FromName(const std::string& name, const gate_params_t& params) {
@@ -231,12 +289,35 @@ GateMatrix GateMatrix::FromName(const std::string& name, const gate_params_t& pa
     return GateMatrix(gUndef);
 }
 
+void GateMatrix::permuteSelf(const std::vector<int>& flags) {
+    switch (gateKind) {
+    case gX: assert(flags.size() == 1); return;
+    case gY: assert(flags.size() == 1); return;
+    case gZ: assert(flags.size() == 1); return;
+    case gH: assert(flags.size() == 1); return;
+    case gP: assert(flags.size() == 1); return;
+    case gU: assert(flags.size() == 1); return;
 
-namespace { // GateMatrix::nqubits definition
-inline int nqubits_params(GateKind ty) {
-    if (ty >= 1)
-        return ty;
-    switch (ty) {
+    case gCX: assert(flags.size() == 2); return;
+    case gCZ: assert(flags.size() == 2); return;
+    case gSWAP: assert(flags.size() == 2); return;
+    case gCP: assert(flags.size() == 2); return;
+    
+    default:
+        break;
+    }
+
+    assert(gateKind >= 1);
+    if (cache.isConvertibleToUpMat == Convertible)
+        cache.upMat = cache.upMat.permute(flags);
+    if (cache.isConvertibleToCMat == Convertible)
+        cache.cMat = cache.cMat.permute(flags);
+    if (cache.isConvertibleToPMat == Convertible)
+        cache.pMat = cache.pMat.permute(flags);
+}
+
+int GateMatrix::nqubits() const {
+    switch (gateKind) {
         case gX:  return 1;
         case gY:  return 1;
         case gZ:  return 1;
@@ -253,305 +334,12 @@ inline int nqubits_params(GateKind ty) {
         case gCP: return 2;
         
         default:
-            assert(false && "Unknown GateKind nqubits");
-            return 0;
+            assert(gateKind >= 1);
+            return static_cast<int>(gateKind);
     }
 }
 
-inline int nqubits_up(const up_matrix_t& matrix) {
-    int nqubits = std::log2(matrix.data.size());
-    assert((1 << nqubits) == matrix.data.size());
-    return nqubits;
-}
-
-inline int nqubits_c(const c_matrix_t& matrix) {
-    int nqubits = std::log2(matrix.edgeSize());
-    assert(1 << nqubits == matrix.edgeSize());
-    return nqubits;
-}
-
-inline int nqubits_p(const p_matrix_t& matrix) {
-    int nqubits = std::log2(matrix.edgeSize());
-    assert(1 << nqubits == matrix.edgeSize());
-    return nqubits;
-}
-} // anonymous namespace
-
-int GateMatrix::nqubits() const {
-    if (const auto* p = std::get_if<gate_params_t>(&_matrix))
-        return nqubits_params(gateKind);
-    if (const auto* p = std::get_if<up_matrix_t>(&_matrix))
-        return nqubits_up(*p);
-    if (const auto* p = std::get_if<c_matrix_t>(&_matrix))
-        return nqubits_c(*p);
-    if (const auto* p = std::get_if<p_matrix_t>(&_matrix))
-        return nqubits_p(*p);
-    assert(false && "Unknown matrix type");
-    return 0;
-}
-
-GateMatrix& GateMatrix::approximateSelf(int level, double thres) {
-    if constexpr (std::is_same_v<decltype(_matrix), c_matrix_t>) {
-        assert(false && "Should only call approximateSelf on constant gate matrices");
-        return *this;
-    }
-
-    if (level < 1)
-        return *this;
-    
-    auto& cMat = std::get<c_matrix_t>(_matrix);
-    for (auto& cplx : cMat.data) {
-        if (std::abs(cplx.real()) < thres)
-            cplx.real(0.0);
-        else if (level > 1) {
-            if (std::abs(cplx.real() - 1.0) < thres)
-                cplx.real(1.0);
-            else if (std::abs(cplx.real() + 1.0) < thres)
-                cplx.real(-1.0);
-        }
-        
-        if (std::abs(cplx.imag()) < thres)
-            cplx.imag(0.0);
-        else if (level > 1) {
-            if (std::abs(cplx.imag() - 1.0) < thres)
-                cplx.imag(1.0);
-            else if (std::abs(cplx.imag() + 1.0) < thres)
-                cplx.imag(-1.0);
-        }
-    }
-    return *this;
-}
-
-inline GateMatrix
-permute_params(const GateMatrix& gateMatrix, const std::vector<int>& flags) {
-    return gateMatrix;
-}
-
-GateMatrix GateMatrix::permute(const std::vector<int>& flags) const {
-    if (const auto* p = std::get_if<gate_params_t>(&_matrix))
-        return permute_params(*this, flags);
-    if (const auto* p = std::get_if<up_matrix_t>(&_matrix))
-        return GateMatrix(p->permute(flags));
-    if (const auto* p = std::get_if<c_matrix_t>(&_matrix))
-        return GateMatrix(p->permute(flags));
-    if (const auto* p = std::get_if<p_matrix_t>(&_matrix))
-        return GateMatrix(p->permute(flags));
-
-    assert(false && "Unknown matrix type");
-    return *this;
-}
-
-namespace { // GateMatrix::printMatrix definition
-inline std::ostream&
-printMatrix_params(std::ostream& os, const GateMatrix&) {
-
-    return os << "print params_t matrix\n";
-}
-
-inline std::ostream&
-printMatrix_up(std::ostream& os, const up_matrix_t&) {
-
-    return os << "print up_t matrix\n";
-}
-
-inline std::ostream&
-printMatrix_c(std::ostream& os, const c_matrix_t& matrix) {
-    const auto& data = matrix.data;
-    auto edgeSize = matrix.edgeSize();
-    os << "[";
-    for (size_t r = 0; r < edgeSize; r++) {
-        for (size_t c = 0; c < edgeSize; c++) {
-            utils::print_complex(os, data[r * edgeSize + c], 3);
-            if (c != edgeSize-1 || r != edgeSize-1)
-                os << ",";
-            os << " ";
-        }
-        if (r == edgeSize-1)
-            os << "]\n";
-        else 
-            os << "\n ";
-    }
-    return os;
-}
-
-inline std::ostream&
-printMatrix_p(std::ostream& os, const p_matrix_t& matrix) {
-    auto edgeSize = matrix.edgeSize();
-    const auto& data = matrix.data;
-    for (size_t r = 0; r < edgeSize; r++) {
-        for (size_t c = 0; c < edgeSize; c++) {
-            os << "[" << r << "," << c << "]: ";
-            data[r*edgeSize + c].print(os) << "\n";
-        }
-    }
-    return os;
-}
-} // anonymous namespace
-
-std::ostream& GateMatrix::printMatrix(std::ostream& os) const {     
-    return std::visit([this, &os](auto&& arg) -> std::ostream& {
-        using T = std::decay_t<decltype(arg)>;
-        if constexpr (std::is_same_v<T, gate_params_t>)
-            return printMatrix_params(os, *this);
-        if constexpr (std::is_same_v<T, up_matrix_t>)
-            return printMatrix_up(os, arg);
-        if constexpr (std::is_same_v<T, c_matrix_t>)
-            return printMatrix_c(os, arg);
-        if constexpr (std::is_same_v<T, p_matrix_t>)
-            return printMatrix_p(os, arg);
-        assert(false && "Unknown matrix type");
-        return os;
-    }, _matrix);
-}
-
-std::ostream& GateMatrix::printParametrizedMatrix(std::ostream& os) const {
-    return printMatrix_p(os, getParametrizedMatrix());
-}
-
-std::optional<up_matrix_t> GateMatrix::getUnitaryPermMatrix() const {
-    if (const auto* p = std::get_if<up_matrix_t>(&_matrix))
-        return *p;
-
-    if (const auto* p = std::get_if<gate_params_t>(&_matrix)) {
-        switch (gateKind) {
-        case gX: return MatrixX_up;
-        case gY: return MatrixY_up;
-        case gZ: return MatrixZ_up;
-        case gP: {
-            const double* plambd = std::get_if<double>(&(*p)[0]);
-            assert(plambd && "");
-            return up_matrix_t {{0, 0.0}, {1, *plambd}};
-        }
-        case gCX: return MatrixCX_up;
-        case gCZ: return MatrixCZ_up;
-        case gCP: {
-            const double* plambd = std::get_if<double>(&(*p)[0]);
-            assert(plambd);
-            return up_matrix_t {{0, 0.0}, {0, 0.0}, {0, 0.0}, {1, *plambd}};
-        }
-        default:
-            break;
-        }
-    }
-
-    if (const auto* p = std::get_if<c_matrix_t>(&_matrix)) {
-        const auto edgeSize = p->edgeSize();
-        up_matrix_t upMat(edgeSize);
-        for (size_t r = 0; r < edgeSize; r++) {
-            bool rowFlag = false;
-            for (size_t c = 0; c < edgeSize; c++) {
-                const auto& cplx = p->data[r * edgeSize + c];
-                if (cplx != std::complex<double>{ 0.0, 0.0 }) {
-                    if (rowFlag)
-                        return std::nullopt;
-                    rowFlag = true;
-                    upMat.data[r] = { c, std::atan2(cplx.imag(), cplx.real()) };
-                }
-            }
-            if (!rowFlag)
-                return std::nullopt;
-        }
-        return upMat;
-    }
-    
-    return std::nullopt;
-}
-
-// GateMatrix::getConstantMatrix definition
-namespace {
-inline c_matrix_t getMatrixU_c(double theta, double phi, double lambd) {
-    double ctheta = std::cos(theta);
-    double stheta = std::sin(theta);
-    return c_matrix_t({
-        { ctheta, 0.0 },
-        { -std::cos(lambd) * stheta, -std::sin(lambd) * stheta },
-        { std::cos(phi) * stheta, std::sin(phi) * stheta },
-        { std::cos(phi+lambd) * ctheta, std::sin(phi+lambd) * ctheta }
-    });
-}
-
-inline std::optional<c_matrix_t>
-getConstantMatrix_params(GateKind ty, const gate_params_t& params) {
-    switch (ty) {
-    case gX: return GateMatrix::MatrixX_c;
-    case gY: return GateMatrix::MatrixY_c;
-    case gZ: return GateMatrix::MatrixZ_c;
-    case gH: return GateMatrix::MatrixH_c;
-    case gP: {
-        const double* p = std::get_if<double>(&params[0]);
-        if (p)
-            return c_matrix_t({
-                { 1.0, 0.0 }, { 0.0, 0.0 },
-                { 0.0, 0.0 }, { std::cos(*p), std::sin(*p) }
-            });
-        return std::nullopt;
-    }
-
-    case gU: {
-        const double* p0 = std::get_if<double>(&params[0]);
-        const double* p1 = std::get_if<double>(&params[1]);
-        const double* p2 = std::get_if<double>(&params[2]);
-        if (p0 && p1 && p2)
-            return getMatrixU_c(*p0, *p1, *p2);
-        return std::nullopt;
-    }
-
-    case gCX: return GateMatrix::MatrixCX_c;
-    case gCZ: return GateMatrix::MatrixCZ_c;
-
-    case gCP: {
-        const double* p0 = std::get_if<double>(&params[0]);
-        if (p0)
-            return c_matrix_t({
-                { 1.0, 0.0 }, { 0.0, 0.0 }, { 0.0, 0.0 }, { 0.0, 0.0 },
-                { 0.0, 0.0 }, { 1.0, 0.0 }, { 0.0, 0.0 }, { 0.0, 0.0 },
-                { 0.0, 0.0 }, { 0.0, 0.0 }, { 1.0, 0.0 }, { 0.0, 0.0 },
-                { 0.0, 0.0 }, { 0.0, 0.0 }, { 0.0, 0.0 }, { std::cos(*p0), std::sin(*p0) },
-            });
-        return std::nullopt;
-    }
-
-    default:
-        assert(false && "Unsupported constant matrix yet");
-        return std::nullopt;
-    }
-}
-
-inline c_matrix_t getConstantMatrix_up(const up_matrix_t& up) {
-    c_matrix_t cmat(up.getSize());
-    for (unsigned i = 0; i < up.getSize(); i++) {
-        const auto& idx = up.data[i].first;
-        const auto& phase = up.data[i].second;
-        cmat.data[idx] = { std::cos(phase), std::sin(phase) };
-    }
-    return cmat;
-}
-
-inline std::optional<c_matrix_t> getConstantMatrix_p(
-        const p_matrix_t& pmat,
-        const std::vector<std::pair<int, double>>& varValues) {
-    assert(false && "Not Implemented");
-    return std::nullopt;
-}
-} // anonymous namespace
-
-std::optional<c_matrix_t> GateMatrix::getConstantMatrix(
-        const std::vector<std::pair<int, double>>& varValues) const {
-    if (const auto* p = std::get_if<gate_params_t>(&_matrix))
-        return getConstantMatrix_params(gateKind, *p);
-    if (const auto* p = std::get_if<up_matrix_t>(&_matrix))
-        return getConstantMatrix_up(*p);
-    if (const auto* p = std::get_if<c_matrix_t>(&_matrix))
-        return *p;
-    if (const auto* p = std::get_if<p_matrix_t>(&_matrix))
-        return getConstantMatrix_p(*p, varValues);
-
-    assert(false && "getConstantMatrix of an unknown matrix type");
-    return std::nullopt;
-}
-
-// GateMatrix::getParametrizedMatrix() definition
-namespace {
+namespace { // matrix conversion
 
 inline p_matrix_t matCvt_gp_to_p(GateKind kind, const gate_params_t& params) {
     switch (kind) {
@@ -623,28 +411,232 @@ inline p_matrix_t matCvt_gp_to_p(GateKind kind, const gate_params_t& params) {
     case gCZ: return GateMatrix::MatrixCZ_p;
 
     default:
-        assert(false && "Unsupported constant matrix yet");
+        assert(false && "Unsupported cvtMat_gp_to_p yet");
         return {};
     }
 }
 
-inline p_matrix_t
-getParametrizedMatrix_c(const c_matrix_t& cmat) {
-    auto edgeSize = cmat.edgeSize();
-    p_matrix_t pmat(edgeSize);
-    for (size_t i = 0; i < edgeSize * edgeSize; i++)
-        pmat.data[i] = Polynomial(cmat.data[i]);
-    return pmat;
+inline c_matrix_t matCvt_up_to_c(const up_matrix_t& up) {
+    c_matrix_t cmat(up.getSize());
+    for (unsigned i = 0; i < up.getSize(); i++) {
+        const auto& idx = up.data[i].first;
+        const auto& phase = up.data[i].second;
+        cmat.data[idx] = { std::cos(phase), std::sin(phase) };
+    }
+    return cmat;
 }
 
 } // anynomous namespace
 
-p_matrix_t GateMatrix::getParametrizedMatrix() const {
-    if (const auto *p = std::get_if<gate_params_t>(&_matrix))
-        return matCvt_gp_to_p(gateKind, *p);
-    if (const auto *p = std::get_if<p_matrix_t>(&_matrix))
-        return *p;
-    auto cmat = getConstantMatrix();
-    assert(cmat.has_value());
-    return getParametrizedMatrix_c(cmat.value());
+// Two paths lead to upMat: gpMat or cMat
+void GateMatrix::computeAndCacheUpMat() const {
+    assert(cache.isConvertibleToCMat == Unknown);
+
+    switch (gateKind) {
+    case gX:  {
+        cache.upMat = MatrixX_up;
+        cache.isConvertibleToUpMat = Convertible;
+        return;
+    }
+    case gY: {
+        cache.upMat = MatrixY_up;
+        cache.isConvertibleToUpMat = Convertible;
+        return;
+    }
+    case gZ: {
+        cache.upMat = MatrixZ_up;
+        cache.isConvertibleToUpMat = Convertible;
+        return;
+    }
+    case gP: {
+        const double* plambd = std::get_if<double>(&gateParameters[0]);
+        if (plambd == nullptr) {
+            cache.isConvertibleToUpMat = UnConvertible;
+            return;
+        }
+        cache.upMat = up_matrix_t {{0, 0.0}, {1, *plambd}};
+        cache.isConvertibleToUpMat = Convertible;
+        return;
+    }
+    case gCX: {
+        cache.upMat = MatrixCX_up;
+        cache.isConvertibleToUpMat = Convertible;
+        return;
+    }
+    case gCZ: {
+        cache.upMat = MatrixCZ_up;
+        cache.isConvertibleToUpMat = Convertible;
+        return;
+    }
+    case gCP: {
+        const double* plambd = std::get_if<double>(&gateParameters[0]);
+        if (plambd == nullptr) {
+            cache.isConvertibleToUpMat = UnConvertible;
+            return;
+        }
+        cache.upMat = up_matrix_t {{0, 0.0}, {0, 0.0}, {0, 0.0}, {1, *plambd}};
+        cache.isConvertibleToUpMat = Convertible;
+        return;
+    }
+    default:
+        break;
+    }
+    
+    const auto* cMat = getConstantMatrix();
+    if (cMat == nullptr) {
+        cache.isConvertibleToUpMat = UnConvertible;
+        return;
+    }
+    const auto edgeSize = cMat->edgeSize();
+    cache.upMat = up_matrix_t(edgeSize);
+    for (size_t r = 0; r < edgeSize; r++) {
+        bool rowFlag = false;
+        for (size_t c = 0; c < edgeSize; c++) {
+            const auto& cplx = cMat->data[r * edgeSize + c];
+            if (cplx != std::complex<double>{ 0.0, 0.0 }) {
+                if (rowFlag) {
+                    cache.isConvertibleToUpMat = UnConvertible;
+                    return;
+                }
+                rowFlag = true;
+                cache.upMat.data[r] = { c, std::atan2(cplx.imag(), cplx.real()) };
+            }
+        }
+        if (!rowFlag) {
+            cache.isConvertibleToUpMat = UnConvertible;
+            return;
+        }
+    }
+    cache.isConvertibleToUpMat = Convertible;
+    return;
+}
+
+void GateMatrix::computeAndCacheCMat() const {
+    assert(cache.isConvertibleToUpMat == Unknown);
+    // try convert from upMat
+    if (cache.isConvertibleToUpMat == Convertible) {
+        const auto edgeSize = cache.upMat.getSize();
+        cache.cMat = c_matrix_t(edgeSize);
+        for (unsigned i = 0; i < edgeSize; ++i) {
+            const auto& idx = cache.upMat.data[i].first;
+            const auto& phase = cache.upMat.data[i].second;
+            cache.cMat.data[idx] = { std::cos(phase), std::sin(phase) };
+        }
+        cache.isConvertibleToCMat = Convertible;
+        return;
+    }
+
+    // try convert from gpMat
+    switch (gateKind) {
+    case gX: {
+        cache.cMat = MatrixX_c;
+        cache.isConvertibleToCMat = Convertible;
+        return;
+    }
+    case gY: {
+        cache.cMat = MatrixY_c;
+        cache.isConvertibleToCMat = Convertible;
+        return;
+    }
+    case gZ: {
+        cache.cMat = MatrixZ_c;
+        cache.isConvertibleToCMat = Convertible;
+        return;
+    }
+    case gH: {
+        cache.cMat = MatrixH_c;
+        cache.isConvertibleToCMat = Convertible;
+        return;
+    }
+    case gP: {
+        const double* p = std::get_if<double>(&gateParameters[0]);
+        if (p == nullptr) {
+            cache.isConvertibleToCMat = UnConvertible;
+            return;
+        }
+        cache.cMat = c_matrix_t({
+                { 1.0, 0.0 }, { 0.0, 0.0 },
+                { 0.0, 0.0 }, { std::cos(*p), std::sin(*p) }
+            });
+        cache.isConvertibleToCMat = Convertible;
+        return;
+    }
+
+    case gU: {
+        const double* p0 = std::get_if<double>(&gateParameters[0]);
+        const double* p1 = std::get_if<double>(&gateParameters[1]);
+        const double* p2 = std::get_if<double>(&gateParameters[2]);
+        if (p0 && p1 && p2) {
+            cache.cMat = c_matrix_t({
+                { std::cos(*p0), 0.0 },
+                { -std::cos(*p2) * std::sin(*p0), -std::sin(*p2) * std::sin(*p0) },
+                { std::cos(*p1) * std::sin(*p0), std::sin(*p1) * std::sin(*p0) },
+                { std::cos(*p1 + *p2) * std::cos(*p0), std::sin(*p1 + *p2) * std::cos(*p0) }
+            });
+            cache.isConvertibleToCMat = Convertible;
+            return;
+        }
+        cache.isConvertibleToCMat = UnConvertible;
+        return;
+    }
+    case gCX: {
+        cache.cMat = MatrixCX_c;
+        cache.isConvertibleToCMat = Convertible;
+        return;
+    }
+    case gCZ: {
+        cache.cMat = MatrixCZ_c;
+        cache.isConvertibleToCMat = Convertible;
+        return;
+    }
+    case gCP: {
+        const double* p0 = std::get_if<double>(&gateParameters[0]);
+        if (p0 == nullptr) {
+            cache.isConvertibleToCMat = UnConvertible;
+            return;
+        }
+        cache.cMat = c_matrix_t({
+                { 1.0, 0.0 }, { 0.0, 0.0 }, { 0.0, 0.0 }, { 0.0, 0.0 },
+                { 0.0, 0.0 }, { 1.0, 0.0 }, { 0.0, 0.0 }, { 0.0, 0.0 },
+                { 0.0, 0.0 }, { 0.0, 0.0 }, { 1.0, 0.0 }, { 0.0, 0.0 },
+                { 0.0, 0.0 }, { 0.0, 0.0 }, { 0.0, 0.0 }, { std::cos(*p0), std::sin(*p0) },
+            });
+        cache.isConvertibleToCMat = Convertible;
+        return;
+    }
+
+    default:
+        assert(false && "Unsupported constant matrix yet");
+        cache.isConvertibleToCMat = UnConvertible;
+        return;
+    }
+}
+
+void GateMatrix::computeAndCachePMat() const {
+    if (cache.isConvertibleToCMat == Convertible) {
+        auto edgeSize = cache.cMat.edgeSize();
+        cache.pMat = p_matrix_t(edgeSize);
+        for (size_t i = 0; i < edgeSize * edgeSize; ++i)
+            cache.pMat.data[i] = Polynomial(cache.cMat.data[i]);
+        cache.isConvertibleToPMat = Convertible;
+        return;
+    }
+    cache.pMat = matCvt_gp_to_p(gateKind, gateParameters);
+    cache.isConvertibleToPMat = Convertible;
+    return;
+}
+
+// GateMatrix::getConstantMatrix definition
+namespace {
+inline c_matrix_t getMatrixU_c(double theta, double phi, double lambd) {
+    double ctheta = std::cos(theta);
+    double stheta = std::sin(theta);
+    return c_matrix_t({
+        { ctheta, 0.0 },
+        { -std::cos(lambd) * stheta, -std::sin(lambd) * stheta },
+        { std::cos(phi) * stheta, std::sin(phi) * stheta },
+        { std::cos(phi+lambd) * ctheta, std::sin(phi+lambd) * ctheta }
+    });
+}
+
 }

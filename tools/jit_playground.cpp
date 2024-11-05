@@ -36,10 +36,13 @@ int main(int argc, char** argv) {
 
     auto& fusedGate = graph.getAllBlocks()[0]->quantumGate;
 
-    fusedGate->gateMatrix.printParametrizedMatrix(std::cerr) << "\n";
-    fusedGate->simplifyGateMatrix();
-    fusedGate->gateMatrix.printParametrizedMatrix(std::cerr) << "\n";
+    auto pMat = fusedGate->gateMatrix.getParametrizedMatrix();
+    
+    printParametrizedMatrix(std::cerr, pMat);
+    for (auto& p : pMat.data)
+        p.removeSmallMonomials();
 
+    printParametrizedMatrix(std::cerr, pMat);
 
     // for (auto& P : fusedGate->gateMatrix.pData())
     //     P.simplify(varValues);

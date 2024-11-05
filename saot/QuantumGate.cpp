@@ -13,7 +13,7 @@ std::ostream& QuantumGate::displayInfo(std::ostream& os) const {
        << "- Target Qubits ";
     utils::printVector(qubits) << "\n";
     os << "- Matrix:\n";
-    return gateMatrix.printMatrix(os);
+    return gateMatrix.printCMat(os);
 }
 
 void QuantumGate::sortQubits() {
@@ -32,7 +32,7 @@ void QuantumGate::sortQubits() {
         newQubits[i] = qubits[indices[i]];
     
     qubits = std::move(newQubits);
-    gateMatrix = gateMatrix.permute(indices);
+    gateMatrix.permuteSelf(indices);
 }
 
 // helper functions in QuantumGate::lmatmul
@@ -184,11 +184,9 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
 
     // const matrix
     {
-    auto aOptCMat = other.gateMatrix.getConstantMatrix();
-    auto bOptCMat = gateMatrix.getConstantMatrix();
-    if (aOptCMat.has_value() && bOptCMat.has_value()) {
-        const auto& aCMat = aOptCMat.value();
-        const auto& bCMat = bOptCMat.value();
+    const auto* aCMat = other.gateMatrix.getConstantMatrix();
+    const auto* bCMat = gateMatrix.getConstantMatrix();
+    if (aCMat && bCMat) {
         GateMatrix::c_matrix_t cCMat(1 << cNqubits);
         // main loop
         for (uint64_t i = 0ULL; i < (1ULL << (2 * cNqubits)); i++) {
@@ -214,7 +212,7 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
                 }
                 // std::cerr << "  aIdx = " << aIdx << ": " << aCMat.data[aIdx] << "; ";
                 // std::cerr << "  bIdx = " << bIdx << ": " << bCMat.data[bIdx] << "\n";
-                cCMat.data[i] += aCMat.data[aIdx] * bCMat.data[bIdx];
+                cCMat.data[i] += aCMat->data[aIdx] * bCMat->data[bIdx];
             }
         }
         return QuantumGate(GateMatrix(cCMat), cQubits);
@@ -246,8 +244,7 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
     return QuantumGate(GateMatrix(cPMat), cQubits);
 }
 
-// QuantumGate::opCount helper functions
-namespace {
+namespace { // QuantumGate::opCount helper functions
 inline int opCount_c(const GateMatrix::c_matrix_t& mat, double thres) {
     int count = 0;
     for (const auto& data : mat.data) {
@@ -281,70 +278,54 @@ int QuantumGate::opCount(double thres) {
         return opCountCache;
 
     double normalizedThres = thres / std::pow(2.0, gateMatrix.nqubits());
-    if (const auto* p = std::get_if<GateMatrix::c_matrix_t>(&gateMatrix._matrix))
-        return opCountCache = opCount_c(*p, normalizedThres);
-    if (const auto* p = std::get_if<GateMatrix::p_matrix_t>(&gateMatrix._matrix))
-        return opCountCache = opCount_p(*p, normalizedThres);
+
+    if (const auto* cMat = gateMatrix.getConstantMatrix())
+        return opCount_c(*cMat, normalizedThres);
+    return opCount_p(gateMatrix.getParametrizedMatrix(), normalizedThres);
 
     assert(false && "opCount Not Implemented");
 
     return -1;
 }
 
-// TODO: optimize it
-bool QuantumGate::isConvertibleToUnitaryPermGate() const {
-    return gateMatrix.getUnitaryPermMatrix().has_value();
-}
-
-bool QuantumGate::approximateGateMatrix(double thres) {
-    const auto approxCplx = [thres=thres](std::complex<double>& cplx) -> bool {
-        bool flag = false;
-        if (std::abs(cplx.real()) < thres) {
-            cplx.real(0.0);
-            flag = true;
-        }
-        else if (std::abs(cplx.real() - 1.0) < thres) {
-            cplx.real(1.0);
-            flag = true;
-        }
-        else if (std::abs(cplx.real() + 1.0) < thres) {
-            cplx.real(-1.0);
-            flag = true;
-        }
+// bool QuantumGate::approximateGateMatrix(double thres) {
+//     const auto approxCplx = [thres=thres](std::complex<double>& cplx) -> bool {
+//         bool flag = false;
+//         if (std::abs(cplx.real()) < thres) {
+//             cplx.real(0.0);
+//             flag = true;
+//         }
+//         else if (std::abs(cplx.real() - 1.0) < thres) {
+//             cplx.real(1.0);
+//             flag = true;
+//         }
+//         else if (std::abs(cplx.real() + 1.0) < thres) {
+//             cplx.real(-1.0);
+//             flag = true;
+//         }
         
-        if (std::abs(cplx.imag()) < thres) {
-            cplx.imag(0.0);
-            flag = true;
-        }
-        else if (std::abs(cplx.imag() - 1.0) < thres) {
-            cplx.imag(1.0);
-            flag = true;
-        }
-        else if (std::abs(cplx.imag() + 1.0) < thres) {
-            cplx.imag(-1.0);
-            flag = true;
-        }
-        return flag;
-    };
+//         if (std::abs(cplx.imag()) < thres) {
+//             cplx.imag(0.0);
+//             flag = true;
+//         }
+//         else if (std::abs(cplx.imag() - 1.0) < thres) {
+//             cplx.imag(1.0);
+//             flag = true;
+//         }
+//         else if (std::abs(cplx.imag() + 1.0) < thres) {
+//             cplx.imag(-1.0);
+//             flag = true;
+//         }
+//         return flag;
+//     };
 
-    auto* p = std::get_if<GateMatrix::c_matrix_t>(&gateMatrix._matrix);
-    if (p == nullptr)
-        return false;
-    bool flag = false;
-    for (auto& data : p->data) {
-        if (approxCplx(data))
-            flag = true;
-    }
-    return flag;
-}
-
-void QuantumGate::simplifyGateMatrix() {
-    auto* p = std::get_if<GateMatrix::p_matrix_t>(&gateMatrix._matrix);
-    if (p == nullptr)
-        return;
-    
-    for (auto& data : p->data) {
-        data.removeSmallMonomials();
-        data.simplifySelf();
-    }
-}
+//     auto* p = std::get_if<GateMatrix::c_matrix_t>(&gateMatrix._matrix);
+//     if (p == nullptr)
+//         return false;
+//     bool flag = false;
+//     for (auto& data : p->data) {
+//         if (approxCplx(data))
+//             flag = true;
+//     }
+//     return flag;
+// }

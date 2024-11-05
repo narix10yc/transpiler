@@ -44,6 +44,11 @@ enum GateKind : int {
 GateKind String2GateKind(const std::string& s);
 std::string GateKind2String(GateKind t);
 
+std::ostream& printConstantMatrix(std::ostream& os,
+        const complex_matrix::SquareMatrix<std::complex<double>>& cMat);
+
+std::ostream& printParametrizedMatrix(std::ostream& os,
+        const complex_matrix::SquareMatrix<saot::Polynomial>& cMat);
 
 class GateMatrix {
 public:
@@ -60,51 +65,71 @@ private:
         Unknown = -1, Convertible = 1, UnConvertible = 0
     };
     struct Cache {
-        ConvertibleKind convertibleToUpMat;
-        std::shared_ptr<up_matrix_t> upMat;
-        ConvertibleKind convertibleToCMat;
-        std::shared_ptr<c_matrix_t> cMat;
+        ConvertibleKind isConvertibleToUpMat;
+        up_matrix_t upMat;
+        ConvertibleKind isConvertibleToCMat;
+        c_matrix_t cMat;
         // gate matrix is always convertible to pMat
-        std::shared_ptr<p_matrix_t> pMat;
+        ConvertibleKind isConvertibleToPMat;
+        p_matrix_t pMat;
 
-        Cache() : convertibleToUpMat(Unknown), upMat(nullptr),
-                  convertibleToCMat(Unknown), cMat(nullptr), pMat(nullptr) {}
+        Cache() : isConvertibleToUpMat(Unknown), upMat(),
+                  isConvertibleToCMat(Unknown), cMat(),
+                  isConvertibleToPMat(Unknown), pMat() {}
     };
 
-    Cache cache;
+    mutable Cache cache;
+
+    void computeAndCacheUpMat() const;
+    void computeAndCacheCMat() const;
+    void computeAndCachePMat() const;
 public:
     GateKind gateKind;
-    std::variant<std::monostate, up_matrix_t, gate_params_t, c_matrix_t, p_matrix_t> _matrix;
+    gate_params_t gateParameters;
 
-    // effectively _matrix.index()
-    enum MatrixKind : int {
-        MK_NotInitialized = 0,
-        MK_ByParameters   = 1,
-        MK_UnitaryPerm    = 2,
-        MK_Constant       = 3,
-        MK_Parametrized   = 4,
-    };
-
-    GateMatrix() : gateKind(gUndef), cache(), _matrix() {}
+    GateMatrix() : cache(), gateKind(gUndef), gateParameters() {}
 
     GateMatrix(GateKind gateKind, const gate_params_t& params = {})
-        : gateKind(gateKind), cache(), _matrix(params) {}
-        
-    GateMatrix(const std::variant<std::monostate, up_matrix_t, gate_params_t, c_matrix_t, p_matrix_t>& m)
-        : cache(), _matrix(m) { gateKind = GateKind(nqubits()); }
+        : cache(), gateKind(gateKind), gateParameters(params) {}
+    
+    GateMatrix(const up_matrix_t& upMat);
+    GateMatrix(const c_matrix_t& upMat);
+    GateMatrix(const p_matrix_t& upMat);
     
     static GateMatrix FromName(const std::string& name, const gate_params_t& params = {});
 
-    // bool tryConvertSelfToUnitaryPerm();
+    void permuteSelf(const std::vector<int>& flags); 
 
-    std::optional<up_matrix_t> getUnitaryPermMatrix() const;
+    const up_matrix_t* getUnitaryPermMatrix() const {
+        if (cache.isConvertibleToUpMat == Unknown)
+            computeAndCacheUpMat();
+        if (cache.isConvertibleToUpMat == UnConvertible)
+            return nullptr;
+        return &cache.upMat;
+    }
 
-    std::optional<c_matrix_t>
-    getConstantMatrix(const std::vector<std::pair<int, double>>& = {}) const;
+    const c_matrix_t* getConstantMatrix() const {
+        if (cache.isConvertibleToCMat == Unknown)
+            computeAndCacheCMat();
+        if (cache.isConvertibleToCMat == UnConvertible)
+            return nullptr;
+        return &cache.cMat;
+    }
 
-    p_matrix_t getParametrizedMatrix() const;
+    const p_matrix_t& getParametrizedMatrix() const {
+        if (cache.isConvertibleToPMat == Unknown)
+            computeAndCachePMat();
+        assert(cache.isConvertibleToPMat == Convertible);
+        return cache.pMat;
+    }
 
-    bool isConvertibleToUnitaryPermMatrix() const;
+    bool isConvertibleToUnitaryPermMatrix() const {
+        return getUnitaryPermMatrix() != nullptr;
+    }
+
+    bool isConvertibleToConstantMatrix() const {
+        return getConstantMatrix() != nullptr;
+    }
 
     // @brief Get number of qubits
     int nqubits() const;
@@ -112,13 +137,17 @@ public:
     /// @brief Approximate matrix elements. Change matrix in-place.
     /// @param level : optimization level. Level 0 turns off everything. Level 1
     /// only applies zero-skipping. Level > 1 also applies to 1 and -1.
-    GateMatrix& approximateSelf(int level, double thres = 1e-8);
+    GateMatrix& approximateCachedCMat(int level, double thres = 1e-8);
 
-    GateMatrix permute(const std::vector<int>& flags) const;
+    std::ostream& printCMat(std::ostream& os) const {
+        const auto* cMat = getConstantMatrix();
+        assert(cMat);
+        return printConstantMatrix(os, *cMat);
+    }
 
-    std::ostream& printMatrix(std::ostream& os) const;
-
-    std::ostream& printParametrizedMatrix(std::ostream& os) const;
+    std::ostream& printPMat(std::ostream& os) const {
+        return printParametrizedMatrix(os, getParametrizedMatrix());
+    }
 
     // preset unitary matrices
     static const up_matrix_t MatrixI1_up;
@@ -214,11 +243,13 @@ public:
 
     int opCount(double zeroSkippingThres = 1e-8);
 
-    bool isConvertibleToUnitaryPermGate() const;
+    bool isConvertibleToUnitaryPermGate() const {
+        return gateMatrix.isConvertibleToUnitaryPermMatrix();
+    }
 
-    bool approximateGateMatrix(double thres);
-
-    void simplifyGateMatrix();
+    bool isConvertibleToConstantGate() const {
+        return gateMatrix.isConvertibleToConstantMatrix();
+    }
 };
 
 } // namespace saot
