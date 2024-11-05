@@ -1,5 +1,5 @@
-#ifndef SIMULATION_TIMEIT_H_
-#define SIMULATION_TIMEIT_H_
+#ifndef SIMULATION_TIMEIT_H
+#define SIMULATION_TIMEIT_H
 
 #include <vector>
 #include <string>
@@ -10,7 +10,7 @@
 namespace timeit {
 
 class TimingResult {
-int repeat, replication;
+    int repeat, replication;
 public:
     std::vector<double> tarr;
     double min, med, q1, q3;
@@ -73,4 +73,4 @@ public:
 
 } // end namespace timeit
 
-#endif // SIMULATION_TIMEIT_H_
+#endif // SIMULATION_TIMEIT_H
