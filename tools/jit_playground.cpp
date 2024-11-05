@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
 
     auto& pMat = fusedGate->gateMatrix.getParametrizedMatrix();
     
-    printParametrizedMatrix(std::cerr, pMat);
+    // printParametrizedMatrix(std::cerr, pMat);
     for (auto& p : pMat.data)
         p.removeSmallMonomials();
 
@@ -52,12 +52,31 @@ int main(int argc, char** argv) {
     Function* func = G.generatePrepareParameter(graph);
     G.dumpToStderr();
 
-    G.applyLLVMOptimization(OptimizationLevel::O2);
-    G.dumpToStderr();
+    // G.applyLLVMOptimization(OptimizationLevel::O2);
+    // G.dumpToStderr();
 
-    // // JIT
-    // jit::JitEngine jitEngine(G);
-    // jitEngine.dumpNativeAssembly(llvm::errs());
+    // JIT
+    jit::JitEngine jitter(G);
+
+    auto funcAddrOrErr = jitter.JIT->lookup(func->getName());
+    if (!funcAddrOrErr) {
+        errs() << "Failed to look up function\n" << funcAddrOrErr.takeError() << "\n";
+        return 1;
+    }
+
+    auto prepareParameter = funcAddrOrErr->toPtr<void(double*, double*)>();
+
+    std::vector<double> circuitParameters { 1.344, 3.109, 0.12 };
+    std::vector<double> circuitMatrices(8);
+
+    prepareParameter(circuitParameters.data(), circuitMatrices.data());
+
+    utils::printVector(circuitMatrices);
+
+
+
+    
+    
 
 
     return 0;

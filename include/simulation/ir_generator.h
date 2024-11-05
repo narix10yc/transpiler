@@ -135,8 +135,9 @@ public:
     std::pair<llvm::Value*, llvm::Value*> generatePolynomial(
             const saot::Polynomial& polynomial, ParamValueFeeder& feeder);
 
-    llvm::Function*
-    generatePrepareParameter(const saot::CircuitGraph& graph);
+    // Generate a function that prepares matrices in simulation.
+    // @return A function void(void* param, void* matrix).
+    llvm::Function* generatePrepareParameter(const saot::CircuitGraph& graph);
 };
 
 } // namespace simulation

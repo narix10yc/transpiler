@@ -200,8 +200,7 @@ Value* IRGenerator::genFSub(Value* a, Value* b) {
 
 Value* IRGenerator::genFMul(Value* a, Value* b) {
     if (a && b) return builder.CreateFMul(a, b);
-    if (a)      return a;
-    return b;
+    return nullptr;
 }
 
 std::pair<Value*, Value*> IRGenerator::genComplexMultiply(

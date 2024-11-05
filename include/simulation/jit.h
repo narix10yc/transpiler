@@ -8,11 +8,9 @@
 namespace saot::jit {
 
 class JitEngine {
-    std::unique_ptr<llvm::orc::LLJIT> JIT;
 public:
+    std::unique_ptr<llvm::orc::LLJIT> JIT;
     JitEngine(simulation::IRGenerator&);
-
-    void dumpNativeAssembly(llvm::raw_ostream&);
 };
 
 } // namespace saot::jit

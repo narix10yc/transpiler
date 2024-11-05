@@ -1,18 +1,22 @@
 #include "simulation/ir_generator.h"
 
+#include "llvm/Support/Debug.h"
+
+
 using namespace llvm;
 using namespace simulation;
 using namespace saot;
 
 std::pair<Value*, Value*>
 IRGenerator::generatePolynomial(const Polynomial& P, ParamValueFeeder& feeder) {
+    P.print(std::cerr << "generating polynomial: ") << "\n";
     const auto generateMonomial = [&](const Monomial& M) {
-        std::pair<Value*, Value*> coefV {
+        std::pair<Value*, Value*> resultV {
             (M.coef.real() == 0.0) ? nullptr : ConstantFP::get(getScalarTy(), M.coef.real()),
             (M.coef.imag() == 0.0) ? nullptr : ConstantFP::get(getScalarTy(), M.coef.imag())
         };
         
-        assert((coefV.first || coefV.second) && "coef should not be 0");
+        assert((resultV.first || resultV.second) && "coef should not be 0");
         // mul terms
         Value* mulTermsV = nullptr;
         for (const auto& T : M.mulTerms()) {
@@ -21,18 +25,22 @@ IRGenerator::generatePolynomial(const Polynomial& P, ParamValueFeeder& feeder) {
             mulTermsV = feeder.get(*it, builder, getScalarTy());
             while (++it != T.vars.cend())
                 mulTermsV = builder.CreateFAdd(mulTermsV, feeder.get(*it, builder, getScalarTy()));
-            if (T.constant != 0.0)
+
+            if (T.constant != 0.0) {
+                // errs() << "T.constant is non-zero " << T.constant << "\n";
                 mulTermsV = builder.CreateFAdd(mulTermsV, ConstantFP::get(getScalarTy(), T.constant));
+            }
+            
             if (T.op == VariableSumNode::CosOp)
                 mulTermsV = builder.CreateUnaryIntrinsic(Intrinsic::cos, mulTermsV);
             else if (T.op == VariableSumNode::SinOp)
                 mulTermsV = builder.CreateUnaryIntrinsic(Intrinsic::sin, mulTermsV);
         }
 
-        coefV = genComplexMultiply(coefV, { mulTermsV, nullptr });
+        resultV = genComplexMultiply(resultV, { mulTermsV, nullptr });
         // expi terms
         if (M.expiVars().empty())
-            return coefV;
+            return resultV;
         
         auto it = M.expiVars().cbegin();
         Value* expiVarV = feeder.get(it->var, builder, getScalarTy());
@@ -45,7 +53,7 @@ IRGenerator::generatePolynomial(const Polynomial& P, ParamValueFeeder& feeder) {
             else
                 expiVarV = builder.CreateFSub(expiVarV, tmp);
         }
-        return genComplexMultiply(coefV, {
+        return genComplexMultiply(resultV, {
             builder.CreateUnaryIntrinsic(Intrinsic::cos, expiVarV),
             builder.CreateUnaryIntrinsic(Intrinsic::sin, expiVarV)
         });
@@ -110,6 +118,7 @@ Function* IRGenerator::generatePrepareParameter(const CircuitGraph& graph) {
                 auto polyV = generatePolynomial(pData[d], feeder);
                 std::string gepName;
                 Value* matPtrV;
+
                 // real part
                 gepName = "m.block" + std::to_string(i) + ".re" + std::to_string(d);
                 matPtrV = builder.CreateConstInBoundsGEP1_64(
@@ -126,7 +135,9 @@ Function* IRGenerator::generatePrepareParameter(const CircuitGraph& graph) {
                 if (polyV.second)
                     builder.CreateStore(polyV.second, matPtrV);
                 else
-                    builder.CreateStore(ConstantFP::get(getScalarTy(), 0.0), matPtrV);            }
+                    builder.CreateStore(ConstantFP::get(getScalarTy(), 0.0), matPtrV);
+                // func->print(errs());
+            }
         }
 
         startIndex += 2 * numCompMatrixEntries;
