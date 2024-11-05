@@ -337,3 +337,14 @@ bool QuantumGate::approximateGateMatrix(double thres) {
     }
     return flag;
 }
+
+void QuantumGate::simplifyGateMatrix() {
+    auto* p = std::get_if<GateMatrix::p_matrix_t>(&gateMatrix._matrix);
+    if (p == nullptr)
+        return;
+    
+    for (auto& data : p->data) {
+        data.removeSmallMonomials();
+        data.simplifySelf();
+    }
+}

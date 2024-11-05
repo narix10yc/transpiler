@@ -23,7 +23,8 @@ std::string saot::parse::getNameOfTokenKind(TokenKind kind) {
         case tk_Comma: return ",";
         case tk_Semicolon: return ";";
     
-    default: return std::to_string(static_cast<int>(kind)) + " Unimplemented Name of TokenKind";
+    default:
+        return "Unimplemented Name of TokenKind " + std::to_string(static_cast<int>(kind));
     }
 }
 

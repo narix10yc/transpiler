@@ -111,8 +111,11 @@ public:
             llvm::Value* aa, llvm::Value* bb, llvm::Value* cc, int bbFlag,
             const llvm::Twine& bbccName = "", const llvm::Twine& aaName = "");
 
+    // fadd, accepting nullable inputs
     llvm::Value* genFAdd(llvm::Value* a, llvm::Value* b);
+    // fsub, accepting nullable inputs
     llvm::Value* genFSub(llvm::Value* a, llvm::Value* b);
+    // fmul, accepting nullable inputs
     llvm::Value* genFMul(llvm::Value* a, llvm::Value* b);
 
     std::pair<llvm::Value*, llvm::Value*> genComplexMultiply(

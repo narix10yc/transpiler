@@ -55,6 +55,23 @@ public:
     using c_matrix_t = complex_matrix::SquareMatrix<std::complex<double>>;
     // parametrised matrix type
     using p_matrix_t = complex_matrix::SquareMatrix<saot::Polynomial>;
+private:
+    enum ConvertibleKind : int {
+        Unknown = -1, Convertible = 1, UnConvertible = 0
+    };
+    struct Cache {
+        ConvertibleKind convertibleToUpMat;
+        std::shared_ptr<up_matrix_t> upMat;
+        ConvertibleKind convertibleToCMat;
+        std::shared_ptr<c_matrix_t> cMat;
+        // gate matrix is always convertible to pMat
+        std::shared_ptr<p_matrix_t> pMat;
+
+        Cache() : convertibleToUpMat(Unknown), upMat(nullptr),
+                  convertibleToCMat(Unknown), cMat(nullptr), pMat(nullptr) {}
+    };
+
+    Cache cache;
 public:
     GateKind gateKind;
     std::variant<std::monostate, up_matrix_t, gate_params_t, c_matrix_t, p_matrix_t> _matrix;
@@ -68,13 +85,13 @@ public:
         MK_Parametrized   = 4,
     };
 
-    GateMatrix() : gateKind(gUndef), _matrix() {}
+    GateMatrix() : gateKind(gUndef), cache(), _matrix() {}
 
     GateMatrix(GateKind gateKind, const gate_params_t& params = {})
-        : gateKind(gateKind), _matrix(params) {}
+        : gateKind(gateKind), cache(), _matrix(params) {}
         
     GateMatrix(const std::variant<std::monostate, up_matrix_t, gate_params_t, c_matrix_t, p_matrix_t>& m)
-        : _matrix(m) { gateKind = GateKind(nqubits()); }
+        : cache(), _matrix(m) { gateKind = GateKind(nqubits()); }
     
     static GateMatrix FromName(const std::string& name, const gate_params_t& params = {});
 
@@ -87,7 +104,7 @@ public:
 
     p_matrix_t getParametrizedMatrix() const;
 
-    // GateMatrix convertToParametrizedMatrix() const;
+    bool isConvertibleToUnitaryPermMatrix() const;
 
     // @brief Get number of qubits
     int nqubits() const;
@@ -200,6 +217,8 @@ public:
     bool isConvertibleToUnitaryPermGate() const;
 
     bool approximateGateMatrix(double thres);
+
+    void simplifyGateMatrix();
 };
 
 } // namespace saot

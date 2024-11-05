@@ -29,31 +29,28 @@ int main(int argc, char** argv) {
     qc.print(file);
 
     auto graph = qc.toCircuitGraph();
+    graph.print(std::cerr) << "\n";
+
     applyCPUGateFusion(CPUFusionConfig::Default, graph);
+    graph.print(std::cerr) << "\n";
 
     auto& fusedGate = graph.getAllBlocks()[0]->quantumGate;
-    fusedGate->gateMatrix.printMatrix(std::cerr) << "\n";
 
-    // auto pMat = fusedGate->gateMatrix.getParametrizedMatrix();
-    // pMat.
+    fusedGate->gateMatrix.printParametrizedMatrix(std::cerr) << "\n";
+    fusedGate->simplifyGateMatrix();
+    fusedGate->gateMatrix.printParametrizedMatrix(std::cerr) << "\n";
 
-    // fusedGate->gateMatrix.printMatrix(std::cerr) << "\n";
-
-    // for (auto& P : fusedGate->gateMatrix.getParametrizedMatrix().data) {
-        // P.removeSmallMonomials();
-    // }
-    // fusedGate->gateMatrix.printMatrix(std::cerr) << "\n";
 
     // for (auto& P : fusedGate->gateMatrix.pData())
-        // P.simplify(varValues);
+    //     P.simplify(varValues);
     // fusedGate->gateMatrix.printMatrix(std::cerr);
 
-    // IRGenerator G;
-    // Function* func = G.generatePrepareParameter(graph);
-    // G.dumpToStderr();
+    IRGenerator G;
+    Function* func = G.generatePrepareParameter(graph);
+    G.dumpToStderr();
 
-    // G.applyLLVMOptimization(OptimizationLevel::O2);
-    // G.dumpToStderr();
+    G.applyLLVMOptimization(OptimizationLevel::O2);
+    G.dumpToStderr();
 
     // // JIT
     // jit::JitEngine jitEngine(G);

@@ -18,7 +18,7 @@ int main(int argc, char** argv) {
     int nGateInst = 0;
     int nMemOnlyInst = 0;
     std::vector<fpga::Instruction> instructions;
-    FPGAInstGenConfig instGenConfig = fpga::FPGAInstGenConfig::Grid2x2;
+    FPGAInstGenConfig instGenConfig = fpga::FPGAInstGenConfig::Grid4x4;
     
     openqasm::Parser qasmParser(argv[1], -1);
     auto G = qasmParser.parse()->toCircuitGraph();
@@ -27,6 +27,8 @@ int main(int argc, char** argv) {
     // auto G = saotParser.parseQuantumCircuit().toCircuitGraph();
 
     // auto G = CircuitGraph::QFTCircuit(std::stoi(argv[1]));
+    // auto G = CircuitGraph::ALACircuit(std::stoi(argv[1]));
+
     // G.print(std::cerr);
     std::cerr << "Before fusion there are " << G.countBlocks() << " blocks\n";
 
