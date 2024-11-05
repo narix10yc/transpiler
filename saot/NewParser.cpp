@@ -1,4 +1,4 @@
-#include "saot/NewParser.h"
+#include "saot/Parser.h"
 #include "saot/CircuitGraph.h"
 #include "saot/ast.h"
 

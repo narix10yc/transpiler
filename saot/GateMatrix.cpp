@@ -606,7 +606,6 @@ void GateMatrix::computeAndCacheCMat() const {
     }
 
     default:
-        assert(false && "Unsupported constant matrix yet");
         cache.isConvertibleToCMat = UnConvertible;
         return;
     }
