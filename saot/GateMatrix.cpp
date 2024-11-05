@@ -625,17 +625,3 @@ void GateMatrix::computeAndCachePMat() const {
     return;
 }
 
-// GateMatrix::getConstantMatrix definition
-namespace {
-inline c_matrix_t getMatrixU_c(double theta, double phi, double lambd) {
-    double ctheta = std::cos(theta);
-    double stheta = std::sin(theta);
-    return c_matrix_t({
-        { ctheta, 0.0 },
-        { -std::cos(lambd) * stheta, -std::sin(lambd) * stheta },
-        { std::cos(phi) * stheta, std::sin(phi) * stheta },
-        { std::cos(phi+lambd) * ctheta, std::sin(phi+lambd) * ctheta }
-    });
-}
-
-}

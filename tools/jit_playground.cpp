@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
 
     auto& fusedGate = graph.getAllBlocks()[0]->quantumGate;
 
-    auto pMat = fusedGate->gateMatrix.getParametrizedMatrix();
+    auto& pMat = fusedGate->gateMatrix.getParametrizedMatrix();
     
     printParametrizedMatrix(std::cerr, pMat);
     for (auto& p : pMat.data)

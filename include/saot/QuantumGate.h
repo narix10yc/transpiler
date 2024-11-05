@@ -100,6 +100,7 @@ public:
 
     void permuteSelf(const std::vector<int>& flags); 
 
+    // get cached unitary perm matrix object associated with this GateMatrix
     const up_matrix_t* getUnitaryPermMatrix() const {
         if (cache.isConvertibleToUpMat == Unknown)
             computeAndCacheUpMat();
@@ -108,6 +109,15 @@ public:
         return &cache.upMat;
     }
 
+    up_matrix_t* getUnitaryPermMatrix() {
+        if (cache.isConvertibleToUpMat == Unknown)
+            computeAndCacheUpMat();
+        if (cache.isConvertibleToUpMat == UnConvertible)
+            return nullptr;
+        return &cache.upMat;
+    }
+
+    // get cached constant matrix object associated with this GateMatrix
     const c_matrix_t* getConstantMatrix() const {
         if (cache.isConvertibleToCMat == Unknown)
             computeAndCacheCMat();
@@ -116,7 +126,23 @@ public:
         return &cache.cMat;
     }
 
+    c_matrix_t* getConstantMatrix() {
+        if (cache.isConvertibleToCMat == Unknown)
+            computeAndCacheCMat();
+        if (cache.isConvertibleToCMat == UnConvertible)
+            return nullptr;
+        return &cache.cMat;
+    }
+
+    // get cached parametrized matrix object associated with this GateMatrix
     const p_matrix_t& getParametrizedMatrix() const {
+        if (cache.isConvertibleToPMat == Unknown)
+            computeAndCachePMat();
+        assert(cache.isConvertibleToPMat == Convertible);
+        return cache.pMat;
+    }
+
+    p_matrix_t& getParametrizedMatrix() {
         if (cache.isConvertibleToPMat == Unknown)
             computeAndCachePMat();
         assert(cache.isConvertibleToPMat == Convertible);
@@ -133,11 +159,6 @@ public:
 
     // @brief Get number of qubits
     int nqubits() const;
-
-    /// @brief Approximate matrix elements. Change matrix in-place.
-    /// @param level : optimization level. Level 0 turns off everything. Level 1
-    /// only applies zero-skipping. Level > 1 also applies to 1 and -1.
-    GateMatrix& approximateCachedCMat(int level, double thres = 1e-8);
 
     std::ostream& printCMat(std::ostream& os) const {
         const auto* cMat = getConstantMatrix();
