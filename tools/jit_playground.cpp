@@ -49,7 +49,11 @@ int main(int argc, char** argv) {
     // fusedGate->gateMatrix.printMatrix(std::cerr);
 
     IRGenerator G;
-    Function* func = G.generatePrepareParameter(graph);
+    Function* llvmFuncPrepareParam = G.generatePrepareParameter(graph);
+    auto allBlocks = graph.getAllBlocks();
+    for (const auto& b : allBlocks) {
+        G.generateKernel(*b->quantumGate);
+    }
     G.dumpToStderr();
 
     // G.applyLLVMOptimization(OptimizationLevel::O2);
@@ -58,7 +62,7 @@ int main(int argc, char** argv) {
     // JIT
     jit::JitEngine jitter(G);
 
-    auto funcAddrOrErr = jitter.JIT->lookup(func->getName());
+    auto funcAddrOrErr = jitter.JIT->lookup(llvmFuncPrepareParam->getName());
     if (!funcAddrOrErr) {
         errs() << "Failed to look up function\n" << funcAddrOrErr.takeError() << "\n";
         return 1;

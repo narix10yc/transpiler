@@ -126,16 +126,14 @@ IRGenerator::generateKernelDebug(
         double zeroSkipThres = _config.zeroSkipThres / K;
         double shareMatrixElemThres = _config.shareMatrixElemThres / K;
         const auto* cMat = gate.gateMatrix.getConstantMatrix();
-        assert(cMat);
-        const auto& cdata = cMat->data;
         for (unsigned i = 0; i < matrix.size(); i++) {
-            if (_config.forceDenseKernel) {
+            if (cMat == nullptr || _config.forceDenseKernel) {
                 matrix[i].realFlag = 2;
                 matrix[i].imagFlag = 2;
                 continue;
             }
-            auto real = cdata.at(i).real();
-            auto imag = cdata.at(i).imag();
+            auto real = cMat->data.at(i).real();
+            auto imag = cMat->data.at(i).imag();
 
             if (std::abs(real) < zeroSkipThres)
                 matrix[i].realFlag = 0;
