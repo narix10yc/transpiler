@@ -37,11 +37,11 @@ int main(int argc, char** argv) {
     // instructions = fpga::genInstruction(G, instGenConfig);
     // for (const auto& i : instructions) {
     //     // i.print(std::cerr);
-    //     if (!i.memInst.isNull())
+    //     if (!i.mInst->isNull())
     //         nMemInst++;
-    //     if (!i.gateInst.isNull())
+    //     if (!i.gInst->isNull())
     //         nGateInst++;
-    //     if (!i.memInst.isNull() && i.gateInst.isNull())
+    //     if (!i.mInst->isNull() && i.gInst->isNull())
     //         nMemOnlyInst++;
     // }
     // std::cerr << "A total of " << instructions.size()
@@ -61,11 +61,11 @@ int main(int argc, char** argv) {
     nMemOnlyInst = 0;
     for (const auto& i : instructions) {
         // i.print(std::cerr);
-        if (!i.memInst.isNull())
+        if (!i.mInst->isNull())
             nMemInst++;
-        if (!i.gateInst.isNull())
+        if (!i.gInst->isNull())
             nGateInst++;
-        if (!i.memInst.isNull() && i.gateInst.isNull())
+        if (!i.mInst->isNull() && i.gInst->isNull())
             nMemOnlyInst++;
     }
     std::cerr << "A total of " << instructions.size()

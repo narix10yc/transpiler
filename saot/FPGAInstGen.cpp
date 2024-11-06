@@ -4,64 +4,33 @@
 using namespace saot;
 using namespace saot::fpga;
 
-std::ostream& GateInst::print(std::ostream& os) const {
-    const auto printQubits = [&]() {
-        auto qubits = block->getQubits();
-        if (block->getQubits().empty())
-            return;
-        auto it = qubits.begin();
-        os << *it;
-        while (++it != qubits.end())
-            os << " " << *it;
-    };
-
-    switch (op) {
-    case GOp_NUL:
-        return os << "NUL";
-    case GOp_SQ: {
-        os << "GSQ <id=" << block->id << "> ";
-        printQubits();
-        return os;
-    }
-    case GOp_UP: {
-        os << "GUP <id=" << block->id << ", size=" << block->dataVector.size() << "> ";
-        printQubits();
-        return os;
-    }
-    default:
-        return os << "<Unknown GateOp>";
-    }
+std::ostream& GInstSQ::print(std::ostream& os) const {
+    os << "UP<id=" << block->id << "> ";
+    for (const auto& data : block->dataVector)
+        os << data.qubit << " ";
     return os;
 }
 
-std::ostream& MemoryInst::print(std::ostream& os) const {
-    switch (op) {
-    case MOp_NUL:
-        return os << "NUL" << std::string(12, ' ');
-    case MOp_SSR:
-        return os << "SSR " << qIdx << std::string(10, ' ');
-    case MOp_SSC:
-        return os << "SSC " << qIdx << std::string(10, ' ');
-    case MOp_FSC:
-        return os << "FSC <cycle=" << cycle << "> " << qIdx;
-    case MOp_FSR:
-        return os << "FSR <cycle=" << cycle << "> " << qIdx;
-    case MOp_EXT:
-        return os << "EXT " << qIdx << std::string(10, ' ');
-    default:
-        return os << "<Unknown MemOp>";
-    }
+std::ostream& GInstUP::print(std::ostream& os) const {
+    os << "UP<id=" << block->id << "> ";
+    for (const auto& data : block->dataVector)
+        os << data.qubit << " ";
+    return os;
 }
 
 uint64_t Instruction::cost(const FPGACostConfig& config) const {
-    if (gateInst.isNull())
+    if (gInst->isNull()) {
+        if (mInst->getKind() == MOp_EXT)
+            return config.tExtMemOp;
+        assert(!mInst->isNull());
         return config.tMemOpOnly;
+    }
     
-    if (gateInst.op == GOp_UP)
+    if (gInst->getKind() == GOp_UP)
         return config.tUnitaryPerm;
-    assert(gateInst.op == GOp_SQ);
+    assert(gInst->getKind() == GOp_SQ);
 
-    if (fpga::getFPGAGateCategory(*gateInst.block->quantumGate) & fpga::fpgaRealOnly)
+    if (fpga::getFPGAGateCategory(*gInst->block->quantumGate) & fpga::fpgaRealOnly)
         return config.tRealGate;
     return config.tGeneral;
 }
@@ -94,6 +63,7 @@ struct QubitStatus {
             case QK_Row: os << "row"; break;
             case QK_Col: os << "col"; break;
             case QK_Depth: os << "dep"; break;
+            case QK_OffChip: os << "ext"; break;
             default: break;
         }
         os << ", " << kindIdx << ")";
@@ -277,13 +247,13 @@ public:
         int vacantGateIdx = 0;
         int sqGateBarrierIdx = 0; // single-qubit gate
 
-        const auto writeMemInst = [&](int idx, const MemoryInst& inst) {
+        const auto writeMemInst = [&](int idx, std::unique_ptr<MemoryInst> inst) {
             if (idx < instructions.size()) {
-                assert(instructions[idx].memInst.isNull());
-                instructions[idx].memInst = inst;
+                assert(instructions[idx].mInst->isNull());
+                instructions[idx].setMInst(std::move(inst));
             } else {
                 assert(idx == instructions.size());
-                instructions.emplace_back(inst, GateInst());
+                instructions.emplace_back(std::move(inst), nullptr);
             }
         };
 
@@ -293,15 +263,20 @@ public:
             const int fullSwapQIdx = qubitStatuses[nonLocalQ].kindIdx;
             const int nFSCycles = getNumberOfFullSwapCycles(fullSwapQIdx);
             const int shuffleSwapQIdx = qubitStatuses[localQ].kindIdx;
-            const MemoryOp fullSwapOp = 
-                (qubitStatuses[nonLocalQ].kind == QK_Row) ? MOp_FSR : MOp_FSC;
-            const MemoryOp shuffleSwapOp = 
-                (qubitStatuses[nonLocalQ].kind == QK_Row) ? MOp_SSR : MOp_SSC;
+
             int insertIdx = std::max(vacantMemIdx, sqGateBarrierIdx);
-            // full swaps + shuffle swap
-            for (int cycle = 0; cycle < nFSCycles; cycle++)
-                writeMemInst(insertIdx++, MemoryInst(fullSwapOp, fullSwapQIdx, cycle));
-            writeMemInst(insertIdx++, MemoryInst(shuffleSwapOp, shuffleSwapQIdx));
+            // full swaps
+            for (int cycle = 0; cycle < nFSCycles; cycle++) {
+                if (qubitStatuses[nonLocalQ].kind == QK_Row)
+                    writeMemInst(insertIdx++, std::make_unique<MInstFSR>(fullSwapQIdx, cycle));
+                else
+                    writeMemInst(insertIdx++, std::make_unique<MInstFSC>(fullSwapQIdx, cycle));
+            }
+            // shuffle swap
+            if (qubitStatuses[nonLocalQ].kind == QK_Row)
+                writeMemInst(insertIdx++, std::make_unique<MInstSSR>(shuffleSwapQIdx));
+            else
+                writeMemInst(insertIdx++, std::make_unique<MInstSSC>(shuffleSwapQIdx));
 
             vacantMemIdx = insertIdx;
             // swap qubit statuses
@@ -330,12 +305,11 @@ public:
             popBlock(b);
 
             if (vacantGateIdx == instructions.size()) {
-                instructions.emplace_back(
-                    MemoryInst(MOp_NUL), GateInst(GOp_UP, b));
+                instructions.emplace_back(nullptr, std::make_unique<GInstUP>(b));
             } else {
                 auto& inst = instructions[vacantGateIdx];
-                assert(inst.gateInst.isNull());
-                inst.gateInst = GateInst(GOp_UP, b);
+                assert(inst.gInst->isNull());
+                inst.setGInst(std::make_unique<GInstUP>(b));
             }
             ++vacantGateIdx;
         };
@@ -347,7 +321,7 @@ public:
             auto qubit = b->quantumGate->qubits[0];
             assert(qubitStatuses[qubit].kind == QK_Local);
 
-            instructions.emplace_back(MemoryInst(), GateInst(GOp_SQ, b));
+            instructions.emplace_back(nullptr, std::make_unique<GInstSQ>(b));
             vacantGateIdx = instructions.size();
             sqGateBarrierIdx = vacantGateIdx - 1;
         };

@@ -430,7 +430,7 @@ inline c_matrix_t matCvt_up_to_c(const up_matrix_t& up) {
 
 // Two paths lead to upMat: gpMat or cMat
 void GateMatrix::computeAndCacheUpMat() const {
-    assert(cache.isConvertibleToCMat == Unknown);
+    assert(cache.isConvertibleToUpMat == Unknown);
 
     switch (gateKind) {
     case gX:  {

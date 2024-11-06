@@ -32,14 +32,14 @@ enum FPGAGateCategory : unsigned {
 
 FPGAGateCategory getFPGAGateCategory(const QuantumGate& gate);
 
-enum GateOp : int {
+enum GInstKind : int {
     GOp_NUL = 0,
 
     GOp_SQ = 1,     // Single Qubit
     GOp_UP = 2,     // Unitary Permutation
 };
 
-enum MemoryOp : int {
+enum MInstKind : int {
     MOp_NUL = 0,
     MOp_SSR = 1,    // Shuffle Swap Row
     MOp_SSC = 2,    // Shuffle Swap Col
@@ -50,40 +50,143 @@ enum MemoryOp : int {
     MOp_EXT = 5,    // External Memory Swap
 };
 
+
 class MemoryInst {
+private:
+    MInstKind mKind;
 public:
-    MemoryOp op;
+    MemoryInst(MInstKind mKind) : mKind(mKind) {}
+
+    virtual ~MemoryInst() = default;
+
+    MInstKind getKind() const { return mKind; }
+
+    bool isNull() { return getKind() == MOp_NUL; }
+    virtual std::ostream& print(std::ostream& os) const {
+        assert(false && "Calling from base class");
+        return os;
+    }
+};
+
+// Null (NUL)
+class MInstNUL : public MemoryInst {
+public:
+    MInstNUL() : MemoryInst(MOp_NUL) {}
+
+    std::ostream& print(std::ostream& os) const override {
+        return os << "NUL" << std::string(12, ' ');
+    }
+};
+
+// Shuffle Swap Row (SSR)
+class MInstSSR : public MemoryInst {
+public:
+    int qIdx;
+    MInstSSR(int qIdx) : MemoryInst(MOp_SSR), qIdx(qIdx) {}
+
+    std::ostream& print(std::ostream& os) const override {
+        return os << "SSR " << qIdx << std::string(10, ' ');
+    }
+};
+
+// Shuffle Swap Col (SSC)
+class MInstSSC : public MemoryInst {
+public:
+    int qIdx;
+    MInstSSC(int qIdx) : MemoryInst(MOp_SSC), qIdx(qIdx) {}
+
+    std::ostream& print(std::ostream& os) const override {
+        return os << "SSC " << qIdx << std::string(10, ' ');
+    }
+};
+
+// Full Swap Row (FSR)
+class MInstFSR : public MemoryInst {
+public:
     int qIdx;
     int cycle;
 
-    MemoryInst() : op(MOp_NUL), qIdx(-1), cycle(-1) {}
+    MInstFSR(int qIdx, int cycle)
+        : MemoryInst(MOp_FSR), qIdx(qIdx), cycle(cycle) {}
 
-    MemoryInst(MemoryOp op, int qIdx = -1, int cycle = -1)
-        : op(op), qIdx(qIdx), cycle(cycle) {}
-    
-    bool isNull() const { return op == MOp_NUL; }
+    std::ostream& print(std::ostream& os) const override {
+        return os << "FSR <cycle=" << cycle << "> " << qIdx;
+    }
+};
 
-    std::ostream& print(std::ostream&) const;
+// Full Swap Col (FSC)
+class MInstFSC : public MemoryInst {
+public:
+    int qIdx;
+    int cycle;
 
+    MInstFSC(int qIdx, int cycle)
+        : MemoryInst(MOp_FSC), qIdx(qIdx), cycle(cycle) {}
+
+    std::ostream& print(std::ostream& os) const override {
+        return os << "FSC <cycle=" << cycle << "> " << qIdx;
+    }
+};
+
+// External (EXT)
+class MInstEXT : public MemoryInst {
+public:
+    std::vector<int> flags;
+
+    MInstEXT(std::initializer_list<int> flags)
+        : MemoryInst(MOp_EXT), flags(flags) {}
+    MInstEXT(const std::vector<int>& flags)
+        : MemoryInst(MOp_EXT), flags(flags) {}
+
+    std::ostream& print(std::ostream& os) const override {
+        return os << "EXT";
+    }
 };
 
 class GateInst {
+private:
+    GInstKind gKind;
 public:
-    GateOp op;
     GateBlock* block;
 
-    GateInst() : op(GOp_NUL), block(nullptr) {}
+    GateInst(GInstKind gKind, GateBlock* block = nullptr)
+        : gKind(gKind), block(block) {}
+    
+    virtual ~GateInst() = default;
 
-    GateInst(GateOp op, GateBlock* block)
-            : op(op), block(block) {
-        assert((op == GOp_NUL) ^ (block != nullptr));
+    GInstKind getKind() const { return gKind; }
+
+    bool isNull() const { return getKind() == GOp_NUL; }
+    virtual std::ostream& print(std::ostream& os) const {
+        assert(false && "Calling from base class");
+        return os;
     }
-
-    bool isNull() const { return op == GOp_NUL; }
-
-    std::ostream& print(std::ostream&) const;
 };
 
+class GInstNUL : public GateInst {
+public:
+    GInstNUL() : GateInst(GOp_NUL, nullptr) {}
+
+    std::ostream& print(std::ostream& os) const override {
+        return os << "NUL";
+    }
+};
+
+// Single Qubit Gate (SQ)
+class GInstSQ : public GateInst {
+public:
+    GInstSQ(GateBlock* block) : GateInst(GOp_SQ, block) {}
+    
+    std::ostream& print(std::ostream& os) const override;
+};
+
+// Unitary Permutation Gate (UP)
+class GInstUP : public GateInst {
+public:
+    GInstUP(GateBlock* block) : GateInst(GOp_UP, block) {}
+    
+    std::ostream& print(std::ostream& os) const override;
+};
 
 struct FPGACostConfig {
     // external memory swap
@@ -108,26 +211,38 @@ struct FPGACostConfig {
 
 class Instruction {
 public:
-    MemoryInst memInst;
-    GateInst gateInst;
+    std::unique_ptr<MemoryInst> mInst;
+    std::unique_ptr<GateInst> gInst;
 
-    Instruction() : memInst(), gateInst() {}
-
-    Instruction(const MemoryInst& memInst, const GateInst& gateInst)
-        : memInst(memInst), gateInst(gateInst) {}
+    Instruction(std::unique_ptr<MemoryInst> _mInst,
+                std::unique_ptr<GateInst> _gInst) {
+        setMInst(std::move(_mInst));
+        setGInst(std::move(_gInst));
+    }
 
     std::ostream& print(std::ostream& os) const {
-        memInst.print(os) << " : ";
-        gateInst.print(os) << "\n";
+        mInst->print(os) << " : ";
+        gInst->print(os) << "\n";
         return os;
     }
 
-    bool isNull() const {
-        return memInst.isNull() && gateInst.isNull();
+    void setMInst(std::unique_ptr<MemoryInst> inst) {
+        if (inst) {
+            mInst = std::move(inst);
+            return;
+        }
+        mInst = std::make_unique<MInstNUL>();
+    }
+
+    void setGInst(std::unique_ptr<GateInst> inst) {
+        if (inst) {
+            gInst = std::move(inst);
+            return;
+        }
+        gInst = std::make_unique<GInstNUL>();
     }
 
     uint64_t cost(const FPGACostConfig&) const;
-    
 };
 
 struct FPGAInstGenConfig {
