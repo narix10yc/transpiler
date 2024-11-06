@@ -23,12 +23,12 @@ int main(int argc, char** argv) {
     QuantumGate gate1(matCX, {0, 1});
     QuantumGate gate2(matCX, {2, 1});
 
-    gate1.gateMatrix.printParametrizedMatrix(std::cerr) << "\n";    
-    gate2.gateMatrix.printParametrizedMatrix(std::cerr) << "\n";    
+    printParametrizedMatrix(std::cerr, gate1.gateMatrix.getParametrizedMatrix()) << "\n";    
+    printParametrizedMatrix(std::cerr, gate2.gateMatrix.getParametrizedMatrix()) << "\n";    
 
 
     auto gate = gate2.lmatmul(gate1);
-    gate.gateMatrix.printParametrizedMatrix(std::cerr) << "\n";    
+    printParametrizedMatrix(std::cerr, gate.gateMatrix.getParametrizedMatrix()) << "\n";    
 
     // Monomial m1;
     // m1.insertMulTerm(VariableSumNode::Cosine({0, 2}, 1.2));

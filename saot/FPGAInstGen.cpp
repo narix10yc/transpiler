@@ -4,19 +4,6 @@
 using namespace saot;
 using namespace saot::fpga;
 
-const FPGAInstGenConfig FPGAInstGenConfig::Grid2x2 = {
-    .gridSize = 2
-};
-
-const FPGAInstGenConfig FPGAInstGenConfig::Grid3x3 = {
-    .gridSize = 3
-};
-
-const FPGAInstGenConfig FPGAInstGenConfig::Grid4x4 = {
-    .gridSize = 4
-};
-
-
 std::ostream& GateInst::print(std::ostream& os) const {
     const auto printQubits = [&]() {
         auto qubits = block->getQubits();

@@ -47,7 +47,7 @@ enum MemoryOp : int {
     MOp_FSR = 3,    // Full Swap Row
     MOp_FSC = 4,    // Full Swap Col
 
-    MOp_EXT = 5,    // External 
+    MOp_EXT = 5,    // External Memory Swap
 };
 
 class MemoryInst {
@@ -86,6 +86,8 @@ public:
 
 
 struct FPGACostConfig {
+    // external memory swap
+    double tExtMemOp;
     // memOp with no gateOp
     double tMemOpOnly;
     // single-qubit gateOp with real gate
@@ -131,10 +133,10 @@ public:
 struct FPGAInstGenConfig {
 public:
     int gridSize;
+    int nOnChipQubits;
 
-static const FPGAInstGenConfig Grid2x2;
-static const FPGAInstGenConfig Grid3x3;
-static const FPGAInstGenConfig Grid4x4;
+    FPGAInstGenConfig(int gridSize, int nOnChipQubits) 
+        : gridSize(gridSize), nOnChipQubits(nOnChipQubits) {}
 };
 
 // top-level function to generate FPGA instructions from a CircuitGraph

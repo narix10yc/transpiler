@@ -1,4 +1,4 @@
-#include "openqasm/Parser.h"
+#include "openqasm/parser.h"
 #include "saot/CircuitGraph.h"
 #include "saot/Fusion.h"
 #include "saot/cpu.h"
@@ -107,11 +107,11 @@ int main(int argc, char** argv) {
         std::cerr << "-- Output file: " << outputFilename << "\n";
     }
 
-    openqasm::LegacyParser LegacyParser(inputFilename, 0);
+    openqasm::Parser parser(inputFilename, 0);
 
     // parse and write ast
     tic = clock::now();
-    auto qasmRoot = LegacyParser.parse();
+    auto qasmRoot = parser.parse();
     std::cerr << "-- qasm AST built\n";
     auto graph = qasmRoot->toCircuitGraph();
     tok = clock::now();

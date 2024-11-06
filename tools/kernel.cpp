@@ -1,4 +1,4 @@
-#include "openqasm/LegacyParser.h"
+#include "openqasm/parser.h"
 #include "saot/CircuitGraph.h"
 #include "saot/Fusion.h"
 #include "saot/cpu.h"

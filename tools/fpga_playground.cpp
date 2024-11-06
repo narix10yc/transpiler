@@ -18,7 +18,8 @@ int main(int argc, char** argv) {
     int nGateInst = 0;
     int nMemOnlyInst = 0;
     std::vector<fpga::Instruction> instructions;
-    FPGAInstGenConfig instGenConfig = fpga::FPGAInstGenConfig::Grid4x4;
+    FPGAInstGenConfig instGenConfig(
+        /* gridSize= */ 2, /* nOnChipQubits= */ 22);
     
     openqasm::Parser qasmParser(argv[1], -1);
     auto G = qasmParser.parse()->toCircuitGraph();
