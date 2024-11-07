@@ -89,7 +89,7 @@ Token Lexer::tokenizeNumeric() {
     do {
         numericStr += curChar;
         nextChar();
-    } while (std::isdigit(curChar) || curChar == '.');
+    } while (std::isdigit(curChar) || curChar == '.' || curChar == 'e' || curChar == '-');
     
     // check number of dots
     int count = 0;
