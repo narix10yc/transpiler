@@ -444,6 +444,11 @@ public:
             if (nonCompFlag)
                 continue;
             
+            if (!config.selectiveGenerationMode) {
+                assert(false && "Not Implemented");
+                continue;
+            }
+            
             // TODO: optimize this traversal
             if (auto* b = findOnChipBlockWithKind(ABK_LocalSQ))
                 generateLocalSQBlock(b);

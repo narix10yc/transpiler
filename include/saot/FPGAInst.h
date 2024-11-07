@@ -249,12 +249,18 @@ public:
     int nLocalQubits;
     int gridSize;
 
+    // If off, apply sequential instruction generation on the default order of
+    // blocks present in CircuitGraph
+    bool selectiveGenerationMode;
+
     int getNOnChipQubits() const {
         return nLocalQubits + 2 * gridSize;
     }
 
-    FPGAInstGenConfig(int nLocalQubits, int gridSize) 
-        : nLocalQubits(nLocalQubits), gridSize(gridSize) {}
+    FPGAInstGenConfig(int nLocalQubits, int gridSize,
+                      bool selectiveGenertaionMode = true) 
+        : nLocalQubits(nLocalQubits), gridSize(gridSize),
+          selectiveGenerationMode(selectiveGenerationMode) {}
 };
 
 // top-level function to generate FPGA instructions from a CircuitGraph
