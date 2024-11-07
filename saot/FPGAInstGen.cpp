@@ -4,6 +4,12 @@
 using namespace saot;
 using namespace saot::fpga;
 
+std::ostream& MInstEXT::print(std::ostream& os) const {
+    os << "EXT ";
+    utils::printVector(flags, os);
+    return os;
+}
+
 std::ostream& GInstSQ::print(std::ostream& os) const {
     os << "UP<id=" << block->id << "> ";
     for (const auto& data : block->dataVector)
@@ -18,10 +24,14 @@ std::ostream& GInstUP::print(std::ostream& os) const {
     return os;
 }
 
-uint64_t Instruction::cost(const FPGACostConfig& config) const {
+double Instruction::cost(const FPGACostConfig& config) const {
+    if (mInst->getKind() == MOp_EXT) {
+        if (dynamic_cast<MInstEXT&>(*mInst).flags[0] < 7)
+            return 2 * config.tExtMemOp;
+        return config.tExtMemOp;
+    }
+
     if (gInst->isNull()) {
-        if (mInst->getKind() == MOp_EXT)
-            return config.tExtMemOp;
         assert(!mInst->isNull());
         return config.tMemOpOnly;
     }
@@ -78,6 +88,12 @@ int getNumberOfFullSwapCycles(int kindIdx) {
 
 class InstGenState {
 private:
+    enum on_chip_flag_t {
+        OCF_NotInited,  // not initialized
+        OCF_OnChip,     // on-chip
+        OCF_OffChip,    // off-chip
+    };
+
     enum available_block_kind_t {
         ABK_LocalSQ,     // local single-qubit
         ABK_NonLocalSQ,  // non-local single-qubit
@@ -88,22 +104,27 @@ private:
 
     struct available_blocks_t {
         GateBlock* block;
+        on_chip_flag_t isOnChip;
         available_block_kind_t kind;
 
-        available_blocks_t(GateBlock* block, available_block_kind_t kind = ABK_NotInited)
-            : block(block), kind(kind) {}
+        available_blocks_t(GateBlock* block,
+                           on_chip_flag_t isOnChip = OCF_NotInited,
+                           available_block_kind_t kind = ABK_NotInited)
+            : block(block), isOnChip(isOnChip), kind(kind) {}
     };
 
     void init(const CircuitGraph& graph) {
         // initialize qubit statuses
-        int nLocalQubits = nqubits - 2 * gridSize;
-        assert(nLocalQubits > 0);
-        for (int i = 0; i < nLocalQubits; i++)
+        int nOnChipQubits = config.getNOnChipQubits();
+        for (int i = 0; i < config.nLocalQubits; i++) // local
             qubitStatuses[i] = QubitStatus(QK_Local, i);
-        for (int i = 0; i < gridSize; i++)
-            qubitStatuses[nLocalQubits + i] = QubitStatus(QK_Row, i);
-        for (int i = 0; i < gridSize; i++)
-            qubitStatuses[nLocalQubits + gridSize + i] = QubitStatus(QK_Col, i);   
+        for (int i = 0; i < config.gridSize; i++) // row
+            qubitStatuses[config.nLocalQubits + i] = QubitStatus(QK_Row, i);
+        for (int i = 0; i < config.gridSize; i++) // col
+            qubitStatuses[config.nLocalQubits + config.gridSize + i] = QubitStatus(QK_Col, i);
+        for (int i = 0; i < nqubits - nOnChipQubits; i++) // off-chip
+            qubitStatuses[nOnChipQubits + i] = QubitStatus(QK_OffChip, i);
+
         // initialize node state
         int row = 0;
         for (auto it = graph.tile().begin(); it != graph.tile().end(); it++, row++) {
@@ -145,7 +166,7 @@ private:
         updateAvailables();
     }
 public:
-    int gridSize;
+    const FPGAInstGenConfig& config;
     int nrows;
     int nqubits;
     std::vector<QubitStatus> qubitStatuses;
@@ -154,8 +175,8 @@ public:
     std::vector<int> unlockedRowIndices;
     std::vector<available_blocks_t> availables;
 
-    InstGenState(const CircuitGraph& graph, int gridSize)
-            : gridSize(gridSize),
+    InstGenState(const CircuitGraph& graph, const FPGAInstGenConfig& config)
+            : config(config),
               nrows(graph.tile().size()),
               nqubits(graph.nqubits),
               qubitStatuses(graph.nqubits),
@@ -172,9 +193,20 @@ public:
         return os;
     }
 
-    // update availables depending on qubitKinds
+    // Update availables depending on qubitKinds. This function should be called
+    // whenever qubitStatuses is changed
     void updateAvailables() {
-        for (auto& available : availables) {
+        const auto updateOnChipFlag = [&](available_blocks_t& available) {
+            for (const auto& data : available.block->dataVector) {
+                if (qubitStatuses[data.qubit].kind == QK_OffChip) {
+                    available.isOnChip = OCF_OffChip;
+                    return;
+                }
+            }
+            available.isOnChip = OCF_OnChip;
+        };
+
+        const auto updateKind = [&](available_blocks_t& available) {
             if (available.kind == ABK_NotInited) {
                 if (available.block->quantumGate->isConvertibleToUnitaryPermGate())
                     available.kind = ABK_UnitaryPerm;
@@ -190,6 +222,12 @@ public:
                 assert(available.block->quantumGate->qubits.size() == 1);
                 available.kind = (qubitStatuses[qubit].kind == QK_Local) ? ABK_LocalSQ : ABK_NonLocalSQ;
             }
+        };
+
+        for (auto& available : availables) {
+            assert(available.block);
+            updateOnChipFlag(available);
+            updateKind(available);
         }
     }
 
@@ -232,8 +270,10 @@ public:
         updateAvailables();
     }
 
-    GateBlock* findBlockWithKind(available_block_kind_t kind) const {
+    GateBlock* findOnChipBlockWithKind(available_block_kind_t kind) const {
         for (const auto& candidate : availables) {
+            if (candidate.isOnChip != OCF_OnChip)
+                continue;
             if (candidate.kind == kind)
                 return candidate.block;
         }
@@ -247,6 +287,7 @@ public:
         int vacantGateIdx = 0;
         int sqGateBarrierIdx = 0; // single-qubit gate
 
+        // This method will update vacantMemIdx = idx + 1
         const auto writeMemInst = [&](int idx, std::unique_ptr<MemoryInst> inst) {
             if (idx < instructions.size()) {
                 assert(instructions[idx].mInst->isNull());
@@ -255,6 +296,7 @@ public:
                 assert(idx == instructions.size());
                 instructions.emplace_back(std::move(inst), nullptr);
             }
+            vacantMemIdx = idx + 1;
         };
 
         const auto generateFullSwap = [&](int localQ, int nonLocalQ) {
@@ -278,7 +320,6 @@ public:
             else
                 writeMemInst(insertIdx++, std::make_unique<MInstSSC>(shuffleSwapQIdx));
 
-            vacantMemIdx = insertIdx;
             // swap qubit statuses
             if (fullSwapQIdx != 0) {
                 // permute nonLocalQ -> kind[0] -> localQ
@@ -345,8 +386,51 @@ public:
             generateLocalSQBlock(b);
         };
 
+        const auto generateOnChipReassignment = [&]() {
+            std::vector<int> priorities;
+            priorities.reserve(nqubits);
+
+            auto availablesCopy(availables);
+            // prioritize assigning SQ gates as local
+            while (!availablesCopy.empty()) {
+                auto it = std::find_if(availablesCopy.begin(), availablesCopy.end(),
+                [](const available_blocks_t& avail) {
+                    return avail.kind == ABK_LocalSQ || avail.kind == ABK_NonLocalSQ;
+                });
+                if (it == availablesCopy.end())
+                    break;
+                assert(it->block->nqubits() == 1);
+                int q = it->block->dataVector[0].qubit;
+                utils::pushBackIfNotInVector(priorities, q);
+                availablesCopy.erase(it);
+            }
+            // no SQ gates, prioritize UP gates
+            for (const auto& avail : availablesCopy) {
+                for (const auto& data : avail.block->dataVector)
+                    utils::pushBackIfNotInVector(priorities, data.qubit);
+            }
+            // fill up priorities vector
+            for (int q = 0; q < nqubits; q++)
+                utils::pushBackIfNotInVector(priorities, q);
+
+            // update qubitStatuses
+            assert(utils::isPermutation(priorities));
+            int nOnChipQubits = config.getNOnChipQubits();
+            for (int i = 0; i < config.nLocalQubits; i++) // local
+                qubitStatuses[priorities[i]] = QubitStatus(QK_Local, i);
+            for (int i = 0; i < config.gridSize; i++) // row
+                qubitStatuses[priorities[config.nLocalQubits + i]] = QubitStatus(QK_Row, i);
+            for (int i = 0; i < config.gridSize; i++) // col
+                qubitStatuses[priorities[config.nLocalQubits + config.gridSize + i]] = QubitStatus(QK_Col, i);
+            for (int i = 0; i < nqubits - nOnChipQubits; i++) // off-chip
+                qubitStatuses[priorities[nOnChipQubits + i]] = QubitStatus(QK_OffChip, i);
+
+            writeMemInst(std::max(vacantMemIdx, sqGateBarrierIdx), std::make_unique<MInstEXT>(priorities));
+            updateAvailables();
+        };
+
         while (!availables.empty()) {
-            // handle non-comp gates (omit them for now)
+            // TODO: handle non-comp gates (omit them for now)
             bool nonCompFlag = false;
             for (const auto& avail : availables) {
                 // omit non-comp gates
@@ -359,26 +443,16 @@ public:
             }
             if (nonCompFlag)
                 continue;
-                
-            // if (vacantMemIdx < vacantGateIdx) {
-            //     if (auto* b = findBlockWithKind(ABK_NonLocalSQ))
-            //         generateNonLocalSQBlock(b);
-            //     else if (auto* b = findBlockWithKind(ABK_LocalSQ))
-            //         generateLocalSQBlock(b);
-            //     else if (auto* b = findBlockWithKind(ABK_UnitaryPerm))
-            //         generateUPBlock(b);
-            //     else
-            //         assert(false && "Unreachable");
-            // } else {
-                if (auto* b = findBlockWithKind(ABK_LocalSQ))
-                    generateLocalSQBlock(b);
-                else if (auto* b = findBlockWithKind(ABK_UnitaryPerm))
-                    generateUPBlock(b);
-                else if (auto* b = findBlockWithKind(ABK_NonLocalSQ))
-                    generateNonLocalSQBlock(b);
-                else
-                    assert(false && "Unreachable");
-            // }
+            
+            // TODO: optimize this traversal
+            if (auto* b = findOnChipBlockWithKind(ABK_LocalSQ))
+                generateLocalSQBlock(b);
+            else if (auto* b = findOnChipBlockWithKind(ABK_UnitaryPerm))
+                generateUPBlock(b);
+            else if (auto* b = findOnChipBlockWithKind(ABK_NonLocalSQ))
+                generateNonLocalSQBlock(b);
+            else // no onChipBlock
+                generateOnChipReassignment();
         }
         return instructions;
     }
@@ -388,7 +462,7 @@ public:
 
 std::vector<Instruction> saot::fpga::genInstruction(
         const CircuitGraph& graph, const FPGAInstGenConfig& config) {
-    InstGenState state(graph, config.gridSize);
+    InstGenState state(graph, config);
 
     return state.generate();
 }

@@ -11,15 +11,37 @@
 using namespace saot;
 using namespace saot::fpga;
 
+void printInstructionStatistics(const std::vector<fpga::Instruction>& insts) {
+    int nNonExtMemInst = 0, nExtMemInst = 0, nSqGateInst = 0, nUpGateInst = 0;
+    for (const auto& inst : insts) {
+        if (inst.gInst->getKind() == GOp_SQ)
+            ++nSqGateInst;
+        else if (inst.gInst->getKind() == GOp_UP)
+            ++nUpGateInst;
+        if (!inst.mInst->isNull()) {
+            if (inst.mInst->getKind() == MOp_EXT)
+                ++nExtMemInst;
+            else
+                ++nNonExtMemInst;
+        }
+    }
+    std::cerr << IOColor::CYAN_FG << " -- Instruction Statistics -- \n"
+              << "# instructions: " << insts.size() << "\n"
+              << "  - # gate instructions:   " << nSqGateInst + nUpGateInst << "\n"
+              << "    - # SQ gate instructions: " << nSqGateInst << "\n"
+              << "    - # UP gate instructions: " << nUpGateInst << "\n"
+              << "  - # memory instructions: " << nExtMemInst + nNonExtMemInst << "\n"
+              << "    - # EXT mem instructions:     " << nExtMemInst << "\n"
+              << "    - # non-EXT mem instructions: " << nNonExtMemInst << "\n"
+              << IOColor::RESET;
+
+}
+
 int main(int argc, char** argv) {
     assert(argc > 1);
 
-    int nMemInst = 0;
-    int nGateInst = 0;
-    int nMemOnlyInst = 0;
     std::vector<fpga::Instruction> instructions;
-    FPGAInstGenConfig instGenConfig(
-        /* gridSize= */ 2, /* nOnChipQubits= */ 22);
+
     
     openqasm::Parser qasmParser(argv[1], -1);
     auto G = qasmParser.parse()->toCircuitGraph();
@@ -55,33 +77,20 @@ int main(int argc, char** argv) {
     // G.print(std::cerr);
     std::cerr << "After fusion there are " << G.countBlocks() << " blocks\n";
 
+    int gridSize = 2;
+    FPGAInstGenConfig instGenConfig(/* nLocalQubits = */ G.nqubits - 2 * gridSize, gridSize);
+    // FPGAInstGenConfig instGenConfig(/* nLocalQubits = */ 1, gridSize);
+    // FPGAInstGenConfig instGenConfig(/* nLocalQubits = */ G.nqubits - 1, 0);
+
+
     instructions = fpga::genInstruction(G, instGenConfig);
-    nMemInst = 0;
-    nGateInst = 0;
-    nMemOnlyInst = 0;
-    for (const auto& i : instructions) {
-        // i.print(std::cerr);
-        if (!i.mInst->isNull())
-            nMemInst++;
-        if (!i.gInst->isNull())
-            nGateInst++;
-        if (!i.mInst->isNull() && i.gInst->isNull())
-            nMemOnlyInst++;
-    }
-    std::cerr << "A total of " << instructions.size()
-              << " (" << nMemInst << " mem, " << nGateInst << " gate) instructions\n";
-    std::cerr << "Num MemOnly instructions: " << nMemOnlyInst << "\n";
-    std::cerr << "IPC: " << (double)(nMemInst + nGateInst) / (instructions.size()) << "\n";
+    printInstructionStatistics(instructions);
 
     double tTotal = 0.0;
-    // double tBaseInNanoSec = 8278.0 * std::pow(2, G.nqubits - 22);
-    // double tBase = 1;
-    // std::cerr << "tBase = " << std::scientific << tBaseInNanoSec << "\n";
-
-    // FPGACostConfig costConfig(tBaseInNanoSec, tBaseInNanoSec, tBaseInNanoSec, 2 * tBaseInNanoSec);
-    FPGACostConfig costConfig(1, 1, 1, 2);
-    for (const auto& inst : instructions)
+    FPGACostConfig costConfig(52, 1, 1, 1, 2);
+    for (const auto& inst : instructions) {
         tTotal += inst.cost(costConfig);
+    }
     
     std::cerr << "Time taken = " << tTotal << "\n";
 

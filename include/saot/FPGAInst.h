@@ -138,9 +138,7 @@ public:
     MInstEXT(const std::vector<int>& flags)
         : MemoryInst(MOp_EXT), flags(flags) {}
 
-    std::ostream& print(std::ostream& os) const override {
-        return os << "EXT";
-    }
+    std::ostream& print(std::ostream& os) const override;
 };
 
 class GateInst {
@@ -200,9 +198,10 @@ struct FPGACostConfig {
     // single-qubit gateOp
     double tGeneral;
 
-    FPGACostConfig(double tMemOpOnly, double tRealGate,
+    FPGACostConfig(double tExtMemOp, double tMemOpOnly, double tRealGate,
                    double tUnitaryPerm, double tGeneral)
-        : tMemOpOnly(tMemOpOnly),
+        : tExtMemOp(tExtMemOp),
+          tMemOpOnly(tMemOpOnly),
           tRealGate(tRealGate),
           tUnitaryPerm(tUnitaryPerm),
           tGeneral(tGeneral) {}
@@ -242,16 +241,20 @@ public:
         gInst = std::make_unique<GInstNUL>();
     }
 
-    uint64_t cost(const FPGACostConfig&) const;
+    double cost(const FPGACostConfig&) const;
 };
 
 struct FPGAInstGenConfig {
 public:
+    int nLocalQubits;
     int gridSize;
-    int nOnChipQubits;
 
-    FPGAInstGenConfig(int gridSize, int nOnChipQubits) 
-        : gridSize(gridSize), nOnChipQubits(nOnChipQubits) {}
+    int getNOnChipQubits() const {
+        return nLocalQubits + 2 * gridSize;
+    }
+
+    FPGAInstGenConfig(int nLocalQubits, int gridSize) 
+        : nLocalQubits(nLocalQubits), gridSize(gridSize) {}
 };
 
 // top-level function to generate FPGA instructions from a CircuitGraph

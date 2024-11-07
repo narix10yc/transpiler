@@ -86,6 +86,16 @@ static std::ostream& printVectorWithPrinter(
     return os << "]";
 }
 
+// @return true if elem is in vec
+template<typename T>
+static void pushBackIfNotInVector(std::vector<T>& vec, T elem) {
+    for (const auto& e : vec) {
+        if (e == elem)
+            return;
+    }
+    vec.push_back(elem);
+}
+
 template<typename T = uint64_t>
 static T insertZeroToBit(T x, int bit) {
     T maskLo = (1 << bit) - 1;

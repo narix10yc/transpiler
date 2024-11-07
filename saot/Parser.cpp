@@ -264,10 +264,10 @@ GateApplyStmt Parser::parseGateApply() {
         break;
     }
 
-    std::cerr << "Parsed gate " << stmt.name << " with "
-              << stmt.qubits.size() << " targets, "
-              << "curToken is " << getNameOfTokenKind(curToken.kind)
-              << "\n";
+    // std::cerr << "Parsed gate " << stmt.name << " with "
+    //           << stmt.qubits.size() << " targets, "
+    //           << "curToken is " << getNameOfTokenKind(curToken.kind)
+    //           << "\n";
     return stmt;
 }
 
