@@ -386,6 +386,7 @@ public:
             generateLocalSQBlock(b);
         };
 
+        // reassign qubit statuses (on-chip / off-chip) based on available blocks
         const auto generateOnChipReassignment = [&]() {
             std::vector<int> priorities;
             priorities.reserve(nqubits);
@@ -433,7 +434,6 @@ public:
             // TODO: handle non-comp gates (omit them for now)
             bool nonCompFlag = false;
             for (const auto& avail : availables) {
-                // omit non-comp gates
                 if (fpga::getFPGAGateCategory(*avail.block->quantumGate) & fpga::fpgaNonComp) {
                     // std::cerr << "Ignored block " << avail.block->id << " because it is non-comp\n";
                     popBlock(avail.block);
@@ -443,7 +443,7 @@ public:
             }
             if (nonCompFlag)
                 continue;
-            
+                            
             if (!config.selectiveGenerationMode) {
                 assert(false && "Not Implemented");
                 continue;

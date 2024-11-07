@@ -60,7 +60,7 @@ public:
 
 /// @brief SquareMatrix class is a wrapper of data : vector<data_t> with a 
 /// private member called 'size'. data.size() should always be a perfect square,
-/// equaling to size * size. If manually update data by, for example,
+/// equaling to edgeSize * edgeSize. If manually update data by, for example,
 /// data.push_back, it is required to call updateSize() which will check
 /// dimension consistency.
 /// @tparam data_t 
@@ -165,7 +165,8 @@ public:
     SquareMatrix permute(const std::vector<int>& flags) const {
         assert(utils::isPermutation(flags));
         assert(checkSizeMatch());
-
+        assert(1 << flags.size() == _edgeSize);
+        
         if (std::all_of(flags.begin(), flags.end(),
                 [&flags](int i) {
                     return flags[i] == i;

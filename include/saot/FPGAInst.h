@@ -258,8 +258,9 @@ public:
     }
 
     FPGAInstGenConfig(int nLocalQubits, int gridSize,
-                      bool selectiveGenertaionMode = true) 
-        : nLocalQubits(nLocalQubits), gridSize(gridSize),
+                      bool selectiveGenerationMode = true) 
+        : nLocalQubits(nLocalQubits),
+          gridSize(gridSize),
           selectiveGenerationMode(selectiveGenerationMode) {}
 };
 
