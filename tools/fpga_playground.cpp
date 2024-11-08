@@ -77,10 +77,10 @@ int main(int argc, char** argv) {
     // G.print(std::cerr);
     std::cerr << "After fusion there are " << G.countBlocks() << " blocks\n";
 
-    int gridSize = 2;
-    FPGAInstGenConfig instGenConfig(/* nLocalQubits = */ G.nqubits - 2 * gridSize, gridSize);
+    int gridSize = 4;
+    // FPGAInstGenConfig instGenConfig(/* nLocalQubits = */ G.nqubits - 2 * gridSize, gridSize);
     // FPGAInstGenConfig instGenConfig(/* nLocalQubits = */ 1, gridSize);
-    // FPGAInstGenConfig instGenConfig(/* nLocalQubits = */ G.nqubits - 1, 0);
+    FPGAInstGenConfig instGenConfig(/* nLocalQubits = */ 14, gridSize);
 
 
     instructions = fpga::genInstruction(G, instGenConfig);
@@ -89,6 +89,7 @@ int main(int argc, char** argv) {
     double tTotal = 0.0;
     FPGACostConfig costConfig(52, 1, 1, 1, 2);
     for (const auto& inst : instructions) {
+        // inst.print(std::cerr);
         tTotal += inst.cost(costConfig);
     }
     
