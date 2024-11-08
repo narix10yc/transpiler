@@ -1,5 +1,6 @@
 #include "saot/Polynomial.h"
 #include <cassert>
+#include <algorithm>
 
 using namespace saot;
 

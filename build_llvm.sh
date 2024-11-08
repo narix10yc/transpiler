@@ -13,10 +13,11 @@
 
 # # Install the compilers package
 # conda install -c conda-forge compilers
+# # unicode/ucnv.h file
+# conda install icu
 
 
-
-cmake -S llvm-project-19.1.0.src/llvm -G Ninja \
+cmake -S llvm-project-17.0.6.src/llvm -G Ninja \
 -B llvm-build \
 -DCMAKE_BUILD_TYPE=Release \
 -DLLVM_ENABLE_RTTI=ON \

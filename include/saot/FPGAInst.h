@@ -1,6 +1,7 @@
 #ifndef SAOT_FPGAINST_H
 #define SAOT_FPGAINST_H
 
+#include <memory>
 #include <vector>
 #include <iostream>
 #include <cassert>
