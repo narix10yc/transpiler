@@ -53,8 +53,8 @@ Function* IRGenerator::generateCUDAKernel(
 
     BasicBlock* entryBB = BasicBlock::Create(*_context, "entry", func);
     builder.SetInsertPoint(entryBB);
-    counterV = builder.CreateIntrinsic(builder.getInt64Ty(), Intrinsic::nvvm_read_ptx_sreg_ntid_x, {}, nullptr, "tid.x");
-
+    counterV = builder.CreateIntrinsic(builder.getInt32Ty(), Intrinsic::nvvm_read_ptx_sreg_ntid_x, {}, nullptr, "tid.x.i32");
+    counterV = builder.CreateIntCast(counterV, builder.getInt64Ty(), true, "tid.x.i64");
     /*
     Example: with target qubits 2, 4, 5
     counter:   xxxhgfedcba
@@ -89,6 +89,8 @@ Function* IRGenerator::generateCUDAKernel(
     tmpCounterV = builder.CreateAnd(counterV, mask, "tmpCounter");
     tmpCounterV = builder.CreateShl(tmpCounterV, gate.qubits.size(), "tmpCounter");
     idxStartV = builder.CreateAdd(idxStartV, tmpCounterV, "idxStart");
+
+    builder.CreateRetVoid();
 
 
     return func;

@@ -20,6 +20,12 @@
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/TargetParser/Host.h>
+// #include <llvm/lib/Target/NVPTX/NVPTXTargetMachine.h>
+
+#include <llvm/MC/TargetRegistry.h>
+#include <llvm/MC/MCContext.h>
+
+#include <llvm/IR/LegacyPassManager.h>
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 
@@ -75,9 +81,48 @@ int main(int argc, char** argv) {
     for (const auto& b : allBlocks) {
         G.generateCUDAKernel(*b->quantumGate);
     }
-    G.dumpToStderr();
+    // G.dumpToStderr();
     
 
+    InitializeAllTargets();
+    InitializeAllTargetMCs();
+    InitializeAllAsmPrinters();
+    InitializeAllAsmParsers();
+
+    errs() << "Registered platforms:\n";
+    for (const auto& targ : TargetRegistry::targets())
+        errs() << targ.getName() << "  " << targ.getBackendName() << "\n";
+    
+    auto targetTriple = Triple("nvptx64-nvidia-cuda");
+    std::string error;
+    const Target *target = TargetRegistry::lookupTarget(targetTriple.str(), error);
+    if (!target) {
+        errs() << "Error: " << error << "\n";
+        return 1;
+    }
+    auto* targetMachine = target->createTargetMachine(targetTriple.str(), "sm_84", "", {}, std::nullopt);
+
+    llvm::SmallString<8> data_ptx, data_ll;
+    llvm::raw_svector_ostream dest_ptx(data_ptx), dest_ll(data_ll);
+    dest_ptx.SetUnbuffered();
+    dest_ll.SetUnbuffered();
+    // print ll
+    G.getModule()->print(dest_ll, nullptr);
+    
+    std::string ll(data_ll.begin(), data_ll.end());
+    std::cerr << ll << "\n";
+
+
+    G.getModule()->setTargetTriple(targetTriple.getTriple());
+    G.getModule()->setDataLayout(targetMachine->createDataLayout());
+    legacy::PassManager passManager;
+    if (targetMachine->addPassesToEmitFile(passManager, dest_ptx, nullptr, CodeGenFileType::AssemblyFile)) {
+        errs() << "The target machine can't emit a file of this type\n";
+        return 1;
+    }
+    passManager.run(*G.getModule());
+    std::string ptx(data_ptx.begin(), data_ptx.end());
+    std::cerr << ptx << "\n";
 
     return 0;
 }
