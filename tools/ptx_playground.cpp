@@ -7,6 +7,23 @@
 #include "saot/Polynomial.h"
 #include "simulation/jit.h"
 
+
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Module.h>
+#include <llvm/Support/SourceMgr.h>
+#include <llvm/AsmParser/Parser.h>
+#include <llvm/Support/TargetSelect.h>
+#include <llvm/Target/TargetMachine.h>
+#include <llvm/Support/raw_ostream.h>
+#include <llvm/Bitcode/BitcodeReader.h>
+#include <llvm/IRReader/IRReader.h>
+#include <llvm/Support/FileSystem.h>
+#include <llvm/Support/CommandLine.h>
+#include <llvm/TargetParser/Host.h>
+
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
+
+
 using namespace saot;
 
 using namespace saot::ast;
@@ -50,35 +67,17 @@ int main(int argc, char** argv) {
     // fusedGate->gateMatrix.printMatrix(std::cerr);
 
     IRGenerator G;
-    Function* llvmFuncPrepareParam = G.generatePrepareParameter(graph);
+    // Function* llvmFuncPrepareParam = G.generatePrepareParameter(graph);
+
+    G.applyLLVMOptimization(OptimizationLevel::O3);
+
     auto allBlocks = graph.getAllBlocks();
-    // for (const auto& b : allBlocks) {
-        // G.generateKernel(*b->quantumGate);
-    // }
-    G.dumpToStderr();
-
-    // G.applyLLVMOptimization(OptimizationLevel::O2);
-    // G.dumpToStderr();
-
-    // JIT;
-
-    saot::jit::JitEngine jitter(G);
-
-    auto funcAddrOrErr = jitter.JIT->lookup(llvmFuncPrepareParam->getName());
-    if (!funcAddrOrErr) {
-        errs() << "Failed to look up function\n" << funcAddrOrErr.takeError() << "\n";
-        return 1;
+    for (const auto& b : allBlocks) {
+        G.generateCUDAKernel(*b->quantumGate);
     }
-
-    auto prepareParameter = funcAddrOrErr->toPtr<void(double*, double*)>();
-
-    std::vector<double> circuitParameters { 1.344, 3.109, 0.12 };
-    std::vector<double> circuitMatrices(8);
-
-    prepareParameter(circuitParameters.data(), circuitMatrices.data());
-
-    utils::printVector(circuitMatrices);
-
+    G.dumpToStderr();
     
+
+
     return 0;
 }

@@ -17,7 +17,8 @@ message(STATUS "LLVM_ROOT: ${LLVM_ROOT}")
 
 set(CMAKE_C_COMPILER "${LLVM_ROOT}/bin/clang")
 set(CMAKE_CXX_COMPILER "${LLVM_ROOT}/bin/clang++")
-### Skip cmake checks for working compiler
+
+### Skip cmake checks for working compiler ###
 # set(CMAKE_C_COMPILER_WORKS 1)
 # set(CMAKE_CXX_COMPILER_WORKS 1)
 
@@ -38,6 +39,8 @@ set(LLVM_DIR "${LLVM_ROOT}/lib/cmake/llvm")
 find_package(LLVM REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+message(STATUS "LLVM is built for targets: ${LLVM_TARGETS_TO_BUILD}")
+
 include_directories(${LLVM_INCLUDE_DIRS} include)
 separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
 add_definitions(${LLVM_DEFINITIONS_LIST})

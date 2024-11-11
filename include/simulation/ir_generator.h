@@ -132,6 +132,10 @@ public:
             const saot::QuantumGate& gate, int debugLevel,
             const std::string& funcName = "");
 
+    llvm::Function* generateCUDAKernel(
+            const saot::QuantumGate& gate,
+            const std::string& funcName = "");
+
     std::pair<llvm::Value*, llvm::Value*> generatePolynomial(
             const saot::Polynomial& polynomial, ParamValueFeeder& feeder);
 

@@ -8,16 +8,12 @@ using namespace saot;
 using namespace IOColor;
 
 FPGAFusionConfig FPGAFusionConfig::Default = FPGAFusionConfig {
-            .maxUnitaryPermutationSize = 5,
-            .ignoreSingleQubitNonCompGates = true,
-            .multiTraverse = true,
-        };
-
-// getFPGAGateCategory
-
+        .maxUnitaryPermutationSize = 5,
+        .ignoreSingleQubitNonCompGates = true,
+        .multiTraverse = true,
+    };
 
 using tile_iter_t = std::list<std::array<GateBlock*, 36>>::iterator;
-
 
 namespace {
 inline bool isSingleQubitNonCompBlock(const GateBlock* b) {
