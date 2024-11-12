@@ -188,28 +188,21 @@ public:
 };
 
 struct FPGACostConfig {
-    // external memory swap
-    double tExtMemOp;
-    // memOp with no gateOp
-    double tMemOpOnly;
-    // single-qubit gateOp with real gate
-    double tRealGate;
-    // unitary-perm gateOp
-    double tUnitaryPerm;
-    // single-qubit gateOp
-    double tGeneral;
-
-    FPGACostConfig(double tExtMemOp, double tMemOpOnly, double tRealGate,
-                   double tUnitaryPerm, double tGeneral)
-        : tExtMemOp(tExtMemOp),
-          tMemOpOnly(tMemOpOnly),
-          tRealGate(tRealGate),
-          tUnitaryPerm(tUnitaryPerm),
-          tGeneral(tGeneral) {}
+    int numLocalQubitsForTwiceExtMemOpTime;
+    int localQubitSignificanceForTwiceExtMemOpTime;
 };
 
 
 class Instruction {
+public:
+    enum CostKind {
+        CK_GeneralSQGate,   // SQ gate 
+        CK_RealOnlySQGate,  // SQ real-only gate
+        CK_UPGate,          // UP gate
+        CK_NonExtMemTime,   // FSR, FSC, SSR, SSC with no gate inst
+        CK_ExtMemTime,      // EXT mem inst
+        CK_TwiceExtMemTime  // twice EXT mem inst
+    };
 public:
     std::unique_ptr<MemoryInst> mInst;
     std::unique_ptr<GateInst> gInst;
@@ -242,7 +235,7 @@ public:
         gInst = std::make_unique<GInstNUL>();
     }
 
-    double cost(const FPGACostConfig&) const;
+    CostKind getCostKind(const FPGACostConfig&) const;
 };
 
 struct FPGAInstGenConfig {

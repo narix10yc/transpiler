@@ -11,6 +11,9 @@
 using namespace saot;
 using namespace saot::fpga;
 
+using namespace IOColor;
+
+
 void printInstructionStatistics(const std::vector<fpga::Instruction>& insts) {
     int nNonExtMemInst = 0, nExtMemInst = 0, nSqGateInst = 0, nUpGateInst = 0;
     for (const auto& inst : insts) {
@@ -25,8 +28,7 @@ void printInstructionStatistics(const std::vector<fpga::Instruction>& insts) {
                 ++nNonExtMemInst;
         }
     }
-    std::cerr << IOColor::CYAN_FG << " -- Instruction Statistics -- \n"
-              << "# instructions: " << insts.size() << "\n"
+    std::cerr << CYAN_FG << BOLD << "Num Instructions: " << insts.size() << "\n" << RESET
               << "  - # gate instructions:   " << nSqGateInst + nUpGateInst << "\n"
               << "    - # SQ gate instructions: " << nSqGateInst << "\n"
               << "    - # UP gate instructions: " << nUpGateInst << "\n"
@@ -34,15 +36,36 @@ void printInstructionStatistics(const std::vector<fpga::Instruction>& insts) {
               << "    - # EXT mem instructions:     " << nExtMemInst << "\n"
               << "    - # non-EXT mem instructions: " << nNonExtMemInst << "\n"
               << IOColor::RESET;
+}
 
+int costKindToNumNormalizedCycle(Instruction::CostKind kind) {
+    switch (kind) {
+    case Instruction::CK_TwiceExtMemTime: return 84;
+    case Instruction::CK_ExtMemTime: return 42;
+    case Instruction::CK_NonExtMemTime: return 1;
+
+    case Instruction::CK_GeneralSQGate: return 2;
+    case Instruction::CK_RealOnlySQGate: return 1;
+    case Instruction::CK_UPGate: return 1;
+    default:
+        assert(false && "Unreachable");
+        return 0;
+    }
 }
 
 int main(int argc, char** argv) {
     assert(argc > 1);
 
+    using clock = std::chrono::high_resolution_clock;
+    auto tic = clock::now();
+    auto tok = clock::now();
+    auto log = [&]() -> std::ostream& {
+        const auto t_ms = std::chrono::duration_cast<std::chrono::milliseconds>(tok - tic).count();
+        return std::cerr << "-- (" << t_ms << " ms) ";
+    };
+
     std::vector<fpga::Instruction> instructions;
 
-    
     openqasm::Parser qasmParser(argv[1], -1);
     auto G = qasmParser.parse()->toCircuitGraph();
 
@@ -55,26 +78,17 @@ int main(int argc, char** argv) {
     // G.print(std::cerr);
     std::cerr << "Before fusion there are " << G.countBlocks() << " blocks\n";
 
+    FPGAFusionConfig fusionConfig {
+        .maxUnitaryPermutationSize = 5,
+        .ignoreSingleQubitNonCompGates = true,
+        .multiTraverse = true,
+    };
 
-    // instructions = fpga::genInstruction(G, instGenConfig);
-    // for (const auto& i : instructions) {
-    //     // i.print(std::cerr);
-    //     if (!i.mInst->isNull())
-    //         nMemInst++;
-    //     if (!i.gInst->isNull())
-    //         nGateInst++;
-    //     if (!i.mInst->isNull() && i.gInst->isNull())
-    //         nMemOnlyInst++;
-    // }
-    // std::cerr << "A total of " << instructions.size()
-    //           << " (" << nMemInst << " mem, " << nGateInst << " gate) instructions\n";
-    // std::cerr << "Num MemOnly instructions: " << nMemOnlyInst << "\n";
-    // std::cerr << "IPC: " << (double)(nMemInst + nGateInst) / (instructions.size()) << "\n";
+    tic = clock::now();
+    applyFPGAGateFusion(fusionConfig, G);
+    tok = clock::now();
+    log() << "Fusion complete!\n";
 
-    applyFPGAGateFusion(FPGAFusionConfig::Default, G);
-
-    // G.relabelBlocks();
-    // G.print(std::cerr);
     std::cerr << "After fusion there are " << G.countBlocks() << " blocks\n";
 
     int gridSize = 4;
@@ -82,18 +96,64 @@ int main(int argc, char** argv) {
     // FPGAInstGenConfig instGenConfig(/* nLocalQubits = */ 1, gridSize);
     FPGAInstGenConfig instGenConfig(/* nLocalQubits = */ 14, gridSize);
 
-
+    tic = clock::now();
     instructions = fpga::genInstruction(G, instGenConfig);
+    tok = clock::now();
+    log() << "Inst Gen Complete!\n";
+
     printInstructionStatistics(instructions);
 
-    double tTotal = 0.0;
-    FPGACostConfig costConfig(52, 1, 1, 1, 2);
+    FPGACostConfig costConfig {
+        .numLocalQubitsForTwiceExtMemOpTime = instGenConfig.nLocalQubits,
+        .localQubitSignificanceForTwiceExtMemOpTime = 7
+    };
+
+    int nTwiceExtMemTime = 0, nExtMemTime = 0, nNonExtMemTime = 0;
+    int nGeneralSQGate = 0, nRealOnlySQGate = 0, nUPGate = 0;
+
     for (const auto& inst : instructions) {
         // inst.print(std::cerr);
-        tTotal += inst.cost(costConfig);
+        auto costKind = inst.getCostKind(costConfig);
+        switch (costKind) {
+        case Instruction::CK_TwiceExtMemTime:
+            ++nTwiceExtMemTime;
+            break;
+        case Instruction::CK_ExtMemTime:
+            ++nExtMemTime;
+            break;
+        case Instruction::CK_NonExtMemTime:
+            ++nNonExtMemTime;
+            break;
+        case Instruction::CK_GeneralSQGate:
+            ++nGeneralSQGate;
+            break;
+        case Instruction::CK_RealOnlySQGate:
+            ++nRealOnlySQGate;
+            break;
+        case Instruction::CK_UPGate:
+            ++nUPGate;
+            break;
+        default:
+            assert(false && "Unreachable");
+            break;
+        }
     }
-    
-    std::cerr << "Time taken = " << tTotal << "\n";
+
+    int tTotal = 84 * nTwiceExtMemTime +
+                 42 * nExtMemTime + 
+                 1 * nNonExtMemTime + 
+                 2 * nGeneralSQGate + 
+                 1 * nRealOnlySQGate + 
+                 1 * nUPGate; 
+
+    std::cerr << CYAN_FG << BOLD << "Num Normalized Cycles: " << tTotal << "\n" << RESET
+              << "  - nTwiceExtMemTime: " << nTwiceExtMemTime << "\n"
+              << "  - nExtMemTime:      " << nExtMemTime << "\n"
+              << "  - nNonExtMemTime:   " << nNonExtMemTime << "\n"
+              << "  - nGeneralSQGate:   " << nGeneralSQGate << "\n"
+              << "  - nRealOnlySQGate:  " << nRealOnlySQGate << "\n"
+              << "  - nUPGate:          " << nUPGate << "\n";
+
 
     return 0;
 }

@@ -11,7 +11,7 @@ std::ostream& MInstEXT::print(std::ostream& os) const {
 }
 
 std::ostream& GInstSQ::print(std::ostream& os) const {
-    os << "UP<id=" << block->id << "> ";
+    os << "SQ<id=" << block->id << "> ";
     for (const auto& data : block->dataVector)
         os << data.qubit << " ";
     return os;
@@ -24,25 +24,30 @@ std::ostream& GInstUP::print(std::ostream& os) const {
     return os;
 }
 
-double Instruction::cost(const FPGACostConfig& config) const {
+Instruction::CostKind Instruction::getCostKind(const FPGACostConfig& config) const {
     if (mInst->getKind() == MOp_EXT) {
-        if (dynamic_cast<MInstEXT&>(*mInst).flags[0] < 7)
-            return 2 * config.tExtMemOp;
-        return config.tExtMemOp;
+        auto extInst = dynamic_cast<const MInstEXT&>(*mInst);
+        int n = std::min(static_cast<int>(extInst.flags.size()),
+                         config.numLocalQubitsForTwiceExtMemOpTime);
+        for (int i = 0; i < n; i++) {
+            if (extInst.flags[i] < config.localQubitSignificanceForTwiceExtMemOpTime)
+                return CK_TwiceExtMemTime;
+        }
+        return CK_ExtMemTime;
     }
 
     if (gInst->isNull()) {
         assert(!mInst->isNull());
-        return config.tMemOpOnly;
+        return CK_NonExtMemTime;
     }
     
     if (gInst->getKind() == GOp_UP)
-        return config.tUnitaryPerm;
+        return CK_UPGate;
     assert(gInst->getKind() == GOp_SQ);
 
     if (fpga::getFPGAGateCategory(*gInst->block->quantumGate) & fpga::fpgaRealOnly)
-        return config.tRealGate;
-    return config.tGeneral;
+        return CK_RealOnlySQGate;
+    return CK_GeneralSQGate;
 }
 
 // helper methods to saot::fpga::genInstruction
@@ -115,15 +120,10 @@ private:
 
     void init(const CircuitGraph& graph) {
         // initialize qubit statuses
-        int nOnChipQubits = config.getNOnChipQubits();
-        for (int i = 0; i < config.nLocalQubits; i++) // local
-            qubitStatuses[i] = QubitStatus(QK_Local, i);
-        for (int i = 0; i < config.gridSize; i++) // row
-            qubitStatuses[config.nLocalQubits + i] = QubitStatus(QK_Row, i);
-        for (int i = 0; i < config.gridSize; i++) // col
-            qubitStatuses[config.nLocalQubits + config.gridSize + i] = QubitStatus(QK_Col, i);
-        for (int i = 0; i < nqubits - nOnChipQubits; i++) // off-chip
-            qubitStatuses[nOnChipQubits + i] = QubitStatus(QK_OffChip, i);
+        std::vector<int> priorities(nqubits);
+        for (int i = 0; i < nqubits; ++i)
+            priorities[i] = i;
+        assignQubitStatuses(priorities);
 
         // initialize node state
         int row = 0;
@@ -231,6 +231,7 @@ public:
         }
     }
 
+    // popBlock: pop a block from \p availables. Update \p availables accordingly.
     void popBlock(GateBlock* block) {
         auto it = std::find_if(availables.begin(), availables.end(),
             [&block](const available_blocks_t& avail) {
@@ -268,6 +269,33 @@ public:
                 availables.emplace_back(b);
         }
         updateAvailables();
+    }
+
+    void assignQubitStatuses(const std::vector<int>& priorities) {
+        assert(utils::isPermutation(priorities));
+        int nOnChipQubits = config.getNOnChipQubits();
+
+        if (nqubits <= config.nLocalQubits) {
+            for (int i = 0; i < nqubits; i++)
+                qubitStatuses[priorities[i]] = QubitStatus(QK_Local, i);
+            return;
+        }
+
+        // local
+        for (int i = 0; i < config.nLocalQubits; i++)
+            qubitStatuses[priorities[i]] = QubitStatus(QK_Local, i);
+
+        // row and col (on-chip)
+        for (int i = config.nLocalQubits, kindIdx = 0; i < nOnChipQubits; ++kindIdx) {
+            qubitStatuses[priorities[i]] = QubitStatus(QK_Row, kindIdx);
+            if (++i >= nOnChipQubits)
+                break;
+            qubitStatuses[priorities[i]] = QubitStatus(QK_Col, kindIdx);
+        }
+        
+        // off-chip
+        for (int i = 0; i < nqubits - nOnChipQubits; i++)
+            qubitStatuses[priorities[nOnChipQubits + i]] = QubitStatus(QK_OffChip, i);
     }
 
     GateBlock* findOnChipBlockWithKind(available_block_kind_t kind) const {
@@ -364,7 +392,7 @@ public:
 
             instructions.emplace_back(nullptr, std::make_unique<GInstSQ>(b));
             vacantGateIdx = instructions.size();
-            sqGateBarrierIdx = vacantGateIdx - 1;
+            sqGateBarrierIdx = vacantGateIdx;
         };
 
         const auto generateNonLocalSQBlock = [&](GateBlock* b) {
@@ -415,19 +443,20 @@ public:
                 utils::pushBackIfNotInVector(priorities, q);
 
             // update qubitStatuses
-            assert(utils::isPermutation(priorities));
-            int nOnChipQubits = config.getNOnChipQubits();
-            for (int i = 0; i < config.nLocalQubits; i++) // local
-                qubitStatuses[priorities[i]] = QubitStatus(QK_Local, i);
-            for (int i = 0; i < config.gridSize; i++) // row
-                qubitStatuses[priorities[config.nLocalQubits + i]] = QubitStatus(QK_Row, i);
-            for (int i = 0; i < config.gridSize; i++) // col
-                qubitStatuses[priorities[config.nLocalQubits + config.gridSize + i]] = QubitStatus(QK_Col, i);
-            for (int i = 0; i < nqubits - nOnChipQubits; i++) // off-chip
-                qubitStatuses[priorities[nOnChipQubits + i]] = QubitStatus(QK_OffChip, i);
-
-            writeMemInst(std::max(vacantMemIdx, sqGateBarrierIdx), std::make_unique<MInstEXT>(priorities));
+            assignQubitStatuses(priorities);
             updateAvailables();
+
+            int insertPosition = std::max(vacantMemIdx, sqGateBarrierIdx);
+            instructions.insert(instructions.cbegin() + insertPosition,
+                Instruction(std::make_unique<MInstEXT>(priorities), nullptr));
+            ++insertPosition;
+            ++vacantMemIdx;
+            if (vacantMemIdx < insertPosition)
+                vacantMemIdx = insertPosition;
+            // we don't have to increment sqGateBarrierIdx as its use case is
+            // always in sync with vacantMemIdx
+            if (sqGateBarrierIdx == insertPosition - 1)
+                ++sqGateBarrierIdx;
         };
 
         while (!availables.empty()) {
