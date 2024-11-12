@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
     };
 
     tic = clock::now();
-    applyFPGAGateFusion(fusionConfig, G);
+    applyFPGAGateFusion(G, fusionConfig);
     tok = clock::now();
     log() << "Fusion complete!\n";
 

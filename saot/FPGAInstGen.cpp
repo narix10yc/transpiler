@@ -263,12 +263,13 @@ public:
         // row and col
         int kindIdx = 0;
         q = config.nLocalQubits;
+        int nQubitsAvailable = std::min(nqubits, nOnChipQubits);
         while (true) {
-            if (q == nOnChipQubits)
+            if (q >= nQubitsAvailable)
                 break;
             qubitStatuses[priorities[q]] = QubitStatus(QK_Row, kindIdx);
             ++q;
-            if (q == nOnChipQubits)
+            if (q >= nQubitsAvailable)
                 break;
             qubitStatuses[priorities[q]] = QubitStatus(QK_Col, kindIdx);
             ++q;

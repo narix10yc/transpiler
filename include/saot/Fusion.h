@@ -40,7 +40,7 @@ struct CPUFusionConfig {
 
 void applyCPUGateFusion(const CPUFusionConfig&, CircuitGraph&);
 
-void applyFPGAGateFusion(const FPGAFusionConfig&, CircuitGraph&);
+void applyFPGAGateFusion(CircuitGraph&, const FPGAFusionConfig&);
 
 } // namespace saot
 

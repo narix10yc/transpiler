@@ -16,8 +16,9 @@ GateBlock* computeCandidate(const GateBlock* lhs, const GateBlock* rhs,
                             const FPGAFusionConfig& config) {
     if (lhs == nullptr || rhs == nullptr)
         return nullptr;
-
-    assert(lhs != rhs);
+    if (lhs == rhs)
+        return nullptr;
+        
     assert(lhs->quantumGate != nullptr);
     assert(rhs->quantumGate != nullptr);
 
@@ -108,38 +109,148 @@ GateBlock* computeCandidate(const GateBlock* lhs, const GateBlock* rhs,
 
     return block;
 }
+
+// void saot::applyFPGAGateFusion(CircuitGraph& graph, const FPGAFusionConfig& config) {
+//     auto& tile = graph.tile();
+//     if (tile.size() < 2)
+//         return;
+    
+//     bool hasChange = true;
+//     while (hasChange) {
+//         hasChange = false;
+//         auto tileIt = tile.begin();
+//         tile_iter_t tileNext;
+//         while ((tileNext = std::next(tileIt)) != tile.end()) {
+//             for (int q = 0; q < graph.nqubits; q++) {
+//                 auto* lhs = (*tileIt)[q];
+//                 auto* rhs = (*tileNext)[q];
+//                 auto* candidate = computeCandidate(lhs, rhs, config);
+//                 if (candidate) {
+//                     hasChange = true;
+//                     for (const auto& qq : lhs->getQubits())
+//                         (*tileIt)[qq] = nullptr;
+//                     for (const auto& qq : rhs->getQubits())
+//                         (*tileNext)[qq] = nullptr;
+//                     delete(lhs);
+//                     delete(rhs);
+//                     graph.insertBlock(tileIt, candidate);
+//                 }
+//             }
+//             tileIt++;
+//         }
+//         graph.updateTileUpward();
+//         graph.eraseEmptyRows();
+//         if (!config.multiTraverse)
+//             break;
+//     }
+// }
+
+GateBlock* trySameWireFuse(
+        CircuitGraph& graph, const tile_iter_t& itLHS, int q_,
+        const FPGAFusionConfig& config) {
+    assert(itLHS != graph.tile().end());
+    const auto itRHS = std::next(itLHS);
+    if (itRHS == graph.tile().end())
+        return nullptr;
+
+    GateBlock* lhs = (*itLHS)[q_];
+    GateBlock* rhs = (*itRHS)[q_];
+
+    if (!lhs || !rhs)
+        return nullptr;
+  
+    GateBlock* block = computeCandidate(lhs, rhs, config);
+    if (block == nullptr)
+        return nullptr;
+
+    // std::cerr << BLUE_FG;
+    // lhs->displayInfo(std::cerr);
+    // rhs->displayInfo(std::cerr);
+    // block->displayInfo(std::cerr) << RESET;
+
+    for (const auto& q : lhs->getQubits())
+        (*itLHS)[q] = nullptr;
+    for (const auto& q : rhs->getQubits())
+        (*itRHS)[q] = nullptr;
+
+    delete(lhs);
+    delete(rhs);
+
+    // insert block to tile
+    graph.insertBlock(itLHS, block);
+    return block;
+}
+
+GateBlock* tryCrossWireFuse(
+        CircuitGraph& graph, const tile_iter_t& tileIt, int q,
+        const FPGAFusionConfig& config) {
+    auto block0 = (*tileIt)[q];
+    if (block0 == nullptr)
+        return nullptr;
+    
+    for (unsigned q1 = 0; q1 < graph.nqubits; q1++) {
+        auto* block1 = (*tileIt)[q1];
+        auto* fusedBlock = computeCandidate(block0, block1, config);
+        if (fusedBlock == nullptr)
+            continue;
+        for (const auto q : fusedBlock->getQubits()) {
+            (*tileIt)[q] = fusedBlock;
+        }
+        delete(block0);
+        delete(block1);
+        return fusedBlock;
+    }
+    return nullptr;
+}
 } // anonymous namespace
 
-void saot::applyFPGAGateFusion(const FPGAFusionConfig& config, CircuitGraph& graph) {
+void saot::applyFPGAGateFusion(
+        CircuitGraph& graph, const FPGAFusionConfig& config) {
     auto& tile = graph.tile();
     if (tile.size() < 2)
         return;
-    
+
+    GateBlock* lhsBlock;
+    GateBlock* rhsBlock;
+
     bool hasChange = true;
+    tile_iter_t tileIt;
+    unsigned q = 0;
+    // multi-traversal
     while (hasChange) {
+        tileIt = tile.begin();
         hasChange = false;
-        auto tileIt = tile.begin();
-        tile_iter_t tileNext;
-        while ((tileNext = std::next(tileIt)) != tile.end()) {
-            for (int q = 0; q < graph.nqubits; q++) {
-                auto* lhs = (*tileIt)[q];
-                auto* rhs = (*tileNext)[q];
-                auto* candidate = computeCandidate(lhs, rhs, config);
-                if (candidate) {
-                    hasChange = true;
-                    for (const auto& qq : lhs->getQubits())
-                        (*tileIt)[qq] = nullptr;
-                    for (const auto& qq : rhs->getQubits())
-                        (*tileNext)[qq] = nullptr;
-                    delete(lhs);
-                    delete(rhs);
-                    graph.insertBlock(tileIt, candidate);
+        while (std::next(tileIt) != tile.end()) {
+            // same wire (connected consecutive) fuse
+            q = 0;
+            while (q < graph.nqubits) {
+                if ((*tileIt)[q] == nullptr) {
+                    q++;
+                    continue;
                 }
+                if ((*std::next(tileIt))[q] == nullptr) {
+                    graph.repositionBlockDownward(tileIt, q++);
+                    continue;
+                }
+                auto* fusedBlock = trySameWireFuse(graph, tileIt, q, config);
+                if (fusedBlock == nullptr)
+                    q++;
+                else
+                    hasChange = true;
+            }
+            // cross wire (same row) fuse
+            q = 0;
+            while (q < graph.nqubits) {
+                auto* fusedBlock = tryCrossWireFuse(graph, tileIt, q, config);
+                if (fusedBlock == nullptr)
+                    q++;
+                else
+                    hasChange = true;
             }
             tileIt++;
         }
-        graph.updateTileUpward();
         graph.eraseEmptyRows();
+        // graph.updateTileUpward();
         if (!config.multiTraverse)
             break;
     }
