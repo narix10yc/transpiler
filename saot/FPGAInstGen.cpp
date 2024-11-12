@@ -249,7 +249,6 @@ public:
         int nOnChipQubits = config.getNOnChipQubits();
 
         int q;
-
         if (nqubits <= config.nLocalQubits) {
             for (q = 0; q < nqubits; q++)
                 qubitStatuses[priorities[q]] = QubitStatus(QK_Local, q);
@@ -461,14 +460,16 @@ public:
                 auto abk = avail.getABK(qubitStatuses);
                 if (abk == ABK_OffChipSQ) {
                     std::vector<int> priorities(nqubits);
+                    assert(avail.block->dataVector.size() == 1);
                     int q = avail.block->dataVector[0].qubit;
                     priorities[0] = q;
                     for (int i = 1; i < nqubits; i++)
-                        priorities[i] = (i < q) ? (i - 1) : i;
+                        priorities[i] = (i <= q) ? (i - 1) : i;
                     assignQubitStatuses(priorities);
                     insertExtMemInst(priorities);
                 }
-                
+
+                abk = avail.getABK(qubitStatuses);
                 if (abk == ABK_OnChipLocalSQ)
                     generateLocalSQBlock(avail.block);
                 else if (abk == ABK_UnitaryPerm)

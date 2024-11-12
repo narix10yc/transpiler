@@ -147,7 +147,7 @@ int main(int argc, char** argv) {
                  1 * nNonExtMemTime + 
                  2 * nGeneralSQGate + 
                  1 * nRealOnlySQGate + 
-                 1 * nUPGate; 
+                 1 * nUPGate;
 
     std::cerr << CYAN_FG << BOLD << "Num Normalized Cycles: " << tTotal << "\n" << RESET
               << "  - nTwiceExtMemTime: " << nTwiceExtMemTime << "\n"
@@ -156,7 +156,6 @@ int main(int argc, char** argv) {
               << "  - nGeneralSQGate:   " << nGeneralSQGate << "\n"
               << "  - nRealOnlySQGate:  " << nRealOnlySQGate << "\n"
               << "  - nUPGate:          " << nUPGate << "\n";
-
 
     return 0;
 }
