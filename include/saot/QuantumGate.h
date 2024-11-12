@@ -80,7 +80,7 @@ private:
 
     mutable Cache cache;
 
-    void computeAndCacheUpMat() const;
+    void computeAndCacheUpMat(double tolerance) const;
     void computeAndCacheCMat() const;
     void computeAndCachePMat() const;
 public:
@@ -98,20 +98,20 @@ public:
     
     static GateMatrix FromName(const std::string& name, const gate_params_t& params = {});
 
-    void permuteSelf(const std::vector<int>& flags); 
+    void permuteSelf(const std::vector<int>& flags);
 
     // get cached unitary perm matrix object associated with this GateMatrix
-    const up_matrix_t* getUnitaryPermMatrix() const {
+    const up_matrix_t* getUnitaryPermMatrix(double tolerance = 0.0) const {
         if (cache.isConvertibleToUpMat == Unknown)
-            computeAndCacheUpMat();
+            computeAndCacheUpMat(tolerance);
         if (cache.isConvertibleToUpMat == UnConvertible)
             return nullptr;
         return &cache.upMat;
     }
 
-    up_matrix_t* getUnitaryPermMatrix() {
+    up_matrix_t* getUnitaryPermMatrix(double tolerance = 0.0) {
         if (cache.isConvertibleToUpMat == Unknown)
-            computeAndCacheUpMat();
+            computeAndCacheUpMat(tolerance);
         if (cache.isConvertibleToUpMat == UnConvertible)
             return nullptr;
         return &cache.upMat;
@@ -149,8 +149,8 @@ public:
         return cache.pMat;
     }
 
-    bool isConvertibleToUnitaryPermMatrix() const {
-        return getUnitaryPermMatrix() != nullptr;
+    bool isConvertibleToUnitaryPermMatrix(double tolerance) const {
+        return getUnitaryPermMatrix(tolerance) != nullptr;
     }
 
     bool isConvertibleToConstantMatrix() const {
@@ -264,8 +264,8 @@ public:
 
     int opCount(double zeroSkippingThres = 1e-8);
 
-    bool isConvertibleToUnitaryPermGate() const {
-        return gateMatrix.isConvertibleToUnitaryPermMatrix();
+    bool isConvertibleToUnitaryPermGate(double tolerance) const {
+        return gateMatrix.isConvertibleToUnitaryPermMatrix(tolerance);
     }
 
     bool isConvertibleToConstantGate() const {

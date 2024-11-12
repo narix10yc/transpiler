@@ -4,6 +4,8 @@
 #include <iostream>
 #include <cassert>
 
+#include "saot/FPGAConfig.h"
+
 namespace saot {
 
 class CircuitGraph;
@@ -37,15 +39,6 @@ struct CPUFusionConfig {
 };
 
 void applyCPUGateFusion(const CPUFusionConfig&, CircuitGraph&);
-
-
-struct FPGAFusionConfig {
-    int maxUnitaryPermutationSize;
-    bool ignoreSingleQubitNonCompGates;
-    bool multiTraverse;
-
-    static FPGAFusionConfig Default;
-};
 
 void applyFPGAGateFusion(const FPGAFusionConfig&, CircuitGraph&);
 

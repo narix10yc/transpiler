@@ -45,7 +45,7 @@ Instruction::CostKind Instruction::getCostKind(const FPGACostConfig& config) con
         return CK_UPGate;
     assert(gInst->getKind() == GOp_SQ);
 
-    if (fpga::getFPGAGateCategory(*gInst->block->quantumGate) & fpga::fpgaRealOnly)
+    if (gInst->blockKind.is(FPGAGateCategory::fpgaRealOnly))
         return CK_RealOnlySQGate;
     return CK_GeneralSQGate;
 }
@@ -94,29 +94,38 @@ int getNumberOfFullSwapCycles(int kindIdx) {
 
 class InstGenState {
 private:
-    enum on_chip_flag_t {
-        OCF_NotInited,  // not initialized
-        OCF_OnChip,     // on-chip
-        OCF_OffChip,    // off-chip
-    };
-
     enum available_block_kind_t {
-        ABK_LocalSQ,     // local single-qubit
-        ABK_NonLocalSQ,  // non-local single-qubit
-        ABK_UnitaryPerm, // unitary permutation
-        ABK_NonComp,     // non-computational
-        ABK_NotInited,   // not initialized
+        ABK_OnChipLocalSQ,      // on-chip local single-qubit
+        ABK_OnChipNonLocalSQ,   // on-chip non-local single-qubit
+        ABK_OffChipSQ,          // off-chip single-qubit
+        ABK_UnitaryPerm,        // unitary permutation
+        ABK_NonComp,            // non-computational
+        ABK_NotInited,          // not initialized
     };
 
     struct available_blocks_t {
         GateBlock* block;
-        on_chip_flag_t isOnChip;
-        available_block_kind_t kind;
+        FPGAGateCategory blockKind;
 
-        available_blocks_t(GateBlock* block,
-                           on_chip_flag_t isOnChip = OCF_NotInited,
-                           available_block_kind_t kind = ABK_NotInited)
-            : block(block), isOnChip(isOnChip), kind(kind) {}
+        available_blocks_t(GateBlock* block, FPGAGateCategory blockKind)
+            : block(block), blockKind(blockKind) {}
+        
+        available_block_kind_t getABK(const std::vector<QubitStatus>& qubitStatuses) const {
+            if (blockKind.is(FPGAGateCategory::fpgaNonComp))
+                return ABK_NonComp;
+            if (blockKind.is(FPGAGateCategory::fpgaUnitaryPerm))
+                return ABK_UnitaryPerm;
+            // single-qubit block
+            assert(blockKind.is(FPGAGateCategory::fpgaSingleQubit));
+            assert(block->dataVector.size() == 1);
+            int q = block->dataVector[0].qubit;
+            if (qubitStatuses[q].kind == QK_OffChip)
+                return ABK_OffChipSQ;
+            if (qubitStatuses[q].kind == QK_Local)
+                return ABK_OnChipLocalSQ;
+            assert(qubitStatuses[q].kind == QK_Row || qubitStatuses[q].kind == QK_Col);
+            return ABK_OnChipNonLocalSQ;
+        }
     };
 
     void init(const CircuitGraph& graph) {
@@ -162,9 +171,8 @@ private:
                 }
             }
             if (acceptFlag)
-                availables.emplace_back(cddBlock);
+                availables.emplace_back(cddBlock, getBlockKind(cddBlock));
         }
-        updateAvailables();
     }
 public:
     const FPGAInstGenConfig& config;
@@ -194,44 +202,9 @@ public:
         return os << "\n";
     }
 
-    // Update availables depending on qubitKinds. This function should be called
-    // whenever qubitStatuses is changed
-    void updateAvailables() {
-        const auto updateOnChipFlag = [&](available_blocks_t& available) {
-            for (const auto& data : available.block->dataVector) {
-                if (qubitStatuses[data.qubit].kind == QK_OffChip) {
-                    available.isOnChip = OCF_OffChip;
-                    return;
-                }
-            }
-            available.isOnChip = OCF_OnChip;
-        };
-
-        const auto updateKind = [&](available_blocks_t& available) {
-            if (available.kind == ABK_NotInited) {
-                if (available.block->quantumGate->isConvertibleToUnitaryPermGate())
-                    available.kind = ABK_UnitaryPerm;
-                else {
-                    const auto& qubit = available.block->quantumGate->qubits[0];
-                    assert(available.block->quantumGate->qubits.size() == 1);
-                    available.kind = (qubitStatuses[qubit].kind == QK_Local) ? ABK_LocalSQ : ABK_NonLocalSQ;
-                }
-            }
-            // only need to update single-qubit blocks now
-            else if (available.kind == ABK_LocalSQ || available.kind == ABK_NonLocalSQ) {
-                const auto& qubit = available.block->quantumGate->qubits[0];
-                assert(available.block->quantumGate->qubits.size() == 1);
-                available.kind = (qubitStatuses[qubit].kind == QK_Local) ? ABK_LocalSQ : ABK_NonLocalSQ;
-            }
-        };
-
-        for (auto& available : availables) {
-            assert(available.block);
-            updateOnChipFlag(available);
-            updateKind(available);
-        }
+    FPGAGateCategory getBlockKind(GateBlock* block) const {
+        return getFPGAGateCategory(*block->quantumGate, config.tolerances);
     }
-
     // popBlock: pop a block from \p availables. Update \p availables accordingly.
     void popBlock(GateBlock* block) {
         auto it = std::find_if(availables.begin(), availables.end(),
@@ -267,9 +240,8 @@ public:
                 }
             }
             if (insertFlag)
-                availables.emplace_back(b);
+                availables.emplace_back(b, getBlockKind(b));
         }
-        updateAvailables();
     }
 
     void assignQubitStatuses(const std::vector<int>& priorities) {
@@ -306,14 +278,11 @@ public:
         // off-chip
         for (q = 0; q < nqubits - nOnChipQubits; q++)
             qubitStatuses[priorities[nOnChipQubits + q]] = QubitStatus(QK_OffChip, q);
-        
     }
 
-    GateBlock* findOnChipBlockWithKind(available_block_kind_t kind) const {
+    GateBlock* findBlockWithABK(available_block_kind_t abk) const {
         for (const auto& candidate : availables) {
-            if (candidate.isOnChip != OCF_OnChip)
-                continue;
-            if (candidate.kind == kind)
+            if (candidate.getABK(qubitStatuses) == abk)
                 return candidate.block;
         }
         return nullptr;
@@ -378,18 +347,17 @@ public:
                 qubitStatuses[localQ] = qubitStatuses[nonLocalQ];
                 qubitStatuses[nonLocalQ] = tmp;
             }
-            updateAvailables();
         };
 
         const auto generateUPBlock = [&](GateBlock* b) {
             popBlock(b);
 
             if (vacantGateIdx == instructions.size()) {
-                instructions.emplace_back(nullptr, std::make_unique<GInstUP>(b));
+                instructions.emplace_back(nullptr, std::make_unique<GInstUP>(b, getBlockKind(b)));
             } else {
                 auto& inst = instructions[vacantGateIdx];
                 assert(inst.gInst->isNull());
-                inst.setGInst(std::make_unique<GInstUP>(b));
+                inst.setGInst(std::make_unique<GInstUP>(b, getBlockKind(b)));
             }
             ++vacantGateIdx;
         };
@@ -401,7 +369,7 @@ public:
             auto qubit = b->quantumGate->qubits[0];
             assert(qubitStatuses[qubit].kind == QK_Local);
 
-            instructions.emplace_back(nullptr, std::make_unique<GInstSQ>(b));
+            instructions.emplace_back(nullptr, std::make_unique<GInstSQ>(b, getBlockKind(b)));
             vacantGateIdx = instructions.size();
             sqGateBarrierIdx = vacantGateIdx;
         };
@@ -425,7 +393,22 @@ public:
             generateLocalSQBlock(b);
         };
 
+        const auto insertExtMemInst = [&](const std::vector<int>& priorities) {
+            int insertPosition = std::max(vacantMemIdx, sqGateBarrierIdx);
+            instructions.insert(instructions.cbegin() + insertPosition,
+                Instruction(std::make_unique<MInstEXT>(priorities), nullptr));
+            ++insertPosition;
+            ++vacantMemIdx;
+            if (vacantMemIdx < insertPosition)
+                vacantMemIdx = insertPosition;
+            // we don't have to increment sqGateBarrierIdx as its use case is
+            // always in sync with vacantMemIdx
+            if (sqGateBarrierIdx == insertPosition - 1)
+                ++sqGateBarrierIdx;
+        };
+
         // reassign qubit statuses (on-chip / off-chip) based on available blocks
+        // this function will call updateAvailables()
         const auto generateOnChipReassignment = [&]() {
             std::vector<int> priorities;
             priorities.reserve(nqubits);
@@ -435,7 +418,7 @@ public:
             while (!availablesCopy.empty()) {
                 auto it = std::find_if(availablesCopy.begin(), availablesCopy.end(),
                 [](const available_blocks_t& avail) {
-                    return avail.kind == ABK_LocalSQ || avail.kind == ABK_NonLocalSQ;
+                    return avail.blockKind.is(FPGAGateCategory::fpgaSingleQubit);
                 });
                 if (it == availablesCopy.end())
                     break;
@@ -455,26 +438,14 @@ public:
 
             // update qubitStatuses
             assignQubitStatuses(priorities);
-            updateAvailables();
-
-            int insertPosition = std::max(vacantMemIdx, sqGateBarrierIdx);
-            instructions.insert(instructions.cbegin() + insertPosition,
-                Instruction(std::make_unique<MInstEXT>(priorities), nullptr));
-            ++insertPosition;
-            ++vacantMemIdx;
-            if (vacantMemIdx < insertPosition)
-                vacantMemIdx = insertPosition;
-            // we don't have to increment sqGateBarrierIdx as its use case is
-            // always in sync with vacantMemIdx
-            if (sqGateBarrierIdx == insertPosition - 1)
-                ++sqGateBarrierIdx;
+            insertExtMemInst(priorities);
         };
 
         while (!availables.empty()) {
             // TODO: handle non-comp gates (omit them for now)
             bool nonCompFlag = false;
             for (const auto& avail : availables) {
-                if (fpga::getFPGAGateCategory(*avail.block->quantumGate) & fpga::fpgaNonComp) {
+                if (avail.blockKind.is(FPGAGateCategory::fpgaNonComp)) {
                     // std::cerr << "Ignored block " << avail.block->id << " because it is non-comp\n";
                     popBlock(avail.block);
                     nonCompFlag = true;
@@ -486,23 +457,34 @@ public:
                             
             if (!config.selectiveGenerationMode) {
                 auto& avail = availables[0];
-                if (avail.kind == ABK_LocalSQ)
+                auto abk = avail.getABK(qubitStatuses);
+                if (abk == ABK_OffChipSQ) {
+                    std::vector<int> priorities(nqubits);
+                    int q = avail.block->dataVector[0].qubit;
+                    priorities[0] = q;
+                    for (int i = 1; i < nqubits; i++)
+                        priorities[i] = (i < q) ? (i - 1) : i;
+                    assignQubitStatuses(priorities);
+                    insertExtMemInst(priorities);
+                }
+                
+                if (abk == ABK_OnChipLocalSQ)
                     generateLocalSQBlock(avail.block);
-                else if (avail.kind == ABK_UnitaryPerm)
+                else if (abk == ABK_UnitaryPerm)
                     generateUPBlock(avail.block);
-                else if (avail.kind == ABK_NonLocalSQ)
+                else if (abk == ABK_OnChipNonLocalSQ)
                     generateNonLocalSQBlock(avail.block);
                 else
-                    generateOnChipReassignment();
+                    assert(false && "Unreachable");
                 continue;
             }
             
             // TODO: optimize this traversal
-            if (auto* b = findOnChipBlockWithKind(ABK_LocalSQ))
+            if (auto* b = findBlockWithABK(ABK_OnChipLocalSQ))
                 generateLocalSQBlock(b);
-            else if (auto* b = findOnChipBlockWithKind(ABK_UnitaryPerm))
+            else if (auto* b = findBlockWithABK(ABK_UnitaryPerm))
                 generateUPBlock(b);
-            else if (auto* b = findOnChipBlockWithKind(ABK_NonLocalSQ))
+            else if (auto* b = findBlockWithABK(ABK_OnChipNonLocalSQ))
                 generateNonLocalSQBlock(b);
             else // no onChipBlock
                 generateOnChipReassignment();

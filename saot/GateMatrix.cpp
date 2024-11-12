@@ -429,7 +429,7 @@ inline c_matrix_t matCvt_up_to_c(const up_matrix_t& up) {
 } // anynomous namespace
 
 // Two paths lead to upMat: gpMat or cMat
-void GateMatrix::computeAndCacheUpMat() const {
+void GateMatrix::computeAndCacheUpMat(double tolerance) const {
     assert(cache.isConvertibleToUpMat == Unknown);
 
     switch (gateKind) {
@@ -493,7 +493,7 @@ void GateMatrix::computeAndCacheUpMat() const {
         bool rowFlag = false;
         for (size_t c = 0; c < edgeSize; c++) {
             const auto& cplx = cMat->data[r * edgeSize + c];
-            if (cplx != std::complex<double>{ 0.0, 0.0 }) {
+            if (std::abs(cplx) > tolerance) {
                 if (rowFlag) {
                     cache.isConvertibleToUpMat = UnConvertible;
                     return;

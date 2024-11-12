@@ -5,24 +5,12 @@
 #include "utils/iocolor.h"
 
 using namespace saot;
+using namespace saot::fpga;
 using namespace IOColor;
-
-FPGAFusionConfig FPGAFusionConfig::Default = FPGAFusionConfig {
-        .maxUnitaryPermutationSize = 5,
-        .ignoreSingleQubitNonCompGates = true,
-        .multiTraverse = true,
-    };
 
 using tile_iter_t = std::list<std::array<GateBlock*, 36>>::iterator;
 
 namespace {
-inline bool isSingleQubitNonCompBlock(const GateBlock* b) {
-    return (fpga::getFPGAGateCategory(*b->quantumGate) & fpga::fpgaSingleQubitNonComp) == fpga::fpgaSingleQubitNonComp;
-}
-
-inline bool isUnitaryPermBlock(const GateBlock* b) {
-    return (fpga::getFPGAGateCategory(*b->quantumGate) & fpga::fpgaUnitaryPerm) == fpga::fpgaUnitaryPerm;
-}
 
 GateBlock* computeCandidate(const GateBlock* lhs, const GateBlock* rhs,
                             const FPGAFusionConfig& config) {
@@ -40,6 +28,7 @@ GateBlock* computeCandidate(const GateBlock* lhs, const GateBlock* rhs,
             //   << "lhs " << lhs->id << " and rhs " << rhs->id
             //   << " => candidate block " << block->id << "\n";
 
+    // set up qubits of candidate block
     std::vector<int> blockQubits;
     for (const auto& lData : lhs->dataVector) {
         const auto& q = lData.qubit;
@@ -58,7 +47,6 @@ GateBlock* computeCandidate(const GateBlock* lhs, const GateBlock* rhs,
         block->dataVector.push_back({q, lhsEntry, rhsEntry});
         blockQubits.push_back(q);
     }
-
     for (const auto& rData : rhs->dataVector) {
         const auto& q = rData.qubit;
         if (lhs->findQubit(q) == lhs->dataVector.end()) {
@@ -67,48 +55,56 @@ GateBlock* computeCandidate(const GateBlock* lhs, const GateBlock* rhs,
         }
     }
 
+    auto lhsCate = getFPGAGateCategory(*lhs->quantumGate, config.tolerances);
+    auto rhsCate = getFPGAGateCategory(*rhs->quantumGate, config.tolerances);
+
     // check fusion condition
-    // 1. ignore single-qubit non-comp gates
+    // 1. ignore non-comp gates
     if (config.ignoreSingleQubitNonCompGates) {
-        if (isSingleQubitNonCompBlock(lhs)) {
-            std::cerr << CYAN_FG << "Omitted because LHS block "
-                      << lhs->id << " is a single-qubit non-comp gate\n" << RESET;
+        if (lhsCate.is(FPGAGateCategory::fpgaNonComp)) {
+            // std::cerr << CYAN_FG << "Omitted because LHS block "
+                    //   << lhs->id << " is a non-comp gate\n" << RESET;
+            // lhs->quantumGate->gateMatrix.printCMat(std::cerr) << "\n";
             return nullptr;
         }
-        if (isSingleQubitNonCompBlock(rhs)) {
-            std::cerr << CYAN_FG << "Omitted because RHS block "
-                      << rhs->id << " is a single-qubit non-comp gate\n" << RESET;
+        if (rhsCate.is(FPGAGateCategory::fpgaNonComp)) {
+            // std::cerr << CYAN_FG << "Omitted because RHS block "
+                    //   << rhs->id << " is a non-comp gate\n" << RESET;
+            // rhs->quantumGate->gateMatrix.printCMat(std::cerr) << "\n";
+
             return nullptr;
         }
     }
-
-    bool lhsIsUP = isUnitaryPermBlock(lhs);
-    bool rhsIsUp = isUnitaryPermBlock(rhs);
 
     // 2. multi-qubit gates: only fuse when unitary perm
-    if (!lhsIsUP || !rhsIsUp) {
-        if (lhs->nqubits() > 1 || rhs->nqubits() > 1) {
-            // std::cerr << CYAN_FG << "Rejected because the resulting gate is multi-qubit but not unitary perm\n" << RESET;
-            return nullptr;
-        }
-        assert(lhs->nqubits() == 1);
-        assert(rhs->nqubits() == 1);
-        if (lhs->quantumGate->qubits[0] != rhs->quantumGate->qubits[0]) {
-            // std::cerr << CYAN_FG << "Rejected because the resulting gate is multi-qubit but not unitary perm\n" << RESET;
-            return nullptr;
-        }
+    if (lhsCate.isNot(FPGAGateCategory::fpgaSingleQubit)) {
+        assert(lhsCate.is(FPGAGateCategory::fpgaUnitaryPerm)
+            && "We do not have kernel for multi-qubit non-unitary-perm gates");
+    }
+    if (rhsCate.isNot(FPGAGateCategory::fpgaSingleQubit)) {
+        assert(rhsCate.is(FPGAGateCategory::fpgaUnitaryPerm)
+            && "We do not have kernel for multi-qubit non-unitary-perm gates");
     }
 
-    if ((lhsIsUP && rhsIsUp)
-            && blockQubits.size() > config.maxUnitaryPermutationSize) {
-        // std::cerr << CYAN_FG << "Rejecte because the candidate block size is too large\n" << RESET;
+    if (blockQubits.size() > config.maxUnitaryPermutationSize) {
+        // std::cerr << YELLOW_FG << "Rejecte because the candidate block size is too large\n" << RESET;
         return nullptr;
+    }
+
+    if (blockQubits.size() > 1) {
+        if (lhsCate.isNot(FPGAGateCategory::fpgaUnitaryPerm)
+                || rhsCate.isNot(FPGAGateCategory::fpgaUnitaryPerm)) {
+            // std::cerr << YELLOW_FG
+                    //   << "Rejected because the resulting gate "
+                        //  "is multi-qubit but not unitary perm\n" << RESET;
+            return nullptr;
+        }
     }
 
     // accept candidate
     // std::cerr << GREEN_FG << "Fusion accepted! " << "\n" << RESET;
     block->quantumGate = std::make_unique<QuantumGate>(
-            rhs->quantumGate->lmatmul(*(lhs->quantumGate)));
+            rhs->quantumGate->lmatmul(*lhs->quantumGate));
 
     return block;
 }

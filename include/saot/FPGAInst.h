@@ -6,6 +6,8 @@
 #include <iostream>
 #include <cassert>
 
+#include "saot/FPGAConfig.h"
+
 namespace saot {
     class CircuitGraph;
     class QuantumGate;
@@ -14,24 +16,12 @@ namespace saot {
 
 namespace saot::fpga {
 
-enum FPGAGateCategory : unsigned {
-    fpgaGeneral = 0,
-    fpgaSingleQubit = 0b0001,
-    
-    // unitary permutation
-    fpgaUnitaryPerm = 0b0010,
-    
-    // Non-computational is a special sub-class of unitary permutation where all
-    // non-zero entries are +1, -1, +i, -i.
-    fpgaNonComp = 0b0110,
-    fpgaRealOnly = 0b1000,
-    
-    // composite
-    fpgaSingleQubitUnitaryPerm = 0b0011,
-    fpgaSingleQubitNonComp = 0b0111,
-};
-
-FPGAGateCategory getFPGAGateCategory(const QuantumGate& gate);
+// @param upTol: tolerance of the absolute values of complex entries in the matrix 
+// smaller than (or equal to) which can be considered zero;
+// @param reOnlyTol: tolerance of the absolutae value of imaginary value of 
+// each entry smaller than (or equal to) which can be considered zero;
+FPGAGateCategory getFPGAGateCategory(
+    const QuantumGate& gate, const FPGAGateCategoryTolerance& tolerances);
 
 enum GInstKind : int {
     GOp_NUL = 0,
@@ -42,12 +32,11 @@ enum GInstKind : int {
 
 enum MInstKind : int {
     MOp_NUL = 0,
+
     MOp_SSR = 1,    // Shuffle Swap Row
     MOp_SSC = 2,    // Shuffle Swap Col
-
     MOp_FSR = 3,    // Full Swap Row
     MOp_FSC = 4,    // Full Swap Col
-
     MOp_EXT = 5,    // External Memory Swap
 };
 
@@ -147,10 +136,14 @@ private:
     GInstKind gKind;
 public:
     GateBlock* block;
+    FPGAGateCategory blockKind;
 
-    GateInst(GInstKind gKind, GateBlock* block = nullptr)
-        : gKind(gKind), block(block) {}
-    
+    GateInst(GInstKind gKind)
+        : gKind(gKind), block(nullptr), blockKind(FPGAGateCategory::General) {}
+
+    GateInst(GInstKind gKind, GateBlock* block, FPGAGateCategory blockKind)
+        : gKind(gKind), block(block), blockKind(blockKind) {}
+
     virtual ~GateInst() = default;
 
     GInstKind getKind() const { return gKind; }
@@ -164,7 +157,7 @@ public:
 
 class GInstNUL : public GateInst {
 public:
-    GInstNUL() : GateInst(GOp_NUL, nullptr) {}
+    GInstNUL() : GateInst(GOp_NUL) {}
 
     std::ostream& print(std::ostream& os) const override {
         return os << "NUL";
@@ -174,7 +167,8 @@ public:
 // Single Qubit Gate (SQ)
 class GInstSQ : public GateInst {
 public:
-    GInstSQ(GateBlock* block) : GateInst(GOp_SQ, block) {}
+    GInstSQ(GateBlock* block, FPGAGateCategory blockKind)
+        : GateInst(GOp_SQ, block, blockKind) {}
     
     std::ostream& print(std::ostream& os) const override;
 };
@@ -182,7 +176,8 @@ public:
 // Unitary Permutation Gate (UP)
 class GInstUP : public GateInst {
 public:
-    GInstUP(GateBlock* block) : GateInst(GOp_UP, block) {}
+    GInstUP(GateBlock* block, FPGAGateCategory blockKind)
+        : GateInst(GOp_UP, block, blockKind) {}
     
     std::ostream& print(std::ostream& os) const override;
 };
@@ -238,19 +233,6 @@ public:
     CostKind getCostKind(const FPGACostConfig&) const;
 };
 
-struct FPGAInstGenConfig {
-public:
-    int nLocalQubits;
-    int gridSize;
-
-    // If off, apply sequential instruction generation on the default order of
-    // blocks present in CircuitGraph
-    bool selectiveGenerationMode;
-
-    int getNOnChipQubits() const {
-        return nLocalQubits + 2 * gridSize;
-    }
-};
 
 // top-level function to generate FPGA instructions from a CircuitGraph
 std::vector<Instruction> genInstruction(

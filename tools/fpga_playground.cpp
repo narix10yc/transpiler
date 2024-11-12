@@ -82,6 +82,7 @@ int main(int argc, char** argv) {
         .maxUnitaryPermutationSize = 5,
         .ignoreSingleQubitNonCompGates = true,
         .multiTraverse = true,
+        .tolerances = FPGAGateCategoryTolerance::Default,
     };
 
     tic = clock::now();
@@ -95,6 +96,7 @@ int main(int argc, char** argv) {
         .nLocalQubits = 14,
         .gridSize = 4,
         .selectiveGenerationMode = true,
+        .tolerances = FPGAGateCategoryTolerance::Default,
     };
 
     tic = clock::now();
