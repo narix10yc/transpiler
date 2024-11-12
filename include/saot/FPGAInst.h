@@ -250,12 +250,6 @@ public:
     int getNOnChipQubits() const {
         return nLocalQubits + 2 * gridSize;
     }
-
-    FPGAInstGenConfig(int nLocalQubits, int gridSize,
-                      bool selectiveGenerationMode = true) 
-        : nLocalQubits(nLocalQubits),
-          gridSize(gridSize),
-          selectiveGenerationMode(selectiveGenerationMode) {}
 };
 
 // top-level function to generate FPGA instructions from a CircuitGraph

@@ -91,10 +91,11 @@ int main(int argc, char** argv) {
 
     std::cerr << "After fusion there are " << G.countBlocks() << " blocks\n";
 
-    int gridSize = 4;
-    // FPGAInstGenConfig instGenConfig(/* nLocalQubits = */ G.nqubits - 2 * gridSize, gridSize);
-    // FPGAInstGenConfig instGenConfig(/* nLocalQubits = */ 1, gridSize);
-    FPGAInstGenConfig instGenConfig(/* nLocalQubits = */ 14, gridSize);
+    FPGAInstGenConfig instGenConfig {
+        .nLocalQubits = 14,
+        .gridSize = 4,
+        .selectiveGenerationMode = true,
+    };
 
     tic = clock::now();
     instructions = fpga::genInstruction(G, instGenConfig);

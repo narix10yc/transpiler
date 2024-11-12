@@ -79,6 +79,7 @@ struct QubitStatus {
             case QK_Col: os << "col"; break;
             case QK_Depth: os << "dep"; break;
             case QK_OffChip: os << "ext"; break;
+            case QK_Unknown: os << "unknown"; break;
             default: break;
         }
         os << ", " << kindIdx << ")";
@@ -189,8 +190,8 @@ public:
         it->print(os << "0:");
         int i = 1;
         while (++it != qubitStatuses.cend())
-            it->print(os << ", " << i << ":");
-        return os;
+            it->print(os << ", " << i++ << ":");
+        return os << "\n";
     }
 
     // Update availables depending on qubitKinds. This function should be called
@@ -275,27 +276,37 @@ public:
         assert(utils::isPermutation(priorities));
         int nOnChipQubits = config.getNOnChipQubits();
 
+        int q;
+
         if (nqubits <= config.nLocalQubits) {
-            for (int i = 0; i < nqubits; i++)
-                qubitStatuses[priorities[i]] = QubitStatus(QK_Local, i);
+            for (q = 0; q < nqubits; q++)
+                qubitStatuses[priorities[q]] = QubitStatus(QK_Local, q);
             return;
         }
 
         // local
-        for (int i = 0; i < config.nLocalQubits; i++)
-            qubitStatuses[priorities[i]] = QubitStatus(QK_Local, i);
+        for (q = 0; q < config.nLocalQubits; q++)
+            qubitStatuses[priorities[q]] = QubitStatus(QK_Local, q);
 
-        // row and col (on-chip)
-        for (int i = config.nLocalQubits, kindIdx = 0; i < nOnChipQubits; ++kindIdx) {
-            qubitStatuses[priorities[i]] = QubitStatus(QK_Row, kindIdx);
-            if (++i >= nOnChipQubits)
+        // row and col
+        int kindIdx = 0;
+        q = config.nLocalQubits;
+        while (true) {
+            if (q == nOnChipQubits)
                 break;
-            qubitStatuses[priorities[i]] = QubitStatus(QK_Col, kindIdx);
+            qubitStatuses[priorities[q]] = QubitStatus(QK_Row, kindIdx);
+            ++q;
+            if (q == nOnChipQubits)
+                break;
+            qubitStatuses[priorities[q]] = QubitStatus(QK_Col, kindIdx);
+            ++q;
+            ++kindIdx;
         }
-        
+
         // off-chip
-        for (int i = 0; i < nqubits - nOnChipQubits; i++)
-            qubitStatuses[priorities[nOnChipQubits + i]] = QubitStatus(QK_OffChip, i);
+        for (q = 0; q < nqubits - nOnChipQubits; q++)
+            qubitStatuses[priorities[nOnChipQubits + q]] = QubitStatus(QK_OffChip, q);
+        
     }
 
     GateBlock* findOnChipBlockWithKind(available_block_kind_t kind) const {
@@ -474,7 +485,15 @@ public:
                 continue;
                             
             if (!config.selectiveGenerationMode) {
-                assert(false && "Not Implemented");
+                auto& avail = availables[0];
+                if (avail.kind == ABK_LocalSQ)
+                    generateLocalSQBlock(avail.block);
+                else if (avail.kind == ABK_UnitaryPerm)
+                    generateUPBlock(avail.block);
+                else if (avail.kind == ABK_NonLocalSQ)
+                    generateNonLocalSQBlock(avail.block);
+                else
+                    generateOnChipReassignment();
                 continue;
             }
             
