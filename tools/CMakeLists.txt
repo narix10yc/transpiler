@@ -17,7 +17,7 @@ target_link_libraries(jit_playground saot simulation qasm)
 
 add_executable(ptx_playground "ptx_playground.cpp")
 llvm_map_components_to_libnames(llvm_libs ${LLVM_TARGETS_TO_BUILD})
-target_link_libraries(ptx_playground saot simulation ${llvm_libs} cuda)
+target_link_libraries(ptx_playground saot simulation ${llvm_libs} cuda cudart)
 
 add_executable(pg_polynomial "pg_polynomial.cpp")
 target_link_libraries(pg_polynomial saot simulation)

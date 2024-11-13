@@ -33,6 +33,7 @@
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 
 #include <cuda.h>
+#include <cuda_runtime.h>
 
 
 #define CHECK_CUDA_ERR(err) \
@@ -140,7 +141,7 @@ int main(int argc, char** argv) {
 
     // Create the pass manager.
     // This one corresponds to a typical -O2 optimization pipeline.
-    ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(OptimizationLevel::O3);
+    ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(OptimizationLevel::O1);
 
     // Optimize the IR!
     MPM.run(*G.getModule(), MAM);
@@ -181,6 +182,56 @@ int main(int argc, char** argv) {
     CUfunction kernel;
     CHECK_CUDA_ERR(cuModuleGetFunction(&kernel, cuMod, "ptx_kernel_"));
 
+    std::vector<double> svHost { 1.0, 0.0, 0.0, 0.0 };
+    double* svDevice;
+    std::vector<double> matHost { M_SQRT1_2, 0.0, M_SQRT1_2, 0.0, M_SQRT1_2, 0.0, -M_SQRT1_2, 0.0 };
+    double* matDevice;
+
+    cudaError_t err;
+
+    err = cudaMalloc((void**)(&svDevice), sizeof(double) * svHost.size());
+    if (err) {
+        std::cerr << IOColor::RED_FG << "Error in cudaMalloc sv: " << err << "\n" << IOColor::RESET;
+        return 1;
+    }
+    err = cudaMalloc((void**)(&matDevice), sizeof(double) * matHost.size());
+    if (err) {
+        std::cerr << IOColor::RED_FG << "Error in cudaMalloc mat: " << err << "\n" << IOColor::RESET;
+        return 1;
+    }
+
+    err = cudaMemcpy((void*)svDevice, static_cast<const void*>(svHost.data()), sizeof(double) * svHost.size(), cudaMemcpyHostToDevice);
+    if (err) {
+        std::cerr << IOColor::RED_FG << "Error in host => device memCpy: " << err << "\n" << IOColor::RESET;
+        return 1;
+    }
+    err = cudaMemcpy((void*)matDevice, static_cast<const void*>(matHost.data()), sizeof(double) * matHost.size(), cudaMemcpyHostToDevice);
+    if (err) {
+        std::cerr << IOColor::RED_FG << "Error in host => device memCpy: " << err << "\n" << IOColor::RESET;
+        return 1;
+    }
+
+    void* kernel_params[] = { &svDevice, &svHost };
+    CHECK_CUDA_ERR(cuLaunchKernel(kernel, 
+        1, 1, 1,        // grid dim
+        1, 1, 1,        // block dim
+        0,              // shared mem size
+        0,              // stream
+        kernel_params,  // kernel params
+        nullptr));      // extra options
+
+    err = cudaMemcpy(svHost.data(), svDevice, sizeof(double) * svHost.size(), cudaMemcpyDeviceToHost);
+    if (err) {
+        std::cerr << IOColor::RED_FG << "Error in device => host memCpy: " << err << "\n" << IOColor::RESET;
+        return 1;
+    }
+    err = cudaMemcpy(matHost.data(), matDevice, sizeof(double) * matHost.size(), cudaMemcpyDeviceToHost);
+    if (err) {
+        std::cerr << IOColor::RED_FG << "Error in device => host memCpy: " << err << "\n" << IOColor::RESET;
+        return 1;
+    }
+
+    utils::printVector(svHost) << "\n";
 
     // wait for kernel to complete
     CHECK_CUDA_ERR(cuCtxSynchronize());

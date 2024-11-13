@@ -57,7 +57,7 @@ Function* IRGenerator::generateCUDAKernel(
     auto* mdOne = ConstantAsMetadata::get(builder.getInt32(1));
     auto* kernelMetadata = MDNode::get(*getContext(), { ValueAsMetadata::get(func), mdString, mdOne });
     getModule()->getOrInsertNamedMetadata("nvvm.annotations")->addOperand(kernelMetadata);
-    
+
     Value* counterV;
     Value* idxStartV = builder.getInt64(0ULL);
 
@@ -97,7 +97,7 @@ Function* IRGenerator::generateCUDAKernel(
     mask = ~((1ULL << (qubits.back() - nqubits + 1)) - 1);
     std::cerr << "mask = " << utils::as0b(mask, 12) << "\n";
     tmpCounterV = builder.CreateAnd(counterV, mask, "tmpCounter");
-    tmpCounterV = builder.CreateShl(tmpCounterV, nqubits, "tmpCounter");
+    tmpCounterV = builder.CreateShl(tmpCounterV, nqubits-1, "tmpCounter");
     idxStartV = builder.CreateAdd(idxStartV, tmpCounterV, "idxStart");
 
     uint64_t N = 1 << nqubits;
