@@ -5,6 +5,7 @@
 #include "utils/utils.h"
 
 #include <fstream>
+#include <memory>
 
 namespace saot {
     class CircuitGraph;

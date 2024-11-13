@@ -3,6 +3,8 @@
 
 #include "saot/QuantumGate.h"
 
+#include <memory>
+
 namespace saot {
     class CircuitGraph;
 }

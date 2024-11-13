@@ -2,6 +2,7 @@
 #include "saot/CircuitGraph.h"
 
 #include "utils/iocolor.h"
+
 using namespace IOColor;
 using namespace saot;
 using namespace saot::ast;

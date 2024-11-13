@@ -7,6 +7,7 @@
 #include "openqasm/parser.h"
 
 #include <cmath>
+#include <chrono>
 
 using namespace saot;
 using namespace saot::fpga;
