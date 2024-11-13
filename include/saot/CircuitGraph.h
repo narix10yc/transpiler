@@ -1,11 +1,13 @@
 #ifndef SAOT_CIRCUITGRAPH_H
 #define SAOT_CIRCUITGRAPH_H
 
+#include "saot/QuantumGate.h"
+
 #include <vector>
 #include <array>
 #include <set>
 #include <list>
-#include "saot/QuantumGate.h"
+#include <memory>
 
 namespace saot {
 
