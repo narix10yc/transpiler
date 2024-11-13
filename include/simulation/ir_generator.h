@@ -122,6 +122,12 @@ public:
             const std::pair<llvm::Value*, llvm::Value*>&,
             const std::pair<llvm::Value*, llvm::Value*>&);
 
+    std::pair<llvm::Value*, llvm::Value*> genComplexDotProduct(
+            const std::vector<llvm::Value*>& aRe,
+            const std::vector<llvm::Value*>& aIm,
+            const std::vector<llvm::Value*>& bRe,
+            const std::vector<llvm::Value*>& bIm);
+
     llvm::Function* generateKernel(
             const saot::QuantumGate& gate,
             const std::string& funcName = "") {

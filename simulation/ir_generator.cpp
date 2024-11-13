@@ -210,3 +210,29 @@ std::pair<Value*, Value*> IRGenerator::genComplexMultiply(
              genFAdd(genFMul(a.first, b.second), genFMul(a.second, b.first)) };
 }
 
+std::pair<Value*, Value*> IRGenerator::genComplexDotProduct(
+        const std::vector<Value*>& aRe, const std::vector<Value*>& aIm,
+        const std::vector<Value*>& bRe, const std::vector<Value*>& bIm) {
+    auto length = aRe.size();
+    assert(aRe.size() == aIm.size());
+    assert(aIm.size() == bRe.size());
+    assert(bRe.size() == bIm.size());
+
+    auto* ty = aRe[0]->getType();
+    auto* re = builder.CreateFMul(aRe[0], bRe[0]);
+    auto* im = builder.CreateFMul(aRe[0], bIm[0]);
+    for (unsigned i = 1; i < length; i++) {
+        re = builder.CreateIntrinsic(ty, Intrinsic::fmuladd, { aRe[i], bRe[i], re });
+        im = builder.CreateIntrinsic(ty, Intrinsic::fmuladd, { aRe[i], bIm[i], im });
+    }
+
+    auto ree = builder.CreateFMul(aIm[0], bIm[0]);
+    im = builder.CreateIntrinsic(ty, Intrinsic::fmuladd, { aIm[0], bRe[0], im });
+    for (unsigned i = 1; i < length; i++) {
+        ree = builder.CreateIntrinsic(ty, Intrinsic::fmuladd, { aRe[i], bRe[i], ree });
+        im = builder.CreateIntrinsic(ty, Intrinsic::fmuladd, { aIm[i], bRe[i], im });
+    }
+    
+    re = builder.CreateFSub(re, ree);
+    return { re, im };
+}

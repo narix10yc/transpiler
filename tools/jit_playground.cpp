@@ -3,6 +3,7 @@
 #include "saot/QuantumGate.h"
 #include "saot/CircuitGraph.h"
 #include "saot/Fusion.h"
+#include "openqasm/parser.h"
 
 #include "saot/Polynomial.h"
 #include "simulation/jit.h"
@@ -19,17 +20,19 @@ int main(int argc, char** argv) {
     std::vector<std::pair<int, double>> varValues {
         {0, 1.1}, {1, 0.4}, {2, 0.1}, {3, -0.3}, {4, -0.9}, {5, 1.9}};
 
-
     assert(argc > 1);
 
-    parse::Parser parser(argv[1]);
-    auto qc = parser.parseQuantumCircuit();
-    std::cerr << "Recovered:\n";
+    // parse::Parser parser(argv[1]);
+    // auto qc = parser.parseQuantumCircuit();
+    // std::cerr << "Recovered:\n";
 
-    std::ofstream file(std::string(argv[1]) + ".rec");
-    qc.print(file);
+    // std::ofstream file(std::string(argv[1]) + ".rec");
+    // qc.print(file);
 
-    auto graph = qc.toCircuitGraph();
+    openqasm::Parser qasmParser(argv[1], -1);
+    auto graph = qasmParser.parse()->toCircuitGraph();
+
+    // auto graph = qc.toCircuitGraph();
     graph.print(std::cerr) << "\n";
 
     applyCPUGateFusion(CPUFusionConfig::Default, graph);
@@ -43,7 +46,7 @@ int main(int argc, char** argv) {
     for (auto& p : pMat.data)
         p.removeSmallMonomials();
 
-    printParametrizedMatrix(std::cerr, pMat);
+    // printParametrizedMatrix(std::cerr, pMat);
 
     // for (auto& P : fusedGate->gateMatrix.pData())
     //     P.simplify(varValues);
@@ -52,12 +55,12 @@ int main(int argc, char** argv) {
     IRGenerator G;
     Function* llvmFuncPrepareParam = G.generatePrepareParameter(graph);
     auto allBlocks = graph.getAllBlocks();
-    // for (const auto& b : allBlocks) {
-        // G.generateKernel(*b->quantumGate);
-    // }
-    G.dumpToStderr();
+    for (const auto& b : allBlocks) {
+        G.generateKernel(*b->quantumGate);
+    }
+    // G.dumpToStderr();
 
-    // G.applyLLVMOptimization(OptimizationLevel::O2);
+    G.applyLLVMOptimization(OptimizationLevel::O2);
     // G.dumpToStderr();
 
     // JIT;
@@ -72,12 +75,12 @@ int main(int argc, char** argv) {
 
     auto prepareParameter = funcAddrOrErr->toPtr<void(double*, double*)>();
 
-    std::vector<double> circuitParameters { 1.344, 3.109, 0.12 };
-    std::vector<double> circuitMatrices(8);
+    // std::vector<double> circuitParameters { 1.344, 3.109, 0.12 };
+    // std::vector<double> circuitMatrices(8);
 
-    prepareParameter(circuitParameters.data(), circuitMatrices.data());
+    // prepareParameter(circuitParameters.data(), circuitMatrices.data());
 
-    utils::printVector(circuitMatrices);
+    // utils::printVector(circuitMatrices);
 
     
     return 0;

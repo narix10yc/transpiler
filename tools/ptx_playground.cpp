@@ -25,6 +25,10 @@
 #include <llvm/MC/TargetRegistry.h>
 #include <llvm/MC/MCContext.h>
 
+
+#include "llvm/Passes/PassBuilder.h"
+#include "llvm/Pass.h"
+
 #include <llvm/IR/LegacyPassManager.h>
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
@@ -56,17 +60,16 @@ int main(int argc, char** argv) {
     graph.print(std::cerr) << "\n";
 
     applyCPUGateFusion(CPUFusionConfig::Default, graph);
-    graph.print(std::cerr) << "\n";
+    // graph.print(std::cerr) << "\n";
 
     auto& fusedGate = graph.getAllBlocks()[0]->quantumGate;
-
     auto& pMat = fusedGate->gateMatrix.getParametrizedMatrix();
     
     // printParametrizedMatrix(std::cerr, pMat);
     for (auto& p : pMat.data)
         p.removeSmallMonomials();
 
-    printParametrizedMatrix(std::cerr, pMat);
+    // printParametrizedMatrix(std::cerr, pMat);
 
     // for (auto& P : fusedGate->gateMatrix.pData())
     //     P.simplify(varValues);
@@ -75,7 +78,7 @@ int main(int argc, char** argv) {
     IRGenerator G;
     // Function* llvmFuncPrepareParam = G.generatePrepareParameter(graph);
 
-    G.applyLLVMOptimization(OptimizationLevel::O3);
+    // G.applyLLVMOptimization(OptimizationLevel::O3);
 
     auto allBlocks = graph.getAllBlocks();
     for (const auto& b : allBlocks) {
@@ -83,7 +86,6 @@ int main(int argc, char** argv) {
     }
     // G.dumpToStderr();
     
-
     InitializeAllTargets();
     InitializeAllTargetMCs();
     InitializeAllAsmPrinters();
@@ -94,13 +96,47 @@ int main(int argc, char** argv) {
         errs() << targ.getName() << "  " << targ.getBackendName() << "\n";
     
     auto targetTriple = Triple("nvptx64-nvidia-cuda");
+    // auto targetTriple = Triple(sys::getDefaultTargetTriple());
+    std::string cpu = "sm_70";
+    errs() << "Target triple is: " << targetTriple.str() << "\n";
+
     std::string error;
     const Target *target = TargetRegistry::lookupTarget(targetTriple.str(), error);
     if (!target) {
         errs() << "Error: " << error << "\n";
         return 1;
     }
-    auto* targetMachine = target->createTargetMachine(targetTriple.str(), "sm_84", "", {}, std::nullopt);
+    auto* targetMachine = target->createTargetMachine(targetTriple.str(), cpu, "", {}, std::nullopt);
+
+    G.getModule()->setTargetTriple(targetTriple.getTriple());
+    G.getModule()->setDataLayout(targetMachine->createDataLayout());
+
+    // These must be declared in this order so that they are destroyed in the
+    // correct order due to inter-analysis-manager references.
+    LoopAnalysisManager LAM;
+    FunctionAnalysisManager FAM;
+    CGSCCAnalysisManager CGAM;
+    ModuleAnalysisManager MAM;
+
+    // Create the new pass manager builder.
+    // Take a look at the PassBuilder constructor parameters for more
+    // customization, e.g. specifying a TargetMachine or various debugging
+    // options.
+    PassBuilder PB;
+
+    // Register all the basic analyses with the managers.
+    PB.registerModuleAnalyses(MAM);
+    PB.registerCGSCCAnalyses(CGAM);
+    PB.registerFunctionAnalyses(FAM);
+    PB.registerLoopAnalyses(LAM);
+    PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+    // Create the pass manager.
+    // This one corresponds to a typical -O2 optimization pipeline.
+    ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(OptimizationLevel::O3);
+
+    // Optimize the IR!
+    MPM.run(*G.getModule(), MAM);
 
     llvm::SmallString<8> data_ptx, data_ll;
     llvm::raw_svector_ostream dest_ptx(data_ptx), dest_ll(data_ll);
@@ -110,11 +146,9 @@ int main(int argc, char** argv) {
     G.getModule()->print(dest_ll, nullptr);
     
     std::string ll(data_ll.begin(), data_ll.end());
-    std::cerr << ll << "\n";
+    std::cerr << "===================== IR ======================\n" << ll << "\n"
+              << "================== End of IR ==================\n";
 
-
-    G.getModule()->setTargetTriple(targetTriple.getTriple());
-    G.getModule()->setDataLayout(targetMachine->createDataLayout());
     legacy::PassManager passManager;
     if (targetMachine->addPassesToEmitFile(passManager, dest_ptx, nullptr, CodeGenFileType::AssemblyFile)) {
         errs() << "The target machine can't emit a file of this type\n";

@@ -13,7 +13,7 @@ target_link_libraries(correctness_kernel saot qasm simulation)
 
 add_executable(jit_playground "jit_playground.cpp")
 # llvm_map_components_to_libnames(llvm_libs orcjit native)
-target_link_libraries(jit_playground saot simulation)
+target_link_libraries(jit_playground saot simulation qasm)
 
 add_executable(ptx_playground "ptx_playground.cpp")
 llvm_map_components_to_libnames(llvm_libs ${LLVM_TARGETS_TO_BUILD})

@@ -15,6 +15,9 @@ using namespace saot;
 
 Function* IRGenerator::generateCUDAKernel(
         const QuantumGate& gate, const std::string& funcName) {
+    
+    const auto& qubits = gate.qubits;
+    const int nqubits = qubits.size();
 
     Type* scalarTy = (_config.precision == 32) ? builder.getFloatTy()
                                                : builder.getDoubleTy();
@@ -73,8 +76,8 @@ Function* IRGenerator::generateCUDAKernel(
     uint64_t mask = 0ULL;
     uint64_t maskSum = 0ULL;
     Value* tmpCounterV = counterV;
-    for (unsigned i = 0; i < gate.qubits.size(); i++) {
-        unsigned bit = gate.qubits[i];
+    for (unsigned i = 0; i < nqubits; i++) {
+        unsigned bit = qubits[i];
         mask = ((1ULL << (bit - i)) - 1) - maskSum;
         maskSum = (1ULL << (bit - i)) - 1;
         std::cerr << "i = " << i << ", bit = " << bit
@@ -84,14 +87,56 @@ Function* IRGenerator::generateCUDAKernel(
         tmpCounterV = builder.CreateShl(tmpCounterV, i, "tmpCounter");
         idxStartV = builder.CreateAdd(idxStartV, tmpCounterV, "tmpIdx");
     }
-    mask = ~((1ULL << (gate.qubits.back() - gate.qubits.size() + 1)) - 1);
+    mask = ~((1ULL << (qubits.back() - nqubits + 1)) - 1);
     std::cerr << "mask = " << utils::as0b(mask, 12) << "\n";
     tmpCounterV = builder.CreateAnd(counterV, mask, "tmpCounter");
-    tmpCounterV = builder.CreateShl(tmpCounterV, gate.qubits.size(), "tmpCounter");
+    tmpCounterV = builder.CreateShl(tmpCounterV, nqubits, "tmpCounter");
     idxStartV = builder.CreateAdd(idxStartV, tmpCounterV, "idxStart");
 
+    uint64_t N = 1 << nqubits;
+    std::vector<Value*> reMats(N), imMats(N), reAmpPtrs(N), imAmpPtrs(N), reAmps(N), imAmps(N);
+    for (uint64_t i = 0; i < N; i++) {
+        uint64_t delta = 0ULL;
+        for (int b = 0; b < nqubits; b++) {
+            if (i & (1 << b))
+                delta |= (1 << qubits[b]);
+        }
+        auto* idxReV = builder.CreateAdd(idxStartV, builder.getInt64(2 * delta), "idx.amp.re." + std::to_string(i));
+        reAmpPtrs[i] = builder.CreateGEP(scalarTy, pSvArg, idxReV, "amp.re.ptr." + std::to_string(i));
+        reAmps[i] = builder.CreateLoad(scalarTy, reAmpPtrs[i], "amp.re." + std::to_string(i));
+
+        auto* idxImV = builder.CreateAdd(idxStartV, builder.getInt64(2 * delta + 1), "idx.amp.im." + std::to_string(i));
+        imAmpPtrs[i] = builder.CreateGEP(scalarTy, pSvArg, idxImV, "amp.im.ptr." + std::to_string(i));
+        imAmps[i] = builder.CreateLoad(scalarTy, imAmpPtrs[i], "amp.im." + std::to_string(i));
+    }
+
+    for (int r = 0; r < N; r++) {
+        for (int c = 0; c < N; c++) {
+            // load the r-th row of the matrix
+            std::string suffix = std::to_string(r) + "." + std::to_string(c);
+            auto* idxReV = builder.CreateConstGEP1_64(scalarTy, pMatArg, 2ULL * (N*r + c), "idx.mat.re." + suffix);
+            reMats[c] = builder.CreateLoad(scalarTy, idxReV, "mat.re." + suffix);
+            auto* idxImV = builder.CreateConstGEP1_64(scalarTy, pMatArg, 2ULL * (N*r + c) + 1, "idx.mat.im." + suffix);
+            imMats[c] = builder.CreateLoad(scalarTy, idxImV, "mat.im." + suffix);
+        }
+
+        // matrix-vector multiplication
+        // Value* updatedReAmp = reAmps[r];
+        // Value* updatedImAmp = imAmps[r];
+        // for (int c = 0; c < N; c++) {
+        //     auto pair = genComplexMultiply({updatedReAmp, updatedImAmp}, {reMats[c], imMats[c]});
+        //     updatedReAmp = pair.first;
+        //     updatedImAmp = pair.second;
+        // }
+        // store back   
+        // builder.CreateStore(updatedReAmp, reAmpPtrs[r]);
+        // builder.CreateStore(updatedImAmp, imAmpPtrs[r]);
+
+        auto updated = genComplexDotProduct(reAmps, imAmps, reMats, imMats);
+        builder.CreateStore(updated.first, reAmpPtrs[r]);
+        builder.CreateStore(updated.second, imAmpPtrs[r]);
+    }
+
     builder.CreateRetVoid();
-
-
     return func;
 }
