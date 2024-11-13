@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(simulation LANGUAGES C CXX CUDA)
+project(simulation LANGUAGES C CXX)
 
 message("############ Custom Setups ############")
 # Apple has a system LLVM. We need to use a specific version
@@ -18,7 +18,7 @@ message(STATUS "LLVM_ROOT: ${LLVM_ROOT}")
 set(CMAKE_C_COMPILER "${LLVM_ROOT}/bin/clang")
 set(CMAKE_CXX_COMPILER "${LLVM_ROOT}/bin/clang++")
 
-find_package(CUDA REQUIRED)
+find_package(CUDA)
 set(CUDA_HOST_COMPILER "${CMAKE_CXX_COMPILER}")
 set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12.5/bin/nvcc")
 
