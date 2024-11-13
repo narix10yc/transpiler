@@ -20,7 +20,6 @@
 #include <llvm/Support/FileSystem.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/TargetParser/Host.h>
-// #include <llvm/lib/Target/NVPTX/NVPTXTargetMachine.h>
 
 #include <llvm/MC/TargetRegistry.h>
 #include <llvm/MC/MCContext.h>
@@ -33,6 +32,14 @@
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 
+#include <cuda.h>
+
+
+#define CHECK_CUDA_ERR(err) \
+    if (err != CUDA_SUCCESS) {\
+        std::cerr << IOColor::RED_FG << "CUDA error at line " << __LINE__ << ": " << err << "\n" << IOColor::RESET;\
+        return -1; \
+    }
 
 using namespace saot;
 
@@ -157,6 +164,30 @@ int main(int argc, char** argv) {
     passManager.run(*G.getModule());
     std::string ptx(data_ptx.begin(), data_ptx.end());
     std::cerr << ptx << "\n";
+
+
+    std::cerr << "=== Start CUDA part ===\n";
+
+    CHECK_CUDA_ERR(cuInit(0));
+    CUdevice device;
+    CHECK_CUDA_ERR(cuDeviceGet(&device, 0));
+
+    CUcontext cuCtx;
+    CHECK_CUDA_ERR(cuCtxCreate(&cuCtx, 0, device));
+
+    CUmodule cuMod;
+    CHECK_CUDA_ERR(cuModuleLoadDataEx(&cuMod, ptx.c_str(), 0, nullptr, nullptr));
+
+    CUfunction kernel;
+    CHECK_CUDA_ERR(cuModuleGetFunction(&kernel, cuMod, "ptx_kernel_"));
+
+
+    // wait for kernel to complete
+    CHECK_CUDA_ERR(cuCtxSynchronize());
+
+    // clean up
+    CHECK_CUDA_ERR(cuModuleUnload(cuMod));
+    CHECK_CUDA_ERR(cuCtxDestroy(cuCtx));
 
     return 0;
 }

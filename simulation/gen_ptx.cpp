@@ -22,6 +22,7 @@ Function* IRGenerator::generateCUDAKernel(
     Type* scalarTy = (_config.precision == 32) ? builder.getFloatTy()
                                                : builder.getDoubleTy();
     Function* func;
+
     Argument *pSvArg, *pMatArg;
     { /* function declaration */
 
@@ -51,6 +52,12 @@ Function* IRGenerator::generateCUDAKernel(
     pSvArg  = func->getArg(0); pSvArg->setName("p.sv");
     pMatArg = func->getArg(1); pMatArg->setName("p.mat");
 
+    // mark this function as a kernel
+    auto* mdString = MDString::get(*getContext(), "kernel");
+    auto* mdOne = ConstantAsMetadata::get(builder.getInt32(1));
+    auto* kernelMetadata = MDNode::get(*getContext(), { ValueAsMetadata::get(func), mdString, mdOne });
+    getModule()->getOrInsertNamedMetadata("nvvm.annotations")->addOperand(kernelMetadata);
+    
     Value* counterV;
     Value* idxStartV = builder.getInt64(0ULL);
 
