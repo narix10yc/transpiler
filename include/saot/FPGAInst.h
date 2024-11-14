@@ -183,10 +183,10 @@ public:
 };
 
 struct FPGACostConfig {
-    int numLocalQubitsForTwiceExtMemOpTime;
-    int localQubitSignificanceForTwiceExtMemOpTime;
+    // If the lowest-significant loaded-in qubit has qubit index less than this
+    // value, external memory access takes twice the time (default to 7)
+    int lowestQIdxForTwiceExtTime;
 };
-
 
 class Instruction {
 public:

@@ -5,11 +5,11 @@ using namespace saot;
 using namespace saot::fpga;
 
 namespace {
-inline bool isRealOnlyGate(const QuantumGate& gate, double tolerance) {
+inline bool isRealOnlyGate(const QuantumGate& gate, double reTol) {
     const auto* cMat = gate.gateMatrix.getConstantMatrix();
     assert(cMat);
     for (const auto& cplx : cMat->data) {
-        if (std::abs(cplx.imag()) <= tolerance)
+        if (std::abs(cplx.imag()) > reTol)
             return false;
     }
     return true;

@@ -27,12 +27,8 @@ std::ostream& GInstUP::print(std::ostream& os) const {
 Instruction::CostKind Instruction::getCostKind(const FPGACostConfig& config) const {
     if (mInst->getKind() == MOp_EXT) {
         auto extInst = dynamic_cast<const MInstEXT&>(*mInst);
-        int n = std::min(static_cast<int>(extInst.flags.size()),
-                         config.numLocalQubitsForTwiceExtMemOpTime);
-        for (int i = 0; i < n; i++) {
-            if (extInst.flags[i] < config.localQubitSignificanceForTwiceExtMemOpTime)
-                return CK_TwiceExtMemTime;
-        }
+        if (extInst.flags[0] < config.lowestQIdxForTwiceExtTime)
+            return CK_TwiceExtMemTime;
         return CK_ExtMemTime;
     }
 
@@ -432,8 +428,12 @@ public:
                 for (const auto& data : avail.block->dataVector)
                     utils::pushBackIfNotInVector(priorities, data.qubit);
             }
+            // to diminish external memory access overhead
+            int numToSort = std::min(static_cast<int>(priorities.size()), config.nLocalQubits);
+            std::sort(priorities.begin(), priorities.begin() + numToSort);
+
             // fill up priorities vector
-            int startQubit = priorities.empty() ? 0 : priorities[0];
+            int startQubit = priorities.empty() ? (nqubits >> 1) : priorities[0];
             for (int q = 0; q < nqubits; q++)
                 utils::pushBackIfNotInVector(priorities, (q+startQubit) % nqubits);
 

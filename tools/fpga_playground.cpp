@@ -14,7 +14,6 @@ using namespace saot::fpga;
 
 using namespace IOColor;
 
-
 void printInstructionStatistics(
         const std::vector<fpga::Instruction>& insts, const FPGACostConfig& costConfig) {
     int nNonExtMemInst = 0, nExtMemInst = 0, nSqGateInst = 0, nUpGateInst = 0;
@@ -125,8 +124,7 @@ void runExperiment(std::function<CircuitGraph()> f) {
     };
 
     FPGACostConfig costConfig {
-        .numLocalQubitsForTwiceExtMemOpTime = nLocalQubits,
-        .localQubitSignificanceForTwiceExtMemOpTime = 7
+        .lowestQIdxForTwiceExtTime = 7
     };
     
     FPGAInstGenConfig instGenSelectiveConfig {
@@ -160,8 +158,6 @@ void runExperiment(std::function<CircuitGraph()> f) {
 
     tic = clock::now();
     instructions = fpga::genInstruction(G, instGenSelectiveConfig);
-    for (const auto& i : instructions)
-        i.print(std::cerr);
     tok = clock::now();
     log() << "Inst Gen Complete!\n";
     printInstructionStatistics(instructions, costConfig);
