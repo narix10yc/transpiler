@@ -214,7 +214,7 @@ int main(int argc, char** argv) {
     //     return 1;
     // }
 
-    // void* kernel_params[] = { &svDevice, &svHost };
+    // void* kernel_params[] = { &svDevice, &matDevice };
     // CHECK_CUDA_ERR(cuLaunchKernel(kernel, 
     //     1, 1, 1,        // grid dim
     //     1, 1, 1,        // block dim
