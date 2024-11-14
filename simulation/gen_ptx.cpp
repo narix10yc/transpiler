@@ -13,16 +13,94 @@ using namespace llvm;
 using namespace simulation;
 using namespace saot;
 
+namespace {
+
+enum ScalarKind : int {
+    SK_Zero = 0,
+    SK_One = 1,
+    SK_MinusOne = -1,
+    SK_General = 2,
+    SK_ImmValue = 3,
+};
+
+std::vector<std::complex<ScalarKind>> getScalarKinds(
+        const GateMatrix& gateMatrix, double zeroTol, double oneTol) {
+    std::vector<std::complex<ScalarKind>> skVec;
+    const auto* cMat = gateMatrix.getConstantMatrix();
+    assert(cMat);
+    assert(cMat->edgeSize() > 0);
+
+    auto edgeSize = cMat->edgeSize();
+    skVec.reserve(edgeSize * edgeSize);
+
+    for (const auto& cplx : cMat->data) {
+        std::complex<ScalarKind> skCplx(SK_General, SK_General);
+        if (std::abs(cplx.real()) <= zeroTol)
+            skCplx.real(SK_Zero);
+        else if (std::abs(cplx.real() - 1.0) <= oneTol)
+            skCplx.real(SK_One);
+        else if (std::abs(cplx.real() + 1.0) <= oneTol)
+            skCplx.real(SK_MinusOne);
+
+        if (std::abs(cplx.imag()) <= zeroTol)
+            skCplx.imag(SK_Zero);
+        else if (std::abs(cplx.imag() - 1.0) <= oneTol)
+            skCplx.imag(SK_One);
+        else if (std::abs(cplx.imag() + 1.0) <= oneTol)
+            skCplx.imag(SK_MinusOne);
+        skVec.push_back(skCplx);
+    }
+
+    return skVec;
+}
+
+Value* genOptFMul(Value* a, Value* b, ScalarKind aKind, IRBuilder<>& builder) {
+    switch (aKind) {
+    case SK_General:
+        assert(a);
+        return builder.CreateFMul(a, b);
+    case SK_One:
+        return b;
+    case SK_MinusOne:
+        return builder.CreateFNeg(b);
+    case SK_Zero:
+        return nullptr;
+    default:
+        llvm_unreachable("Unknown ScalarKind");
+        return nullptr;
+    }
+}
+
+// return a * b + c
+Value* genMulAndAdd(Value* a, Value* b, Value* c, ScalarKind aKind, IRBuilder<>& builder) {
+    switch (aKind) {
+    case SK_General:
+        assert(a);
+        return builder.CreateIntrinsic(a->getType(), Intrinsic::fmuladd, { a, b, c });
+    case SK_One:
+        return builder.CreateFAdd(b, c);
+    case SK_MinusOne:
+        return builder.CreateFSub(c, b);
+    case SK_Zero:
+        return c;
+    default:
+        llvm_unreachable("Unknown ScalarKind");
+        return nullptr;
+    }
+}
+
+}
+
+
 Function* IRGenerator::generateCUDAKernel(
-        const QuantumGate& gate, const std::string& funcName) {
-    
+        const QuantumGate& gate, const CUDAGenerationConfig& config,
+        const std::string& funcName) {
     const auto& qubits = gate.qubits;
     const int nqubits = qubits.size();
 
     Type* scalarTy = (_config.precision == 32) ? builder.getFloatTy()
                                                : builder.getDoubleTy();
     Function* func;
-
     Argument *pSvArg, *pMatArg;
     { /* function declaration */
 
@@ -47,7 +125,6 @@ Function* IRGenerator::generateCUDAKernel(
         func->setName(ss.str());
     } else
         func->setName(funcName);
-    }
 
     pSvArg  = func->getArg(0); pSvArg->setName("p.sv");
     pMatArg = func->getArg(1); pMatArg->setName("p.mat");
@@ -57,6 +134,7 @@ Function* IRGenerator::generateCUDAKernel(
     auto* mdOne = ConstantAsMetadata::get(builder.getInt32(1));
     auto* kernelMetadata = MDNode::get(*getContext(), { ValueAsMetadata::get(func), mdString, mdOne });
     getModule()->getOrInsertNamedMetadata("nvvm.annotations")->addOperand(kernelMetadata);
+    } // end function declearation
 
     Value* counterV;
     Value* idxStartV = builder.getInt64(0ULL);
@@ -103,6 +181,11 @@ Function* IRGenerator::generateCUDAKernel(
     uint64_t N = 1 << nqubits;
     // std::vector<Value*> reMats(N), imMats(N), reAmpPtrs(N), imAmpPtrs(N), reAmps(N), imAmps(N);
     std::vector<Value*> reAmpPtrs(N), imAmpPtrs(N), reAmps(N), imAmps(N);
+    const auto scalarKinds = getScalarKinds(gate.gateMatrix, 1e-8, 1e-8);
+
+    utils::printVectorWithPrinter(scalarKinds, [](const std::complex<ScalarKind>& kind, std::ostream& os) {
+        os << std::complex<int>(static_cast<int>(kind.real()), static_cast<int>(kind.imag()));
+    }, std::cerr);
 
     for (uint64_t i = 0; i < N; i++) {
         uint64_t delta = 0ULL;
@@ -149,30 +232,63 @@ Function* IRGenerator::generateCUDAKernel(
         // Alternative version, potentially having better locality
         // updatedReAmp = sum(reAmps_i * reMats_i) - sum(imAmps_i * imMats_i)
         // updatedImAmp = sum(reAmps_i * imMats_i) + sum(imAmps_i * reMats_i)
-        Value* reMatPtr = builder.CreateConstGEP1_64(scalarTy, pMatArg, 0ULL, "mat.re.ptr." + std::to_string(r) + ".0");
-        Value* imMatPtr = builder.CreateConstGEP1_64(scalarTy, pMatArg, 1ULL, "mat.im.ptr." + std::to_string(r) + ".0");
-        Value* reMat = builder.CreateLoad(scalarTy, reMatPtr, "mat.re." + std::to_string(r) + ".0");
-        Value* imMat = builder.CreateLoad(scalarTy, imMatPtr, "mat.im." + std::to_string(r) + ".0");
-        Value* updatedReAmp0 = builder.CreateFMul(reAmps[0], reMat);
-        Value* updatedReAmp1 = builder.CreateFMul(imAmps[0], imMat);
-        Value* updatedImAmp = builder.CreateFMul(reAmps[0], imMat);
+        Value *reMatPtr, *imMatPtr, *reMat, *imMat;
+        if (scalarKinds[0].real() == SK_General) {
+            reMatPtr = builder.CreateConstGEP1_64(scalarTy, pMatArg, 0ULL, "mat.re.ptr." + std::to_string(r) + ".0");
+            reMat = builder.CreateLoad(scalarTy, reMatPtr, "mat.re." + std::to_string(r) + ".0");
+        }
+        if (scalarKinds[0].imag() == SK_General) {
+            imMatPtr = builder.CreateConstGEP1_64(scalarTy, pMatArg, 1ULL, "mat.im.ptr." + std::to_string(r) + ".0");
+            imMat = builder.CreateLoad(scalarTy, imMatPtr, "mat.im." + std::to_string(r) + ".0");
+        }
+        
+        Value* updatedReAmp0 = genOptFMul(reMat, reAmps[0], scalarKinds[0].real(), builder);
+        Value* updatedReAmp1 = genOptFMul(imMat, imAmps[0], scalarKinds[0].imag(), builder);
+        Value* updatedImAmp = genOptFMul(reMat, imAmps[0], scalarKinds[0].real(), builder);
+        updatedImAmp = genMulAndAdd(imMat, reAmps[0], updatedImAmp, scalarKinds[0].imag(), builder);
         for (int c = 1; c < N; c++) {
             std::string suffix = std::to_string(r) + "." + std::to_string(c);
-            reMatPtr = builder.CreateConstGEP1_64(scalarTy, pMatArg, 2ULL * (N*r + c), "idx.mat.re." + suffix);
-            reMat = builder.CreateLoad(scalarTy, reMatPtr, "mat.re." + suffix);
-            imMatPtr = builder.CreateConstGEP1_64(scalarTy, pMatArg, 2ULL * (N*r + c) + 1, "idx.mat.im." + suffix);
-            reMat = builder.CreateLoad(scalarTy, imMatPtr, "mat.im." + suffix);
+            reMat = nullptr;
+            imMat = nullptr;
 
-            updatedReAmp0 = builder.CreateIntrinsic(
-                scalarTy, Intrinsic::fmuladd, { reAmps[c], reMat, updatedReAmp0 });
-            updatedReAmp1 = builder.CreateIntrinsic(
-                scalarTy, Intrinsic::fmuladd, { imAmps[c], imMat, updatedReAmp1 });
-            updatedImAmp = builder.CreateIntrinsic(
-                scalarTy, Intrinsic::fmuladd, { reAmps[c], imMat, updatedImAmp });
-            updatedImAmp = builder.CreateIntrinsic(
-                scalarTy, Intrinsic::fmuladd, { imAmps[c], reMat, updatedImAmp });
+            size_t matIdx = r * N + c;
+            if (scalarKinds[matIdx].real() == SK_General) {
+                reMatPtr = builder.CreateConstGEP1_64(scalarTy, pMatArg, 2ULL * matIdx, "idx.mat.re." + suffix);
+                reMat = builder.CreateLoad(scalarTy, reMatPtr, "mat.re." + suffix);
+            }
+            if (scalarKinds[matIdx].imag() == SK_General) {
+                imMatPtr = builder.CreateConstGEP1_64(scalarTy, pMatArg, 2ULL * matIdx + 1, "idx.mat.im." + suffix);
+                reMat = builder.CreateLoad(scalarTy, imMatPtr, "mat.im." + suffix);
+            }
+
+            // updatedReAmp0 = builder.CreateIntrinsic(
+            //     scalarTy, Intrinsic::fmuladd, { reAmps[c], reMat, updatedReAmp0 });
+            // updatedReAmp1 = builder.CreateIntrinsic(
+            //     scalarTy, Intrinsic::fmuladd, { imAmps[c], imMat, updatedReAmp1 });
+            // updatedImAmp = builder.CreateIntrinsic(
+            //     scalarTy, Intrinsic::fmuladd, { reAmps[c], imMat, updatedImAmp });
+            // updatedImAmp = builder.CreateIntrinsic(
+            //     scalarTy, Intrinsic::fmuladd, { imAmps[c], reMat, updatedImAmp });
+
+            updatedReAmp0 = genMulAndAdd(reMat, reAmps[c], updatedReAmp0,
+                scalarKinds[matIdx].real(), builder);
+            updatedReAmp1 = genMulAndAdd(imMat, imAmps[c], updatedReAmp1,
+                scalarKinds[matIdx].imag(), builder);
+            updatedImAmp = genMulAndAdd(reMat, imAmps[c], updatedImAmp,
+                scalarKinds[matIdx].real(), builder);
+            updatedImAmp = genMulAndAdd(imMat, reAmps[c], updatedImAmp,
+                scalarKinds[matIdx].imag(), builder);
         }
-        Value* updatedReAmp = builder.CreateFSub(updatedReAmp0, updatedReAmp1);
+        Value* updatedReAmp = nullptr;
+        if (updatedReAmp0 && updatedReAmp1)
+            updatedReAmp = builder.CreateFSub(updatedReAmp0, updatedReAmp1);
+        else if (updatedReAmp0)
+            updatedReAmp = updatedReAmp0;
+        else if (updatedReAmp1)
+            updatedReAmp = builder.CreateFNeg(updatedReAmp1);
+        else
+            llvm_unreachable("updatedReAmp should not be zero");
+
         builder.CreateStore(updatedReAmp, reAmpPtrs[r]);
         builder.CreateStore(updatedImAmp, imAmpPtrs[r]);
     }

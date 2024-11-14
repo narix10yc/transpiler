@@ -433,8 +433,9 @@ public:
                     utils::pushBackIfNotInVector(priorities, data.qubit);
             }
             // fill up priorities vector
+            int startQubit = priorities.empty() ? 0 : priorities[0];
             for (int q = 0; q < nqubits; q++)
-                utils::pushBackIfNotInVector(priorities, q);
+                utils::pushBackIfNotInVector(priorities, (q+startQubit) % nqubits);
 
             // update qubitStatuses
             assignQubitStatuses(priorities);

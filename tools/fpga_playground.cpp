@@ -143,6 +143,13 @@ void runExperiment(std::function<CircuitGraph()> f) {
         .tolerances = FPGAGateCategoryTolerance::Default,
     };
 
+    FPGAInstGenConfig instGenBadConfig {
+        .nLocalQubits = nLocalQubits,
+        .gridSize = gridSize,
+        .selectiveGenerationMode = false,
+        .tolerances = FPGAGateCategoryTolerance::Zero,
+    };
+
     std::cerr << YELLOW_FG << BOLD << "Test 0: Fusion  ON, InstGen  ON\n" << RESET;
     G = f();
     std::cerr << "Before fusion there are " << G.countBlocks() << " blocks\n";
@@ -153,6 +160,8 @@ void runExperiment(std::function<CircuitGraph()> f) {
 
     tic = clock::now();
     instructions = fpga::genInstruction(G, instGenSelectiveConfig);
+    for (const auto& i : instructions)
+        i.print(std::cerr);
     tok = clock::now();
     log() << "Inst Gen Complete!\n";
     printInstructionStatistics(instructions, costConfig);
@@ -188,6 +197,14 @@ void runExperiment(std::function<CircuitGraph()> f) {
     tok = clock::now();
     log() << "Inst Gen Complete!\n";
     printInstructionStatistics(instructions, costConfig);
+
+    // std::cerr << YELLOW_FG << BOLD << "Test 4: Fusion OFF, InstGen OFF, No gate value tolerance\n" << RESET;
+    // G = f();
+    // tic = clock::now();
+    // instructions = fpga::genInstruction(G, instGenBadConfig);
+    // tok = clock::now();
+    // log() << "Inst Gen Complete!\n";
+    // printInstructionStatistics(instructions, costConfig);
 }
 
 int main(int argc, char** argv) {
@@ -206,10 +223,15 @@ int main(int argc, char** argv) {
 
     // G.print(std::cerr);
 
+    // runExperiment([arg = argv[1]]() {
+        // openqasm::Parser qasmParser(arg, -1);
+        // return qasmParser.parse()->toCircuitGraph();
+    // });
+
     runExperiment([arg = argv[1]]() {
-        openqasm::Parser qasmParser(arg, -1);
-        return qasmParser.parse()->toCircuitGraph();
+        return CircuitGraph::QFTCircuit(std::stoi(arg));
     });
 
     return 0;
 }
+

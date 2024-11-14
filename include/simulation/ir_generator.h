@@ -15,6 +15,10 @@
 
 namespace simulation {
 
+struct CUDAGenerationConfig {
+    bool useImmValues;
+};
+
 class ParamValueFeeder {
 public:
     llvm::Value* basePtrV;
@@ -140,6 +144,7 @@ public:
 
     llvm::Function* generateCUDAKernel(
             const saot::QuantumGate& gate,
+            const CUDAGenerationConfig& config,
             const std::string& funcName = "");
 
     std::pair<llvm::Value*, llvm::Value*> generatePolynomial(
