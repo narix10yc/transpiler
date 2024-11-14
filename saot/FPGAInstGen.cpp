@@ -430,7 +430,17 @@ public:
             }
             // to diminish external memory access overhead
             int numToSort = std::min(static_cast<int>(priorities.size()), config.nLocalQubits);
-            std::sort(priorities.begin(), priorities.begin() + numToSort);
+            if (numToSort == 0) {}
+            else if (numToSort == 1) {
+                int tmp = priorities[0];
+                if (tmp != nqubits - 1) {
+                    priorities[0] = nqubits - 1;
+                    priorities.push_back(tmp);
+                }
+            }
+            else {
+                std::sort(priorities.begin(), priorities.begin() + numToSort, std::greater<>());
+            }
 
             // fill up priorities vector
             int startQubit = priorities.empty() ? (nqubits >> 1) : priorities[0];

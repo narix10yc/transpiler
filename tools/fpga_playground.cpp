@@ -219,14 +219,14 @@ int main(int argc, char** argv) {
 
     // G.print(std::cerr);
 
-    // runExperiment([arg = argv[1]]() {
-        // openqasm::Parser qasmParser(arg, -1);
-        // return qasmParser.parse()->toCircuitGraph();
-    // });
-
     runExperiment([arg = argv[1]]() {
-        return CircuitGraph::QFTCircuit(std::stoi(arg));
+        openqasm::Parser qasmParser(arg, -1);
+        return qasmParser.parse()->toCircuitGraph();
     });
+
+    // runExperiment([arg = argv[1]]() {
+        // return CircuitGraph::QFTCircuit(std::stoi(arg));
+    // });
 
     return 0;
 }
