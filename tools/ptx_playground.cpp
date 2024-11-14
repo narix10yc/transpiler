@@ -210,6 +210,7 @@ int main(int argc, char** argv) {
     // }
     // err = cudaMemcpy((void*)matDevice, static_cast<const void*>(matHost.data()), sizeof(double) * matHost.size(), cudaMemcpyHostToDevice);
     // if (err) {
+    
     //     std::cerr << IOColor::RED_FG << "Error in host => device memCpy: " << err << "\n" << IOColor::RESET;
     //     return 1;
     // }
