@@ -115,7 +115,9 @@ Function* IRGenerator::generateCUDAKernel(
 
         For a reference see https://llvm.org/docs/NVPTXUsage.html#id32
     */
-    SmallVector<Type*> argType { builder.getPtrTy(1U), builder.getPtrTy(4U), };
+    SmallVector<Type*> argType {
+        builder.getPtrTy(1U),
+        builder.getPtrTy(config.useConstantMemSpaceForMatPtrArg ? 4U : 1U), };
 
     auto* funcType = FunctionType::get(builder.getVoidTy(), argType, false);
     func = Function::Create(funcType, Function::ExternalLinkage, funcName, getModule());

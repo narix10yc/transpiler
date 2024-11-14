@@ -54,7 +54,6 @@ int main(int argc, char** argv) {
     std::vector<std::pair<int, double>> varValues {
         {0, 1.1}, {1, 0.4}, {2, 0.1}, {3, -0.3}, {4, -0.9}, {5, 1.9}};
 
-
     assert(argc > 1);
 
     parse::Parser parser(argv[1]);
@@ -90,6 +89,7 @@ int main(int argc, char** argv) {
 
     CUDAGenerationConfig cudaGenConfig {
         .useImmValues = true,
+        .useConstantMemSpaceForMatPtrArg = false
     };
 
     auto allBlocks = graph.getAllBlocks();

@@ -17,6 +17,7 @@ namespace simulation {
 
 struct CUDAGenerationConfig {
     bool useImmValues;
+    bool useConstantMemSpaceForMatPtrArg;
 };
 
 class ParamValueFeeder {
