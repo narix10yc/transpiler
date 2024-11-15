@@ -408,7 +408,8 @@ public:
         const auto generateOnChipReassignment = [&]() {
             std::vector<int> priorities;
             priorities.reserve(nqubits);
-
+            priorities.push_back(nqubits >> 1);
+            
             auto availablesCopy(availables);
             // prioritize assigning SQ gates as local
             while (!availablesCopy.empty()) {
@@ -429,18 +430,20 @@ public:
                     utils::pushBackIfNotInVector(priorities, data.qubit);
             }
             // to diminish external memory access overhead
-            int numToSort = std::min(static_cast<int>(priorities.size()), config.nLocalQubits);
-            if (numToSort == 0) {}
-            else if (numToSort == 1) {
-                int tmp = priorities[0];
-                if (tmp != nqubits - 1) {
-                    priorities[0] = nqubits - 1;
-                    priorities.push_back(tmp);
-                }
-            }
-            else {
-                std::sort(priorities.begin(), priorities.begin() + numToSort, std::greater<>());
-            }
+            // int numToSort = std::min(static_cast<int>(priorities.size()), config.nLocalQubits);
+            // if (numToSort == 0) {
+            //     priorities.push_back(nqubits - 1);
+            // }
+            // else if (numToSort == 1) {
+            //     int tmp = priorities[0];
+            //     if (tmp != nqubits - 1) {
+            //         priorities[0] = nqubits - 1;
+            //         priorities.push_back(tmp);
+            //     }
+            // }
+            // else {
+            //     std::sort(priorities.begin(), priorities.begin() + numToSort, std::greater<>());
+            // }
 
             // fill up priorities vector
             int startQubit = priorities.empty() ? (nqubits >> 1) : priorities[0];

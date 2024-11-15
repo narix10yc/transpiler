@@ -194,13 +194,13 @@ void runExperiment(std::function<CircuitGraph()> f) {
     log() << "Inst Gen Complete!\n";
     printInstructionStatistics(instructions, costConfig);
 
-    // std::cerr << YELLOW_FG << BOLD << "Test 4: Fusion OFF, InstGen OFF, No gate value tolerance\n" << RESET;
-    // G = f();
-    // tic = clock::now();
-    // instructions = fpga::genInstruction(G, instGenBadConfig);
-    // tok = clock::now();
-    // log() << "Inst Gen Complete!\n";
-    // printInstructionStatistics(instructions, costConfig);
+    std::cerr << YELLOW_FG << BOLD << "Test 4: Fusion OFF, InstGen OFF, No gate value tolerance\n" << RESET;
+    G = f();
+    tic = clock::now();
+    instructions = fpga::genInstruction(G, instGenBadConfig);
+    tok = clock::now();
+    log() << "Inst Gen Complete!\n";
+    printInstructionStatistics(instructions, costConfig);
 }
 
 int main(int argc, char** argv) {
