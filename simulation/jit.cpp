@@ -1,4 +1,4 @@
-#include "simulation/jit.h"
+#include "simulation/ir_generator.h"
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
@@ -24,13 +24,12 @@
 using namespace saot;
 using namespace llvm;
 using namespace simulation;
-using namespace saot::jit;
 
-JitEngine::JitEngine(IRGenerator& G) {
+void IRGenerator::createJitSession() {
     InitializeNativeTarget();
     InitializeNativeTargetAsmParser();
     InitializeNativeTargetAsmPrinter();
-    JIT = std::move(cantFail(orc::LLJITBuilder().create()));
-    cantFail(JIT->addIRModule(orc::ThreadSafeModule(std::move(G._module), std::move(G._context))));
+    _jitter = std::move(cantFail(orc::LLJITBuilder().create()));
+    cantFail(_jitter->addIRModule(orc::ThreadSafeModule(std::move(_module), std::move(_context))));
 }
 

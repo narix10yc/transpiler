@@ -17,6 +17,7 @@ struct CPUFusionConfig {
     double zeroSkippingThreshold;
     bool allowMultipleTraverse;
     bool incrementScheme;
+    
     static CPUFusionConfig Disable;
     static CPUFusionConfig TwoQubitOnly;
     static CPUFusionConfig Default;

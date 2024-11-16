@@ -28,3 +28,7 @@ target_link_libraries(pg_polynomial saot simulation)
 
 add_executable(fpga_playground "fpga_playground.cpp")
 target_link_libraries(fpga_playground qasm saot simulation)
+
+add_executable(cost_model "cost_model.cpp")
+llvm_map_components_to_libnames(llvm_libs support core irreader orcjit native)
+target_link_libraries(cost_model qasm saot simulation ${llvm_libs})

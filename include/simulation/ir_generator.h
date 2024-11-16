@@ -6,6 +6,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Passes/OptimizationLevel.h"
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 
 #include <vector>
 #include <array>
@@ -54,6 +55,8 @@ struct IRGeneratorConfig {
 
 /// @brief IR Generator.
 class IRGenerator {
+private:
+    std::unique_ptr<llvm::orc::LLJIT> _jitter;
 public:
     std::unique_ptr<llvm::LLVMContext> _context;
     std::unique_ptr<llvm::Module> _module;
@@ -62,24 +65,47 @@ public:
 
     using AmpFormat = IRGeneratorConfig::AmpFormat;
 public:
-    IRGenerator(const std::string& moduleName = "myModule") : 
-        _context(std::make_unique<llvm::LLVMContext>()),
-        _module(std::make_unique<llvm::Module>(moduleName, *_context)),
-        builder(*_context), 
-        _config() {}
+    IRGenerator(const std::string& moduleName = "myModule")
+        :   _jitter(nullptr), 
+            _context(std::make_unique<llvm::LLVMContext>()),
+            _module(std::make_unique<llvm::Module>(moduleName, *_context)),
+            builder(*_context), 
+            _config() {}
 
     IRGenerator(const IRGeneratorConfig& irConfig,
-                const std::string& moduleName = "myModule") : 
-        _context(std::make_unique<llvm::LLVMContext>()),
-        _module(std::make_unique<llvm::Module>(moduleName, *_context)),
-        builder(*_context), 
-        _config(irConfig) {}
+                const std::string& moduleName = "myModule")
+        :   _jitter(nullptr), 
+            _context(std::make_unique<llvm::LLVMContext>()),
+            _module(std::make_unique<llvm::Module>(moduleName, *_context)),
+            builder(*_context), 
+            _config(irConfig) {}
 
-    const llvm::LLVMContext* getContext() const { return _context.get(); }
-    llvm::LLVMContext* getContext() { return _context.get(); }
+    const llvm::LLVMContext* getContext() const {
+        assert(_context);
+        return _context.get();
+    }
+    llvm::LLVMContext* getContext() {
+        assert(_context);
+        return _context.get();
+    }
 
-    const llvm::Module* getModule() const { return _module.get(); }
-    llvm::Module* getModule() { return _module.get(); }
+    const llvm::Module* getModule() const { 
+        assert(_module);
+        return _module.get();
+    }
+    llvm::Module* getModule() { 
+        assert(_module);
+        return _module.get();
+    }
+
+    const llvm::orc::LLJIT* getJitter() const {
+        assert(_jitter && "Call 'createJitSession' first");
+        return _jitter.get();
+    }
+    llvm::orc::LLJIT* getJitter() {
+        assert(_jitter && "Call 'createJitSession' first");
+        return _jitter.get();
+    }
 
     llvm::IRBuilder<>& getBuilder() { return builder; }
 
@@ -91,6 +117,8 @@ public:
     void applyLLVMOptimization(const llvm::OptimizationLevel&);
 
     void dumpToStderr() const { _module->print(llvm::errs(), nullptr); }
+
+    void createJitSession();
 
     llvm::Type* getScalarTy() {
         if (_config.precision == 32)

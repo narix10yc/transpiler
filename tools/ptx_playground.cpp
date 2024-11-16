@@ -5,7 +5,6 @@
 #include "saot/Fusion.h"
 
 #include "saot/Polynomial.h"
-#include "simulation/jit.h"
 
 
 #include <llvm/IR/LLVMContext.h>

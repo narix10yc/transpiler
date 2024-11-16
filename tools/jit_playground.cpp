@@ -6,7 +6,9 @@
 #include "openqasm/parser.h"
 
 #include "saot/Polynomial.h"
-#include "simulation/jit.h"
+#include "simulation/ir_generator.h"
+
+#include <chrono>
 
 using namespace saot;
 
@@ -15,73 +17,82 @@ using namespace simulation;
 
 using namespace llvm;
 
+void timedExecute(std::function<void()> f, const char* msg) {
+    using clock = std::chrono::high_resolution_clock;
+    auto tic = clock::now();
+    f();
+    auto tok = clock::now();
+    const auto t_ms = std::chrono::duration_cast<std::chrono::milliseconds>(tok - tic).count();
+    std::cerr << "-- (" << t_ms << " ms) " << msg << "\n";
+    return;
+}
+
+struct kernel_t {
+    Function* llvmFunc;
+    void (*func)(double*, uint64_t, uint64_t, double*);
+};
+
 
 int main(int argc, char** argv) {
-    std::vector<std::pair<int, double>> varValues {
-        {0, 1.1}, {1, 0.4}, {2, 0.1}, {3, -0.3}, {4, -0.9}, {5, 1.9}};
-
     assert(argc > 1);
 
-    // parse::Parser parser(argv[1]);
-    // auto qc = parser.parseQuantumCircuit();
-    // std::cerr << "Recovered:\n";
-
-    // std::ofstream file(std::string(argv[1]) + ".rec");
-    // qc.print(file);
-
-    openqasm::Parser qasmParser(argv[1], -1);
-    auto graph = qasmParser.parse()->toCircuitGraph();
-
-    // auto graph = qc.toCircuitGraph();
-    graph.print(std::cerr) << "\n";
-
-    applyCPUGateFusion(CPUFusionConfig::Default, graph);
-    graph.print(std::cerr) << "\n";
-
-    auto& fusedGate = graph.getAllBlocks()[0]->quantumGate;
-
-    auto& pMat = fusedGate->gateMatrix.getParametrizedMatrix();
-    
-    // printParametrizedMatrix(std::cerr, pMat);
-    for (auto& p : pMat.data)
-        p.removeSmallMonomials();
-
-    // printParametrizedMatrix(std::cerr, pMat);
-
-    // for (auto& P : fusedGate->gateMatrix.pData())
-    //     P.simplify(varValues);
-    // fusedGate->gateMatrix.printMatrix(std::cerr);
-
+    CircuitGraph graph;
+    CPUFusionConfig fusionConfig = CPUFusionConfig::Aggressive;
     IRGenerator G;
-    Function* llvmFuncPrepareParam = G.generatePrepareParameter(graph);
-    auto allBlocks = graph.getAllBlocks();
-    for (const auto& b : allBlocks) {
-        G.generateKernel(*b->quantumGate);
-    }
-    // G.dumpToStderr();
+    IRGeneratorConfig irConfig;
+    irConfig.simd_s = 1;
+    irConfig.usePDEP = false;
+    Function* llvmFuncPrepareParam;
+    std::vector<kernel_t> kernels;
+    void (*prepareParam)(double*, double*);
 
-    G.applyLLVMOptimization(OptimizationLevel::O2);
-    // G.dumpToStderr();
+    // parse
+    timedExecute([&]() {
+        openqasm::Parser qasmParser(argv[1], -1);
+        graph = qasmParser.parse()->toCircuitGraph();
+    }, "Parsing complete!");
 
-    // JIT;
+    // fusion
+    timedExecute([&]() {
+        applyCPUGateFusion(fusionConfig, graph);
+    }, "Fusion complete!");
 
-    saot::jit::JitEngine jitter(G);
+    // ir generation
+    timedExecute([&]() {
+        llvmFuncPrepareParam = G.generatePrepareParameter(graph);
+        auto allBlocks = graph.getAllBlocks();
+        std::cerr << "After fusion there are " << allBlocks.size() << " blocks\n";
+        kernels.reserve(allBlocks.size());
+        for (const auto& b : allBlocks) {
+            kernels.push_back({G.generateKernel(*b->quantumGate), nullptr});
+        }
+    }, "IR generation complete!");
 
-    auto funcAddrOrErr = jitter.JIT->lookup(llvmFuncPrepareParam->getName());
-    if (!funcAddrOrErr) {
-        errs() << "Failed to look up function\n" << funcAddrOrErr.takeError() << "\n";
-        return 1;
-    }
+    // optimize
+    timedExecute([&]() {
+        G.applyLLVMOptimization(OptimizationLevel::O1);
+    }, "Optimization complete!");
 
-    auto prepareParameter = funcAddrOrErr->toPtr<void(double*, double*)>();
+    // jit
+    timedExecute([&]() {
+        G.createJitSession();
+    }, "JIT session created!");
 
-    // std::vector<double> circuitParameters { 1.344, 3.109, 0.12 };
-    // std::vector<double> circuitMatrices(8);
+    // function lookup
+    timedExecute([&]() {
+        auto* jitter = G.getJitter();
+        auto funcAddrOrErr = jitter->lookup(llvmFuncPrepareParam->getName());
+        if (!funcAddrOrErr) {
+            errs() << "Failed to look up function\n" << funcAddrOrErr.takeError() << "\n";
+        }
 
-    // prepareParameter(circuitParameters.data(), circuitMatrices.data());
+        prepareParam = funcAddrOrErr->toPtr<void(double*, double*)>();
+        for (auto& kernel : kernels) {
+            kernel.func = cantFail(jitter->lookup(llvmFuncPrepareParam->getName()))
+                            .toPtr<void(double*, uint64_t, uint64_t, double*)>();
+        }
+    }, "Function found");
 
-    // utils::printVector(circuitMatrices);
 
-    
     return 0;
 }

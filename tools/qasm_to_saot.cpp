@@ -66,10 +66,10 @@ int main(int argc, char** argv) {
             cl::desc("load vector matrix"), cl::init(false));
     cl::opt<bool>
     UseFMA("use-fma", cl::cat(IRGenerationConfigCategory),
-            cl::desc("use fma (fused multiplicatio addition)"), cl::init(true));
+            cl::desc("use fma (fused multiplication addition)"), cl::init(true));
     cl::opt<bool>
     UseFMS("use-fms", cl::cat(IRGenerationConfigCategory),
-            cl::desc("use fms (fused multiplicatio subtraction)"), cl::init(true));
+            cl::desc("use fms (fused multiplication subtraction)"), cl::init(true));
     cl::opt<bool>
     UsePDEP("use-pdep", cl::cat(IRGenerationConfigCategory),
             cl::desc("use pdep (parallel bit deposite)"), cl::init(true));
@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
             cl::desc("enable prefetch (not tested, recommend off)"), cl::init(false));
     cl::opt<std::string>
     AmpFormat("amp-format", cl::cat(IRGenerationConfigCategory),
-            cl::desc("amplitude format"), cl::init("alt"));
+            cl::desc("amplitude format (recommand 'alt')"), cl::init("alt"));
     cl::opt<double>
     ShareMatrixElemThres("share-matrix-elem-thres", cl::cat(IRGenerationConfigCategory),
             cl::desc("share matrix element threshold (set to 0.0 to turn off)"), cl::init(0.0));
