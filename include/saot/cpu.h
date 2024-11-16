@@ -15,7 +15,7 @@ namespace saot {
 struct CodeGeneratorCPUConfig {
     bool multiThreaded;
     bool installTimer;
-    // int overrideNqubits;
+    bool writeRawIR;
     bool dumpIRToMultipleFiles;
     simulation::IRGeneratorConfig irConfig;
 
@@ -26,6 +26,8 @@ class CodeGeneratorCPU {
 private:
     std::string fileName;
 public:
+    CodeGeneratorCPU() : fileName(""), config() {}
+    
     CodeGeneratorCPU(const CodeGeneratorCPUConfig& config, const std::string& fileName = "gen_file")
         : fileName(fileName), 
           config(config) {}

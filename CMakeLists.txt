@@ -60,9 +60,11 @@ add_definitions(${LLVM_DEFINITIONS_LIST})
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
+add_subdirectory(utils)
 add_subdirectory(openqasm)
 add_subdirectory(saot)
 add_subdirectory(timeit)
 add_subdirectory(simulation)
 add_subdirectory(tools)
 add_subdirectory(tests)
+

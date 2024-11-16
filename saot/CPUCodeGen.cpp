@@ -2,7 +2,7 @@
 
 #include "utils/utils.h"
 #include "utils/iocolor.h"
-#include "llvm/Support/FileSystem.h"
+#include "llvm/Bitcode/BitcodeWriter.h"
 
 #include <fstream>
 #include <sstream>
@@ -18,13 +18,15 @@ CodeGeneratorCPUConfig::display(int verbose, std::ostream& os) const {
     os << CYAN_FG << BOLD << "=== CodeGen Configuration ===\n" << RESET;
     
     os << "Multi-threading "
-        << ((multiThreaded) ? "enabled" : "disabled")
-        << ".\n";
-    
+       << ((multiThreaded) ? "enabled" : "disabled")
+       << ".\n";
+
     if (installTimer)
         os << "Timer installed\n";
-    if (dumpIRToMultipleFiles)
-        os << "Dumping IR to multiple files\n";
+
+    os << "Dumping "
+       << (writeRawIR ? "raw IR codes" : "bitcodes") << " to "
+       << (dumpIRToMultipleFiles ? "multiple files\n" : "a single file\n");
     
     os << CYAN_FG << "Detailed IR settings:\n" << RESET;
     irConfig.display(verbose, false, os);
@@ -120,7 +122,10 @@ void CodeGeneratorCPU::generate(
         if (config.dumpIRToMultipleFiles) {
             std::error_code ec;
             llvm::raw_fd_ostream irFile(kernelDir + "/kernel" + std::to_string(block->id) + ".ll", ec);
-            irGenerator.getModule()->print(irFile, nullptr);
+            if (config.writeRawIR)
+                irGenerator.getModule()->print(irFile, nullptr);
+            else
+                WriteBitcodeToFile(*irGenerator.getModule(), irFile);
             irFile.close();
             irGenerator.~IRGenerator();
             new (&irGenerator) IRGenerator(config.irConfig, "mod_" + std::to_string(block->id));
@@ -188,9 +193,12 @@ void CodeGeneratorCPU::generate(
     if (!config.dumpIRToMultipleFiles) {
         std::error_code ec;
         llvm::raw_fd_ostream irFile(fileName + ".ll", ec);
-        irGenerator.getModule()->setModuleIdentifier(fileName + "_module");
-        irGenerator.getModule()->setSourceFileName(fileName + ".ll");
-        irGenerator.getModule()->print(irFile, nullptr);
+        // irGenerator.getModule()->setModuleIdentifier(fileName + "_module");
+        // irGenerator.getModule()->setSourceFileName(fileName + ".ll");
+        if (config.writeRawIR)
+            irGenerator.getModule()->print(irFile, nullptr);
+        else
+            WriteBitcodeToFile(*irGenerator.getModule(), irFile);
         irFile.close();
     }
 }

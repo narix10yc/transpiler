@@ -17,15 +17,7 @@ using namespace simulation;
 
 using namespace llvm;
 
-void timedExecute(std::function<void()> f, const char* msg) {
-    using clock = std::chrono::high_resolution_clock;
-    auto tic = clock::now();
-    f();
-    auto tok = clock::now();
-    const auto t_ms = std::chrono::duration_cast<std::chrono::milliseconds>(tok - tic).count();
-    std::cerr << "-- (" << t_ms << " ms) " << msg << "\n";
-    return;
-}
+using utils::timedExecute;
 
 struct kernel_t {
     Function* llvmFunc;
