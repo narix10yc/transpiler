@@ -273,7 +273,7 @@ inline int opCount_p(const GateMatrix::p_matrix_t& mat, double thres) {
 
 } // anonymous namespace
 
-int QuantumGate::opCount(double thres) {
+int QuantumGate::opCount(double thres) const {
     if (opCountCache >= 0)
         return opCountCache;
 

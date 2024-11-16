@@ -1,16 +1,20 @@
 # Compiler and flags
-CLANG = $(llvm_root)/bin/clang
-CLANGXX = $(llvm_root)/bin/clang++
+# CLANG = $(llvm_root)/bin/clang
+# CLANGXX = $(llvm_root)/bin/clang++
+CLANG = /opt/homebrew/opt/llvm/bin/clang
+CLANGXX = /opt/homebrew/opt/llvm/bin/clang++
 
 BUILD_DIR = $(CURDIR)/../build
 INCLUDE_DIR = $(CURDIR)/../include
 
-CFLAGS = -std=c++17 -I$(INCLUDE_DIR) -Ofast -march=native --gcc-install-dir=$(SELECT_GCC_TOOLCHAIN)
+# MACOS_SDK_PATH = /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
+# CFLAGS = -std=c++17 -I$(INCLUDE_DIR) -Ofast -march=native -isysroot $(MACOS_SDK_PATH)
+IR_CFLAGS = -march=native -O3 -Wno-override-module
+CFLAGS = -std=c++17 -I$(INCLUDE_DIR) -O3 -march=native
 LDFLAGS = -L$(BUILD_DIR)/timeit -ltimeit -lpthread
 
 # Directories
-# IR_DIR = $(CURDIR)/gen_file_ir
-IR_DIR = $(CURDIR)
+IR_DIR = $(CURDIR)/gen_file_kernels
 OBJ_DIR = $(CURDIR)/obj
 SRC_FILE = $(CURDIR)/benchmark.cpp
 HEADER_FILE =$(wildcard $(CURDIR)/*.h)
@@ -27,12 +31,15 @@ $(OBJ_DIR):
 
 # Compile LLVM IR files to object files
 $(OBJ_DIR)/%.ll.o: $(IR_DIR)/%.ll | $(OBJ_DIR)
-	$(CLANG) -c -Ofast -march=native -o $@ $<
+	$(CLANG) $(IR_CFLAGS) -c -o $@ $<
 
 fidelity: $(CURDIR)/gen_file.ll $(CURDIR)/fidelity.cpp
 	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -o $(BUILD_DIR)/fidelity
 	
 benchmark: $(CURDIR)/gen_file.ll $(CURDIR)/benchmark.cpp
+	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -o $(BUILD_DIR)/benchmark
+
+benchmark_m: $(OBJ_FILES) $(CURDIR)/benchmark.cpp
 	$(CLANGXX) $^ $(LDFLAGS) $(CFLAGS) -o $(BUILD_DIR)/benchmark
 
 gate_benchmark : $(CURDIR)/gen_file.ll $(CURDIR)/gate_benchmark.cpp

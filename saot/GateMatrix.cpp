@@ -625,3 +625,45 @@ void GateMatrix::computeAndCachePMat() const {
     return;
 }
 
+namespace {
+
+inline void computeSigMatAfresh(
+        const GateMatrix::c_matrix_t& cMat, double zeroTol, double oneTol,
+        GateMatrix::sig_matrix_t& sigMat) {
+
+    assert(sigMat.data.empty());
+    auto edgeSize = cMat.edgeSize();
+    sigMat.data.reserve(edgeSize * edgeSize);
+
+    for (const auto& cplx : cMat.data) {
+        std::complex<ScalarKind> skCplx(SK_General, SK_General);
+        if (std::abs(cplx.real()) <= zeroTol)
+            skCplx.real(SK_Zero);
+        else if (std::abs(cplx.real() - 1.0) <= oneTol)
+            skCplx.real(SK_One);
+        else if (std::abs(cplx.real() + 1.0) <= oneTol)
+            skCplx.real(SK_MinusOne);
+
+        if (std::abs(cplx.imag()) <= zeroTol)
+            skCplx.imag(SK_Zero);
+        else if (std::abs(cplx.imag() - 1.0) <= oneTol)
+            skCplx.imag(SK_One);
+        else if (std::abs(cplx.imag() + 1.0) <= oneTol)
+            skCplx.imag(SK_MinusOne);
+        sigMat.data.push_back(skCplx);
+    }
+    sigMat.updateSize();
+}
+
+} // anonymous namespace
+
+// TODO: when there exists cached sigMat already, we can update sigMat more
+// efficiently
+void GateMatrix::computeAndCacheSigMat(double zeroTol, double oneTol) const {
+    const auto* cMat = getConstantMatrix();
+    assert(cMat);
+    assert(cMat->edgeSize() > 0);
+    computeSigMatAfresh(*cMat, zeroTol, oneTol, cache.sigMat);
+    cache.sigZeroTol = zeroTol;
+    cache.sigOneTol = oneTol;
+}

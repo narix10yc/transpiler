@@ -2,6 +2,7 @@
 
 #include "utils/utils.h"
 #include "utils/iocolor.h"
+#include "llvm/Support/FileSystem.h"
 
 #include <fstream>
 #include <sstream>
@@ -10,6 +11,7 @@
 using namespace IOColor;
 using namespace saot;
 using namespace simulation;
+using namespace llvm;
 
 std::ostream&
 CodeGeneratorCPUConfig::display(int verbose, std::ostream& os) const {
@@ -21,6 +23,8 @@ CodeGeneratorCPUConfig::display(int verbose, std::ostream& os) const {
     
     if (installTimer)
         os << "Timer installed\n";
+    if (dumpIRToMultipleFiles)
+        os << "Dumping IR to multiple files\n";
     
     os << CYAN_FG << "Detailed IR settings:\n" << RESET;
     irConfig.display(verbose, false, os);
@@ -31,8 +35,6 @@ CodeGeneratorCPUConfig::display(int verbose, std::ostream& os) const {
 
 void CodeGeneratorCPU::generate(
         const CircuitGraph& graph, int debugLevel, bool forceInOrder) {
-    IRGenerator irGenerator(config.irConfig);
-
     bool isSepKernel = (config.irConfig.ampFormat == IRGeneratorConfig::SepFormat);
 
     const std::string realTy = (config.irConfig.precision == 32) ? "float" : "double";
@@ -105,21 +107,24 @@ void CodeGeneratorCPU::generate(
         std::sort(allBlocks.begin(), allBlocks.end(),
                 [](GateBlock* a, GateBlock* b) { return a->id < b->id; });
 
+    std::string kernelDir = fileName + "_kernels";
+    if (config.dumpIRToMultipleFiles) {
+        sys::fs::create_directory(kernelDir);
+    }
+
+    IRGenerator irGenerator(config.irConfig, "mod_" + std::to_string(allBlocks[0]->id));
     for (const auto& block : allBlocks) {
         const auto& gate = *(block->quantumGate);
         std::string kernelName = "kernel_block_" + std::to_string(block->id);
         irGenerator.generateKernelDebug(gate, debugLevel, kernelName);
-        // if (config.dumpIRToMultipleFiles) {
-        //     std::error_code ec;
-        //     llvm::raw_fd_ostream irFile(fileName + "_ir/" + kernelName + ".ll", ec);
-        //     irGenerator.getModule().setModuleIdentifier(kernelName + "_module");
-        //     irGenerator.getModule().setSourceFileName(kernelName + ".ll");
-        //     irGenerator.getModule().print(irFile, nullptr);
-        //     irFile.close();
-        //     irGenerator.~IRGenerator();
-
-        //     new (&irGenerator) IRGenerator(config.irConfig);
-        // }
+        if (config.dumpIRToMultipleFiles) {
+            std::error_code ec;
+            llvm::raw_fd_ostream irFile(kernelDir + "/kernel" + std::to_string(block->id) + ".ll", ec);
+            irGenerator.getModule()->print(irFile, nullptr);
+            irFile.close();
+            irGenerator.~IRGenerator();
+            new (&irGenerator) IRGenerator(config.irConfig, "mod_" + std::to_string(block->id));
+        }
 
         externSS << " void " << kernelName << "("
                  << realTy << "*, ";
@@ -180,12 +185,12 @@ void CodeGeneratorCPU::generate(
 
     hFile.close();
 
-    // if (!config.dumpIRToMultipleFiles) {
+    if (!config.dumpIRToMultipleFiles) {
         std::error_code ec;
         llvm::raw_fd_ostream irFile(fileName + ".ll", ec);
         irGenerator.getModule()->setModuleIdentifier(fileName + "_module");
         irGenerator.getModule()->setSourceFileName(fileName + ".ll");
         irGenerator.getModule()->print(irFile, nullptr);
         irFile.close();
-    // }
+    }
 }

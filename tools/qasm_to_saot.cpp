@@ -161,6 +161,7 @@ int main(int argc, char** argv) {
         const auto config = CodeGeneratorCPUConfig {
             .multiThreaded = MultiThreaded,
             .installTimer = InstallTimer,
+            .dumpIRToMultipleFiles = DumpIRToMultipleFiles,
             .irConfig = IRGeneratorConfig {
                 .simd_s = SimdS,
                 .precision = (UseF32 || Precision == "f32") ? 32 : 64,

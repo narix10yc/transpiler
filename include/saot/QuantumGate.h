@@ -50,6 +50,15 @@ std::ostream& printConstantMatrix(std::ostream& os,
 std::ostream& printParametrizedMatrix(std::ostream& os,
         const complex_matrix::SquareMatrix<saot::Polynomial>& cMat);
 
+
+enum ScalarKind : int {
+    SK_Zero = 0,
+    SK_One = 1,
+    SK_MinusOne = -1,
+    SK_General = 2,
+    SK_ImmValue = 3,
+};
+
 class GateMatrix {
 public:
     // specify gate matrix with (up to three) parameters
@@ -60,6 +69,8 @@ public:
     using c_matrix_t = complex_matrix::SquareMatrix<std::complex<double>>;
     // parametrised matrix type
     using p_matrix_t = complex_matrix::SquareMatrix<saot::Polynomial>;
+    // matrix signature type
+    using sig_matrix_t = complex_matrix::SquareMatrix<std::complex<ScalarKind>>;
 private:
     enum ConvertibleKind : int {
         Unknown = -1, Convertible = 1, UnConvertible = 0
@@ -73,9 +84,14 @@ private:
         ConvertibleKind isConvertibleToPMat;
         p_matrix_t pMat;
 
+        double sigZeroTol;
+        double sigOneTol;
+        sig_matrix_t sigMat;
+
         Cache() : isConvertibleToUpMat(Unknown), upMat(),
                   isConvertibleToCMat(Unknown), cMat(),
-                  isConvertibleToPMat(Unknown), pMat() {}
+                  isConvertibleToPMat(Unknown), pMat(),
+                  sigZeroTol(-1.0), sigOneTol(-1.0), sigMat() {}
     };
 
     mutable Cache cache;
@@ -83,6 +99,7 @@ private:
     void computeAndCacheUpMat(double tolerance) const;
     void computeAndCacheCMat() const;
     void computeAndCachePMat() const;
+    void computeAndCacheSigMat(double zeroTol, double oneTol) const;
 public:
     GateKind gateKind;
     gate_params_t gateParameters;
@@ -149,6 +166,15 @@ public:
         return cache.pMat;
     }
 
+    const sig_matrix_t& getSignatureMatrix(double zeroTol, double oneTol) const {
+        if (cache.sigMat.edgeSize() == 0) {
+            assert(cache.sigZeroTol < 0.0);
+            assert(cache.sigOneTol < 0.0);
+            computeAndCacheSigMat(zeroTol, oneTol);
+        }
+        return cache.sigMat;
+    }
+
     bool isConvertibleToUnitaryPermMatrix(double tolerance) const {
         return getUnitaryPermMatrix(tolerance) != nullptr;
     }
@@ -206,9 +232,40 @@ public:
 
 };
 
+// std::vector<std::complex<ScalarKind>> getScalarKinds(
+//         const GateMatrix& gateMatrix, double zeroTol, double oneTol) {
+//     std::vector<std::complex<ScalarKind>> skVec;
+//     const auto* cMat = gateMatrix.getConstantMatrix();
+//     assert(cMat);
+//     assert(cMat->edgeSize() > 0);
+
+//     auto edgeSize = cMat->edgeSize();
+//     skVec.reserve(edgeSize * edgeSize);
+
+//     for (const auto& cplx : cMat->data) {
+//         std::complex<ScalarKind> skCplx(SK_General, SK_General);
+//         if (std::abs(cplx.real()) <= zeroTol)
+//             skCplx.real(SK_Zero);
+//         else if (std::abs(cplx.real() - 1.0) <= oneTol)
+//             skCplx.real(SK_One);
+//         else if (std::abs(cplx.real() + 1.0) <= oneTol)
+//             skCplx.real(SK_MinusOne);
+
+//         if (std::abs(cplx.imag()) <= zeroTol)
+//             skCplx.imag(SK_Zero);
+//         else if (std::abs(cplx.imag() - 1.0) <= oneTol)
+//             skCplx.imag(SK_One);
+//         else if (std::abs(cplx.imag() + 1.0) <= oneTol)
+//             skCplx.imag(SK_MinusOne);
+//         skVec.push_back(skCplx);
+//     }
+
+//     return skVec;
+// }
+
 class QuantumGate {
 private:
-    int opCountCache = -1;
+    mutable int opCountCache = -1;
 public:
     /// The canonical form of qubits is in ascending order
     std::vector<int> qubits;
@@ -262,7 +319,7 @@ public:
     /// @brief B.lmatmul(A) will return AB
     QuantumGate lmatmul(const QuantumGate& other) const;
 
-    int opCount(double zeroSkippingThres = 1e-8);
+    int opCount(double zeroSkippingThres = 1e-8) const;
 
     bool isConvertibleToUnitaryPermGate(double tolerance) const {
         return gateMatrix.isConvertibleToUnitaryPermMatrix(tolerance);

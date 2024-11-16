@@ -17,6 +17,8 @@
 namespace simulation {
 
 struct CUDAGenerationConfig {
+    double zeroTol;
+    double oneTol;
     bool useImmValues;
     bool useConstantMemSpaceForMatPtrArg;
 };

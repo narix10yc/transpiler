@@ -186,7 +186,7 @@ public:
 
     std::ostream& print(std::ostream& os) const {
         if (N > 32) {
-            os << Color::BOLD << Color::CYAN_FG << "Warning: " << Color::RESET
+            os << IOColor::BOLD << IOColor::CYAN_FG << "Warning: " << IOColor::RESET
                << "statevector has more than 5 qubits, "
                     "only the first 32 entries are shown.\n";
         }
@@ -280,7 +280,7 @@ public:
 
     std::ostream& print(std::ostream& os) const {
         if (N > 32) {
-            os << Color::BOLD << Color::CYAN_FG << "Warning: " << Color::RESET
+            os << IOColor::BOLD << IOColor::CYAN_FG << "Warning: " << IOColor::RESET
                << "statevector has more than 5 qubits, "
                     "only the first 32 entries are shown.\n";
         }

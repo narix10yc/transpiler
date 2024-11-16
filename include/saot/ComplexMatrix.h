@@ -98,25 +98,37 @@ public:
         return data.size() == _edgeSize * _edgeSize;
     }
 
-    static SquareMatrix Identity(size_t edgeSize) {
-        SquareMatrix m(edgeSize);
-        for (size_t r = 0; r < edgeSize; r++)
-            m.data[r*edgeSize + r].real = 1;
-        return m;
+    // get data by specifying row and col
+    const data_t& getRC(size_t row, size_t col) const {
+        assert(row * _edgeSize + col < data.size());
+        return data[row * _edgeSize + col];
+    }
+    
+    // get data by specifying row and col
+    data_t& getRC(size_t row, size_t col) {
+        assert(row * _edgeSize + col < data.size());
+        return data[row * _edgeSize + col];
     }
 
-    SquareMatrix matmul(const SquareMatrix& other) {
-        assert(_edgeSize == other.edgeSize());
+    // static SquareMatrix Identity(size_t edgeSize) {
+    //     SquareMatrix m(edgeSize);
+    //     for (size_t r = 0; r < edgeSize; r++)
+    //         m.data[r*edgeSize + r].real = 1;
+    //     return m;
+    // }
 
-        SquareMatrix m(_edgeSize);
-        for (size_t i = 0; i < _edgeSize; i++) {
-        for (size_t j = 0; j < _edgeSize; j++) {
-        for (size_t k = 0; k < _edgeSize; k++) {
-            // C_{ij} = A_{ik} B_{kj}
-            m.data[i*_edgeSize + j] += data[i*_edgeSize + k] * other.data[k*_edgeSize + j];
-        } } }
-        return m;
-    }
+    // SquareMatrix matmul(const SquareMatrix& other) {
+    //     assert(_edgeSize == other.edgeSize());
+
+    //     SquareMatrix m(_edgeSize);
+    //     for (size_t i = 0; i < _edgeSize; i++) {
+    //     for (size_t j = 0; j < _edgeSize; j++) {
+    //     for (size_t k = 0; k < _edgeSize; k++) {
+    //         // C_{ij} = A_{ik} B_{kj}
+    //         m.data[i*_edgeSize + j] += data[i*_edgeSize + k] * other.data[k*_edgeSize + j];
+    //     } } }
+    //     return m;
+    // }
 
     // SquareMatrix kron(const SquareMatrix& other) const {
     //     size_t lsize = size;

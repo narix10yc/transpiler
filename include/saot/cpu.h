@@ -16,7 +16,7 @@ struct CodeGeneratorCPUConfig {
     bool multiThreaded;
     bool installTimer;
     // int overrideNqubits;
-    // bool dumpIRToMultipleFiles;
+    bool dumpIRToMultipleFiles;
     simulation::IRGeneratorConfig irConfig;
 
     std::ostream& display(int verbose = 1, std::ostream& os = std::cerr) const;

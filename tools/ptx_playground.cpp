@@ -4,7 +4,7 @@
 #include "saot/CircuitGraph.h"
 #include "saot/Fusion.h"
 
-#include "saot/Polynomial.h"
+#include "simulation/ir_generator.h"
 
 
 #include <llvm/IR/LLVMContext.h>
