@@ -2,6 +2,8 @@
 #include "saot/CircuitGraph.h"
 #include "saot/Fusion.h"
 #include "saot/cpu.h"
+#include "simulation/ir_generator.h"
+
 #include "utils/iocolor.h"
 #include "utils/utils.h"
 
@@ -14,6 +16,7 @@ using utils::timedExecute;
 using namespace IOColor;
 using namespace llvm;
 using namespace saot;
+using namespace simulation;
 
 static cl::opt<std::string>
 InputFileName(cl::desc("input file name"), cl::Positional, cl::Required);
@@ -101,7 +104,24 @@ int main(int argc, char** argv) {
     CircuitGraph graph;
     CPUFusionConfig fusionConfig;
     CodeGeneratorCPU codeGenerator;
+    IRGeneratorConfig irConfig;
     CodeGeneratorCPUConfig cpuConfig;
+
+    irConfig = IRGeneratorConfig {
+        .simd_s = SimdS,
+        .precision = (UseF32 || Precision == "f32") ? 32 : 64,
+        .ampFormat = ((AmpFormat == "sep") ? IRGeneratorConfig::SepFormat
+                                            : IRGeneratorConfig::AltFormat),
+        .useFMA = UseFMA,
+        .useFMS = UseFMS,
+        .usePDEP = UsePDEP,
+        .loadMatrixInEntry = LoadMatrixInEntry,
+        .loadVectorMatrix = LoadVectorMatrix,
+        .forceDenseKernel = ForceDenseKernel,
+        .zeroSkipThres = ZeroSkipThreshold,
+        .shareMatrixElemThres = ShareMatrixElemThres,
+        .shareMatrixElemUseImmValue = ShareMatrixElemUseImmValue
+    };
 
     // parse arguments
     // timedExecute([&]() {
@@ -127,21 +147,7 @@ int main(int argc, char** argv) {
                 .installTimer = InstallTimer,
                 .writeRawIR = WriteRawIR,
                 .dumpIRToMultipleFiles = DumpIRToMultipleFiles,
-                .irConfig = IRGeneratorConfig {
-                    .simd_s = SimdS,
-                    .precision = (UseF32 || Precision == "f32") ? 32 : 64,
-                    .ampFormat = ((AmpFormat == "sep") ? IRGeneratorConfig::SepFormat
-                                                       : IRGeneratorConfig::AltFormat),
-                    .useFMA = UseFMA,
-                    .useFMS = UseFMS,
-                    .usePDEP = UsePDEP,
-                    .loadMatrixInEntry = LoadMatrixInEntry,
-                    .loadVectorMatrix = LoadVectorMatrix,
-                    .forceDenseKernel = ForceDenseKernel,
-                    .zeroSkipThres = ZeroSkipThreshold,
-                    .shareMatrixElemThres = ShareMatrixElemThres,
-                    .shareMatrixElemUseImmValue = ShareMatrixElemUseImmValue
-                }
+                .irConfig = irConfig,
             };
 
             codeGenerator = CodeGeneratorCPU(cpuConfig, OutputFileName);
@@ -182,6 +188,13 @@ int main(int argc, char** argv) {
     }
     if (Verbose > 0)
         graph.displayInfo(std::cerr, Verbose + 1);
+
+    timedExecute([&]() {
+        IRGenerator generator(irConfig);
+        const auto allBlocks = graph.getAllBlocks();
+        for (const auto& b : allBlocks)
+            generator.generateKernel(*b->quantumGate);
+    }, "Kernel generated");
 
     if (OutputFileName != "") {
         timedExecute([&]() {
