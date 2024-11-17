@@ -4,6 +4,7 @@
 #include "saot/CircuitGraph.h"
 #include "saot/Fusion.h"
 #include "utils/utils.h"
+#include "utils/statevector.h"
 
 #include "openqasm/parser.h"
 
@@ -27,8 +28,9 @@
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 
-// #include <cuda.h>
-// #include <cuda_runtime.h>
+#include <cuda.h>
+#include <cuda_runtime.h>
+
 using utils::timedExecute;
 
 #define CHECK_CUDA_ERR(err) \
@@ -50,16 +52,18 @@ int main(int argc, char** argv) {
 
     openqasm::Parser parser(argv[1], 0);
     auto graph = parser.parse()->toCircuitGraph();
+    // saot::parse::Parser parser(argv[1]);
+    // auto graph = parser.parseQuantumCircuit().toCircuitGraph();
 
     applyCPUGateFusion(CPUFusionConfig::Default, graph);
     // graph.print(std::cerr) << "\n";
 
-    auto& fusedGate = graph.getAllBlocks()[0]->quantumGate;
-    auto& pMat = fusedGate->gateMatrix.getParametrizedMatrix();
+    // auto& fusedGate = graph.getAllBlocks()[0]->quantumGate;
+    // auto& pMat = fusedGate->gateMatrix.getParametrizedMatrix();
     
-    // printParametrizedMatrix(std::cerr, pMat);
-    for (auto& p : pMat.data)
-        p.removeSmallMonomials();
+    // // printParametrizedMatrix(std::cerr, pMat);
+    // for (auto& p : pMat.data)
+    //     p.removeSmallMonomials();
 
     // printParametrizedMatrix(std::cerr, pMat);
 
@@ -76,7 +80,7 @@ int main(int argc, char** argv) {
 
     auto allBlocks = graph.getAllBlocks();
     for (const auto& b : allBlocks) {
-        G.generateCUDAKernel(*b->quantumGate, cudaGenConfig);
+        G.generateCUDAKernel(*b->quantumGate, cudaGenConfig, "kernel_block_" + std::to_string(b->id));
     }
     // G.dumpToStderr();
 
@@ -107,9 +111,9 @@ int main(int argc, char** argv) {
     G.getModule()->setTargetTriple(targetTriple.getTriple());
     G.getModule()->setDataLayout(targetMachine->createDataLayout());
 
-    timedExecute([&]() {
-        G.applyLLVMOptimization(OptimizationLevel::O1);
-    }, "Optimization Applied");
+    // timedExecute([&]() {
+    //     G.applyLLVMOptimization(OptimizationLevel::O1);
+    // }, "Optimization Applied");
 
     llvm::SmallString<8> data_ptx, data_ll;
     llvm::raw_svector_ostream dest_ptx(data_ptx), dest_ll(data_ll);
@@ -134,59 +138,116 @@ int main(int argc, char** argv) {
     std::string ptx(data_ptx.begin(), data_ptx.end());
     // std::cerr << ptx << "\n";
 
-    // std::cerr << "=== Start CUDA part ===\n";
+    std::cerr << "=== Start CUDA part ===\n";
 
-    // CHECK_CUDA_ERR(cuInit(0));
-    // CUdevice device;
-    // CHECK_CUDA_ERR(cuDeviceGet(&device, 0));
+    CHECK_CUDA_ERR(cuInit(0));
+    CUdevice device;
+    CHECK_CUDA_ERR(cuDeviceGet(&device, 0));
 
-    // CUcontext cuCtx;
-    // CHECK_CUDA_ERR(cuCtxCreate(&cuCtx, 0, device));
+    CUcontext cuCtx;
+    CHECK_CUDA_ERR(cuCtxCreate(&cuCtx, 0, device));
 
-    // CUmodule cuMod;
-    // CHECK_CUDA_ERR(cuModuleLoadDataEx(&cuMod, ptx.c_str(), 0, nullptr, nullptr));
+    CUmodule cuMod;
+    CHECK_CUDA_ERR(cuModuleLoadDataEx(&cuMod, ptx.c_str(), 0, nullptr, nullptr));
 
-    // CUfunction kernel;
-    // CHECK_CUDA_ERR(cuModuleGetFunction(&kernel, cuMod, "ptx_kernel_"));
+    std::vector<CUfunction> kernels(allBlocks.size());
+    for (int i = 0; i < allBlocks.size(); i++) {
+        std::string kernelName = "kernel_block_" + std::to_string(allBlocks[i]->id);
+        CHECK_CUDA_ERR(cuModuleGetFunction(kernels.data() + i, cuMod, kernelName.c_str()));
+    }
 
-    // std::vector<double> svHost { 1.0, 0.0, 0.0, 0.0 };
-    // double* svDevice;
-    // std::vector<double> matHost { M_SQRT1_2, 0.0, M_SQRT1_2, 0.0, M_SQRT1_2, 0.0, -M_SQRT1_2, 0.0 };
-    // double* matDevice;
+    // calculate the length of matrix array needed
+    unsigned lengthMatVec = 0;
+    for (const auto& b : allBlocks) {
+        lengthMatVec += (1 << (2 * b->nqubits() + 1));
+    }
 
-    // cudaError_t err;
 
-    // err = cudaMalloc((void**)(&svDevice), sizeof(double) * svHost.size());
-    // if (err) {
-    //     std::cerr << IOColor::RED_FG << "Error in cudaMalloc sv: " << err << "\n" << IOColor::RESET;
-    //     return 1;
-    // }
-    // err = cudaMalloc((void**)(&matDevice), sizeof(double) * matHost.size());
-    // if (err) {
-    //     std::cerr << IOColor::RED_FG << "Error in cudaMalloc mat: " << err << "\n" << IOColor::RESET;
-    //     return 1;
-    // }
+    size_t lengthSV = 2ULL * (1ULL << graph.nqubits);
+    utils::statevector::StatevectorComp<double> h_sv(graph.nqubits);
 
-    // err = cudaMemcpy((void*)svDevice, static_cast<const void*>(svHost.data()), sizeof(double) * svHost.size(), cudaMemcpyHostToDevice);
-    // if (err) {
-    //     std::cerr << IOColor::RED_FG << "Error in host => device memCpy: " << err << "\n" << IOColor::RESET;
-    //     return 1;
-    // }
-    // err = cudaMemcpy((void*)matDevice, static_cast<const void*>(matHost.data()), sizeof(double) * matHost.size(), cudaMemcpyHostToDevice);
-    // if (err) {
+    std::vector<double> h_mat(lengthMatVec);
+
+    double* d_sv;
+    double* d_mat;
+
+    cudaError_t err;
+
+    err = cudaMalloc((void**)(&d_sv), sizeof(double) * lengthSV);
+    if (err) {
+        std::cerr << IOColor::RED_FG << "Error in cudaMalloc sv: " << err << "\n" << IOColor::RESET;
+        return 1;
+    }
+    err = cudaMalloc((void**)(&d_mat), sizeof(double) * h_mat.size());
+    if (err) {
+        std::cerr << IOColor::RED_FG << "Error in cudaMalloc mat: " << err << "\n" << IOColor::RESET;
+        return 1;
+    }
+
+    err = cudaMemcpy(d_sv, h_sv.data, sizeof(double) * lengthSV, cudaMemcpyHostToDevice);
+    if (err) {
+        std::cerr << IOColor::RED_FG << "Error in host => device memCpy: " << err << "\n" << IOColor::RESET;
+        return 1;
+    }
+    err = cudaMemcpy(d_mat, h_mat.data(), sizeof(double) * h_mat.size(), cudaMemcpyHostToDevice);
+    if (err) {
     
-    //     std::cerr << IOColor::RED_FG << "Error in host => device memCpy: " << err << "\n" << IOColor::RESET;
-    //     return 1;
-    // }
+        std::cerr << IOColor::RED_FG << "Error in host => device memCpy: " << err << "\n" << IOColor::RESET;
+        return 1;
+    }
 
-    // void* kernel_params[] = { &svDevice, &matDevice };
-    // CHECK_CUDA_ERR(cuLaunchKernel(kernel, 
-    //     1, 1, 1,        // grid dim
-    //     1, 1, 1,        // block dim
-    //     0,              // shared mem size
-    //     0,              // stream
-    //     kernel_params,  // kernel params
-    //     nullptr));      // extra options
+    void* kernel_params[] = { &d_sv, &d_mat };
+
+    unsigned nBlocksBits = graph.nqubits - 8;
+    unsigned nThreads = 1 << 8; // 512
+    
+    using clock = std::chrono::high_resolution_clock;
+    auto tic = clock::now();
+    auto tok = clock::now();
+
+    tic = clock::now();
+    for (int i = 0; i < kernels.size(); i++) {
+        std::cerr << "Launching kernel " << i << "\n";
+        CHECK_CUDA_ERR(cuLaunchKernel(kernels[i], 
+            (1 << (nBlocksBits - allBlocks[i]->nqubits())), 1, 1,        // grid dim
+            nThreads, 1, 1,        // block dim
+            0,              // shared mem size
+            0,              // stream
+            kernel_params,  // kernel params
+            nullptr));      // extra options
+        // CHECK_CUDA_ERR(cudaDeviceSynchronize());
+        std::cerr << "Kernel " << i << " finished\n";
+
+        CHECK_CUDA_ERR(cuCtxSynchronize());
+    }
+    cudaDeviceSynchronize();
+    tok = clock::now();
+    std::cerr << "-- (" << std::chrono::duration_cast<std::chrono::milliseconds>(tok - tic).count()
+              << " ms) " << "Simulation Complete!" << "\n";
+
+
+
+    tic = clock::now();
+    for (int i = 0; i < kernels.size(); i++) {
+        std::cerr << "Launching kernel " << i << "\n";
+        CHECK_CUDA_ERR(cuLaunchKernel(kernels[i], 
+            (1 << (nBlocksBits - allBlocks[i]->nqubits())), 1, 1,        // grid dim
+            nThreads, 1, 1,        // block dim
+            0,              // shared mem size
+            0,              // stream
+            kernel_params,  // kernel params
+            nullptr));      // extra options
+        // CHECK_CUDA_ERR(cudaDeviceSynchronize());
+        std::cerr << "Kernel " << i << " finished\n";
+
+        CHECK_CUDA_ERR(cuCtxSynchronize());
+    }
+    cudaDeviceSynchronize();
+    tok = clock::now();
+    std::cerr << "-- (" << std::chrono::duration_cast<std::chrono::milliseconds>(tok - tic).count()
+              << " ms) " << "Simulation Complete!" << "\n";
+
+
 
     // err = cudaMemcpy(svHost.data(), svDevice, sizeof(double) * svHost.size(), cudaMemcpyDeviceToHost);
     // if (err) {
@@ -201,12 +262,12 @@ int main(int argc, char** argv) {
 
     // utils::printVector(svHost) << "\n";
 
-    // // wait for kernel to complete
-    // CHECK_CUDA_ERR(cuCtxSynchronize());
+    // wait for kernel to complete
+    CHECK_CUDA_ERR(cuCtxSynchronize());
 
-    // // clean up
-    // CHECK_CUDA_ERR(cuModuleUnload(cuMod));
-    // CHECK_CUDA_ERR(cuCtxDestroy(cuCtx));
+    // clean up
+    CHECK_CUDA_ERR(cuModuleUnload(cuMod));
+    CHECK_CUDA_ERR(cuCtxDestroy(cuCtx));
 
     return 0;
 }
