@@ -3,11 +3,11 @@
 #include "saot/QuantumGate.h"
 #include "saot/CircuitGraph.h"
 #include "saot/Fusion.h"
+#include "utils/utils.h"
 
 #include "openqasm/parser.h"
 
 #include "simulation/ir_generator.h"
-
 
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
@@ -27,9 +27,9 @@
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 
-#include <cuda.h>
-#include <cuda_runtime.h>
-
+// #include <cuda.h>
+// #include <cuda_runtime.h>
+using utils::timedExecute;
 
 #define CHECK_CUDA_ERR(err) \
     if (err != CUDA_SUCCESS) {\
@@ -69,7 +69,6 @@ int main(int argc, char** argv) {
 
     IRGenerator G;
 
-
     CUDAGenerationConfig cudaGenConfig {
         .useImmValues = true,
         .useConstantMemSpaceForMatPtrArg = false
@@ -80,15 +79,17 @@ int main(int argc, char** argv) {
         G.generateCUDAKernel(*b->quantumGate, cudaGenConfig);
     }
     // G.dumpToStderr();
+
+    std::cerr << "There are " << graph.countBlocks() << " blocks after fusion\n";
     
     InitializeAllTargets();
     InitializeAllTargetMCs();
     InitializeAllAsmPrinters();
     InitializeAllAsmParsers();
 
-    errs() << "Registered platforms:\n";
-    for (const auto& targ : TargetRegistry::targets())
-        errs() << targ.getName() << "  " << targ.getBackendName() << "\n";
+    // errs() << "Registered platforms:\n";
+    // for (const auto& targ : TargetRegistry::targets())
+    //     errs() << targ.getName() << "  " << targ.getBackendName() << "\n";
     
     auto targetTriple = Triple("nvptx64-nvidia-cuda");
     // auto targetTriple = Triple(sys::getDefaultTargetTriple());
@@ -106,15 +107,16 @@ int main(int argc, char** argv) {
     G.getModule()->setTargetTriple(targetTriple.getTriple());
     G.getModule()->setDataLayout(targetMachine->createDataLayout());
 
-    G.applyLLVMOptimization(OptimizationLevel::O2);
-
+    timedExecute([&]() {
+        G.applyLLVMOptimization(OptimizationLevel::O1);
+    }, "Optimization Applied");
 
     llvm::SmallString<8> data_ptx, data_ll;
     llvm::raw_svector_ostream dest_ptx(data_ptx), dest_ll(data_ll);
     dest_ptx.SetUnbuffered();
     dest_ll.SetUnbuffered();
     // print ll
-    G.getModule()->print(dest_ll, nullptr);
+    // G.getModule()->print(dest_ll, nullptr);
     
     std::string ll(data_ll.begin(), data_ll.end());
     std::cerr << "===================== IR ======================\n" << ll << "\n"
@@ -125,83 +127,86 @@ int main(int argc, char** argv) {
         errs() << "The target machine can't emit a file of this type\n";
         return 1;
     }
-    passManager.run(*G.getModule());
+    timedExecute([&]() {
+        passManager.run(*G.getModule());
+    }, "PTX Code Generated!");
+
     std::string ptx(data_ptx.begin(), data_ptx.end());
-    std::cerr << ptx << "\n";
+    // std::cerr << ptx << "\n";
 
-    std::cerr << "=== Start CUDA part ===\n";
+    // std::cerr << "=== Start CUDA part ===\n";
 
-    CHECK_CUDA_ERR(cuInit(0));
-    CUdevice device;
-    CHECK_CUDA_ERR(cuDeviceGet(&device, 0));
+    // CHECK_CUDA_ERR(cuInit(0));
+    // CUdevice device;
+    // CHECK_CUDA_ERR(cuDeviceGet(&device, 0));
 
-    CUcontext cuCtx;
-    CHECK_CUDA_ERR(cuCtxCreate(&cuCtx, 0, device));
+    // CUcontext cuCtx;
+    // CHECK_CUDA_ERR(cuCtxCreate(&cuCtx, 0, device));
 
-    CUmodule cuMod;
-    CHECK_CUDA_ERR(cuModuleLoadDataEx(&cuMod, ptx.c_str(), 0, nullptr, nullptr));
+    // CUmodule cuMod;
+    // CHECK_CUDA_ERR(cuModuleLoadDataEx(&cuMod, ptx.c_str(), 0, nullptr, nullptr));
 
-    CUfunction kernel;
-    CHECK_CUDA_ERR(cuModuleGetFunction(&kernel, cuMod, "ptx_kernel_"));
+    // CUfunction kernel;
+    // CHECK_CUDA_ERR(cuModuleGetFunction(&kernel, cuMod, "ptx_kernel_"));
 
-    std::vector<double> svHost { 1.0, 0.0, 0.0, 0.0 };
-    double* svDevice;
-    std::vector<double> matHost { M_SQRT1_2, 0.0, M_SQRT1_2, 0.0, M_SQRT1_2, 0.0, -M_SQRT1_2, 0.0 };
-    double* matDevice;
+    // std::vector<double> svHost { 1.0, 0.0, 0.0, 0.0 };
+    // double* svDevice;
+    // std::vector<double> matHost { M_SQRT1_2, 0.0, M_SQRT1_2, 0.0, M_SQRT1_2, 0.0, -M_SQRT1_2, 0.0 };
+    // double* matDevice;
 
-    cudaError_t err;
+    // cudaError_t err;
 
-    err = cudaMalloc((void**)(&svDevice), sizeof(double) * svHost.size());
-    if (err) {
-        std::cerr << IOColor::RED_FG << "Error in cudaMalloc sv: " << err << "\n" << IOColor::RESET;
-        return 1;
-    }
-    err = cudaMalloc((void**)(&matDevice), sizeof(double) * matHost.size());
-    if (err) {
-        std::cerr << IOColor::RED_FG << "Error in cudaMalloc mat: " << err << "\n" << IOColor::RESET;
-        return 1;
-    }
+    // err = cudaMalloc((void**)(&svDevice), sizeof(double) * svHost.size());
+    // if (err) {
+    //     std::cerr << IOColor::RED_FG << "Error in cudaMalloc sv: " << err << "\n" << IOColor::RESET;
+    //     return 1;
+    // }
+    // err = cudaMalloc((void**)(&matDevice), sizeof(double) * matHost.size());
+    // if (err) {
+    //     std::cerr << IOColor::RED_FG << "Error in cudaMalloc mat: " << err << "\n" << IOColor::RESET;
+    //     return 1;
+    // }
 
-    err = cudaMemcpy((void*)svDevice, static_cast<const void*>(svHost.data()), sizeof(double) * svHost.size(), cudaMemcpyHostToDevice);
-    if (err) {
-        std::cerr << IOColor::RED_FG << "Error in host => device memCpy: " << err << "\n" << IOColor::RESET;
-        return 1;
-    }
-    err = cudaMemcpy((void*)matDevice, static_cast<const void*>(matHost.data()), sizeof(double) * matHost.size(), cudaMemcpyHostToDevice);
-    if (err) {
+    // err = cudaMemcpy((void*)svDevice, static_cast<const void*>(svHost.data()), sizeof(double) * svHost.size(), cudaMemcpyHostToDevice);
+    // if (err) {
+    //     std::cerr << IOColor::RED_FG << "Error in host => device memCpy: " << err << "\n" << IOColor::RESET;
+    //     return 1;
+    // }
+    // err = cudaMemcpy((void*)matDevice, static_cast<const void*>(matHost.data()), sizeof(double) * matHost.size(), cudaMemcpyHostToDevice);
+    // if (err) {
     
-        std::cerr << IOColor::RED_FG << "Error in host => device memCpy: " << err << "\n" << IOColor::RESET;
-        return 1;
-    }
+    //     std::cerr << IOColor::RED_FG << "Error in host => device memCpy: " << err << "\n" << IOColor::RESET;
+    //     return 1;
+    // }
 
-    void* kernel_params[] = { &svDevice, &matDevice };
-    CHECK_CUDA_ERR(cuLaunchKernel(kernel, 
-        1, 1, 1,        // grid dim
-        1, 1, 1,        // block dim
-        0,              // shared mem size
-        0,              // stream
-        kernel_params,  // kernel params
-        nullptr));      // extra options
+    // void* kernel_params[] = { &svDevice, &matDevice };
+    // CHECK_CUDA_ERR(cuLaunchKernel(kernel, 
+    //     1, 1, 1,        // grid dim
+    //     1, 1, 1,        // block dim
+    //     0,              // shared mem size
+    //     0,              // stream
+    //     kernel_params,  // kernel params
+    //     nullptr));      // extra options
 
-    err = cudaMemcpy(svHost.data(), svDevice, sizeof(double) * svHost.size(), cudaMemcpyDeviceToHost);
-    if (err) {
-        std::cerr << IOColor::RED_FG << "Error in device => host memCpy: " << err << "\n" << IOColor::RESET;
-        return 1;
-    }
-    err = cudaMemcpy(matHost.data(), matDevice, sizeof(double) * matHost.size(), cudaMemcpyDeviceToHost);
-    if (err) {
-        std::cerr << IOColor::RED_FG << "Error in device => host memCpy: " << err << "\n" << IOColor::RESET;
-        return 1;
-    }
+    // err = cudaMemcpy(svHost.data(), svDevice, sizeof(double) * svHost.size(), cudaMemcpyDeviceToHost);
+    // if (err) {
+    //     std::cerr << IOColor::RED_FG << "Error in device => host memCpy: " << err << "\n" << IOColor::RESET;
+    //     return 1;
+    // }
+    // err = cudaMemcpy(matHost.data(), matDevice, sizeof(double) * matHost.size(), cudaMemcpyDeviceToHost);
+    // if (err) {
+    //     std::cerr << IOColor::RED_FG << "Error in device => host memCpy: " << err << "\n" << IOColor::RESET;
+    //     return 1;
+    // }
 
-    utils::printVector(svHost) << "\n";
+    // utils::printVector(svHost) << "\n";
 
-    // wait for kernel to complete
-    CHECK_CUDA_ERR(cuCtxSynchronize());
+    // // wait for kernel to complete
+    // CHECK_CUDA_ERR(cuCtxSynchronize());
 
-    // clean up
-    CHECK_CUDA_ERR(cuModuleUnload(cuMod));
-    CHECK_CUDA_ERR(cuCtxDestroy(cuCtx));
+    // // clean up
+    // CHECK_CUDA_ERR(cuModuleUnload(cuMod));
+    // CHECK_CUDA_ERR(cuCtxDestroy(cuCtx));
 
     return 0;
 }

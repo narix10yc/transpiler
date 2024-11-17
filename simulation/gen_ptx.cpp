@@ -34,20 +34,21 @@ Value* genOptFMul(Value* a, Value* b, ScalarKind aKind, IRBuilder<>& builder) {
 
 // return a * b + c
 Value* genMulAndAdd(Value* a, Value* b, Value* c, ScalarKind aKind, IRBuilder<>& builder) {
+    assert(b);
+
     switch (aKind) {
     case SK_General:
         assert(a);
-        assert(b);
-        assert(c);
-        return builder.CreateIntrinsic(a->getType(), Intrinsic::fmuladd, { a, b, c });
+        if (c)
+            return builder.CreateIntrinsic(a->getType(), Intrinsic::fmuladd, { a, b, c });
+        return builder.CreateFMul(a, b);
     case SK_One:
-        assert(b);
-        assert(c);
-        return builder.CreateFAdd(b, c);
+        if (c)
+            return builder.CreateFAdd(b, c);
     case SK_MinusOne:
-        assert(b);
-        assert(c);
-        return builder.CreateFSub(c, b);
+        if (c)
+            return builder.CreateFSub(c, b);
+        return builder.CreateFNeg(b);
     case SK_Zero:
         return c;
     default:
