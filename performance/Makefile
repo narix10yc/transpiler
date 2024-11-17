@@ -1,8 +1,8 @@
 # Compiler and flags
-# CLANG = $(llvm_root)/bin/clang
-# CLANGXX = $(llvm_root)/bin/clang++
-CLANG = /opt/homebrew/opt/llvm/bin/clang
-CLANGXX = /opt/homebrew/opt/llvm/bin/clang++
+CLANG = $(llvm_root)/bin/clang
+CLANGXX = $(llvm_root)/bin/clang++
+# CLANG = /opt/homebrew/opt/llvm/bin/clang
+# CLANGXX = /opt/homebrew/opt/llvm/bin/clang++
 
 BUILD_DIR = $(CURDIR)/../build
 INCLUDE_DIR = $(CURDIR)/../include

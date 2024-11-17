@@ -37,10 +37,16 @@ Value* genMulAndAdd(Value* a, Value* b, Value* c, ScalarKind aKind, IRBuilder<>&
     switch (aKind) {
     case SK_General:
         assert(a);
+        assert(b);
+        assert(c);
         return builder.CreateIntrinsic(a->getType(), Intrinsic::fmuladd, { a, b, c });
     case SK_One:
+        assert(b);
+        assert(c);
         return builder.CreateFAdd(b, c);
     case SK_MinusOne:
+        assert(b);
+        assert(c);
         return builder.CreateFSub(c, b);
     case SK_Zero:
         return c;
@@ -136,14 +142,14 @@ Function* IRGenerator::generateCUDAKernel(
         mask = ((1ULL << (bit - i)) - 1) - maskSum;
         maskSum = (1ULL << (bit - i)) - 1;
         std::cerr << "i = " << i << ", bit = " << bit
-                  << ", mask = " << utils::as0b(mask, 12) << "\n";
+                  << ", mask = " << utils::as0b(mask, nqubits) << "\n";
 
         tmpCounterV = builder.CreateAnd(counterV, mask, "tmpCounter");
         tmpCounterV = builder.CreateShl(tmpCounterV, i, "tmpCounter");
         idxStartV = builder.CreateAdd(idxStartV, tmpCounterV, "tmpIdx");
     }
     mask = ~((1ULL << (qubits.back() - nqubits + 1)) - 1);
-    std::cerr << "mask = " << utils::as0b(mask, 12) << "\n";
+    std::cerr << "mask = " << utils::as0b(mask, nqubits) << "\n";
     tmpCounterV = builder.CreateAnd(counterV, mask, "tmpCounter");
     tmpCounterV = builder.CreateShl(tmpCounterV, nqubits-1, "tmpCounter");
     idxStartV = builder.CreateAdd(idxStartV, tmpCounterV, "idxStart");
@@ -224,7 +230,7 @@ Function* IRGenerator::generateCUDAKernel(
             }
             if (sigMat.getRC(r, c).imag() == SK_General) {
                 imMatPtr = builder.CreateConstGEP1_64(scalarTy, pMatArg, 2ULL * matIdx + 1, "idx.mat.im." + suffix);
-                reMat = builder.CreateLoad(scalarTy, imMatPtr, "mat.im." + suffix);
+                imMat = builder.CreateLoad(scalarTy, imMatPtr, "mat.im." + suffix);
             }
 
             // updatedReAmp0 = builder.CreateIntrinsic(
@@ -245,6 +251,7 @@ Function* IRGenerator::generateCUDAKernel(
             updatedImAmp = genMulAndAdd(imMat, reAmps[c], updatedImAmp,
                 sigMat.getRC(r, c).imag(), builder);
         }
+
         Value* updatedReAmp = nullptr;
         if (updatedReAmp0 && updatedReAmp1)
             updatedReAmp = builder.CreateFSub(updatedReAmp0, updatedReAmp1);

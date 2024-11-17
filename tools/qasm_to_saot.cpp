@@ -175,9 +175,9 @@ int main(int argc, char** argv) {
     timedExecute([&]() {
         saot::applyCPUGateFusion(fusionConfig, graph);
     }, "Gate Fusion Complete");
+    graph.relabelBlocks();
 
     if (Verbose > 2) {
-        graph.relabelBlocks();
         graph.print(std::cerr << "CircuitGraph After Fusion:\n");
     }
     if (Verbose > 0)
