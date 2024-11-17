@@ -6,8 +6,9 @@
 
 #include "utils/iocolor.h"
 #include "utils/utils.h"
-
 #include "llvm/Support/CommandLine.h"
+
+#include <thread>
 
 using IRGeneratorConfig = simulation::IRGeneratorConfig;
 // using AmpFormat = IRGeneratorConfig::AmpFormat;
@@ -21,7 +22,7 @@ using namespace simulation;
 static cl::opt<std::string>
 InputFileName(cl::desc("input file name"), cl::Positional, cl::Required);
 static cl::opt<std::string>
-OutputFileName("o", cl::desc("output file name"), cl::init(""));
+OutputDirectory("o", cl::desc("output directory"), cl::init(""));
 static cl::opt<std::string>
 Precision("p", cl::desc("precision (f64 or f32)"), cl::init("f64"));
 static cl::opt<int>
@@ -98,12 +99,18 @@ DumpIRToMultipleFiles("dump-ir-to-multiple-files", cl::cat(IRGenerationConfigCat
 static cl::opt<bool>
 WriteRawIR("write-raw-ir", cl::cat(IRGenerationConfigCategory),
         cl::desc("write raw ir files instead of bitcodes"), cl::init(false));
+static cl::opt<int>
+NThreadsKernelGeneration("nthread-kernel-gen", cl::cat(IRGenerationConfigCategory),
+        cl::desc("multi-thread kernel generation"), cl::init(1));
+static cl::opt<int>
+RemoveFilesInsideOutputDirectory("rm-out-dir", cl::cat(IRGenerationConfigCategory),
+        cl::desc("remove files inside output directory"), cl::init(true));
 
 int main(int argc, char** argv) {
 
     CircuitGraph graph;
     CPUFusionConfig fusionConfig;
-    CodeGeneratorCPU codeGenerator;
+    // CodeGeneratorCPU codeGenerator;
     IRGeneratorConfig irConfig;
     CodeGeneratorCPUConfig cpuConfig;
 
@@ -141,26 +148,28 @@ int main(int argc, char** argv) {
         fusionConfig.allowMultipleTraverse = AllowMultipleTraverse;
         fusionConfig.incrementScheme = EnableIncreamentScheme;
 
-        if (OutputFileName != "") {
+        if (OutputDirectory != "") {
             cpuConfig = CodeGeneratorCPUConfig {
                 .multiThreaded = MultiThreaded,
                 .installTimer = InstallTimer,
                 .writeRawIR = WriteRawIR,
                 .dumpIRToMultipleFiles = DumpIRToMultipleFiles,
+                .rmFilesInsideOutputDirectory = RemoveFilesInsideOutputDirectory,
+                .forceInOrder = false,
                 .irConfig = irConfig,
             };
 
-            codeGenerator = CodeGeneratorCPU(cpuConfig, OutputFileName);
-            if (Verbose > 0) {
-                codeGenerator.displayConfig(Verbose, std::cerr);
-                cpuConfig.irConfig.checkConfliction(std::cerr);
-            }
+            // codeGenerator = CodeGeneratorCPU(cpuConfig, OutputFileName);
+            // if (Verbose > 0) {
+            //     codeGenerator.displayConfig(Verbose, std::cerr);
+            //     cpuConfig.irConfig.checkConfliction(std::cerr);
+            // }
         }
     // }, "Arguments parsed");
 
     if (Verbose > 0) {
         std::cerr << "-- Input file:  " << InputFileName << "\n";
-        std::cerr << "-- Output file: " << OutputFileName << "\n";
+        std::cerr << "-- Output directory: " << OutputDirectory << "\n";
     }
 
     if (Verbose > 0)
@@ -189,18 +198,16 @@ int main(int argc, char** argv) {
     if (Verbose > 0)
         graph.displayInfo(std::cerr, Verbose + 1);
 
-    timedExecute([&]() {
-        IRGenerator generator(irConfig);
-        const auto allBlocks = graph.getAllBlocks();
-        for (const auto& b : allBlocks)
-            generator.generateKernel(*b->quantumGate);
-    }, "Kernel generated");
+    // std::vector<std::thread> threads
 
-    if (OutputFileName != "") {
-        timedExecute([&]() {
-            codeGenerator.generate(graph, DebugLevel);
-        }, "Code Generation Done");
-    }
+
+    // if (OutputFileName != "") {
+    //     timedExecute([&]() {
+    //         codeGenerator.generate(graph, DebugLevel);
+    //     }, "Code Generation Done");
+    // }
+    if (OutputDirectory != "")
+        generateCpuIrForRecompilation(graph, OutputDirectory, cpuConfig, NThreadsKernelGeneration);
 
     return 0;
 }
