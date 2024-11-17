@@ -93,7 +93,7 @@ ForceDenseKernel("force-dense-kernel", cl::cat(IRGenerationConfigCategory),
         cl::desc("force all kernels to be dense"), cl::init(false));
 static cl::opt<bool>
 DumpIRToMultipleFiles("dump-ir-to-multiple-files", cl::cat(IRGenerationConfigCategory),
-        cl::desc("dump ir to multiple files"), cl::init(false));
+        cl::desc("dump ir to multiple files"), cl::init(true));
 static cl::opt<bool>
 WriteRawIR("write-raw-ir", cl::cat(IRGenerationConfigCategory),
         cl::desc("write raw ir files instead of bitcodes"), cl::init(false));

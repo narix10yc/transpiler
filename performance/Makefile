@@ -1,15 +1,15 @@
 # Compiler and flags
-# CLANG = $(llvm_root)/bin/clang
-# CLANGXX = $(llvm_root)/bin/clang++
-CLANG = /opt/homebrew/opt/llvm/bin/clang
-CLANGXX = /opt/homebrew/opt/llvm/bin/clang++
+CLANG = $(llvm_root)/bin/clang
+CLANGXX = $(llvm_root)/bin/clang++
+# CLANG = /opt/homebrew/opt/llvm/bin/clang
+# CLANGXX = /opt/homebrew/opt/llvm/bin/clang++
 
 BUILD_DIR = $(CURDIR)/../build
 INCLUDE_DIR = $(CURDIR)/../include
 
 # MACOS_SDK_PATH = /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk
 # CFLAGS = -std=c++17 -I$(INCLUDE_DIR) -Ofast -march=native -isysroot $(MACOS_SDK_PATH)
-IR_CFLAGS = -march=native -O3 -Wno-override-module
+IR_CFLAGS = -march=native -O1 -Wno-override-module
 CFLAGS = -std=c++17 -I$(INCLUDE_DIR) -O3 -march=native
 LDFLAGS = -L$(BUILD_DIR)/timeit -ltimeit -lpthread
 
