@@ -350,8 +350,8 @@ using clock = std::chrono::high_resolution_clock;
 // write kernel ir to a llvm ir file named <dir>/kernels_t<threadIdx>.ll.
 // This file will contain (blockIdx1 - blockIdx0) kernels.
 // This function will own its own instance of IRGenerator
-void writeKernelsIrFile(
-        const std::vector<GateBlock*>& allBlocks, const std::string& fileName,
+void writeKernelsSingleIrFile(
+        const std::vector<GateBlock*>& allBlocks, const std::string& dir,
         const CodeGeneratorCPUConfig& config,
         int blockIdx0, int blockIdx1,
         double* irGenTime) {
@@ -366,12 +366,15 @@ void writeKernelsIrFile(
         irGenerator.generateKernel(gate, kernelName);
     }
     auto tok = clock::now();
+    std::chrono::duration<double> duration = tok - tic;
     if (irGenTime) {
-        std::chrono::duration<double> duration = tok - tic;
         *irGenTime = duration.count();
     }
     std::error_code ec;
-    llvm::raw_fd_ostream irFile(fileName, ec);
+    std::string filename =
+        dir + "/kernel_" + std::to_string(blockIdx0) + "_to_" + std::to_string(blockIdx1) + ".ll";
+
+    llvm::raw_fd_ostream irFile(filename, ec);
 
     if (config.writeRawIR)
         irGenerator.getModule()->print(irFile, nullptr);
@@ -379,6 +382,53 @@ void writeKernelsIrFile(
         WriteBitcodeToFile(*irGenerator.getModule(), irFile);
     irFile.close();
 }
+
+void writeKernelsMultipleIrFiles(
+        const std::vector<GateBlock*>& allBlocks, const std::string& dir,
+        const CodeGeneratorCPUConfig& config,
+        int blockIdx0, int blockIdx1,
+        double* irGenTime) {
+
+    IRGenerator irGenerator(config.irConfig,
+        "module_block" + std::to_string(allBlocks[blockIdx0]->id));
+    
+    auto tic = clock::now();
+    auto tok = clock::now();
+    double totalTime = 0.0;
+    std::chrono::duration<double> duration = tok - tic;
+
+    for (int i = blockIdx0; i < blockIdx1; i++) {
+        const auto& gate = *(allBlocks[i]->quantumGate);
+        std::string kernelName = getKernelName(allBlocks[i]);
+        tic = clock::now();
+        irGenerator.generateKernel(gate, kernelName);
+        tok = clock::now();
+        duration = tok - tic;
+        totalTime += duration.count();
+        std::error_code ec;
+        std::string filename =
+            dir + "/kernel_" + std::to_string(allBlocks[i]->id) + ".ll";
+
+        llvm::raw_fd_ostream irFile(filename, ec);
+
+        if (config.writeRawIR)
+            irGenerator.getModule()->print(irFile, nullptr);
+        else
+            WriteBitcodeToFile(*irGenerator.getModule(), irFile);
+        irFile.close();
+
+        if (i != blockIdx1 - 1) {
+            irGenerator.~IRGenerator();
+            new (&irGenerator) IRGenerator(config.irConfig,
+                "module_block" + std::to_string(allBlocks[i+1]->id));
+        }
+    }
+    if (irGenTime) {
+        *irGenTime = totalTime;
+    }
+    return;
+}
+
 
 } // anonymous namespace
 
@@ -402,7 +452,7 @@ void saot::generateCpuIrForRecompilation(
                     std::cerr << "Failed to remove file: " << file->path() 
                             << " Error: " << removeError.message() << "\n";
                 } else {
-                    std::cerr << "Removed file: " << file->path() << "\n";
+                    // std::cerr << "Removed file: " << file->path() << "\n";
                 }
             }
         }
@@ -412,7 +462,10 @@ void saot::generateCpuIrForRecompilation(
         // no multi-threading
         writeMetadataHeaderFile(allBlocks, graph.nqubits, dir + "/kernel_metadata.h", config);
         double irGenTime;
-        writeKernelsIrFile(allBlocks, dir + "/kernels.ll", config, 0, allBlocks.size(), &irGenTime);
+        if (config.dumpIRToMultipleFiles)
+            writeKernelsMultipleIrFiles(allBlocks, dir, config, 0, allBlocks.size(), &irGenTime);
+        else
+            writeKernelsSingleIrFile(allBlocks, dir, config, 0, allBlocks.size(), &irGenTime);
         std::cerr << "IR Generation takes " << static_cast<int>(1e3 * irGenTime) << " ms\n";
         return;
     }
@@ -427,10 +480,14 @@ void saot::generateCpuIrForRecompilation(
     for (int threadIdx = 0; threadIdx < nthreads; threadIdx++) {
         int blockIdx0 = threadIdx * nBlocksPerThread;
         int blockIdx1 = (threadIdx == nthreads - 1) ? totalNBlocks : (threadIdx + 1) * nBlocksPerThread;
-        std::string filename = dir + "/kernel_t" + std::to_string(threadIdx) + ".ll";
-        threads.emplace_back(writeKernelsIrFile,
-            std::cref(allBlocks), filename, std::cref(config),
-            blockIdx0, blockIdx1, irGenTimes.data() + threadIdx);
+        if (config.dumpIRToMultipleFiles)
+            threads.emplace_back(writeKernelsMultipleIrFiles,
+                std::cref(allBlocks), dir, std::cref(config),
+                blockIdx0, blockIdx1, irGenTimes.data() + threadIdx);
+        else
+            threads.emplace_back(writeKernelsSingleIrFile,
+                std::cref(allBlocks), dir, std::cref(config),
+                blockIdx0, blockIdx1, irGenTimes.data() + threadIdx);
     }
 
     // main thread writes metadata
