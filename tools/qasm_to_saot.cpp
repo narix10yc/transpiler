@@ -8,8 +8,6 @@
 #include "utils/utils.h"
 #include "llvm/Support/CommandLine.h"
 
-#include <thread>
-
 using IRGeneratorConfig = simulation::IRGeneratorConfig;
 // using AmpFormat = IRGeneratorConfig::AmpFormat;
 using utils::timedExecute;
@@ -102,7 +100,7 @@ WriteRawIR("write-raw-ir", cl::cat(IRGenerationConfigCategory),
 static cl::opt<int>
 NThreadsKernelGeneration("nthread-kernel-gen", cl::cat(IRGenerationConfigCategory),
         cl::desc("multi-thread kernel generation"), cl::init(1));
-static cl::opt<int>
+static cl::opt<bool>
 RemoveFilesInsideOutputDirectory("rm-out-dir", cl::cat(IRGenerationConfigCategory),
         cl::desc("remove files inside output directory"), cl::init(true));
 
@@ -198,16 +196,12 @@ int main(int argc, char** argv) {
     if (Verbose > 0)
         graph.displayInfo(std::cerr, Verbose + 1);
 
-    // std::vector<std::thread> threads
-
-
-    // if (OutputFileName != "") {
-    //     timedExecute([&]() {
-    //         codeGenerator.generate(graph, DebugLevel);
-    //     }, "Code Generation Done");
-    // }
-    if (OutputDirectory != "")
-        generateCpuIrForRecompilation(graph, OutputDirectory, cpuConfig, NThreadsKernelGeneration);
+    if (OutputDirectory != "") {
+        timedExecute([&]() {
+            generateCpuIrForRecompilation(graph, OutputDirectory, cpuConfig,
+                                          NThreadsKernelGeneration);
+        }, "Generation complete!");
+    }
 
     return 0;
 }

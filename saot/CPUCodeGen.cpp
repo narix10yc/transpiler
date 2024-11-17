@@ -372,6 +372,7 @@ void writeKernelsIrFile(
     }
     std::error_code ec;
     llvm::raw_fd_ostream irFile(fileName, ec);
+
     if (config.writeRawIR)
         irGenerator.getModule()->print(irFile, nullptr);
     else
@@ -428,7 +429,7 @@ void saot::generateCpuIrForRecompilation(
         int blockIdx1 = (threadIdx == nthreads - 1) ? totalNBlocks : (threadIdx + 1) * nBlocksPerThread;
         std::string filename = dir + "/kernel_t" + std::to_string(threadIdx) + ".ll";
         threads.emplace_back(writeKernelsIrFile,
-            std::cref(allBlocks), std::cref(filename), std::cref(config),
+            std::cref(allBlocks), filename, std::cref(config),
             blockIdx0, blockIdx1, irGenTimes.data() + threadIdx);
     }
 
@@ -438,6 +439,11 @@ void saot::generateCpuIrForRecompilation(
     for (auto& t : threads)
         t.join();
 
-    utils::printVector(irGenTimes, std::cerr << "irGenTimes: ") << "\n";
+    double irGenTime = 0.0;
+    for (const auto& t : irGenTimes) {
+        if (t > irGenTime)
+            irGenTime = t;
+    }
+    std::cerr << "IR Generation Time: " << static_cast<int>(1e3 * irGenTime) << " ms\n";
     return;
 }

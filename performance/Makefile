@@ -1,8 +1,8 @@
 # Compiler and flags
-CLANG = $(llvm_root)/bin/clang
-CLANGXX = $(llvm_root)/bin/clang++
-# CLANG = /opt/homebrew/opt/llvm/bin/clang
-# CLANGXX = /opt/homebrew/opt/llvm/bin/clang++
+# CLANG = $(llvm_root)/bin/clang
+# CLANGXX = $(llvm_root)/bin/clang++
+CLANG = /opt/homebrew/opt/llvm/bin/clang
+CLANGXX = /opt/homebrew/opt/llvm/bin/clang++
 
 BUILD_DIR = $(CURDIR)/../build
 INCLUDE_DIR = $(CURDIR)/../include
@@ -14,7 +14,7 @@ CFLAGS = -std=c++17 -I$(INCLUDE_DIR) -O3 -march=native
 LDFLAGS = -L$(BUILD_DIR)/timeit -ltimeit -lpthread
 
 # Directories
-IR_DIR = $(CURDIR)/gen_file_kernels
+IR_DIR = $(CURDIR)/gen_file
 OBJ_DIR = $(CURDIR)/obj
 SRC_FILE = $(CURDIR)/benchmark.cpp
 HEADER_FILE =$(wildcard $(CURDIR)/*.h)
