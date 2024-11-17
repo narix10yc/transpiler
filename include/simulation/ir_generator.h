@@ -21,6 +21,7 @@ struct CUDAGenerationConfig {
     double oneTol;
     bool useImmValues;
     bool useConstantMemSpaceForMatPtrArg;
+    bool forceDenseKernel;
 };
 
 class ParamValueFeeder {

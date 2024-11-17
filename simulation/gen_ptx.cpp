@@ -158,7 +158,13 @@ Function* IRGenerator::generateCUDAKernel(
     uint64_t N = 1 << nqubits;
     // std::vector<Value*> reMats(N), imMats(N), reAmpPtrs(N), imAmpPtrs(N), reAmps(N), imAmps(N);
     std::vector<Value*> reAmpPtrs(N), imAmpPtrs(N), reAmps(N), imAmps(N);
-    const auto sigMat = gate.gateMatrix.getSignatureMatrix(config.zeroTol, config.oneTol);
+    auto sigMat = gate.gateMatrix.getSignatureMatrix(config.zeroTol, config.oneTol);
+    if (config.forceDenseKernel) {
+        for (auto& sig : sigMat.data) {
+            sig.real(SK_General);
+            sig.imag(SK_General);
+        }    
+    }
 
     for (uint64_t i = 0; i < N; i++) {
         uint64_t delta = 0ULL;

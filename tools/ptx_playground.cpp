@@ -61,7 +61,7 @@ int main(int argc, char** argv) {
     // saot::parse::Parser parser(argv[1]);
     // auto graph = parser.parseQuantumCircuit().toCircuitGraph();
 
-    applyCPUGateFusion(CPUFusionConfig::Aggressive, graph);
+    applyCPUGateFusion(CPUFusionConfig::Default, graph);
     // graph.print(std::cerr) << "\n";
 
     // auto& fusedGate = graph.getAllBlocks()[0]->quantumGate;
@@ -81,7 +81,8 @@ int main(int argc, char** argv) {
 
     CUDAGenerationConfig cudaGenConfig {
         .useImmValues = true,
-        .useConstantMemSpaceForMatPtrArg = false
+        .useConstantMemSpaceForMatPtrArg = false,
+        .forceDenseKernel = false,
     };
 
     auto allBlocks = graph.getAllBlocks();
