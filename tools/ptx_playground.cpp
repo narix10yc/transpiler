@@ -32,6 +32,7 @@
 #include <cuda_runtime.h>
 
 using utils::timedExecute;
+using scalar_t = double;
 
 #define CHECK_CUDA_ERR(err) \
     if (err != CUDA_SUCCESS) {\
@@ -178,32 +179,32 @@ int main(int argc, char** argv) {
     }
 
     size_t lengthSV = 2ULL * (1ULL << graph.nqubits);
-    // utils::statevector::StatevectorComp<double> h_sv(graph.nqubits);
+    // utils::statevector::StatevectorComp<scalar_t> h_sv(graph.nqubits);
 
-    // std::vector<double> h_mat(lengthMatVec);
+    // std::vector<scalar_t> h_mat(lengthMatVec);
 
-    double* d_sv;
-    double* d_mat;
+    scalar_t* d_sv;
+    scalar_t* d_mat;
 
     cudaError_t err;
 
-    err = cudaMalloc((void**)(&d_sv), sizeof(double) * lengthSV);
+    err = cudaMalloc((void**)(&d_sv), sizeof(scalar_t) * lengthSV);
     if (err) {
         std::cerr << IOColor::RED_FG << "Error in cudaMalloc sv: " << err << "\n" << IOColor::RESET;
         return 1;
     }
-    err = cudaMalloc((void**)(&d_mat), sizeof(double) * lengthMatVec);
+    err = cudaMalloc((void**)(&d_mat), sizeof(scalar_t) * lengthMatVec);
     if (err) {
         std::cerr << IOColor::RED_FG << "Error in cudaMalloc mat: " << err << "\n" << IOColor::RESET;
         return 1;
     }
 
-    // err = cudaMemcpy(d_sv, h_sv.data, sizeof(double) * lengthSV, cudaMemcpyHostToDevice);
+    // err = cudaMemcpy(d_sv, h_sv.data, sizeof(scalar_t) * lengthSV, cudaMemcpyHostToDevice);
     // if (err) {
     //     std::cerr << IOColor::RED_FG << "Error in host => device memCpy: " << err << "\n" << IOColor::RESET;
     //     return 1;
     // }
-    // err = cudaMemcpy(d_mat, h_mat.data(), sizeof(double) * h_mat.size(), cudaMemcpyHostToDevice);
+    // err = cudaMemcpy(d_mat, h_mat.data(), sizeof(scalar_t) * h_mat.size(), cudaMemcpyHostToDevice);
     // if (err) {
     
     //     std::cerr << IOColor::RED_FG << "Error in host => device memCpy: " << err << "\n" << IOColor::RESET;
@@ -262,12 +263,12 @@ int main(int argc, char** argv) {
 
 
 
-    // err = cudaMemcpy(svHost.data(), svDevice, sizeof(double) * svHost.size(), cudaMemcpyDeviceToHost);
+    // err = cudaMemcpy(svHost.data(), svDevice, sizeof(scalar_t) * svHost.size(), cudaMemcpyDeviceToHost);
     // if (err) {
     //     std::cerr << IOColor::RED_FG << "Error in device => host memCpy: " << err << "\n" << IOColor::RESET;
     //     return 1;
     // }
-    // err = cudaMemcpy(matHost.data(), matDevice, sizeof(double) * matHost.size(), cudaMemcpyDeviceToHost);
+    // err = cudaMemcpy(matHost.data(), matDevice, sizeof(scalar_t) * matHost.size(), cudaMemcpyDeviceToHost);
     // if (err) {
     //     std::cerr << IOColor::RED_FG << "Error in device => host memCpy: " << err << "\n" << IOColor::RESET;
     //     return 1;
