@@ -1,7 +1,7 @@
 #ifndef SIMULATION_KERNELGEN_H
 #define SIMULATION_KERNELGEN_H
 
-#include <LLVM/IR/Module.h>
+#include <llvm/IR/Module.h>
 #include <memory>
 
 namespace saot {

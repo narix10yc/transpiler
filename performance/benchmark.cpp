@@ -29,11 +29,11 @@ int main(int argc, char** argv) {
 
     #ifdef MULTI_THREAD_SIMULATION_KERNEL
     std::cerr << "Multi-threading enabled.\n";
-    timer.setReplication(3);
+    timer.setReplication(1);
 
     // const std::vector<int> nthreads {2,4,8,12,16,20,24,28,32,36};
     // const std::vector<int> nthreads {16,24,32,36,48,64,68,72};
-    const std::vector<int> nthreads {64, 32};
+    const std::vector<int> nthreads {64, 64};
     
     std::vector<double> tarr(nthreads.size());
     int warmUpNThread = nthreads[nthreads.size()-1];
