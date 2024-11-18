@@ -32,12 +32,11 @@
 #include <cuda_runtime.h>
 
 using utils::timedExecute;
-using scalar_t = double;
+using scalar_t = float;
 
 #define CHECK_CUDA_ERR(err) \
     if (err != CUDA_SUCCESS) {\
         std::cerr << IOColor::RED_FG << "CUDA error at line " << __LINE__ << ": " << err << "\n" << IOColor::RESET;\
-        return -1; \
     }
 
 using namespace saot;
@@ -64,26 +63,13 @@ int main(int argc, char** argv) {
     // saot::parse::Parser parser(argv[1]);
     // auto graph = parser.parseQuantumCircuit().toCircuitGraph();
 
-    applyCPUGateFusion(CPUFusionConfig::TwoQubitOnly, graph);
+    applyCPUGateFusion(CPUFusionConfig::Default, graph);
     // graph.print(std::cerr) << "\n";
-
-    // auto& fusedGate = graph.getAllBlocks()[0]->quantumGate;
-    // auto& pMat = fusedGate->gateMatrix.getParametrizedMatrix();
-    
-    // // printParametrizedMatrix(std::cerr, pMat);
-    // for (auto& p : pMat.data)
-    //     p.removeSmallMonomials();
-
-    // printParametrizedMatrix(std::cerr, pMat);
-
-    // for (auto& P : fusedGate->gateMatrix.pData())
-    //     P.simplify(varValues);
-    // fusedGate->gateMatrix.printMatrix(std::cerr);
 
     IRGenerator G;
 
     CUDAGenerationConfig cudaGenConfig {
-        .precision = 64,
+        .precision = 32,
         .useImmValues = true,
         .useConstantMemSpaceForMatPtrArg = false,
         .forceDenseKernel = false,
@@ -159,18 +145,23 @@ int main(int argc, char** argv) {
     CHECK_CUDA_ERR(cuCtxCreate(&cuCtx, 0, device));
 
     CUmodule cuMod;
+
     std::cerr << "Loading PTX into cuda context\n";
-    CHECK_CUDA_ERR(cuModuleLoadDataEx(&cuMod, ptx.c_str(), 0, nullptr, nullptr));
+    timedExecute([&]() {
+        CHECK_CUDA_ERR(cuModuleLoadDataEx(&cuMod, ptx.c_str(), 0, nullptr, nullptr));
+    }, "cuContext loaded!");
 
     std::vector<kernel_t> kernels(allBlocks.size());
     auto nBlocks = allBlocks.size();
-    for (int i = 0; i < nBlocks; i++) {
-        // std::cerr << "Initilizing kernel " << i << "/" << nBlocks << ": id = " << allBlocks[i]->id << "\n";
-        std::string kernelName = "kernel_block_" + std::to_string(allBlocks[i]->id);
-        CHECK_CUDA_ERR(cuModuleGetFunction(&(kernels[i].kernel), cuMod, kernelName.c_str()));
-        kernels[i].block = allBlocks[i];
-        kernels[i].name = kernelName;
-    }
+    
+    timedExecute([&]() {
+        for (int i = 0; i < nBlocks; i++) {
+            std::string kernelName = "kernel_block_" + std::to_string(allBlocks[i]->id);
+            CHECK_CUDA_ERR(cuModuleGetFunction(&(kernels[i].kernel), cuMod, kernelName.c_str()));
+            kernels[i].block = allBlocks[i];
+            kernels[i].name = kernelName;
+        }
+    }, "Kernel function initialized");
 
     // calculate the length of matrix array needed
     unsigned lengthMatVec = 0;
@@ -179,102 +170,55 @@ int main(int argc, char** argv) {
     }
 
     size_t lengthSV = 2ULL * (1ULL << graph.nqubits);
-    // utils::statevector::StatevectorComp<scalar_t> h_sv(graph.nqubits);
-
-    // std::vector<scalar_t> h_mat(lengthMatVec);
-
     scalar_t* d_sv;
     scalar_t* d_mat;
 
-    cudaError_t err;
-
-    err = cudaMalloc((void**)(&d_sv), sizeof(scalar_t) * lengthSV);
-    if (err) {
-        std::cerr << IOColor::RED_FG << "Error in cudaMalloc sv: " << err << "\n" << IOColor::RESET;
-        return 1;
-    }
-    err = cudaMalloc((void**)(&d_mat), sizeof(scalar_t) * lengthMatVec);
-    if (err) {
-        std::cerr << IOColor::RED_FG << "Error in cudaMalloc mat: " << err << "\n" << IOColor::RESET;
-        return 1;
-    }
-
-    // err = cudaMemcpy(d_sv, h_sv.data, sizeof(scalar_t) * lengthSV, cudaMemcpyHostToDevice);
-    // if (err) {
-    //     std::cerr << IOColor::RED_FG << "Error in host => device memCpy: " << err << "\n" << IOColor::RESET;
-    //     return 1;
-    // }
-    // err = cudaMemcpy(d_mat, h_mat.data(), sizeof(scalar_t) * h_mat.size(), cudaMemcpyHostToDevice);
-    // if (err) {
-    
-    //     std::cerr << IOColor::RED_FG << "Error in host => device memCpy: " << err << "\n" << IOColor::RESET;
-    //     return 1;
-    // }
+    timedExecute([&]() {
+        if (auto err = cudaMalloc((void**)(&d_sv), sizeof(scalar_t) * lengthSV))
+            std::cerr << IOColor::RED_FG << "Error in cudaMalloc sv: " << err << "\n" << IOColor::RESET;
+        if (auto err = cudaMalloc((void**)(&d_mat), sizeof(scalar_t) * lengthMatVec))
+            std::cerr << IOColor::RED_FG << "Error in cudaMalloc mat: " << err << "\n" << IOColor::RESET;
+    }, "Device memory allocated!");
 
     void* kernel_params[] = { &d_sv, &d_mat };
 
     unsigned nBlocksBits = graph.nqubits - 8;
     unsigned nThreads = 1 << 8; // 256
     
-    using clock = std::chrono::high_resolution_clock;
-    auto tic = clock::now();
-    auto tok = clock::now();
+    timedExecute([&]() {
+        for (int i = 0; i < kernels.size(); i++) {
+            // std::cerr << "Launching kernel " << i << "\n";
+            CHECK_CUDA_ERR(cuLaunchKernel(kernels[i].kernel, 
+                (1 << (nBlocksBits - kernels[i].block->nqubits())), 1, 1,        // grid dim
+                nThreads, 1, 1,        // block dim
+                0,              // shared mem size
+                0,              // stream
+                kernel_params,  // kernel params
+                nullptr));      // extra options
+            // std::cerr << "Kernel " << i << " finished\n";
 
-    tic = clock::now();
-    for (int i = 0; i < kernels.size(); i++) {
-        std::cerr << "Launching kernel " << i << "\n";
-        CHECK_CUDA_ERR(cuLaunchKernel(kernels[i].kernel, 
-            (1 << (nBlocksBits - kernels[i].block->nqubits())), 1, 1,        // grid dim
-            nThreads, 1, 1,        // block dim
-            0,              // shared mem size
-            0,              // stream
-            kernel_params,  // kernel params
-            nullptr));      // extra options
-        // CHECK_CUDA_ERR(cudaDeviceSynchronize());
-        std::cerr << "Kernel " << i << " finished\n";
-
-        CHECK_CUDA_ERR(cuCtxSynchronize());
-    }
-    cudaDeviceSynchronize();
-    tok = clock::now();
-    std::cerr << "-- (" << std::chrono::duration_cast<std::chrono::milliseconds>(tok - tic).count()
-              << " ms) " << "Simulation Complete!" << "\n";
+            CHECK_CUDA_ERR(cuCtxSynchronize());
+        }
+        cudaDeviceSynchronize();
+    }, "Simulation complete!");
 
 
-    tic = clock::now();
-    for (int i = 0; i < kernels.size(); i++) {
-        std::cerr << "Launching kernel " << i << "\n";
-        CHECK_CUDA_ERR(cuLaunchKernel(kernels[i].kernel, 
-            (1 << (nBlocksBits - kernels[i].block->nqubits())), 1, 1,        // grid dim
-            nThreads, 1, 1,        // block dim
-            0,              // shared mem size
-            0,              // stream
-            kernel_params,  // kernel params
-            nullptr));      // extra options
-        // CHECK_CUDA_ERR(cudaDeviceSynchronize());
-        std::cerr << "Kernel " << i << " finished\n";
+    timedExecute([&]() {
+        for (int i = 0; i < kernels.size(); i++) {
+            // std::cerr << "Launching kernel " << i << "\n";
+            CHECK_CUDA_ERR(cuLaunchKernel(kernels[i].kernel, 
+                (1 << (nBlocksBits - kernels[i].block->nqubits())), 1, 1,        // grid dim
+                nThreads, 1, 1,        // block dim
+                0,              // shared mem size
+                0,              // stream
+                kernel_params,  // kernel params
+                nullptr));      // extra options
+            // std::cerr << "Kernel " << i << " finished\n";
 
-        CHECK_CUDA_ERR(cuCtxSynchronize());
-    }
-    cudaDeviceSynchronize();
-    tok = clock::now();
-    std::cerr << "-- (" << std::chrono::duration_cast<std::chrono::milliseconds>(tok - tic).count()
-              << " ms) " << "Simulation Complete!" << "\n";
-
-
-
-    // err = cudaMemcpy(svHost.data(), svDevice, sizeof(scalar_t) * svHost.size(), cudaMemcpyDeviceToHost);
-    // if (err) {
-    //     std::cerr << IOColor::RED_FG << "Error in device => host memCpy: " << err << "\n" << IOColor::RESET;
-    //     return 1;
-    // }
-    // err = cudaMemcpy(matHost.data(), matDevice, sizeof(scalar_t) * matHost.size(), cudaMemcpyDeviceToHost);
-    // if (err) {
-    //     std::cerr << IOColor::RED_FG << "Error in device => host memCpy: " << err << "\n" << IOColor::RESET;
-    //     return 1;
-    // }
-
-    // utils::printVector(svHost) << "\n";
+            CHECK_CUDA_ERR(cuCtxSynchronize());
+        }
+        cudaDeviceSynchronize();
+    }, "Simulation complete!");
 
     // wait for kernel to complete
     CHECK_CUDA_ERR(cuCtxSynchronize());

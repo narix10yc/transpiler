@@ -2,6 +2,8 @@
 #define SAOT_COSTMODEL_H
 
 #include <cassert>
+#include <vector>
+#include <string>
 
 namespace saot {
 
@@ -33,6 +35,24 @@ public:
     int getCost(const QuantumGate& gate) const override;
 
 };
+
+class PerformanceCache {
+public:
+    struct Entry {
+        int nqubits;
+        int opCount;
+        double memUpdateSpeed;
+    };
+
+    std::vector<Entry> entries;
+    PerformanceCache() : entries() {}
+
+    void addExperiments(int comprehensiveness);
+
+    void saveToCSV(const std::string& fileName) const;
+    static PerformanceCache LoadFromCSV(const std::string& fileName);
+};
+
 
 } // namespace saot;
 

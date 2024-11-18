@@ -17,6 +17,12 @@ using namespace llvm;
 using namespace saot;
 using namespace simulation;
 
+#ifdef __BMI2__
+    #define PDEP_DEFAULT true
+#else
+    #define PDEP_DEFAULT false
+#endif
+
 static cl::opt<std::string>
 InputFileName(cl::desc("input file name"), cl::Positional, cl::Required);
 static cl::opt<std::string>
@@ -75,7 +81,7 @@ UseFMS("use-fms", cl::cat(IRGenerationConfigCategory),
         cl::desc("use fms (fused multiplication subtraction)"), cl::init(true));
 static cl::opt<bool>
 UsePDEP("use-pdep", cl::cat(IRGenerationConfigCategory),
-        cl::desc("use pdep (parallel bit deposite)"), cl::init(true));
+        cl::desc("use pdep (parallel bit deposite)"), cl::init(PDEP_DEFAULT));
 static cl::opt<bool>
 EnablePrefetch("enable-prefetch", cl::cat(IRGenerationConfigCategory),
         cl::desc("enable prefetch (not tested, recommend off)"), cl::init(false));
