@@ -66,8 +66,8 @@ Function* IRGenerator::generateCUDAKernel(
     const auto& qubits = gate.qubits;
     const int nqubits = qubits.size();
 
-    Type* scalarTy = (_config.precision == 32) ? builder.getFloatTy()
-                                               : builder.getDoubleTy();
+    Type* scalarTy = (config.precision == 32) ? builder.getFloatTy()
+                                              : builder.getDoubleTy();
     Function* func;
     Argument *pSvArg, *pMatArg;
     { /* function declaration */

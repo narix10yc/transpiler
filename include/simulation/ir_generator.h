@@ -17,6 +17,7 @@
 namespace simulation {
 
 struct CUDAGenerationConfig {
+    int precision;
     double zeroTol;
     double oneTol;
     bool useImmValues;

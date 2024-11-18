@@ -58,10 +58,12 @@ int main(int argc, char** argv) {
 
     openqasm::Parser parser(argv[1], 0);
     auto graph = parser.parse()->toCircuitGraph();
+    // auto graph = CircuitGraph::QFT(30);
+
     // saot::parse::Parser parser(argv[1]);
     // auto graph = parser.parseQuantumCircuit().toCircuitGraph();
 
-    applyCPUGateFusion(CPUFusionConfig::Default, graph);
+    applyCPUGateFusion(CPUFusionConfig::TwoQubitOnly, graph);
     // graph.print(std::cerr) << "\n";
 
     // auto& fusedGate = graph.getAllBlocks()[0]->quantumGate;
@@ -80,6 +82,7 @@ int main(int argc, char** argv) {
     IRGenerator G;
 
     CUDAGenerationConfig cudaGenConfig {
+        .precision = 64,
         .useImmValues = true,
         .useConstantMemSpaceForMatPtrArg = false,
         .forceDenseKernel = false,
@@ -118,9 +121,9 @@ int main(int argc, char** argv) {
     G.getModule()->setTargetTriple(targetTriple.getTriple());
     G.getModule()->setDataLayout(targetMachine->createDataLayout());
 
-    // timedExecute([&]() {
-    //     G.applyLLVMOptimization(OptimizationLevel::O1);
-    // }, "Optimization Applied");
+    timedExecute([&]() {
+        G.applyLLVMOptimization(OptimizationLevel::O1);
+    }, "Optimization Applied");
 
     llvm::SmallString<8> data_ptx, data_ll;
     llvm::raw_svector_ostream dest_ptx(data_ptx), dest_ll(data_ll);
@@ -161,7 +164,7 @@ int main(int argc, char** argv) {
     std::vector<kernel_t> kernels(allBlocks.size());
     auto nBlocks = allBlocks.size();
     for (int i = 0; i < nBlocks; i++) {
-        std::cerr << "Initilizing kernel " << i << "/" << nBlocks << ": id = " << allBlocks[i]->id << "\n";
+        // std::cerr << "Initilizing kernel " << i << "/" << nBlocks << ": id = " << allBlocks[i]->id << "\n";
         std::string kernelName = "kernel_block_" + std::to_string(allBlocks[i]->id);
         CHECK_CUDA_ERR(cuModuleGetFunction(&(kernels[i].kernel), cuMod, kernelName.c_str()));
         kernels[i].block = allBlocks[i];
