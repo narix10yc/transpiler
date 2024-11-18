@@ -117,6 +117,7 @@ int main(int argc, char** argv) {
     // CodeGeneratorCPU codeGenerator;
     IRGeneratorConfig irConfig;
     CodeGeneratorCPUConfig cpuConfig;
+    cl::ParseCommandLineOptions(argc, argv);
 
     irConfig = IRGeneratorConfig {
         .simd_s = SimdS,
@@ -134,9 +135,10 @@ int main(int argc, char** argv) {
         .shareMatrixElemUseImmValue = ShareMatrixElemUseImmValue
     };
 
+    irConfig.display();
+
     // parse arguments
     // timedExecute([&]() {
-        cl::ParseCommandLineOptions(argc, argv);
         if (MaxNQubits > 0 || MaxOpCount > 0) {
             if (MaxNQubits == 0 || MaxOpCount == 0) {
                 std::cerr << RED_FG << BOLD << "Argument Error: " << RESET
