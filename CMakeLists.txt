@@ -35,6 +35,9 @@ add_link_options("-fuse-ld=lld")
 message(STATUS "C Compiler: ${CMAKE_C_COMPILER}")
 message(STATUS "C++ Compiler: ${CMAKE_CXX_COMPILER}")
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=native")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+
 if(DEFINED ENV{SELECT_GCC_TOOLCHAIN})
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --gcc-install-dir=$ENV{SELECT_GCC_TOOLCHAIN}")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --gcc-install-dir=$ENV{SELECT_GCC_TOOLCHAIN}")

@@ -32,7 +32,7 @@
 #include <cuda_runtime.h>
 
 using utils::timedExecute;
-using scalar_t = float;
+using scalar_t = double;
 
 #define CHECK_CUDA_ERR(err) \
     if (err != CUDA_SUCCESS) {\
@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
     IRGenerator G;
 
     CUDAGenerationConfig cudaGenConfig {
-        .precision = 32,
+        .precision = 64,
         .useImmValues = true,
         .useConstantMemSpaceForMatPtrArg = false,
         .forceDenseKernel = false,
