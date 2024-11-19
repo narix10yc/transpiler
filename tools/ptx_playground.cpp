@@ -32,7 +32,7 @@
 #include <cuda_runtime.h>
 
 using utils::timedExecute;
-using scalar_t = double;
+using scalar_t = float;
 
 #define CHECK_CUDA_ERR(err) \
     if (err != CUDA_SUCCESS) {\
@@ -63,13 +63,22 @@ int main(int argc, char** argv) {
     // saot::parse::Parser parser(argv[1]);
     // auto graph = parser.parseQuantumCircuit().toCircuitGraph();
 
-    applyCPUGateFusion(CPUFusionConfig::Default, graph);
+    auto fusionConfig = CPUFusionConfig::Default;
+    // CPUFusionConfig fusionConfig = CPUFusionConfig {
+    //     .maxNQubits = 3,
+    //     .maxOpCount = 9999,
+    //     .zeroSkippingThreshold = 1e-8,
+    //     .allowMultipleTraverse = true,
+    //     .incrementScheme = true,
+    // };
+    applyCPUGateFusion(fusionConfig, graph);
+
     // graph.print(std::cerr) << "\n";
 
     IRGenerator G;
 
     CUDAGenerationConfig cudaGenConfig {
-        .precision = 64,
+        .precision = 32,
         .useImmValues = true,
         .useConstantMemSpaceForMatPtrArg = false,
         .forceDenseKernel = false,

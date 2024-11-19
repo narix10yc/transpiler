@@ -131,7 +131,7 @@ Function* IRGenerator::generateCUDAKernel(
                 + (xxxhgfedcba & 11111111000) << 3
     */
 
-    utils::printVector(gate.qubits, std::cerr << "target qubits: ") << "\n";
+    // utils::printVector(gate.qubits, std::cerr << "target qubits: ") << "\n";
     
     // idx = insert 0 to every bit in higherQubits to counter
     idxStartV = builder.getInt64(0ULL);
@@ -142,15 +142,15 @@ Function* IRGenerator::generateCUDAKernel(
         unsigned bit = qubits[i];
         mask = ((1ULL << (bit - i)) - 1) - maskSum;
         maskSum = (1ULL << (bit - i)) - 1;
-        std::cerr << "i = " << i << ", bit = " << bit
-                  << ", mask = " << utils::as0b(mask, nqubits) << "\n";
+        // std::cerr << "i = " << i << ", bit = " << bit
+                //   << ", mask = " << utils::as0b(mask, nqubits) << "\n";
 
         tmpCounterV = builder.CreateAnd(counterV, mask, "tmpCounter");
         tmpCounterV = builder.CreateShl(tmpCounterV, i, "tmpCounter");
         idxStartV = builder.CreateAdd(idxStartV, tmpCounterV, "tmpIdx");
     }
     mask = ~((1ULL << (qubits.back() - nqubits + 1)) - 1);
-    std::cerr << "mask = " << utils::as0b(mask, nqubits) << "\n";
+    // std::cerr << "mask = " << utils::as0b(mask, nqubits) << "\n";
     tmpCounterV = builder.CreateAnd(counterV, mask, "tmpCounter");
     tmpCounterV = builder.CreateShl(tmpCounterV, nqubits-1, "tmpCounter");
     idxStartV = builder.CreateAdd(idxStartV, tmpCounterV, "idxStart");
