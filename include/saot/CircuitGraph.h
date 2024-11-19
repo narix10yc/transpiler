@@ -171,6 +171,9 @@ public:
     static CircuitGraph QFTCircuit(int nqubits);
     static CircuitGraph ALACircuit(int nqubits, int nrounds);
 
+    static CircuitGraph GetTestCircuit(
+            const GateMatrix& gateMatrix, int nqubits, int nrounds);
+
     tile_t& tile() { return _tile; }
     const tile_t& tile() const { return _tile; }
 

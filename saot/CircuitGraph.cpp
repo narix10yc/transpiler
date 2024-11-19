@@ -84,6 +84,20 @@ CircuitGraph CircuitGraph::ALACircuit(int nqubits, int nrounds) {
     return graph;
 }
 
+CircuitGraph CircuitGraph::GetTestCircuit(
+        const GateMatrix& gateMatrix, int nqubits, int nrounds) {
+    CircuitGraph graph;
+    auto nqubitsGate = gateMatrix.nqubits();
+
+    for (int r = 0; r < nrounds; r++) {
+        for (int q = 0; q < nqubits; q++) {
+            graph.addGate(QuantumGate(gateMatrix, { q, (q+1) % nqubits, (q+2) % nqubits }));
+        }
+    }
+    return graph;
+}
+
+
 CircuitGraph::tile_iter_t
 CircuitGraph::insertBlock(tile_iter_t it, GateBlock* block) {
     assert(block);
