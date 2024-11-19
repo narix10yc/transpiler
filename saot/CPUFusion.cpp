@@ -107,9 +107,9 @@ GateBlock* computeCandidate(
         return nullptr;
     }
     
-    auto blockQuantumGate = rhs->quantumGate->lmatmul(*(lhs->quantumGate));
-    if (config.maxNQubits >= 0 && 
-            blockQuantumGate.opCount(config.zeroSkippingThreshold) > config.maxOpCount) {
+    block->quantumGate = std::make_unique<QuantumGate>(rhs->quantumGate->lmatmul(*(lhs->quantumGate)));
+    if (config.maxOpCount >= 0 && 
+            block->quantumGate->opCount(config.zeroSkippingThreshold) > config.maxOpCount) {
         // std::cerr << CYAN_FG << "Rejected due to OpCount\n" << RESET;
         delete(block);
         return nullptr;
@@ -117,7 +117,6 @@ GateBlock* computeCandidate(
 
     // accept candidate
     // std::cerr << GREEN_FG << "Fusion accepted!\n" << RESET;
-    block->quantumGate = std::make_unique<QuantumGate>(blockQuantumGate);
     return block;
 }
 

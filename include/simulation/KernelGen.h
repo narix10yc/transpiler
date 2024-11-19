@@ -6,6 +6,8 @@
 
 namespace saot {
 
+class QuantumGate;
+
 struct CPUKernelGenConfig {
     enum AmpFormat { AltFormat, SepFormat };
 
@@ -26,18 +28,9 @@ struct CPUKernelGenConfig {
     static const CPUKernelGenConfig NativeDefault;
 };
 
-enum ScalarKind : int {
-    SK_Zero = 0,
-    SK_One = 1,
-    SK_MinusOne = -1,
-    SK_General = 2,
-    SK_ImmValue = 3,
-};
-
 llvm::Function* genCPUCode(llvm::Module& llvmModule,
                            const CPUKernelGenConfig& config,
-                           const std::vector<ScalarKind>& sigMat,
-                           const std::vector<int>& qubits,
+                           const QuantumGate& gate,
                            const std::string& funcName);
 
 

@@ -1,5 +1,6 @@
 #include "simulation/KernelGen.h"
 #include "simulation/KernelGenInternal.h"
+#include "saot/QuantumGate.h"
 
 #include "utils/iocolor.h"
 #include "utils/utils.h"
@@ -69,16 +70,14 @@ getMaskToMerge(const std::vector<int>& v0, const std::vector<int>& v1) {
 
 Function* saot::genCPUCode(llvm::Module& llvmModule,
                            const CPUKernelGenConfig& config,
-                           const std::vector<ScalarKind>& sigMat,
-                           const std::vector<int>& qubits,
+                           const QuantumGate& gate,
                            const std::string& funcName) {
     const uint64_t s = config.simdS;
     const uint64_t S = 1ULL << s;
-    const uint64_t k = qubits.size();
+    const uint64_t k = gate.qubits.size();
     const uint64_t K = 1ULL << k;
 
     auto& llvmContext = llvmModule.getContext();
-    assert(K * K == sigMat.size());
 
     IRBuilder<> builder(llvmContext);
 
