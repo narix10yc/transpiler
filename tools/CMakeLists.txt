@@ -20,7 +20,7 @@ llvm_map_components_to_libnames(llvm_libs ${LLVM_TARGETS_TO_BUILD})
 if (CUDA_FOUND)
     target_link_libraries(ptx_playground qasm saot simulation ${llvm_libs} cuda cudart)
 else()
-    target_link_libraries(ptx_playground qasm saot simulation ${llvm_libs} cuda cudart)
+    target_link_libraries(ptx_playground qasm saot simulation ${llvm_libs})
 endif()
 
 add_executable(pg_polynomial "pg_polynomial.cpp")

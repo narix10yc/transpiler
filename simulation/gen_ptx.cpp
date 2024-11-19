@@ -66,6 +66,9 @@ Function* IRGenerator::generateCUDAKernel(
     const auto& qubits = gate.qubits;
     const int nqubits = qubits.size();
 
+    auto* gateCMat = gate.gateMatrix.getConstantMatrix();
+    printConstantMatrix(std::cerr, *gateCMat);
+
     Type* scalarTy = (config.precision == 32) ? builder.getFloatTy()
                                               : builder.getDoubleTy();
     Function* func;
@@ -213,12 +216,20 @@ Function* IRGenerator::generateCUDAKernel(
         // updatedImAmp = sum(reAmps_i * imMats_i) + sum(imAmps_i * reMats_i)
         Value *reMatPtr, *imMatPtr, *reMat, *imMat;
         if (sigMat.getRC(0, 0).real() == SK_General) {
-            reMatPtr = builder.CreateConstGEP1_64(scalarTy, pMatArg, 0ULL, "mat.re.ptr." + std::to_string(r) + ".0");
-            reMat = builder.CreateLoad(scalarTy, reMatPtr, "mat.re." + std::to_string(r) + ".0");
+            if (config.useImmValues && gateCMat) {
+                reMat = ConstantFP::get(scalarTy, gateCMat->getRC(0, 0).real());
+            } else {
+                reMatPtr = builder.CreateConstGEP1_64(scalarTy, pMatArg, 0ULL, "mat.re.ptr." + std::to_string(r) + ".0");
+                reMat = builder.CreateLoad(scalarTy, reMatPtr, "mat.re." + std::to_string(r) + ".0");
+            }
         }
         if (sigMat.getRC(0, 0).imag() == SK_General) {
-            imMatPtr = builder.CreateConstGEP1_64(scalarTy, pMatArg, 1ULL, "mat.im.ptr." + std::to_string(r) + ".0");
-            imMat = builder.CreateLoad(scalarTy, imMatPtr, "mat.im." + std::to_string(r) + ".0");
+            if (config.useImmValues && gateCMat) {
+                imMat = ConstantFP::get(scalarTy, gateCMat->getRC(0, 0).imag());
+            } else {
+                imMatPtr = builder.CreateConstGEP1_64(scalarTy, pMatArg, 1ULL, "mat.im.ptr." + std::to_string(r) + ".0");
+                imMat = builder.CreateLoad(scalarTy, imMatPtr, "mat.im." + std::to_string(r) + ".0");
+            }
         }
         
         Value* updatedReAmp0 = genOptFMul(reMat, reAmps[0], sigMat.getRC(0, 0).real(), builder);
@@ -232,12 +243,20 @@ Function* IRGenerator::generateCUDAKernel(
 
             size_t matIdx = r * N + c;
             if (sigMat.getRC(r, c).real() == SK_General) {
-                reMatPtr = builder.CreateConstGEP1_64(scalarTy, pMatArg, 2ULL * matIdx, "idx.mat.re." + suffix);
-                reMat = builder.CreateLoad(scalarTy, reMatPtr, "mat.re." + suffix);
+                if (config.useImmValues && gateCMat) {
+                    reMat = ConstantFP::get(scalarTy, gateCMat->getRC(r, c).real());
+                } else {
+                    reMatPtr = builder.CreateConstGEP1_64(scalarTy, pMatArg, 2ULL * matIdx, "idx.mat.re." + suffix);
+                    reMat = builder.CreateLoad(scalarTy, reMatPtr, "mat.re." + suffix);
+                }
             }
             if (sigMat.getRC(r, c).imag() == SK_General) {
-                imMatPtr = builder.CreateConstGEP1_64(scalarTy, pMatArg, 2ULL * matIdx + 1, "idx.mat.im." + suffix);
-                imMat = builder.CreateLoad(scalarTy, imMatPtr, "mat.im." + suffix);
+                if (config.useImmValues && gateCMat) {
+                    reMat = ConstantFP::get(scalarTy, gateCMat->getRC(r, c).imag());
+                } else {
+                    imMatPtr = builder.CreateConstGEP1_64(scalarTy, pMatArg, 2ULL * matIdx + 1, "idx.mat.im." + suffix);
+                    imMat = builder.CreateLoad(scalarTy, imMatPtr, "mat.im." + suffix);
+                }
             }
 
             // updatedReAmp0 = builder.CreateIntrinsic(
