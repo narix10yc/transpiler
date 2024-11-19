@@ -67,7 +67,7 @@ Function* IRGenerator::generateCUDAKernel(
     const int nqubits = qubits.size();
 
     auto* gateCMat = gate.gateMatrix.getConstantMatrix();
-    printConstantMatrix(std::cerr, *gateCMat);
+    // printConstantMatrix(std::cerr, *gateCMat);
 
     Type* scalarTy = (config.precision == 32) ? builder.getFloatTy()
                                               : builder.getDoubleTy();
@@ -110,7 +110,6 @@ Function* IRGenerator::generateCUDAKernel(
     } // end function declearation
 
     Value* counterV;
-    Value* idxStartV = builder.getInt64(0ULL);
 
     BasicBlock* entryBB = BasicBlock::Create(*_context, "entry", func);
     builder.SetInsertPoint(entryBB);
@@ -122,7 +121,7 @@ Function* IRGenerator::generateCUDAKernel(
         Intrinsic::nvvm_read_ptx_sreg_ctaid_x, {}, nullptr, "blockIdx");
     counterV = builder.CreateMul(blockIdx, nthreads);
     counterV = builder.CreateAdd(counterV, threadIdx, "counter.i32");
-    counterV = builder.CreateIntCast(counterV, builder.getInt64Ty(), true, "counter");
+    counterV = builder.CreateIntCast(counterV, builder.getInt64Ty(), true, "global.thread.idx");
     /*
     Example: with target qubits 2, 4, 5
     counter:   xxxhgfedcba
@@ -132,31 +131,49 @@ Function* IRGenerator::generateCUDAKernel(
     hgfed00c0ba = (xxxhgfedcba & 00000000011) << 0
                 + (xxxhgfedcba & 00000000100) << 1
                 + (xxxhgfedcba & 11111111000) << 3
+    
+    We build this segment by segment. For [2, 4, 5], there are 3 segments:
+        [0, 2),      [3, 4),      [5, ),
+    corresponding to mask
+        00000000011, 00000000100, 11111111000
     */
 
-    // utils::printVector(gate.qubits, std::cerr << "target qubits: ") << "\n";
+    // utils::printVector(qubits, std::cerr << "target qubits: ") << "\n";
     
-    // idx = insert 0 to every bit in higherQubits to counter
-    idxStartV = builder.getInt64(0ULL);
+    // the pointer of sv start in this thread
+    Value* svPtrV;
+    {
+    Value* idxStartV = builder.getInt64(0ULL);
+    Value* tmpCounterV;
     uint64_t mask = 0ULL;
-    uint64_t maskSum = 0ULL;
-    Value* tmpCounterV = counterV;
-    for (unsigned i = 0; i < nqubits; i++) {
-        unsigned bit = qubits[i];
-        mask = ((1ULL << (bit - i)) - 1) - maskSum;
-        maskSum = (1ULL << (bit - i)) - 1;
-        // std::cerr << "i = " << i << ", bit = " << bit
-                //   << ", mask = " << utils::as0b(mask, nqubits) << "\n";
-
+    int highestQ = qubits.back();
+    int qIdx = 0;
+    int counterQ = 0;
+    for (int q = 0; q <= highestQ; q++) {
+        if (q < qubits[qIdx]) {
+            mask |= (1 << counterQ++);
+            continue;
+        }
+        // q == qubits[qIdx];
+        ++qIdx;
+        if (mask == 0)
+            continue;
         tmpCounterV = builder.CreateAnd(counterV, mask, "tmpCounter");
-        tmpCounterV = builder.CreateShl(tmpCounterV, i, "tmpCounter");
+        tmpCounterV = builder.CreateShl(tmpCounterV, (qIdx - 1), "tmpCounter");
         idxStartV = builder.CreateAdd(idxStartV, tmpCounterV, "tmpIdx");
+        // std::cerr << "  (globalThreadIdx & " << utils::as0b(mask, 32) << ") << " << (qIdx - 1) << "\n";
+        mask = 0ULL;
     }
     mask = ~((1ULL << (qubits.back() - nqubits + 1)) - 1);
-    // std::cerr << "mask = " << utils::as0b(mask, nqubits) << "\n";
+    // std::cerr << "  (globalThreadIdx & " << utils::as0b(mask, 32) << ") << " << (nqubits) << "\n";
+
     tmpCounterV = builder.CreateAnd(counterV, mask, "tmpCounter");
-    tmpCounterV = builder.CreateShl(tmpCounterV, nqubits-1, "tmpCounter");
+    tmpCounterV = builder.CreateShl(tmpCounterV, nqubits, "tmpCounter");
     idxStartV = builder.CreateAdd(idxStartV, tmpCounterV, "idxStart");
+    idxStartV = builder.CreateShl(idxStartV, 1, "idxStart");
+    svPtrV = builder.CreateGEP(scalarTy, pSvArg, idxStartV, "sv.ptr");
+    }
+
 
     uint64_t N = 1 << nqubits;
     // std::vector<Value*> reMats(N), imMats(N), reAmpPtrs(N), imAmpPtrs(N), reAmps(N), imAmps(N);
@@ -169,18 +186,18 @@ Function* IRGenerator::generateCUDAKernel(
         }    
     }
 
+    // load amplitude set
     for (uint64_t i = 0; i < N; i++) {
         uint64_t delta = 0ULL;
         for (int b = 0; b < nqubits; b++) {
             if (i & (1 << b))
                 delta |= (1 << qubits[b]);
         }
-        auto* idxReV = builder.CreateAdd(idxStartV, builder.getInt64(2 * delta), "idx.amp.re." + std::to_string(i));
-        reAmpPtrs[i] = builder.CreateGEP(scalarTy, pSvArg, idxReV, "amp.re.ptr." + std::to_string(i));
-        reAmps[i] = builder.CreateLoad(scalarTy, reAmpPtrs[i], "amp.re." + std::to_string(i));
+        // std::cerr << "amp idx " << utils::as0b(i, nqubits) << ", delta = " << utils::as0b(delta, 32) << "\n";
 
-        auto* idxImV = builder.CreateAdd(idxStartV, builder.getInt64(2 * delta + 1), "idx.amp.im." + std::to_string(i));
-        imAmpPtrs[i] = builder.CreateGEP(scalarTy, pSvArg, idxImV, "amp.im.ptr." + std::to_string(i));
+        reAmpPtrs[i] = builder.CreateConstGEP1_64(scalarTy, svPtrV, 2 * delta, "amp.re.ptr." + std::to_string(i));
+        reAmps[i] = builder.CreateLoad(scalarTy, reAmpPtrs[i], "amp.re." + std::to_string(i));
+        imAmpPtrs[i] = builder.CreateConstGEP1_64(scalarTy, svPtrV, 2 * delta + 1, "amp.im.ptr." + std::to_string(i));
         imAmps[i] = builder.CreateLoad(scalarTy, imAmpPtrs[i], "amp.im." + std::to_string(i));
     }
 
@@ -252,7 +269,7 @@ Function* IRGenerator::generateCUDAKernel(
             }
             if (sigMat.getRC(r, c).imag() == SK_General) {
                 if (config.useImmValues && gateCMat) {
-                    reMat = ConstantFP::get(scalarTy, gateCMat->getRC(r, c).imag());
+                    imMat = ConstantFP::get(scalarTy, gateCMat->getRC(r, c).imag());
                 } else {
                     imMatPtr = builder.CreateConstGEP1_64(scalarTy, pMatArg, 2ULL * matIdx + 1, "idx.mat.im." + suffix);
                     imMat = builder.CreateLoad(scalarTy, imMatPtr, "mat.im." + suffix);
