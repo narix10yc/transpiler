@@ -23,6 +23,11 @@ saot::CircuitGraph RootNode::toCircuitGraph() const {
             assert(ev.isConstant);
             params[i++] = ev.value;
         }
+        if (gateApply->name == "u3") {
+            auto* p = std::get_if<double>(&params[0]);
+            assert(p);
+            *p *= 0.5;
+        }
         auto matrix = saot::GateMatrix::FromName(gateApply->name, params);
         graph.addGate(matrix, qubits);
     }

@@ -567,12 +567,14 @@ void GateMatrix::computeAndCacheCMat() const {
         const double* p1 = std::get_if<double>(&gateParameters[1]);
         const double* p2 = std::get_if<double>(&gateParameters[2]);
         if (p0 && p1 && p2) {
+            // std::cerr << "(theta, phi, lambd) = " << *p0 << " " << *p1 << " " << *p2 << "\n";
             cache.cMat = c_matrix_t({
-                { std::cos(*p0), 0.0 },
+                {  std::cos(*p0), 0.0 },
                 { -std::cos(*p2) * std::sin(*p0), -std::sin(*p2) * std::sin(*p0) },
-                { std::cos(*p1) * std::sin(*p0), std::sin(*p1) * std::sin(*p0) },
-                { std::cos(*p1 + *p2) * std::cos(*p0), std::sin(*p1 + *p2) * std::cos(*p0) }
+                {  std::cos(*p1) * std::sin(*p0),  std::sin(*p1) * std::sin(*p0) },
+                {  std::cos(*p1 + *p2) * std::cos(*p0), std::sin(*p1 + *p2) * std::cos(*p0) }
             });
+            // printConstantMatrix(std::cerr, cache.cMat);
             cache.isConvertibleToCMat = Convertible;
             return;
         }

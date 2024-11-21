@@ -226,6 +226,9 @@ int main(int argc, char** argv) {
 
     // runExperiment([arg = argv[1]]() {
         // return CircuitGraph::QFTCircuit(std::stoi(arg));
+        // CircuitGraph graph;
+        // graph.addGate(QuantumGate(GateMatrix::FromName("u3", {M_PI_2, 0.0, M_PI}), 0));
+        // return graph;
     // });
 
     return 0;
