@@ -13,7 +13,7 @@ using namespace saot;
 using namespace saot::parse;
 using namespace simulation;
 
-int main(int argc, char **argv) {
+int main(int argc, char* *argv) {
   std::vector<std::pair<int, double>> varValues{{0, 1.1},  {1, 0.4},  {2, 0.1},
                                                 {3, -0.3}, {4, -0.9}, {5, 1.9}};
 

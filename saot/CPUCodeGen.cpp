@@ -111,7 +111,7 @@ void CodeGeneratorCPU::generate(const CircuitGraph &graph, int debugLevel,
   auto allBlocks = graph.getAllBlocks();
   if (forceInOrder)
     std::sort(allBlocks.begin(), allBlocks.end(),
-              [](GateBlock *a, GateBlock *b) { return a->id < b->id; });
+              [](GateBlock* a, GateBlock* b) { return a->id < b->id; });
 
   std::string kernelDir = fileName + "_kernels";
   if (config.dumpIRToMultipleFiles) {
@@ -121,7 +121,7 @@ void CodeGeneratorCPU::generate(const CircuitGraph &graph, int debugLevel,
   IRGenerator irGenerator(config.irConfig,
                           "mod_" + std::to_string(allBlocks[0]->id));
   for (const auto &block : allBlocks) {
-    const auto &gate = *(block->quantumGate);
+    const auto &gate =* (block->quantumGate);
     std::string kernelName = "kernel_block_" + std::to_string(block->id);
     irGenerator.generateKernelDebug(gate, debugLevel, kernelName);
     if (config.dumpIRToMultipleFiles) {
@@ -156,7 +156,7 @@ void CodeGeneratorCPU::generate(const CircuitGraph &graph, int debugLevel,
     }
 
     metaDataSS << "(" << realTy << "[]){";
-    const auto *cMat = block->quantumGate->gateMatrix.getConstantMatrix();
+    const auto* cMat = block->quantumGate->gateMatrix.getConstantMatrix();
     assert(cMat);
     const auto &cdata = cMat->data;
     for (const auto &elem : cdata)
@@ -211,12 +211,12 @@ void CodeGeneratorCPU::generate(const CircuitGraph &graph, int debugLevel,
 // generateCpuIrForRecompilation helper functions
 namespace {
 
-inline std::string getKernelName(GateBlock *block) {
+inline std::string getKernelName(GateBlock* block) {
   return "kernel_" + std::to_string(block->id);
 }
 
 // write meta data to a C header file
-void writeMetadataHeaderFile(const std::vector<GateBlock *> &allBlocks,
+void writeMetadataHeaderFile(const std::vector<GateBlock*> &allBlocks,
                              int nqubits, const std::string &fileName,
                              const CodeGeneratorCPUConfig &config) {
   bool isSepKernel =
@@ -290,7 +290,7 @@ void writeMetadataHeaderFile(const std::vector<GateBlock *> &allBlocks,
              << "static const _meta_data_t_ _metaData[] = {\n";
 
   for (const auto &block : allBlocks) {
-    const auto &gate = *(block->quantumGate);
+    const auto &gate =* (block->quantumGate);
     std::string kernelName = getKernelName(block);
 
     externSS << " void " << kernelName << "(" << realTy << "*, ";
@@ -311,7 +311,7 @@ void writeMetadataHeaderFile(const std::vector<GateBlock *> &allBlocks,
     }
 
     metaDataSS << "(" << realTy << "[]){";
-    const auto *cMat = block->quantumGate->gateMatrix.getConstantMatrix();
+    const auto* cMat = block->quantumGate->gateMatrix.getConstantMatrix();
     assert(cMat);
     const auto &cdata = cMat->data;
     for (const auto &elem : cdata)
@@ -356,10 +356,10 @@ using clock = std::chrono::high_resolution_clock;
 // write kernel ir to a llvm ir file named <dir>/kernels_t<threadIdx>.ll.
 // This file will contain (blockIdx1 - blockIdx0) kernels.
 // This function will own its own instance of IRGenerator
-void writeKernelsSingleIrFile(const std::vector<GateBlock *> &allBlocks,
+void writeKernelsSingleIrFile(const std::vector<GateBlock*> &allBlocks,
                               const std::string &dir,
                               const CodeGeneratorCPUConfig &config,
-                              int blockIdx0, int blockIdx1, double *irGenTime) {
+                              int blockIdx0, int blockIdx1, double* irGenTime) {
 
   IRGenerator irGenerator(config.irConfig,
                           "module_blocks" + std::to_string(blockIdx0) + "_to_" +
@@ -367,14 +367,14 @@ void writeKernelsSingleIrFile(const std::vector<GateBlock *> &allBlocks,
 
   auto tic = clock::now();
   for (int i = blockIdx0; i < blockIdx1; i++) {
-    const auto &gate = *(allBlocks[i]->quantumGate);
+    const auto &gate =* (allBlocks[i]->quantumGate);
     std::string kernelName = getKernelName(allBlocks[i]);
     irGenerator.generateKernel(gate, kernelName);
   }
   auto tok = clock::now();
   std::chrono::duration<double> duration = tok - tic;
   if (irGenTime) {
-    *irGenTime = duration.count();
+   * irGenTime = duration.count();
   }
   std::error_code ec;
   std::string filename = dir + "/kernel_" + std::to_string(blockIdx0) + "_to_" +
@@ -389,11 +389,11 @@ void writeKernelsSingleIrFile(const std::vector<GateBlock *> &allBlocks,
   irFile.close();
 }
 
-void writeKernelsMultipleIrFiles(const std::vector<GateBlock *> &allBlocks,
+void writeKernelsMultipleIrFiles(const std::vector<GateBlock*> &allBlocks,
                                  const std::string &dir,
                                  const CodeGeneratorCPUConfig &config,
                                  int blockIdx0, int blockIdx1,
-                                 double *irGenTime) {
+                                 double* irGenTime) {
 
   IRGenerator irGenerator(config.irConfig,
                           "module_block" +
@@ -405,7 +405,7 @@ void writeKernelsMultipleIrFiles(const std::vector<GateBlock *> &allBlocks,
   std::chrono::duration<double> duration = tok - tic;
 
   for (int i = blockIdx0; i < blockIdx1; i++) {
-    const auto &gate = *(allBlocks[i]->quantumGate);
+    const auto &gate =* (allBlocks[i]->quantumGate);
     std::string kernelName = getKernelName(allBlocks[i]);
     tic = clock::now();
     irGenerator.generateKernel(gate, kernelName);
@@ -432,7 +432,7 @@ void writeKernelsMultipleIrFiles(const std::vector<GateBlock *> &allBlocks,
     }
   }
   if (irGenTime) {
-    *irGenTime = totalTime;
+   * irGenTime = totalTime;
   }
   return;
 }
@@ -448,7 +448,7 @@ void saot::generateCpuIrForRecompilation(const CircuitGraph &graph,
   auto allBlocks = graph.getAllBlocks();
   if (config.forceInOrder)
     std::sort(allBlocks.begin(), allBlocks.end(),
-              [](GateBlock *a, GateBlock *b) { return a->id < b->id; });
+              [](GateBlock* a, GateBlock* b) { return a->id < b->id; });
 
   sys::fs::create_directory(dir);
   if (config.rmFilesInsideOutputDirectory) {

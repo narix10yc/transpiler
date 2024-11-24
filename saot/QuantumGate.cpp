@@ -71,9 +71,9 @@ inline QuantumGate lmatmul_up_up(const GateMatrix::up_matrix_t &aUp,
   uint64_t aMask = 0;
   uint64_t bMask = 0;
   for (auto it = cQubits.begin(); it != cQubits.end(); it++) {
-    if (std::find(aQubits.begin(), aQubits.end(), *it) != aQubits.end())
+    if (std::find(aQubits.begin(), aQubits.end(),* it) != aQubits.end())
       aMask |= (1 << i);
-    if (std::find(bQubits.begin(), bQubits.end(), *it) != bQubits.end())
+    if (std::find(bQubits.begin(), bQubits.end(),* it) != bQubits.end())
       bMask |= (1 << i);
     i++;
   }
@@ -184,8 +184,8 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate &other) const {
 
   // const matrix
   {
-    const auto *aCMat = other.gateMatrix.getConstantMatrix();
-    const auto *bCMat = gateMatrix.getConstantMatrix();
+    const auto* aCMat = other.gateMatrix.getConstantMatrix();
+    const auto* bCMat = gateMatrix.getConstantMatrix();
     if (aCMat && bCMat) {
       GateMatrix::c_matrix_t cCMat(1 << cNqubits);
       // main loop
@@ -195,12 +195,12 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate &other) const {
 
         // std::cerr << "Ready to update cmat[" << i << "]\n";
         // std::cerr << "  aIdxBegin: " << utils::as0b(i, 2 * cNqubits)
-        //           << " -> " << utils::as0b(utils::pdep64(i, aPdepMask), 2 *
+        //           << " -> " << utils::as0b(utils::pdep64(i, aPdepMask), 2* 
         //           aNqubits)
         //           << " -> " << utils::as0b(aIdxBegin, 2 * aNqubits) << " = "
         //           << aIdxBegin << "\n";
         // std::cerr << "  bIdxBegin: " << utils::as0b(i, 2 * cNqubits)
-        //           << " -> " << utils::as0b(utils::pdep64(i, bPdepMask), 2 *
+        //           << " -> " << utils::as0b(utils::pdep64(i, bPdepMask), 2* 
         //           bNqubits)
         //           << " -> " << utils::as0b(bIdxBegin, 2 * bNqubits) << " = "
         //           << bIdxBegin << "\n";
@@ -284,7 +284,7 @@ int QuantumGate::opCount(double thres) const {
 
   double normalizedThres = thres / std::pow(2.0, gateMatrix.nqubits());
 
-  if (const auto *cMat = gateMatrix.getConstantMatrix())
+  if (const auto* cMat = gateMatrix.getConstantMatrix())
     return opCount_c(*cMat, normalizedThres);
   return opCount_p(gateMatrix.getParametrizedMatrix(), normalizedThres);
 

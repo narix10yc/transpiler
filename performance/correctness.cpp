@@ -18,7 +18,7 @@ using namespace saot::simulate;
 using namespace utils::statevector;
 using namespace saot;
 
-int main(int argc, char **argv) {
+int main(int argc, char* *argv) {
   assert(argc > 1);
   unsigned targetQ = std::stoi(argv[1]);
 

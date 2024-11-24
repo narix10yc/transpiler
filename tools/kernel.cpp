@@ -79,7 +79,7 @@ static CircuitGraph &getCircuitU3(CircuitGraph &graph, int nqubits) {
   return graph;
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char* *argv) {
   cl::opt<unsigned> NQubits("N", cl::desc("number of qubits"), cl::Prefix,
                             cl::Required);
   cl::opt<std::string> outputFilename("o", cl::desc("output file name"),

@@ -125,7 +125,7 @@ public:
   void permuteSelf(const std::vector<int> &flags);
 
   // get cached unitary perm matrix object associated with this GateMatrix
-  const up_matrix_t *getUnitaryPermMatrix(double tolerance = 0.0) const {
+  const up_matrix_t* getUnitaryPermMatrix(double tolerance = 0.0) const {
     if (cache.isConvertibleToUpMat == Unknown)
       computeAndCacheUpMat(tolerance);
     if (cache.isConvertibleToUpMat == UnConvertible)
@@ -133,7 +133,7 @@ public:
     return &cache.upMat;
   }
 
-  up_matrix_t *getUnitaryPermMatrix(double tolerance = 0.0) {
+  up_matrix_t* getUnitaryPermMatrix(double tolerance = 0.0) {
     if (cache.isConvertibleToUpMat == Unknown)
       computeAndCacheUpMat(tolerance);
     if (cache.isConvertibleToUpMat == UnConvertible)
@@ -142,7 +142,7 @@ public:
   }
 
   // get cached constant matrix object associated with this GateMatrix
-  const c_matrix_t *getConstantMatrix() const {
+  const c_matrix_t* getConstantMatrix() const {
     if (cache.isConvertibleToCMat == Unknown)
       computeAndCacheCMat();
     if (cache.isConvertibleToCMat == UnConvertible)
@@ -150,7 +150,7 @@ public:
     return &cache.cMat;
   }
 
-  c_matrix_t *getConstantMatrix() {
+  c_matrix_t* getConstantMatrix() {
     if (cache.isConvertibleToCMat == Unknown)
       computeAndCacheCMat();
     if (cache.isConvertibleToCMat == UnConvertible)
@@ -194,9 +194,9 @@ public:
   int nqubits() const;
 
   std::ostream &printCMat(std::ostream &os) const {
-    const auto *cMat = getConstantMatrix();
+    const auto* cMat = getConstantMatrix();
     assert(cMat);
-    return printConstantMatrix(os, *cMat);
+    return printConstantMatrix(os,* cMat);
   }
 
   std::ostream &printPMat(std::ostream &os) const {

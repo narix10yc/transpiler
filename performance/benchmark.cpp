@@ -21,7 +21,7 @@ using Statevector = utils::statevector::StatevectorSep<real_t>;
 
 // #include <immintrin.h>
 
-int main(int argc, char **argv) {
+int main(int argc, char* *argv) {
   Statevector sv(DEFAULT_NQUBITS);
   Timer timer;
   // timer.setRunTime(0.5);

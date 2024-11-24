@@ -36,7 +36,7 @@ uint64_t utils::pdep64(uint64_t src, uint64_t mask, int nbits) {
   return dst;
 }
 
-void utils::timedExecute(std::function<void()> f, const char *msg) {
+void utils::timedExecute(std::function<void()> f, const char* msg) {
   using clock = std::chrono::high_resolution_clock;
   auto tic = clock::now();
   f();

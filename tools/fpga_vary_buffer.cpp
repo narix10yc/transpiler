@@ -163,7 +163,7 @@ void runExperiment(std::function<CircuitGraph()> f) {
   }
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char* *argv) {
   assert(argc > 1);
 
   // std::vector<fpga::Instruction> instructions;

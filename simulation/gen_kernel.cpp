@@ -15,8 +15,8 @@ using namespace simulation;
 using namespace saot;
 
 struct matrix_data_t {
-  Value *realVal;
-  Value *imagVal;
+  Value* realVal;
+  Value* imagVal;
   int realFlag;
   int imagFlag;
   bool realLoadNeg;
@@ -62,7 +62,7 @@ getMaskToMerge(const std::vector<int> &v0, const std::vector<int> &v1) {
   return std::make_pair(mask, vec);
 }
 
-Function *IRGenerator::generateKernelDebug(const QuantumGate &gate,
+Function* IRGenerator::generateKernelDebug(const QuantumGate &gate,
                                            int debugLevel,
                                            const std::string &funcName) {
   const uint64_t s = _config.simd_s;
@@ -79,20 +79,20 @@ Function *IRGenerator::generateKernelDebug(const QuantumGate &gate,
     printVector(gate.qubits) << "\n";
   }
 
-  Type *scalarTy =
+  Type* scalarTy =
       (_config.precision == 32) ? builder.getFloatTy() : builder.getDoubleTy();
-  Function *func;
-  Argument *pSvArg, *pReArg, *pImArg, *ctrBeginArg, *ctrEndArg, *pMatArg;
+  Function* func;
+  Argument* pSvArg,* pReArg,* pImArg,* ctrBeginArg,* ctrEndArg,* pMatArg;
   { /* start of function declaration */
     auto argType =
         (_config.ampFormat == IRGeneratorConfig::SepFormat)
-            ? SmallVector<Type *>{builder.getPtrTy(), builder.getPtrTy(),
+            ? SmallVector<Type*>{builder.getPtrTy(), builder.getPtrTy(),
                                   builder.getInt64Ty(), builder.getInt64Ty(),
                                   builder.getPtrTy()}
-            : SmallVector<Type *>{builder.getPtrTy(), builder.getInt64Ty(),
+            : SmallVector<Type*>{builder.getPtrTy(), builder.getInt64Ty(),
                                   builder.getInt64Ty(), builder.getPtrTy()};
 
-    auto *funcType = FunctionType::get(builder.getVoidTy(), argType, false);
+    auto* funcType = FunctionType::get(builder.getVoidTy(), argType, false);
     func = Function::Create(funcType, Function::ExternalLinkage, funcName,
                             getModule());
 
@@ -120,10 +120,10 @@ Function *IRGenerator::generateKernelDebug(const QuantumGate &gate,
   } /* end of function declaration */
 
   // init basic blocks
-  BasicBlock *entryBB = BasicBlock::Create(*_context, "entry", func);
-  BasicBlock *loopBB = BasicBlock::Create(*_context, "loop", func);
-  BasicBlock *loopBodyBB = BasicBlock::Create(*_context, "loop.body", func);
-  BasicBlock *retBB = BasicBlock::Create(*_context, "ret", func);
+  BasicBlock* entryBB = BasicBlock::Create(*_context, "entry", func);
+  BasicBlock* loopBB = BasicBlock::Create(*_context, "loop", func);
+  BasicBlock* loopBodyBB = BasicBlock::Create(*_context, "loop.body", func);
+  BasicBlock* retBB = BasicBlock::Create(*_context, "ret", func);
 
   std::vector<matrix_data_t> matrix(K * K);
   const auto loadMatrixF = [&]() {
@@ -137,7 +137,7 @@ Function *IRGenerator::generateKernelDebug(const QuantumGate &gate,
 
     double zeroSkipThres = _config.zeroSkipThres / K;
     double shareMatrixElemThres = _config.shareMatrixElemThres / K;
-    const auto *cMat = gate.gateMatrix.getConstantMatrix();
+    const auto* cMat = gate.gateMatrix.getConstantMatrix();
     for (unsigned i = 0; i < matrix.size(); i++) {
       if (cMat == nullptr || _config.forceDenseKernel) {
         matrix[i].realFlag = 2;
@@ -200,7 +200,7 @@ Function *IRGenerator::generateKernelDebug(const QuantumGate &gate,
     }
 
     if (_config.loadVectorMatrix) {
-      auto *matV = builder.CreateLoad(
+      auto* matV = builder.CreateLoad(
           VectorType::get(scalarTy, 2 * K * K, false), pMatArg, "matrix");
       for (unsigned i = 0; i < matrix.size(); i++) {
         matrix[i].realVal = builder.CreateShuffleVector(
@@ -212,9 +212,9 @@ Function *IRGenerator::generateKernelDebug(const QuantumGate &gate,
       for (unsigned i = 0; i < matrix.size(); i++) {
         uint64_t reLoadPosition =
             (shareMatrixElemThres > 0.0) ? uniqueEntryIndices[2 * i] : 2ULL * i;
-        auto *pReVal = builder.CreateConstGEP1_64(
+        auto* pReVal = builder.CreateConstGEP1_64(
             scalarTy, pMatArg, reLoadPosition, "pm.re." + std::to_string(i));
-        auto *mReVal = builder.CreateLoad(scalarTy, pReVal,
+        auto* mReVal = builder.CreateLoad(scalarTy, pReVal,
                                           "m.re." + std::to_string(i) + ".tmp");
         matrix[i].realVal =
             builder.CreateVectorSplat(S, mReVal, "m.re." + std::to_string(i));
@@ -222,9 +222,9 @@ Function *IRGenerator::generateKernelDebug(const QuantumGate &gate,
         uint64_t imLoadPosition = (shareMatrixElemThres > 0.0)
                                       ? uniqueEntryIndices[2 * i + 1]
                                       : 2ULL * i + 1;
-        auto *pImVal = builder.CreateConstGEP1_64(
+        auto* pImVal = builder.CreateConstGEP1_64(
             scalarTy, pMatArg, imLoadPosition, "pmIm_" + std::to_string(i));
-        auto *mImVal = builder.CreateLoad(scalarTy, pImVal,
+        auto* mImVal = builder.CreateLoad(scalarTy, pImVal,
                                           "m.re." + std::to_string(i) + ".tmp");
         matrix[i].imagVal =
             builder.CreateVectorSplat(S, mImVal, "m.re." + std::to_string(i));
@@ -242,7 +242,7 @@ Function *IRGenerator::generateKernelDebug(const QuantumGate &gate,
     unsigned _q = 0;
     auto qubitsIt = gate.qubits.cbegin();
     while (simdQubits.size() != s) {
-      if (qubitsIt != gate.qubits.cend() && *qubitsIt == _q) {
+      if (qubitsIt != gate.qubits.cend() &&* qubitsIt == _q) {
         lowerQubits.push_back(_q);
         qubitsIt++;
       } else {
@@ -266,8 +266,8 @@ Function *IRGenerator::generateKernelDebug(const QuantumGate &gate,
 
   const unsigned vecSize = 1U << sepBit;
   const unsigned vecSizex2 = vecSize << 1;
-  auto *vecType = VectorType::get(scalarTy, vecSize, false);
-  auto *vecTypex2 = VectorType::get(scalarTy, vecSizex2, false);
+  auto* vecType = VectorType::get(scalarTy, vecSize, false);
+  auto* vecTypex2 = VectorType::get(scalarTy, vecSizex2, false);
 
   const unsigned lk = lowerQubits.size();
   const unsigned LK = 1 << lk;
@@ -294,9 +294,9 @@ Function *IRGenerator::generateKernelDebug(const QuantumGate &gate,
 
   // loop entry
   builder.SetInsertPoint(loopBB);
-  PHINode *counterV = builder.CreatePHI(builder.getInt64Ty(), 2, "counter");
+  PHINode* counterV = builder.CreatePHI(builder.getInt64Ty(), 2, "counter");
   counterV->addIncoming(ctrBeginArg, entryBB);
-  Value *cond = builder.CreateICmpSLT(counterV, ctrEndArg, "cond");
+  Value* cond = builder.CreateICmpSLT(counterV, ctrEndArg, "cond");
   builder.CreateCondBr(cond, loopBodyBB, retBB);
 
   // loop body
@@ -320,7 +320,7 @@ Function *IRGenerator::generateKernelDebug(const QuantumGate &gate,
     }
   }
 
-  Value *idxStartV = counterV;
+  Value* idxStartV = counterV;
   { /* locate start pointer */
     if (_config.usePDEP) {
       uint64_t pdepMask = ~static_cast<uint64_t>(0ULL);
@@ -342,7 +342,7 @@ Function *IRGenerator::generateKernelDebug(const QuantumGate &gate,
       idxStartV = builder.getInt64(0ULL);
       uint64_t mask = 0ULL;
       uint64_t maskSum = 0ULL;
-      Value *tmpCounterV = counterV;
+      Value* tmpCounterV = counterV;
       for (unsigned i = 0; i < higherQubits.size(); i++) {
         unsigned bit = higherQubits[i];
         mask = ((1ULL << (bit - sepBit - i)) - 1) - maskSum;
@@ -411,10 +411,10 @@ Function *IRGenerator::generateKernelDebug(const QuantumGate &gate,
       Each size-(S*LK) res is shuffled into LK size-S regs, the amplitude
       vectors.
   */
-  std::vector<Value *> real(K, nullptr), imag(K, nullptr);
-  std::vector<Value *> pSv(HK, nullptr), pRe(HK, nullptr), pIm(HK, nullptr);
+  std::vector<Value*> real(K, nullptr), imag(K, nullptr);
+  std::vector<Value*> pSv(HK, nullptr), pRe(HK, nullptr), pIm(HK, nullptr);
   { /* load amplitude registers */
-    Value *svFull, *reFull, *imFull;
+    Value* svFull,* reFull,* imFull;
     for (unsigned hi = 0; hi < HK; hi++) {
       unsigned keyStart = 0;
       uint64_t idxShift = 0ULL;
@@ -429,7 +429,7 @@ Function *IRGenerator::generateKernelDebug(const QuantumGate &gate,
                   << "idxShift = " << std::bitset<12>(idxShift) << ", "
                   << "keyStart = " << keyStart << "\n";
 
-      auto *_idxV = builder.CreateAdd(idxStartV, builder.getInt64(idxShift),
+      auto* _idxV = builder.CreateAdd(idxStartV, builder.getInt64(idxShift),
                                       "idx_" + std::to_string(hi));
       if (_config.ampFormat == IRGeneratorConfig::SepFormat) {
         pRe[hi] = builder.CreateGEP(vecType, pReArg, _idxV,
@@ -483,8 +483,8 @@ Function *IRGenerator::generateKernelDebug(const QuantumGate &gate,
   // mat-vec mul and storing
   for (unsigned hi = 0; hi < HK; hi++) {
     // matrix-vector multiplication
-    std::vector<Value *> newReal(LK, nullptr);
-    std::vector<Value *> newImag(LK, nullptr);
+    std::vector<Value*> newReal(LK, nullptr);
+    std::vector<Value*> newImag(LK, nullptr);
     for (unsigned li = 0; li < LK; li++) {
       unsigned r = hi * LK + li; // row
       // real part
@@ -512,7 +512,7 @@ Function *IRGenerator::generateKernelDebug(const QuantumGate &gate,
         }
       } else {
         assert(_config.shareMatrixElemThres <= 0.0 && "Not Implemented");
-        Value *newRe0 = nullptr, *newRe1 = nullptr;
+        Value* newRe0 = nullptr,* newRe1 = nullptr;
         for (unsigned c = 0; c < K; c++) {
           newRe0 = genMulAdd(newRe0, matrix[r * K + c].realVal, real[c],
                              matrix[r * K + c].realFlag, "", nameRe);
@@ -568,9 +568,9 @@ Function *IRGenerator::generateKernelDebug(const QuantumGate &gate,
                     << " => " << storeIdx << "\n";
 
         newReal[storeIdx] = builder.CreateShuffleVector(
-            newReal[mergeIdx], newReal[mergeIdx + 1], *maskIt, "re.merge");
+            newReal[mergeIdx], newReal[mergeIdx + 1],* maskIt, "re.merge");
         newImag[storeIdx] = builder.CreateShuffleVector(
-            newImag[mergeIdx], newImag[mergeIdx + 1], *maskIt, "im.merge");
+            newImag[mergeIdx], newImag[mergeIdx + 1],* maskIt, "im.merge");
         maskIt++;
       }
     }
@@ -582,14 +582,14 @@ Function *IRGenerator::generateKernelDebug(const QuantumGate &gate,
       builder.CreateStore(newReal[0], pRe[hi], false);
       builder.CreateStore(newImag[0], pIm[hi], false);
     } else {
-      auto *newSv = builder.CreateShuffleVector(newReal[0], newImag[0],
+      auto* newSv = builder.CreateShuffleVector(newReal[0], newImag[0],
                                                 svMargeMask, "sv.new");
       builder.CreateStore(newSv, pSv[hi], false);
     }
   }
 
   // increment counter and return
-  auto *counterNextV =
+  auto* counterNextV =
       builder.CreateAdd(counterV, builder.getInt64(1), "counter.next");
   counterV->addIncoming(counterNextV, loopBodyBB);
   builder.CreateBr(loopBB);

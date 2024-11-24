@@ -18,8 +18,8 @@ private:
 public:
   struct gate_data {
     int qubit;
-    GateNode *lhsGate;
-    GateNode *rhsGate;
+    GateNode* lhsGate;
+    GateNode* rhsGate;
   };
   const int id;
   unsigned nqubits;
@@ -44,7 +44,7 @@ public:
     return it;
   }
 
-  GateNode *findLHS(unsigned q) {
+  GateNode* findLHS(unsigned q) {
     for (const auto &data : dataVector) {
       if (data.qubit == q)
         return data.lhsGate;
@@ -52,7 +52,7 @@ public:
     return nullptr;
   }
 
-  GateNode *findRHS(unsigned q) {
+  GateNode* findRHS(unsigned q) {
     for (const auto &data : dataVector) {
       if (data.qubit == q)
         return data.rhsGate;
@@ -60,7 +60,7 @@ public:
     return nullptr;
   }
 
-  int connect(GateNode *rhsGate, int q = -1);
+  int connect(GateNode* rhsGate, int q = -1);
 
   std::vector<int> getQubits() const {
     std::vector<int> qubits(nqubits);
@@ -82,8 +82,8 @@ private:
 public:
   struct block_data {
     int qubit;
-    GateNode *lhsEntry;
-    GateNode *rhsEntry;
+    GateNode* lhsEntry;
+    GateNode* rhsEntry;
   };
 
   int id;
@@ -92,7 +92,7 @@ public:
 
   GateBlock() : id(idCount++), dataVector(), quantumGate(nullptr) {}
 
-  GateBlock(GateNode *gateNode)
+  GateBlock(GateNode* gateNode)
       : id(idCount++), dataVector(),
         quantumGate(std::make_unique<QuantumGate>(gateNode->toQuantumGate())) {
     for (const auto &data : gateNode->dataVector)
@@ -101,11 +101,11 @@ public:
 
   std::ostream &displayInfo(std::ostream &os) const;
 
-  std::vector<GateNode *> getOrderedGates() const;
+  std::vector<GateNode*> getOrderedGates() const;
 
   size_t countGates() const { return getOrderedGates().size(); }
 
-  int connect(GateBlock *rhsBlock, int q = -1);
+  int connect(GateBlock* rhsBlock, int q = -1);
 
   int nqubits() const { return dataVector.size(); }
 
@@ -153,7 +153,7 @@ public:
 
 class CircuitGraph {
 private:
-  using row_t = std::array<GateBlock *, 36>;
+  using row_t = std::array<GateBlock*, 36>;
   using tile_t = std::list<row_t>;
   using tile_iter_t = std::list<row_t>::iterator;
   using tile_riter_t = std::list<row_t>::reverse_iterator;
@@ -177,7 +177,7 @@ public:
   /// @brief Erase empty rows in the tile
   void eraseEmptyRows();
 
-  bool isRowVacant(tile_iter_t it, const GateBlock *block) const {
+  bool isRowVacant(tile_iter_t it, const GateBlock* block) const {
     for (const auto &q : block->getQubits())
       if ((*it)[q] != nullptr)
         return false;
@@ -202,7 +202,7 @@ public:
   /// - If \p it+1 is vacant, insert \p block there. Otherwise,
   /// - Insert a separate row between \p it and \p it+1 and place \p block
   ///   there.
-  tile_iter_t insertBlock(tile_iter_t it, GateBlock *block);
+  tile_iter_t insertBlock(tile_iter_t it, GateBlock* block);
 
   void addGate(const QuantumGate &gate) {
     return addGate(gate.gateMatrix, gate.qubits);
@@ -211,7 +211,7 @@ public:
   void addGate(const GateMatrix &matrix, const std::vector<int> &qubits);
 
   /// @return ordered vector of blocks
-  std::vector<GateBlock *> getAllBlocks() const;
+  std::vector<GateBlock*> getAllBlocks() const;
 
   /// @brief Get the number of blocks with each size.
   /// @return ret[i] is the number of blocks with size i. Therefore, ret[0] is

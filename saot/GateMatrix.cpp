@@ -423,8 +423,8 @@ inline p_matrix_t matCvt_gp_to_p(GateKind kind, const gate_params_t &params) {
   case gH:
     return GateMatrix::MatrixH_p;
   case gP: {
-    const double *pC = std::get_if<double>(&params[0]);
-    const int *pV = std::get_if<int>(&params[0]);
+    const double* pC = std::get_if<double>(&params[0]);
+    const int* pV = std::get_if<int>(&params[0]);
     assert(pC || pV);
     if (pC)
       return p_matrix_t(
@@ -435,12 +435,12 @@ inline p_matrix_t matCvt_gp_to_p(GateKind kind, const gate_params_t &params) {
   }
 
   case gU: {
-    const double *p0C = std::get_if<double>(&params[0]);
-    const double *p1C = std::get_if<double>(&params[1]);
-    const double *p2C = std::get_if<double>(&params[2]);
-    const int *p0V = std::get_if<int>(&params[0]);
-    const int *p1V = std::get_if<int>(&params[1]);
-    const int *p2V = std::get_if<int>(&params[2]);
+    const double* p0C = std::get_if<double>(&params[0]);
+    const double* p1C = std::get_if<double>(&params[1]);
+    const double* p2C = std::get_if<double>(&params[2]);
+    const int* p0V = std::get_if<int>(&params[0]);
+    const int* p1V = std::get_if<int>(&params[1]);
+    const int* p2V = std::get_if<int>(&params[2]);
     assert(p0C || p0V);
     assert(p1C || p1V);
     assert(p2C || p2V);
@@ -521,12 +521,12 @@ void GateMatrix::computeAndCacheUpMat(double tolerance) const {
     return;
   }
   case gP: {
-    const double *plambd = std::get_if<double>(&gateParameters[0]);
+    const double* plambd = std::get_if<double>(&gateParameters[0]);
     if (plambd == nullptr) {
       cache.isConvertibleToUpMat = UnConvertible;
       return;
     }
-    cache.upMat = up_matrix_t{{0, 0.0}, {1, *plambd}};
+    cache.upMat = up_matrix_t{{0, 0.0}, {1,* plambd}};
     cache.isConvertibleToUpMat = Convertible;
     return;
   }
@@ -541,12 +541,12 @@ void GateMatrix::computeAndCacheUpMat(double tolerance) const {
     return;
   }
   case gCP: {
-    const double *plambd = std::get_if<double>(&gateParameters[0]);
+    const double* plambd = std::get_if<double>(&gateParameters[0]);
     if (plambd == nullptr) {
       cache.isConvertibleToUpMat = UnConvertible;
       return;
     }
-    cache.upMat = up_matrix_t{{0, 0.0}, {0, 0.0}, {0, 0.0}, {1, *plambd}};
+    cache.upMat = up_matrix_t{{0, 0.0}, {0, 0.0}, {0, 0.0}, {1,* plambd}};
     cache.isConvertibleToUpMat = Convertible;
     return;
   }
@@ -554,7 +554,7 @@ void GateMatrix::computeAndCacheUpMat(double tolerance) const {
     break;
   }
 
-  const auto *cMat = getConstantMatrix();
+  const auto* cMat = getConstantMatrix();
   if (cMat == nullptr) {
     cache.isConvertibleToUpMat = UnConvertible;
     return;
@@ -621,7 +621,7 @@ void GateMatrix::computeAndCacheCMat() const {
     return;
   }
   case gP: {
-    const double *p = std::get_if<double>(&gateParameters[0]);
+    const double* p = std::get_if<double>(&gateParameters[0]);
     if (p == nullptr) {
       cache.isConvertibleToCMat = UnConvertible;
       return;
@@ -633,18 +633,18 @@ void GateMatrix::computeAndCacheCMat() const {
   }
 
   case gU: {
-    const double *p0 = std::get_if<double>(&gateParameters[0]);
-    const double *p1 = std::get_if<double>(&gateParameters[1]);
-    const double *p2 = std::get_if<double>(&gateParameters[2]);
+    const double* p0 = std::get_if<double>(&gateParameters[0]);
+    const double* p1 = std::get_if<double>(&gateParameters[1]);
+    const double* p2 = std::get_if<double>(&gateParameters[2]);
     if (p0 && p1 && p2) {
-      // std::cerr << "(theta, phi, lambd) = " << *p0 << " " << *p1 << " " <<
-      // *p2 << "\n";
+      // std::cerr << "(theta, phi, lambd) = " <<* p0 << " " <<* p1 << " " <<
+      //* p2 << "\n";
       cache.cMat = c_matrix_t(
           {{std::cos(*p0), 0.0},
            {-std::cos(*p2) * std::sin(*p0), -std::sin(*p2) * std::sin(*p0)},
            {std::cos(*p1) * std::sin(*p0), std::sin(*p1) * std::sin(*p0)},
-           {std::cos(*p1 + *p2) * std::cos(*p0),
-            std::sin(*p1 + *p2) * std::cos(*p0)}});
+           {std::cos(*p1 +* p2) * std::cos(*p0),
+            std::sin(*p1 +* p2) * std::cos(*p0)}});
       // printConstantMatrix(std::cerr, cache.cMat);
       cache.isConvertibleToCMat = Convertible;
       return;
@@ -663,7 +663,7 @@ void GateMatrix::computeAndCacheCMat() const {
     return;
   }
   case gCP: {
-    const double *p0 = std::get_if<double>(&gateParameters[0]);
+    const double* p0 = std::get_if<double>(&gateParameters[0]);
     if (p0 == nullptr) {
       cache.isConvertibleToCMat = UnConvertible;
       return;
@@ -745,7 +745,7 @@ inline void computeSigMatAfresh(const GateMatrix::c_matrix_t &cMat,
 // TODO: when there exists cached sigMat already, we can update sigMat more
 // efficiently
 void GateMatrix::computeAndCacheSigMat(double zeroTol, double oneTol) const {
-  const auto *cMat = getConstantMatrix();
+  const auto* cMat = getConstantMatrix();
   assert(cMat);
   assert(cMat->edgeSize() > 0);
   computeSigMatAfresh(*cMat, zeroTol, oneTol, cache.sigMat);

@@ -17,7 +17,7 @@ using namespace timeit;
 
 // #include <immintrin.h>
 
-int main(int argc, char **argv) {
+int main(int argc, char* *argv) {
 
   int nthreads = 16;
   if (argc > 1)

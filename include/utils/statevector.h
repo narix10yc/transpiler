@@ -23,14 +23,14 @@ template <typename real_t> class StatevectorSep {
 public:
   unsigned nqubits;
   uint64_t N;
-  real_t *real;
-  real_t *imag;
+  real_t* real;
+  real_t* imag;
 
   StatevectorSep(int nqubits, bool initialize = false)
       : nqubits(static_cast<unsigned>(nqubits)), N(1ULL << nqubits) {
     assert(nqubits > 0);
-    real = (real_t *)std::aligned_alloc(64, N * sizeof(real_t));
-    imag = (real_t *)std::aligned_alloc(64, N * sizeof(real_t));
+    real = (real_t* )std::aligned_alloc(64, N * sizeof(real_t));
+    imag = (real_t* )std::aligned_alloc(64, N * sizeof(real_t));
     if (initialize) {
       for (size_t i = 0; i < (1 << nqubits); i++) {
         real[i] = 0;
@@ -43,8 +43,8 @@ public:
 
   StatevectorSep(const StatevectorSep &that)
       : nqubits(that.nqubits), N(that.N) {
-    real = (real_t *)aligned_alloc(64, N * sizeof(real_t));
-    imag = (real_t *)aligned_alloc(64, N * sizeof(real_t));
+    real = (real_t* )aligned_alloc(64, N * sizeof(real_t));
+    imag = (real_t* )aligned_alloc(64, N * sizeof(real_t));
     for (size_t i = 0; i < that.N; i++) {
       real[i] = that.real[i];
       imag[i] = that.imag[i];
@@ -204,11 +204,11 @@ template <typename real_t, unsigned simd_s> class StatevectorAlt {
 public:
   unsigned nqubits;
   uint64_t N;
-  real_t *data;
+  real_t* data;
 
   StatevectorAlt(unsigned nqubits, bool initialize = false)
       : nqubits(nqubits), N(1ULL << nqubits) {
-    data = (real_t *)aligned_alloc(64, 2 * N * sizeof(real_t));
+    data = (real_t* )aligned_alloc(64, 2 * N * sizeof(real_t));
     if (initialize) {
       for (size_t i = 0; i < (1 << (nqubits + 1)); i++)
         data[i] = 0;
@@ -218,7 +218,7 @@ public:
 
   StatevectorAlt(const StatevectorAlt &that)
       : nqubits(that.nqubits), N(that.N) {
-    data = (real_t *)aligned_alloc(64, 2 * N * sizeof(real_t));
+    data = (real_t* )aligned_alloc(64, 2 * N * sizeof(real_t));
     for (size_t i = 0; i < 2 * that.N; i++)
       data[i] = that.data[i];
   }
@@ -296,7 +296,7 @@ template <typename real_t> class StatevectorComp {
 public:
   unsigned nqubits;
   size_t N;
-  complex_t *data;
+  complex_t* data;
   StatevectorComp(unsigned nqubits) : nqubits(nqubits), N(1 << nqubits) {
     data = new complex_t[N];
   }

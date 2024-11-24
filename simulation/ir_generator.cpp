@@ -14,14 +14,14 @@ using namespace IOColor;
 using namespace llvm;
 using namespace simulation;
 
-Value *ParamValueFeeder::get(int v, IRBuilder<> &B, Type *Ty) {
+Value* ParamValueFeeder::get(int v, IRBuilder<> &B, Type* Ty) {
   if (v >= cache.size())
     cache.resize(v + 1);
 
   if (cache[v] != nullptr)
     return cache[v];
 
-  Value *ptr =
+  Value* ptr =
       B.CreateConstGEP1_32(Ty, basePtrV, v, "p.param." + std::to_string(v));
   return cache[v] = B.CreateLoad(Ty, ptr, "param." + std::to_string(v));
 }
@@ -59,8 +59,8 @@ std::ostream &IRGeneratorConfig::display(int verbose, bool title,
   if (title)
     os << CYAN_FG << "===== IR Generator Config =====\n" << RESET;
 
-  const char *ON = "\033[32mon\033[0m";
-  const char *OFF = "\033[31moff\033[0m";
+  const char* ON = "\033[32mon\033[0m";
+  const char* OFF = "\033[31moff\033[0m";
 
   os << "simd s:               " << simd_s << "\n"
      << "precision:            " << "f" << precision << "\n"
@@ -88,7 +88,7 @@ std::ostream &IRGeneratorConfig::display(int verbose, bool title,
 
 void IRGenerator::loadFromFile(const std::string &fileName) {
   SMDiagnostic err;
-  _module = std::move(parseIRFile(fileName, err, *_context));
+  _module = std::move(parseIRFile(fileName, err,* _context));
   if (_module == nullptr) {
     err.print("IRGenerator::loadFromFile", llvm::errs());
     llvm_unreachable("Failed to load from file");
@@ -124,7 +124,7 @@ void IRGenerator::applyLLVMOptimization(const OptimizationLevel &level) {
   MPM.run(*_module, MAM);
 }
 
-Value *IRGenerator::genMulAdd(Value *aa, Value *bb, Value *cc, int bbFlag,
+Value* IRGenerator::genMulAdd(Value* aa, Value* bb, Value* cc, int bbFlag,
                               const Twine &bbccName, const Twine &aaName) {
   if (bbFlag == 0)
     return aa;
@@ -152,16 +152,16 @@ Value *IRGenerator::genMulAdd(Value *aa, Value *bb, Value *cc, int bbFlag,
     return builder.CreateIntrinsic(bb->getType(), Intrinsic::fmuladd,
                                    {bb, cc, aa}, nullptr, aaName);
   // not use FMA
-  auto *bbcc = builder.CreateFMul(bb, cc, bbccName);
+  auto* bbcc = builder.CreateFMul(bb, cc, bbccName);
   return builder.CreateFAdd(aa, bbcc, aaName);
 }
 
-Value *IRGenerator::genMulSub(Value *aa, Value *bb, Value *cc, int bbFlag,
+Value* IRGenerator::genMulSub(Value* aa, Value* bb, Value* cc, int bbFlag,
                               const Twine &bbccName, const Twine &aaName) {
   if (bbFlag == 0)
     return aa;
 
-  auto *ccNeg = builder.CreateFNeg(cc, "ccNeg");
+  auto* ccNeg = builder.CreateFNeg(cc, "ccNeg");
   // new_aa = aa - cc
   if (bbFlag == 1) {
     if (aa == nullptr)
@@ -185,11 +185,11 @@ Value *IRGenerator::genMulSub(Value *aa, Value *bb, Value *cc, int bbFlag,
     return builder.CreateIntrinsic(bb->getType(), Intrinsic::fmuladd,
                                    {bb, ccNeg, aa}, nullptr, aaName);
   // not use FMS
-  auto *bbccNeg = builder.CreateFMul(bb, ccNeg, bbccName + "Neg");
+  auto* bbccNeg = builder.CreateFMul(bb, ccNeg, bbccName + "Neg");
   return builder.CreateFAdd(aa, bbccNeg, aaName);
 }
 
-Value *IRGenerator::genFAdd(Value *a, Value *b) {
+Value* IRGenerator::genFAdd(Value* a, Value* b) {
   if (a && b)
     return builder.CreateFAdd(a, b);
   if (a)
@@ -197,7 +197,7 @@ Value *IRGenerator::genFAdd(Value *a, Value *b) {
   return b;
 }
 
-Value *IRGenerator::genFSub(Value *a, Value *b) {
+Value* IRGenerator::genFSub(Value* a, Value* b) {
   if (a && b)
     return builder.CreateFSub(a, b);
   if (a)
@@ -207,30 +207,30 @@ Value *IRGenerator::genFSub(Value *a, Value *b) {
   return nullptr;
 }
 
-Value *IRGenerator::genFMul(Value *a, Value *b) {
+Value* IRGenerator::genFMul(Value* a, Value* b) {
   if (a && b)
     return builder.CreateFMul(a, b);
   return nullptr;
 }
 
-std::pair<Value *, Value *> IRGenerator::genComplexMultiply(
-    const std::pair<llvm::Value *, llvm::Value *> &a,
-    const std::pair<llvm::Value *, llvm::Value *> &b) {
+std::pair<Value*, Value*> IRGenerator::genComplexMultiply(
+    const std::pair<llvm::Value*, llvm::Value*> &a,
+    const std::pair<llvm::Value*, llvm::Value*> &b) {
   return {genFSub(genFMul(a.first, b.first), genFMul(a.second, b.second)),
           genFAdd(genFMul(a.first, b.second), genFMul(a.second, b.first))};
 }
 
-std::pair<Value *, Value *> IRGenerator::genComplexDotProduct(
-    const std::vector<Value *> &aRe, const std::vector<Value *> &aIm,
-    const std::vector<Value *> &bRe, const std::vector<Value *> &bIm) {
+std::pair<Value*, Value*> IRGenerator::genComplexDotProduct(
+    const std::vector<Value*> &aRe, const std::vector<Value*> &aIm,
+    const std::vector<Value*> &bRe, const std::vector<Value*> &bIm) {
   auto length = aRe.size();
   assert(aRe.size() == aIm.size());
   assert(aIm.size() == bRe.size());
   assert(bRe.size() == bIm.size());
 
-  auto *ty = aRe[0]->getType();
-  auto *re = builder.CreateFMul(aRe[0], bRe[0]);
-  auto *im = builder.CreateFMul(aRe[0], bIm[0]);
+  auto* ty = aRe[0]->getType();
+  auto* re = builder.CreateFMul(aRe[0], bRe[0]);
+  auto* im = builder.CreateFMul(aRe[0], bIm[0]);
   for (unsigned i = 1; i < length; i++) {
     re = builder.CreateIntrinsic(ty, Intrinsic::fmuladd, {aRe[i], bRe[i], re});
     im = builder.CreateIntrinsic(ty, Intrinsic::fmuladd, {aRe[i], bIm[i], im});

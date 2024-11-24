@@ -6,7 +6,7 @@ using namespace saot::fpga;
 
 namespace {
 inline bool isRealOnlyGate(const QuantumGate &gate, double reTol) {
-  const auto *cMat = gate.gateMatrix.getConstantMatrix();
+  const auto* cMat = gate.gateMatrix.getConstantMatrix();
   assert(cMat);
   for (const auto &cplx : cMat->data) {
     if (std::abs(cplx.imag()) > reTol)
@@ -46,7 +46,7 @@ saot::fpga::getFPGAGateCategory(const QuantumGate &gate,
   if (gate.qubits.size() == 1)
     cate |= FPGAGateCategory::SingleQubit;
 
-  if (const auto *p = gate.gateMatrix.getUnitaryPermMatrix(tolerances.upTol)) {
+  if (const auto* p = gate.gateMatrix.getUnitaryPermMatrix(tolerances.upTol)) {
     if (std::all_of(
             p->data.begin(), p->data.end(),
             [tol = tolerances.ncTol](const std::pair<size_t, double> &d) {

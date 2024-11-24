@@ -43,9 +43,9 @@ std::ostream &printVector(const std::vector<T> &v,
   if (v.empty())
     return os << "[]";
   auto it = v.cbegin();
-  os << "[" << *it;
+  os << "[" <<* it;
   while (++it != v.cend())
-    os << "," << *it;
+    os << "," <<* it;
   return os << "]";
 }
 
@@ -103,7 +103,7 @@ public:
   }
 };
 
-void timedExecute(std::function<void()> f, const char *msg);
+void timedExecute(std::function<void()> f, const char* msg);
 
 } // namespace utils
 

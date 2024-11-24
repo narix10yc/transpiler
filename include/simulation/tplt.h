@@ -6,7 +6,7 @@
 namespace simulation::tplt {
 
 template <typename real_t>
-void applySingleQubit(real_t *real, real_t *imag, const real_t *mat,
+void applySingleQubit(real_t* real, real_t* imag, const real_t* mat,
                       size_t nqubits, size_t k) {
   size_t K = 1ULL << k;
   size_t N = 1ULL << nqubits;
@@ -31,7 +31,7 @@ void applySingleQubit(real_t *real, real_t *imag, const real_t *mat,
 }
 
 template <typename real_t>
-void applySingleQubitQuEST(real_t *real, real_t *imag, const real_t *mat,
+void applySingleQubitQuEST(real_t* real, real_t* imag, const real_t* mat,
                            size_t nqubits, size_t k) {
   size_t K = 1ULL << k;
   size_t sizeBlock = 2 * K;
@@ -56,7 +56,7 @@ void applySingleQubitQuEST(real_t *real, real_t *imag, const real_t *mat,
 }
 
 template <typename real_t, size_t k>
-void applySingleQubitTemplate(real_t *real, real_t *imag, const real_t *mat,
+void applySingleQubitTemplate(real_t* real, real_t* imag, const real_t* mat,
                               size_t nqubits) {
   size_t K = 1ULL << k;
   size_t N = 1ULL << nqubits;

@@ -19,7 +19,7 @@ using Statevector = utils::statevector::StatevectorAlt<real_t, S_VALUE>;
 using Statevector = utils::statevector::StatevectorSep<real_t>;
 #endif
 
-int main(int argc, char **argv) {
+int main(int argc, char* *argv) {
   assert(argc > 1);
   unsigned targetQ = std::stoi(argv[1]);
 

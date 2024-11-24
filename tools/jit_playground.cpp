@@ -20,11 +20,11 @@ using namespace llvm;
 using utils::timedExecute;
 
 struct kernel_t {
-  Function *llvmFunc;
-  void (*func)(double *, uint64_t, uint64_t, double *);
+  Function* llvmFunc;
+  void (*func)(double*, uint64_t, uint64_t, double* );
 };
 
-int main(int argc, char **argv) {
+int main(int argc, char* *argv) {
   assert(argc > 1);
 
   CircuitGraph graph;
@@ -33,9 +33,9 @@ int main(int argc, char **argv) {
   IRGeneratorConfig irConfig;
   irConfig.simd_s = 1;
   irConfig.usePDEP = false;
-  Function *llvmFuncPrepareParam;
+  Function* llvmFuncPrepareParam;
   std::vector<kernel_t> kernels;
-  void (*prepareParam)(double *, double *);
+  void (*prepareParam)(double*, double* );
 
   // parse
   timedExecute(
@@ -73,18 +73,18 @@ int main(int argc, char **argv) {
   // function lookup
   timedExecute(
       [&]() {
-        auto *jitter = G.getJitter();
+        auto* jitter = G.getJitter();
         auto funcAddrOrErr = jitter->lookup(llvmFuncPrepareParam->getName());
         if (!funcAddrOrErr) {
           errs() << "Failed to look up function\n"
                  << funcAddrOrErr.takeError() << "\n";
         }
 
-        prepareParam = funcAddrOrErr->toPtr<void(double *, double *)>();
+        prepareParam = funcAddrOrErr->toPtr<void(double*, double* )>();
         for (auto &kernel : kernels) {
           kernel.func =
               cantFail(jitter->lookup(llvmFuncPrepareParam->getName()))
-                  .toPtr<void(double *, uint64_t, uint64_t, double *)>();
+                  .toPtr<void(double*, uint64_t, uint64_t, double* )>();
         }
       },
       "Function found");

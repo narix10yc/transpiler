@@ -136,9 +136,9 @@ void Lexer::lex(Token &tok) {
     return;
   }
 
-  char c = *(curPtr++);
+  char c =* (curPtr++);
   while (c == ' ' || c == '\r')
-    c = *(curPtr++);
+    c =* (curPtr++);
 
   switch (c) {
   case '\0':
@@ -201,18 +201,18 @@ void Lexer::lex(Token &tok) {
   }
 
   default:
-    auto *memRefBegin = --curPtr;
+    auto* memRefBegin = --curPtr;
     if ('0' <= c && c <= '9') {
-      c = *(++curPtr);
+      c =* (++curPtr);
       while (c == '.' || ('0' <= c && c <= '9'))
-        c = *(++curPtr);
+        c =* (++curPtr);
       tok = Token(tk_Numeric, memRefBegin, curPtr);
       return;
     }
     assert(std::isalpha(c) && "Can only parse identifiers now");
-    c = *(++curPtr);
+    c =* (++curPtr);
     while (c == '_' || std::isalnum(c))
-      c = *(++curPtr);
+      c =* (++curPtr);
     tok = Token(tk_Identifier, memRefBegin, curPtr);
     return;
   }
@@ -229,7 +229,7 @@ void Lexer::skipLine() {
 }
 
 Lexer::line_info_t Lexer::getCurLineInfo() const {
-  auto *lineEnd = curPtr;
+  auto* lineEnd = curPtr;
   while (lineEnd < bufferEnd) {
     if (*(lineEnd++) == '\n')
       break;

@@ -136,13 +136,13 @@ private:
   GInstKind gKind;
 
 public:
-  GateBlock *block;
+  GateBlock* block;
   FPGAGateCategory blockKind;
 
   GateInst(GInstKind gKind)
       : gKind(gKind), block(nullptr), blockKind(FPGAGateCategory::General) {}
 
-  GateInst(GInstKind gKind, GateBlock *block, FPGAGateCategory blockKind)
+  GateInst(GInstKind gKind, GateBlock* block, FPGAGateCategory blockKind)
       : gKind(gKind), block(block), blockKind(blockKind) {}
 
   virtual ~GateInst() = default;
@@ -166,7 +166,7 @@ public:
 // Single Qubit Gate (SQ)
 class GInstSQ : public GateInst {
 public:
-  GInstSQ(GateBlock *block, FPGAGateCategory blockKind)
+  GInstSQ(GateBlock* block, FPGAGateCategory blockKind)
       : GateInst(GOp_SQ, block, blockKind) {}
 
   std::ostream &print(std::ostream &os) const override;
@@ -175,7 +175,7 @@ public:
 // Unitary Permutation Gate (UP)
 class GInstUP : public GateInst {
 public:
-  GInstUP(GateBlock *block, FPGAGateCategory blockKind)
+  GInstUP(GateBlock* block, FPGAGateCategory blockKind)
       : GateInst(GOp_UP, block, blockKind) {}
 
   std::ostream &print(std::ostream &os) const override;

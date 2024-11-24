@@ -112,10 +112,10 @@ private:
   };
 
   struct available_blocks_t {
-    GateBlock *block;
+    GateBlock* block;
     FPGAGateCategory blockKind;
 
-    available_blocks_t(GateBlock *block, FPGAGateCategory blockKind)
+    available_blocks_t(GateBlock* block, FPGAGateCategory blockKind)
         : block(block), blockKind(blockKind) {}
 
     available_block_kind_t
@@ -165,7 +165,7 @@ private:
       row = unlockedRowIndices[q];
       if (row >= nrows)
         continue;
-      auto *cddBlock = tileBlocks[nqubits * row + q];
+      auto* cddBlock = tileBlocks[nqubits * row + q];
       assert(cddBlock);
       if (std::find_if(availables.begin(), availables.end(),
                        [&cddBlock](const available_blocks_t &avail) {
@@ -191,7 +191,7 @@ public:
   int nrows;
   int nqubits;
   std::vector<QubitStatus> qubitStatuses;
-  std::vector<GateBlock *> tileBlocks;
+  std::vector<GateBlock*> tileBlocks;
   // unlockedRowIndices[q] gives the index of the last unlocked row in wire q
   std::vector<int> unlockedRowIndices;
   std::vector<available_blocks_t> availables;
@@ -212,11 +212,11 @@ public:
     return os << "\n";
   }
 
-  FPGAGateCategory getBlockKind(GateBlock *block) const {
+  FPGAGateCategory getBlockKind(GateBlock* block) const {
     return getFPGAGateCategory(*block->quantumGate, config.tolerances);
   }
   // popBlock: pop a block from \p availables. Update \p availables accordingly.
-  void popBlock(GateBlock *block) {
+  void popBlock(GateBlock* block) {
     auto it = std::find_if(availables.begin(), availables.end(),
                            [&block](const available_blocks_t &avail) {
                              return avail.block == block;
@@ -225,11 +225,11 @@ public:
     availables.erase(it);
 
     // grab next availables
-    std::vector<GateBlock *> candidateBlocks;
+    std::vector<GateBlock*> candidateBlocks;
     for (const auto &data : block->dataVector) {
       const auto &qubit = data.qubit;
 
-      GateBlock *cddBlock = nullptr;
+      GateBlock* cddBlock = nullptr;
       for (auto &updatedRow = ++unlockedRowIndices[qubit]; updatedRow < nrows;
            ++updatedRow) {
         auto idx = nqubits * updatedRow + qubit;
@@ -291,7 +291,7 @@ public:
       qubitStatuses[priorities[nOnChipQubits + q]] = QubitStatus(QK_OffChip, q);
   }
 
-  GateBlock *findBlockWithABK(available_block_kind_t abk) const {
+  GateBlock* findBlockWithABK(available_block_kind_t abk) const {
     for (const auto &candidate : availables) {
       if (candidate.getABK(qubitStatuses) == abk)
         return candidate.block;
@@ -350,8 +350,8 @@ public:
               return S.kind == kind && S.kindIdx == 0;
             });
         assert(it != qubitStatuses.end());
-        auto tmp = *it;
-        *it = qubitStatuses[nonLocalQ];
+        auto tmp =* it;
+       * it = qubitStatuses[nonLocalQ];
         qubitStatuses[nonLocalQ] = qubitStatuses[localQ];
         qubitStatuses[localQ] = tmp;
       } else {
@@ -363,9 +363,9 @@ public:
     };
 
     bool upFusionFlag = false;
-    const auto generateUPBlock = [&](GateBlock *b) {
+    const auto generateUPBlock = [&](GateBlock* b) {
       popBlock(b);
-      GateBlock *lastUpBlock = nullptr;
+      GateBlock* lastUpBlock = nullptr;
       assert(vacantGateIdx >= 0);
       if (config.maxUpSize > 0 && !instructions.empty() &&
           instructions[vacantGateIdx - 1].gInst->getKind() == GOp_UP) {
@@ -378,8 +378,8 @@ public:
         if (candidateQubits.size() <= config.maxUpSize) {
           // TODO: This will cause memory leak
           auto gate = b->quantumGate->lmatmul(*lastUpBlock->quantumGate);
-          auto *node = new GateNode(gate.gateMatrix, gate.qubits);
-          auto *block = new GateBlock(node);
+          auto* node = new GateNode(gate.gateMatrix, gate.qubits);
+          auto* block = new GateBlock(node);
           instructions[vacantGateIdx - 1].setGInst(
               std::make_unique<GInstUP>(block, FPGAGateCategory::NonComp));
           // std::cerr << "InstGen Time Fusion Accepted\n";
@@ -403,7 +403,7 @@ public:
       ++vacantGateIdx;
     };
 
-    const auto generateLocalSQBlock = [&](GateBlock *b) {
+    const auto generateLocalSQBlock = [&](GateBlock* b) {
       popBlock(b);
       assert(b->quantumGate->qubits.size() == 1 &&
              "SQ Block has more than 1 target qubits?");
@@ -416,7 +416,7 @@ public:
       sqGateBarrierIdx = vacantGateIdx;
     };
 
-    const auto generateNonLocalSQBlock = [&](GateBlock *b) {
+    const auto generateNonLocalSQBlock = [&](GateBlock* b) {
       assert(b->quantumGate->qubits.size() == 1 &&
              "SQ Block has more than 1 target qubits?");
       auto qubit = b->quantumGate->qubits[0];
@@ -546,19 +546,19 @@ public:
       }
 
       if (upFusionFlag) {
-        if (auto *b = findBlockWithABK(ABK_UnitaryPerm)) {
+        if (auto* b = findBlockWithABK(ABK_UnitaryPerm)) {
           generateUPBlock(b);
           continue;
         }
       }
       // TODO: optimize this traversal
-      if (auto *b = findBlockWithABK(ABK_OnChipLocalSQ)) {
+      if (auto* b = findBlockWithABK(ABK_OnChipLocalSQ)) {
         generateLocalSQBlock(b);
         continue;
       }
-      if (auto *b = findBlockWithABK(ABK_UnitaryPerm)) {
+      if (auto* b = findBlockWithABK(ABK_UnitaryPerm)) {
         generateUPBlock(b);
-      } else if (auto *b = findBlockWithABK(ABK_OnChipNonLocalSQ))
+      } else if (auto* b = findBlockWithABK(ABK_OnChipNonLocalSQ))
         generateNonLocalSQBlock(b);
       else // no onChipBlock
         generateOnChipReassignment();

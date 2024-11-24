@@ -123,7 +123,7 @@ public:
   //     for (size_t j = 0; j < _edgeSize; j++) {
   //     for (size_t k = 0; k < _edgeSize; k++) {
   //         // C_{ij} = A_{ik} B_{kj}
-  //         m.data[i*_edgeSize + j] += data[i*_edgeSize + k] *
+  //         m.data[i*_edgeSize + j] += data[i*_edgeSize + k]* 
   //         other.data[k*_edgeSize + j];
   //     } } }
   //     return m;

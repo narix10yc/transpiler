@@ -18,7 +18,7 @@ using namespace IOColor;
 using namespace timeit;
 using namespace simulation::tplt;
 
-int main(int argc, char **argv) {
+int main(int argc, char* *argv) {
   Timer timer;
   timer.setReplication(15);
   TimingResult rst;

@@ -15,7 +15,7 @@ using namespace saot;
 
 namespace {
 
-Value *genOptFMul(Value *a, Value *b, ScalarKind aKind, IRBuilder<> &builder) {
+Value* genOptFMul(Value* a, Value* b, ScalarKind aKind, IRBuilder<> &builder) {
   switch (aKind) {
   case SK_General:
     assert(a);
@@ -33,7 +33,7 @@ Value *genOptFMul(Value *a, Value *b, ScalarKind aKind, IRBuilder<> &builder) {
 }
 
 // return a * b + c
-Value *genMulAndAdd(Value *a, Value *b, Value *c, ScalarKind aKind,
+Value* genMulAndAdd(Value* a, Value* b, Value* c, ScalarKind aKind,
                     IRBuilder<> &builder) {
   assert(b);
 
@@ -61,19 +61,19 @@ Value *genMulAndAdd(Value *a, Value *b, Value *c, ScalarKind aKind,
 
 } // namespace
 
-Function *IRGenerator::generateCUDAKernel(const QuantumGate &gate,
+Function* IRGenerator::generateCUDAKernel(const QuantumGate &gate,
                                           const CUDAGenerationConfig &config,
                                           const std::string &funcName) {
   const auto &qubits = gate.qubits;
   const int nqubits = qubits.size();
 
-  auto *gateCMat = gate.gateMatrix.getConstantMatrix();
-  // printConstantMatrix(std::cerr, *gateCMat);
+  auto* gateCMat = gate.gateMatrix.getConstantMatrix();
+  // printConstantMatrix(std::cerr,* gateCMat);
 
-  Type *scalarTy =
+  Type* scalarTy =
       (config.precision == 32) ? builder.getFloatTy() : builder.getDoubleTy();
-  Function *func;
-  Argument *pSvArg, *pMatArg;
+  Function* func;
+  Argument* pSvArg,* pMatArg;
   { /* function declaration */
 
     /*
@@ -87,12 +87,12 @@ Function *IRGenerator::generateCUDAKernel(const QuantumGate &gate,
 
         For a reference see https://llvm.org/docs/NVPTXUsage.html#id32
     */
-    SmallVector<Type *> argType{
+    SmallVector<Type*> argType{
         builder.getPtrTy(1U),
         builder.getPtrTy(config.useConstantMemSpaceForMatPtrArg ? 4U : 1U),
     };
 
-    auto *funcType = FunctionType::get(builder.getVoidTy(), argType, false);
+    auto* funcType = FunctionType::get(builder.getVoidTy(), argType, false);
     func = Function::Create(funcType, Function::ExternalLinkage, funcName,
                             getModule());
     if (funcName == "") {
@@ -108,26 +108,26 @@ Function *IRGenerator::generateCUDAKernel(const QuantumGate &gate,
     pMatArg->setName("p.mat");
 
     // mark this function as a kernel
-    auto *mdString = MDString::get(*getContext(), "kernel");
-    auto *mdOne = ConstantAsMetadata::get(builder.getInt32(1));
-    auto *kernelMetadata = MDNode::get(
-        *getContext(), {ValueAsMetadata::get(func), mdString, mdOne});
+    auto* mdString = MDString::get(*getContext(), "kernel");
+    auto* mdOne = ConstantAsMetadata::get(builder.getInt32(1));
+    auto* kernelMetadata = MDNode::get(
+       * getContext(), {ValueAsMetadata::get(func), mdString, mdOne});
     getModule()
         ->getOrInsertNamedMetadata("nvvm.annotations")
         ->addOperand(kernelMetadata);
   } // end function declearation
 
-  Value *counterV;
+  Value* counterV;
 
-  BasicBlock *entryBB = BasicBlock::Create(*_context, "entry", func);
+  BasicBlock* entryBB = BasicBlock::Create(*_context, "entry", func);
   builder.SetInsertPoint(entryBB);
-  auto *threadIdx = builder.CreateIntrinsic(builder.getInt32Ty(),
+  auto* threadIdx = builder.CreateIntrinsic(builder.getInt32Ty(),
                                             Intrinsic::nvvm_read_ptx_sreg_tid_x,
                                             {}, nullptr, "threadIdx");
-  auto *nthreads = builder.CreateIntrinsic(builder.getInt32Ty(),
+  auto* nthreads = builder.CreateIntrinsic(builder.getInt32Ty(),
                                            Intrinsic::nvvm_read_ptx_sreg_ntid_x,
                                            {}, nullptr, "nthreads");
-  auto *blockIdx = builder.CreateIntrinsic(
+  auto* blockIdx = builder.CreateIntrinsic(
       builder.getInt32Ty(), Intrinsic::nvvm_read_ptx_sreg_ctaid_x, {}, nullptr,
       "blockIdx");
   counterV = builder.CreateMul(blockIdx, nthreads);
@@ -153,10 +153,10 @@ Function *IRGenerator::generateCUDAKernel(const QuantumGate &gate,
   // utils::printVector(qubits, std::cerr << "target qubits: ") << "\n";
 
   // the pointer of sv start in this thread
-  Value *svPtrV;
+  Value* svPtrV;
   {
-    Value *idxStartV = builder.getInt64(0ULL);
-    Value *tmpCounterV;
+    Value* idxStartV = builder.getInt64(0ULL);
+    Value* tmpCounterV;
     uint64_t mask = 0ULL;
     int highestQ = qubits.back();
     int qIdx = 0;
@@ -191,7 +191,7 @@ Function *IRGenerator::generateCUDAKernel(const QuantumGate &gate,
   uint64_t N = 1 << nqubits;
   // std::vector<Value*> reMats(N), imMats(N), reAmpPtrs(N), imAmpPtrs(N),
   // reAmps(N), imAmps(N);
-  std::vector<Value *> reAmpPtrs(N), imAmpPtrs(N), reAmps(N), imAmps(N);
+  std::vector<Value*> reAmpPtrs(N), imAmpPtrs(N), reAmps(N), imAmps(N);
   auto sigMat =
       gate.gateMatrix.getSignatureMatrix(config.zeroTol, config.oneTol);
   if (config.forceDenseKernel) {
@@ -225,7 +225,7 @@ Function *IRGenerator::generateCUDAKernel(const QuantumGate &gate,
     // for (int c = 0; c < N; c++) {
     //     // load the r-th row of the matrix
     //     std::string suffix = std::to_string(r) + "." + std::to_string(c);
-    //     auto* idxReV = builder.CreateConstGEP1_64(scalarTy, pMatArg, 2ULL *
+    //     auto* idxReV = builder.CreateConstGEP1_64(scalarTy, pMatArg, 2ULL* 
     //     (N*r + c), "idx.mat.re." + suffix); reMats[c] =
     //     builder.CreateLoad(scalarTy, idxReV, "mat.re." + suffix); auto*
     //     idxImV = builder.CreateConstGEP1_64(scalarTy, pMatArg, 2ULL * (N*r +
@@ -253,7 +253,7 @@ Function *IRGenerator::generateCUDAKernel(const QuantumGate &gate,
     // Alternative version, potentially having better locality
     // updatedReAmp = sum(reAmps_i * reMats_i) - sum(imAmps_i * imMats_i)
     // updatedImAmp = sum(reAmps_i * imMats_i) + sum(imAmps_i * reMats_i)
-    Value *reMatPtr, *imMatPtr, *reMat, *imMat;
+    Value* reMatPtr,* imMatPtr,* reMat,* imMat;
     if (sigMat.getRC(0, 0).real() == SK_General) {
       if (config.useImmValues && gateCMat) {
         reMat = ConstantFP::get(scalarTy, gateCMat->getRC(0, 0).real());
@@ -275,11 +275,11 @@ Function *IRGenerator::generateCUDAKernel(const QuantumGate &gate,
       }
     }
 
-    Value *updatedReAmp0 =
+    Value* updatedReAmp0 =
         genOptFMul(reMat, reAmps[0], sigMat.getRC(0, 0).real(), builder);
-    Value *updatedReAmp1 =
+    Value* updatedReAmp1 =
         genOptFMul(imMat, imAmps[0], sigMat.getRC(0, 0).imag(), builder);
-    Value *updatedImAmp =
+    Value* updatedImAmp =
         genOptFMul(reMat, imAmps[0], sigMat.getRC(0, 0).real(), builder);
     updatedImAmp = genMulAndAdd(imMat, reAmps[0], updatedImAmp,
                                 sigMat.getRC(0, 0).imag(), builder);
@@ -327,7 +327,7 @@ Function *IRGenerator::generateCUDAKernel(const QuantumGate &gate,
                                   sigMat.getRC(r, c).imag(), builder);
     }
 
-    Value *updatedReAmp = nullptr;
+    Value* updatedReAmp = nullptr;
     if (updatedReAmp0 && updatedReAmp1)
       updatedReAmp = builder.CreateFSub(updatedReAmp0, updatedReAmp1);
     else if (updatedReAmp0)

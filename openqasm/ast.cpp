@@ -9,7 +9,7 @@ saot::CircuitGraph RootNode::toCircuitGraph() const {
   for (const auto &s : stmts) {
     saot::GateMatrix::gate_params_t params;
     int i = 0;
-    auto gateApply = dynamic_cast<GateApplyStmt *>(s.get());
+    auto gateApply = dynamic_cast<GateApplyStmt*>(s.get());
     if (gateApply == nullptr) {
       // std::cerr << "skipping " << s->toString() << "\n";
       continue;
@@ -24,9 +24,9 @@ saot::CircuitGraph RootNode::toCircuitGraph() const {
       params[i++] = ev.value;
     }
     if (gateApply->name == "u3") {
-      auto *p = std::get_if<double>(&params[0]);
+      auto* p = std::get_if<double>(&params[0]);
       assert(p);
-      *p *= 0.5;
+     * p *= 0.5;
     }
     auto matrix = saot::GateMatrix::FromName(gateApply->name, params);
     graph.addGate(matrix, qubits);

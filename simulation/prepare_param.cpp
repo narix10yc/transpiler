@@ -6,11 +6,11 @@ using namespace llvm;
 using namespace simulation;
 using namespace saot;
 
-std::pair<Value *, Value *>
+std::pair<Value*, Value*>
 IRGenerator::generatePolynomial(const Polynomial &P, ParamValueFeeder &feeder) {
   P.print(std::cerr << "generating polynomial: ") << "\n";
   const auto generateMonomial = [&](const Monomial &M) {
-    std::pair<Value *, Value *> resultV{
+    std::pair<Value*, Value*> resultV{
         (M.coef.real() == 0.0) ? nullptr
                                : ConstantFP::get(getScalarTy(), M.coef.real()),
         (M.coef.imag() == 0.0) ? nullptr
@@ -18,7 +18,7 @@ IRGenerator::generatePolynomial(const Polynomial &P, ParamValueFeeder &feeder) {
 
     assert((resultV.first || resultV.second) && "coef should not be 0");
     // mul terms
-    Value *mulTermsV = nullptr;
+    Value* mulTermsV = nullptr;
     for (const auto &T : M.mulTerms()) {
       assert(!T.vars.empty() && "should be absorbed into M.coef");
       auto it = T.vars.cbegin();
@@ -45,11 +45,11 @@ IRGenerator::generatePolynomial(const Polynomial &P, ParamValueFeeder &feeder) {
       return resultV;
 
     auto it = M.expiVars().cbegin();
-    Value *expiVarV = feeder.get(it->var, builder, getScalarTy());
+    Value* expiVarV = feeder.get(it->var, builder, getScalarTy());
     if (!it->isPlus)
       expiVarV = builder.CreateFNeg(expiVarV);
     while (++it != M.expiVars().cend()) {
-      Value *tmp = feeder.get(it->var, builder, getScalarTy());
+      Value* tmp = feeder.get(it->var, builder, getScalarTy());
       if (it->isPlus)
         expiVarV = builder.CreateFAdd(expiVarV, tmp);
       else
@@ -72,35 +72,35 @@ IRGenerator::generatePolynomial(const Polynomial &P, ParamValueFeeder &feeder) {
   return polyV;
 }
 
-Function *IRGenerator::generatePrepareParameter(const CircuitGraph &graph) {
-  Type *scalarTy = getScalarTy();
+Function* IRGenerator::generatePrepareParameter(const CircuitGraph &graph) {
+  Type* scalarTy = getScalarTy();
 
-  auto *funcTy = FunctionType::get(
+  auto* funcTy = FunctionType::get(
       builder.getVoidTy(), {builder.getPtrTy(), builder.getPtrTy()}, false);
-  Function *func = Function::Create(funcTy, Function::ExternalLinkage,
+  Function* func = Function::Create(funcTy, Function::ExternalLinkage,
                                     "prepare_function", getModule());
 
-  auto *paramArgV = func->getArg(0);
+  auto* paramArgV = func->getArg(0);
   paramArgV->setName("param.ptr");
-  auto *matrixArgV = func->getArg(1);
+  auto* matrixArgV = func->getArg(1);
   matrixArgV->setName("matrix.ptr");
   ParamValueFeeder feeder(paramArgV);
 
-  BasicBlock *entryBB = BasicBlock::Create(*_context, "entry", func);
+  BasicBlock* entryBB = BasicBlock::Create(*_context, "entry", func);
   builder.SetInsertPoint(entryBB);
 
   uint64_t startIndex = 0;
   const auto allBlocks = graph.getAllBlocks();
   for (unsigned i = 0; i < allBlocks.size(); i++) {
-    GateBlock *gateBlock = allBlocks[i];
+    GateBlock* gateBlock = allBlocks[i];
     uint64_t numCompMatrixEntries = (1ULL << (2 * gateBlock->nqubits()));
 
     const GateMatrix &gateMatrix = gateBlock->quantumGate->gateMatrix;
-    if (const auto *cMat = gateMatrix.getConstantMatrix()) {
+    if (const auto* cMat = gateMatrix.getConstantMatrix()) {
       const auto &cData = cMat->data;
       for (uint64_t d = 0; d < numCompMatrixEntries; d++) {
         std::string gepName;
-        Value *matPtrV;
+        Value* matPtrV;
         // real part
         gepName = "m.block" + std::to_string(i) + ".re" + std::to_string(d);
         matPtrV = builder.CreateConstInBoundsGEP1_64(
@@ -120,7 +120,7 @@ Function *IRGenerator::generatePrepareParameter(const CircuitGraph &graph) {
       for (uint64_t d = 0; d < numCompMatrixEntries; d++) {
         auto polyV = generatePolynomial(pData[d], feeder);
         std::string gepName;
-        Value *matPtrV;
+        Value* matPtrV;
 
         // real part
         gepName = "m.block" + std::to_string(i) + ".re" + std::to_string(d);

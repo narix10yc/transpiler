@@ -16,11 +16,11 @@ using real_t = double;
 #endif
 using namespace timeit;
 
-int main(int argc, char **argv) {
+int main(int argc, char* *argv) {
   assert(argc > 1);
   const std::string test_name = argv[1];
 
-  real_t *real, *imag;
+  real_t* real,* imag;
   Timer timer;
   timer.setRunTime(0.5);
   // timer.setReplication(3);
@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
       timer.setReplication(3);
     uint64_t idxMax = 1ULL << (nqubits - SIMD_S - _metaData[0].nqubits);
 
-    real = (real_t *)std::aligned_alloc(64,
+    real = (real_t* )std::aligned_alloc(64,
                                         2 * (1ULL << nqubits) * sizeof(real_t));
     imag = real + (1ULL << nqubits);
 

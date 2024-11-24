@@ -49,7 +49,7 @@ using namespace simulation;
 using namespace llvm;
 
 struct kernel_t {
-  GateBlock *block;
+  GateBlock* block;
   std::string name;
   CUfunction kernel;
 };
@@ -154,7 +154,7 @@ static CircuitGraph &getCircuitZ4(CircuitGraph &graph, int nqubits) {
   return graph;
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char* *argv) {
   assert(argc > 1);
 
   // openqasm::Parser parser(argv[1], 0);
@@ -223,13 +223,13 @@ int main(int argc, char **argv) {
   errs() << "Target triple is: " << targetTriple.str() << "\n";
 
   std::string error;
-  const Target *target =
+  const Target* target =
       TargetRegistry::lookupTarget(targetTriple.str(), error);
   if (!target) {
     errs() << "Error: " << error << "\n";
     return 1;
   }
-  auto *targetMachine = target->createTargetMachine(targetTriple.str(), cpu, "",
+  auto* targetMachine = target->createTargetMachine(targetTriple.str(), cpu, "",
                                                     {}, std::nullopt);
 
   G.getModule()->setTargetTriple(targetTriple.getTriple());
@@ -300,25 +300,25 @@ int main(int argc, char **argv) {
   }
 
   size_t lengthSV = 2ULL * (1ULL << graph.nqubits);
-  scalar_t *d_sv;
-  scalar_t *d_mat;
+  scalar_t* d_sv;
+  scalar_t* d_mat;
 
   timedExecute(
       [&]() {
         if (auto err =
-                cudaMalloc((void **)(&d_sv), sizeof(scalar_t) * lengthSV))
+                cudaMalloc((void* *)(&d_sv), sizeof(scalar_t) * lengthSV))
           std::cerr << IOColor::RED_FG << "Error in cudaMalloc sv: " << err
                     << "\n"
                     << IOColor::RESET;
         if (auto err =
-                cudaMalloc((void **)(&d_mat), sizeof(scalar_t) * lengthMatVec))
+                cudaMalloc((void* *)(&d_mat), sizeof(scalar_t) * lengthMatVec))
           std::cerr << IOColor::RED_FG << "Error in cudaMalloc mat: " << err
                     << "\n"
                     << IOColor::RESET;
       },
       "Device memory allocated!");
 
-  void *kernel_params[] = {&d_sv, &d_mat};
+  void* kernel_params[] = {&d_sv, &d_mat};
   // void* kernel_params[] = { &d_sv };
 
   unsigned nBlocksBits = graph.nqubits - 8;

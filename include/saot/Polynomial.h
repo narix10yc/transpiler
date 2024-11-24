@@ -245,7 +245,7 @@ public:
   std::ostream &print(std::ostream &) const override;
 
   /// @brief Remove Monomials whose coefficient is less than a given threshold
-  /// @return updated *this
+  /// @return updated* this
   Polynomial &removeSmallMonomials(double thres = 1e-8);
   Polynomial &
   simplifySelf(const std::vector<std::pair<int, double>> &varValues = {});

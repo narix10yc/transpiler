@@ -72,13 +72,13 @@ std::string getNameOfTokenKind(TokenKind);
 class Token {
 public:
   TokenKind kind;
-  const char *memRefBegin;
-  const char *memRefEnd;
+  const char* memRefBegin;
+  const char* memRefEnd;
 
   Token(TokenKind kind = tk_Unknown)
       : kind(kind), memRefBegin(nullptr), memRefEnd(nullptr) {}
 
-  Token(TokenKind kind, const char *memRefBegin, const char *memRefEnd)
+  Token(TokenKind kind, const char* memRefBegin, const char* memRefEnd)
       : kind(kind), memRefBegin(memRefBegin), memRefEnd(memRefEnd) {}
 
   std::ostream &print(std::ostream & = std::cerr) const;
@@ -89,7 +89,7 @@ public:
   // is the token the literal 'i'
   bool isI() {
     return kind == tk_Identifier && memRefBegin + 1 == memRefEnd &&
-           *memRefBegin == 'i';
+          * memRefBegin == 'i';
   }
 
   double toDouble() const {
@@ -105,16 +105,16 @@ public:
 
 class Lexer {
 public:
-  const char *bufferBegin;
-  const char *bufferEnd;
+  const char* bufferBegin;
+  const char* bufferEnd;
   size_t bufferLength;
 
-  const char *curPtr;
+  const char* curPtr;
 
   int line;
-  const char *lineBegin;
+  const char* lineBegin;
 
-  Lexer(const char *fileName) {
+  Lexer(const char* fileName) {
     std::ifstream file(fileName, std::ifstream::binary);
     assert(file.is_open());
 
@@ -124,7 +124,7 @@ public:
 
     bufferBegin = new char[bufferLength];
     bufferEnd = bufferBegin + bufferLength;
-    file.read(const_cast<char *>(bufferBegin), bufferLength);
+    file.read(const_cast<char*>(bufferBegin), bufferLength);
     file.close();
 
     curPtr = bufferBegin;
@@ -138,8 +138,8 @@ public:
 
   struct line_info_t {
     int line;
-    const char *memRefBegin;
-    const char *memRefEnd;
+    const char* memRefBegin;
+    const char* memRefEnd;
   };
 
   line_info_t getCurLineInfo() const;
@@ -154,7 +154,7 @@ class Parser {
   std::complex<double> parseComplexNumber();
 
 public:
-  Parser(const char *fileName) : lexer(fileName) {
+  Parser(const char* fileName) : lexer(fileName) {
     lexer.lex(curToken);
     lexer.lex(nextToken);
   }
@@ -196,7 +196,7 @@ public:
     return false;
   }
 
-  void requiredAdvance(TokenKind kind, const char *msg = nullptr) {
+  void requiredAdvance(TokenKind kind, const char* msg = nullptr) {
     if (curToken.is(kind)) {
       advance();
       return;
@@ -212,7 +212,7 @@ public:
     failAndExit();
   }
 
-  void requireCurTokenIs(TokenKind kind, const char *msg = nullptr) {
+  void requireCurTokenIs(TokenKind kind, const char* msg = nullptr) {
     if (curToken.is(kind))
       return;
     auto &os = logErr();

@@ -178,7 +178,7 @@ RemoveFilesInsideOutputDirectory("rm-out-dir",
     cl::desc("remove files inside output directory"),
     cl::init(true));
 
-int main(int argc, char **argv) {
+int main(int argc, char* *argv) {
   CircuitGraph graph;
   CPUFusionConfig fusionConfig;
   // CodeGeneratorCPU codeGenerator;

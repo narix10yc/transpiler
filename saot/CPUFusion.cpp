@@ -51,10 +51,10 @@ std::ostream &CPUFusionConfig::display(std::ostream &OS) const {
 }
 
 // convenient iterator types
-using tile_iter_t = std::list<std::array<GateBlock *, 36>>::iterator;
+using tile_iter_t = std::list<std::array<GateBlock*, 36>>::iterator;
 
 namespace {
-GateBlock *computeCandidate(const GateBlock *lhs, const GateBlock *rhs,
+GateBlock* computeCandidate(const GateBlock* lhs, const GateBlock* rhs,
                             const CPUFusionConfig &config) {
   if (lhs == nullptr || rhs == nullptr)
     return nullptr;
@@ -76,8 +76,8 @@ GateBlock *computeCandidate(const GateBlock *lhs, const GateBlock *rhs,
   for (const auto &lData : lhs->dataVector) {
     const auto &q = lData.qubit;
 
-    GateNode *lhsEntry = lData.lhsEntry;
-    GateNode *rhsEntry;
+    GateNode* lhsEntry = lData.lhsEntry;
+    GateNode* rhsEntry;
     auto it = rhs->findQubit(q);
     if (it == rhs->dataVector.end())
       rhsEntry = lData.rhsEntry;
@@ -121,20 +121,20 @@ GateBlock *computeCandidate(const GateBlock *lhs, const GateBlock *rhs,
   return block;
 }
 
-GateBlock *trySameWireFuse(const CPUFusionConfig &config, CircuitGraph &graph,
+GateBlock* trySameWireFuse(const CPUFusionConfig &config, CircuitGraph &graph,
                            const tile_iter_t &itLHS, int q_) {
   assert(itLHS != graph.tile().end());
   const auto itRHS = std::next(itLHS);
   if (itRHS == graph.tile().end())
     return nullptr;
 
-  GateBlock *lhs = (*itLHS)[q_];
-  GateBlock *rhs = (*itRHS)[q_];
+  GateBlock* lhs = (*itLHS)[q_];
+  GateBlock* rhs = (*itRHS)[q_];
 
   if (!lhs || !rhs)
     return nullptr;
 
-  GateBlock *block = computeCandidate(lhs, rhs, config);
+  GateBlock* block = computeCandidate(lhs, rhs, config);
   if (block == nullptr)
     return nullptr;
 
@@ -156,15 +156,15 @@ GateBlock *trySameWireFuse(const CPUFusionConfig &config, CircuitGraph &graph,
   return block;
 }
 
-GateBlock *tryCrossWireFuse(const CPUFusionConfig &config, CircuitGraph &graph,
+GateBlock* tryCrossWireFuse(const CPUFusionConfig &config, CircuitGraph &graph,
                             const tile_iter_t &tileIt, int q) {
   auto block0 = (*tileIt)[q];
   if (block0 == nullptr)
     return nullptr;
 
   for (unsigned q1 = 0; q1 < graph.nqubits; q1++) {
-    auto *block1 = (*tileIt)[q1];
-    auto *fusedBlock = computeCandidate(block0, block1, config);
+    auto* block1 = (*tileIt)[q1];
+    auto* fusedBlock = computeCandidate(block0, block1, config);
     if (fusedBlock == nullptr)
       continue;
     for (const auto q : fusedBlock->getQubits()) {
@@ -184,8 +184,8 @@ void saot::applyCPUGateFusion(const CPUFusionConfig &originalConfig,
   if (tile.size() < 2)
     return;
 
-  GateBlock *lhsBlock;
-  GateBlock *rhsBlock;
+  GateBlock* lhsBlock;
+  GateBlock* rhsBlock;
 
   auto config = originalConfig;
   // increment scheme applies maxNQubits = 2, 3, ..., maxNQubits
@@ -212,7 +212,7 @@ void saot::applyCPUGateFusion(const CPUFusionConfig &originalConfig,
             graph.repositionBlockDownward(tileIt, q++);
             continue;
           }
-          auto *fusedBlock = trySameWireFuse(config, graph, tileIt, q);
+          auto* fusedBlock = trySameWireFuse(config, graph, tileIt, q);
           if (fusedBlock == nullptr)
             q++;
           else
@@ -221,7 +221,7 @@ void saot::applyCPUGateFusion(const CPUFusionConfig &originalConfig,
         // cross wire (same row) fuse
         q = 0;
         while (q < graph.nqubits) {
-          auto *fusedBlock = tryCrossWireFuse(config, graph, tileIt, q);
+          auto* fusedBlock = tryCrossWireFuse(config, graph, tileIt, q);
           if (fusedBlock == nullptr)
             q++;
           else

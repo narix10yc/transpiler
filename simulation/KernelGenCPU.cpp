@@ -17,8 +17,8 @@ using namespace llvm;
 using namespace saot;
 
 struct matrix_data_t {
-  Value *realVal;
-  Value *imagVal;
+  Value* realVal;
+  Value* imagVal;
   int realFlag;
   int imagFlag;
   bool realLoadNeg;
@@ -67,7 +67,7 @@ getMaskToMerge(const std::vector<int> &v0, const std::vector<int> &v1) {
 
 } // anonymous namespace
 
-Function *saot::genCPUCode(llvm::Module &llvmModule,
+Function* saot::genCPUCode(llvm::Module &llvmModule,
                            const CPUKernelGenConfig &config,
                            const QuantumGate &gate,
                            const std::string &funcName) {
@@ -80,20 +80,20 @@ Function *saot::genCPUCode(llvm::Module &llvmModule,
 
   IRBuilder<> builder(llvmContext);
 
-  Type *scalarTy =
+  Type* scalarTy =
       (config.precision == 32) ? builder.getFloatTy() : builder.getDoubleTy();
-  Function *func;
-  Argument *pSvArg, *pReArg, *pImArg, *ctrBeginArg, *ctrEndArg, *pMatArg;
+  Function* func;
+  Argument* pSvArg,* pReArg,* pImArg,* ctrBeginArg,* ctrEndArg,* pMatArg;
   { /* start of function declaration */
     auto argType =
         (config.ampFormat == CPUKernelGenConfig::SepFormat)
-            ? SmallVector<Type *>{builder.getPtrTy(), builder.getPtrTy(),
+            ? SmallVector<Type*>{builder.getPtrTy(), builder.getPtrTy(),
                                   builder.getInt64Ty(), builder.getInt64Ty(),
                                   builder.getPtrTy()}
-            : SmallVector<Type *>{builder.getPtrTy(), builder.getInt64Ty(),
+            : SmallVector<Type*>{builder.getPtrTy(), builder.getInt64Ty(),
                                   builder.getInt64Ty(), builder.getPtrTy()};
 
-    auto *funcType = FunctionType::get(builder.getVoidTy(), argType, false);
+    auto* funcType = FunctionType::get(builder.getVoidTy(), argType, false);
     func = Function::Create(funcType, Function::ExternalLinkage, funcName,
                             llvmModule);
 
@@ -121,10 +121,10 @@ Function *saot::genCPUCode(llvm::Module &llvmModule,
   } /* end of function declaration */
 
   // init basic blocks
-  BasicBlock *entryBB = BasicBlock::Create(llvmContext, "entry", func);
-  BasicBlock *loopBB = BasicBlock::Create(llvmContext, "loop", func);
-  BasicBlock *loopBodyBB = BasicBlock::Create(llvmContext, "loop.body", func);
-  BasicBlock *retBB = BasicBlock::Create(llvmContext, "ret", func);
+  BasicBlock* entryBB = BasicBlock::Create(llvmContext, "entry", func);
+  BasicBlock* loopBB = BasicBlock::Create(llvmContext, "loop", func);
+  BasicBlock* loopBodyBB = BasicBlock::Create(llvmContext, "loop.body", func);
+  BasicBlock* retBB = BasicBlock::Create(llvmContext, "ret", func);
 
   std::vector<matrix_data_t> matrix(K * K);
 
@@ -246,7 +246,7 @@ Function *saot::genCPUCode(llvm::Module &llvmModule,
   // unsigned _q = 0;
   // auto qubitsIt = gate.qubits.cbegin();
   // while (simdQubits.size() != s) {
-  //     if (qubitsIt != gate.qubits.cend() && *qubitsIt == _q) {
+  //     if (qubitsIt != gate.qubits.cend() &&* qubitsIt == _q) {
   //         lowerQubits.push_back(_q);
   //         qubitsIt++;
   //     } else {
@@ -418,7 +418,7 @@ Function *saot::genCPUCode(llvm::Module &llvmModule,
   // std::vector<Value*> real(K, nullptr), imag(K, nullptr);
   // std::vector<Value*> pSv(HK, nullptr), pRe(HK, nullptr), pIm(HK, nullptr);
   // { /* load amplitude registers */
-  // Value *svFull, *reFull, *imFull;
+  // Value* svFull,* reFull,* imFull;
   // for (unsigned hi = 0; hi < HK; hi++) {
   //     unsigned keyStart = 0;
   //     uint64_t idxShift = 0ULL;
@@ -516,7 +516,7 @@ Function *saot::genCPUCode(llvm::Module &llvmModule,
   //             }
   //         } else {
   //             assert(_config.shareMatrixElemThres <= 0.0 && "Not
-  //             Implemented"); Value *newRe0 = nullptr, *newRe1 = nullptr; for
+  //             Implemented"); Value* newRe0 = nullptr,* newRe1 = nullptr; for
   //             (unsigned c = 0; c < K; c++) {
   //                 newRe0 = genMulAdd(newRe0, matrix[r * K + c].realVal,
   //                 real[c],
@@ -577,10 +577,10 @@ Function *saot::genCPUCode(llvm::Module &llvmModule,
 
   //             newReal[storeIdx] = builder.CreateShuffleVector(
   //                     newReal[mergeIdx], newReal[mergeIdx + 1],
-  //                     *maskIt, "re.merge");
+  //                    * maskIt, "re.merge");
   //             newImag[storeIdx] = builder.CreateShuffleVector(
   //                     newImag[mergeIdx], newImag[mergeIdx + 1],
-  //                     *maskIt, "im.merge");
+  //                    * maskIt, "im.merge");
   //             maskIt++;
   //         }
   //     }
