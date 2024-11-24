@@ -5,11 +5,7 @@ namespace saot {
 
 class CircuitGraph;
 
-struct PtxGenerationConfig {
-
-};
-
-
+struct PtxGenerationConfig {};
 
 } // namespace saot
 

@@ -2,8 +2,8 @@
 #define SAOT_COSTMODEL_H
 
 #include <cassert>
-#include <vector>
 #include <string>
+#include <vector>
 
 namespace saot {
 
@@ -11,49 +11,47 @@ class QuantumGate;
 
 class CostModel {
 public:
-    ~CostModel() = default;
+  ~CostModel() = default;
 
-    virtual int getCost(const QuantumGate& gate) const {
-        assert(false && "Should not call from base class");
-        return -1;
-    }
-
+  virtual int getCost(const QuantumGate &gate) const {
+    assert(false && "Should not call from base class");
+    return -1;
+  }
 };
 
 class StandardCostModel : public CostModel {
-    int maxNQubits;
-    int maxOp;
+  int maxNQubits;
+  int maxOp;
+
 public:
-    StandardCostModel(int maxNQubits, int maxOp)
-        : maxNQubits(maxNQubits), maxOp(maxOp) {}
-        
-    int getCost(const QuantumGate& gate) const override;
+  StandardCostModel(int maxNQubits, int maxOp)
+      : maxNQubits(maxNQubits), maxOp(maxOp) {}
+
+  int getCost(const QuantumGate &gate) const override;
 };
 
 class AdaptiveCostModel : public CostModel {
 public:
-    int getCost(const QuantumGate& gate) const override;
-
+  int getCost(const QuantumGate &gate) const override;
 };
 
 class PerformanceCache {
 public:
-    struct Entry {
-        int nqubits;
-        int opCount;
-        double memUpdateSpeed;
-    };
+  struct Entry {
+    int nqubits;
+    int opCount;
+    double memUpdateSpeed;
+  };
 
-    std::vector<Entry> entries;
-    PerformanceCache() : entries() {}
+  std::vector<Entry> entries;
+  PerformanceCache() : entries() {}
 
-    void addExperiments(int comprehensiveness);
+  void addExperiments(int comprehensiveness);
 
-    void saveToCSV(const std::string& fileName) const;
-    static PerformanceCache LoadFromCSV(const std::string& fileName);
+  void saveToCSV(const std::string &fileName) const;
+  static PerformanceCache LoadFromCSV(const std::string &fileName);
 };
 
-
-} // namespace saot;
+} // namespace saot
 
 #endif // SAOT_COSTMODEL_H

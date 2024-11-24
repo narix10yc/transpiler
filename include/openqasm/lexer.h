@@ -1,55 +1,57 @@
 #ifndef LEXER_H_
 #define LEXER_H_
 
-#include <iostream>
-#include <fstream>
-#include <queue>
 #include "token.h"
+#include <fstream>
+#include <iostream>
+#include <queue>
 
 namespace openqasm {
 
 class Lexer {
-    std::string fileName;
-    std::queue<int> charBuf;
-    bool waitFlag = false;
-    int curChar;
-    std::ifstream file;
+  std::string fileName;
+  std::queue<int> charBuf;
+  bool waitFlag = false;
+  int curChar;
+  std::ifstream file;
+
 public:
-    Lexer(const std::string& fileName) : fileName(fileName) {}
-    ~Lexer() { file.close(); }
+  Lexer(const std::string &fileName) : fileName(fileName) {}
+  ~Lexer() { file.close(); }
 
-    int peekChar();
+  int peekChar();
 
-    Token getToken();
+  Token getToken();
 
-    void logError(const std::string& msg) const {
-        std::cerr << "== Lexer Error == " << msg << "\n";
-    }
+  void logError(const std::string &msg) const {
+    std::cerr << "== Lexer Error == " << msg << "\n";
+  }
 
-    bool openFile() { 
-        file = std::ifstream(fileName);
-        return file.is_open();
-    }
+  bool openFile() {
+    file = std::ifstream(fileName);
+    return file.is_open();
+  }
 
-    void closeFile() { file.close(); }
+  void closeFile() { file.close(); }
 
 private:
-    void nextChar() {
-        if (charBuf.empty())
-            curChar = file.get();
-        else {
-            curChar = charBuf.front();
-            charBuf.pop();
-        }
+  void nextChar() {
+    if (charBuf.empty())
+      curChar = file.get();
+    else {
+      curChar = charBuf.front();
+      charBuf.pop();
     }
+  }
 
-    void skipToEndOfLine() {
-        do { nextChar(); }
-        while (curChar != EOF && curChar != '\n' && curChar != '\r');
-    }
-    
-    Token tokenizeNumeric();
-    Token tokenizeIdentifier();
+  void skipToEndOfLine() {
+    do {
+      nextChar();
+    } while (curChar != EOF && curChar != '\n' && curChar != '\r');
+  }
+
+  Token tokenizeNumeric();
+  Token tokenizeIdentifier();
 };
 
 } // namespace openqasm

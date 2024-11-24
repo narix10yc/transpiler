@@ -16,7 +16,6 @@
 // using namespace llvm;
 // using namespace IOColor;
 
-
 // static CircuitGraph getCircuitH1(int nqubits, int repeat) {
 //     CircuitGraph graph;
 //     graph.updateFusionConfig({
@@ -29,9 +28,9 @@
 //     for (unsigned r = 0; r < repeat; r++)
 //         for (unsigned q = 0; q < nqubits; q++)
 //             graph.addGate(mat, {q});
-    
+
 //     return graph;
-// } 
+// }
 
 // static CircuitGraph getCircuitU1(int nqubits, int repeat) {
 //     CircuitGraph graph;
@@ -45,9 +44,9 @@
 //     for (unsigned r = 0; r < repeat; r++)
 //         for (unsigned q = 0; q < nqubits; q++)
 //             graph.addGate(mat, {q});
-    
+
 //     return graph;
-// } 
+// }
 
 // static CircuitGraph getCircuitH2(int nqubits, int repeat) {
 //     CircuitGraph graph;
@@ -65,9 +64,9 @@
 //             graph.addGate(gate);
 //         }
 //     }
-    
+
 //     return graph;
-// } 
+// }
 
 // static CircuitGraph getCircuitU2(int nqubits, int repeat) {
 //     CircuitGraph graph;
@@ -86,7 +85,7 @@
 //         }
 //     }
 //     return graph;
-// } 
+// }
 
 // static CircuitGraph getCircuitH3(int nqubits, int repeat) {
 //     CircuitGraph graph;
@@ -105,9 +104,9 @@
 //             graph.addGate(gate);
 //         }
 //     }
-    
+
 //     return graph;
-// } 
+// }
 
 // static CircuitGraph getCircuitU3(int nqubits, int repeat) {
 //     CircuitGraph graph;
@@ -127,8 +126,7 @@
 //         }
 //     }
 //     return graph;
-// } 
-
+// }
 
 // int main(int argc, char** argv) {
 //     cl::opt<std::string>
@@ -156,10 +154,12 @@
 //     UsePDEP("use-pdep", cl::desc("use pdep"), cl::init(true));
 
 //     cl::opt<bool>
-//     EnablePrefetch("enable-prefetch", cl::desc("enable prefetch"), cl::init(false));
+//     EnablePrefetch("enable-prefetch", cl::desc("enable prefetch"),
+//     cl::init(false));
 
 //     cl::opt<bool>
-//     AltKernel("alt-kernel", cl::desc("generate alt kernel"), cl::init(false));
+//     AltKernel("alt-kernel", cl::desc("generate alt kernel"),
+//     cl::init(false));
 
 //     cl::opt<std::string>
 //     WhichGate("gate", cl::desc("which gate"));
@@ -196,7 +196,7 @@
 //     if (UseF32)
 //         codeGenerator.config.precision = 32;
 //     codeGenerator.generate(graph);
-    
+
 //     return 0;
 // }
 
