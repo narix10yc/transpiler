@@ -11,7 +11,7 @@ saot::CircuitGraph RootNode::toCircuitGraph() const {
         int i = 0;
         auto gateApply = dynamic_cast<GateApplyStmt*>(s.get());
         if (gateApply == nullptr) {
-            std::cerr << "skipping " << s->toString() << "\n";
+            // std::cerr << "skipping " << s->toString() << "\n";
             continue;
         }
         qubits.clear();

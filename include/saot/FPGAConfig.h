@@ -72,6 +72,7 @@ public:
     // If off, apply sequential instruction generation on the default order of
     // blocks present in CircuitGraph
     bool selectiveGenerationMode;
+    int maxUpSize;
 
     FPGAGateCategoryTolerance tolerances;
 

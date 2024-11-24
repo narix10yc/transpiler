@@ -88,13 +88,14 @@ void printInstructionStatistics(
             //   << "    - num non-EXT mem instructions: " << nNonExtMemInst << "\n"
               << " ----------------------------------- \n"
               << BOLD << "Num Normalized Cycles: "
-              << tTotal << " (" << tTotalNoOpt << ")\n" << RESET << CYAN_FG
-              << "  - nTwiceExtMemTime: " << nTwiceExtMemTime << "\n"
-              << "  - nExtMemTime:      " << nExtMemTime << "\n"
-              << "  - nNonExtMemTime:   " << nNonExtMemTime << "\n"
-              << "  - nGeneralSQGate:   " << nGeneralSQGate << "\n"
-              << "  - nRealOnlySQGate:  " << nRealOnlySQGate << "\n"
-              << "  - nUPGate:          " << nUPGate << "\n";}
+              << tTotal << " (" << tTotalNoOpt << ")\n" << RESET << CYAN_FG;
+            //   << "  - nTwiceExtMemTime: " << nTwiceExtMemTime << "\n"
+            //   << "  - nExtMemTime:      " << nExtMemTime << "\n"
+            //   << "  - nNonExtMemTime:   " << nNonExtMemTime << "\n"
+            //   << "  - nGeneralSQGate:   " << nGeneralSQGate << "\n"
+            //   << "  - nRealOnlySQGate:  " << nRealOnlySQGate << "\n"
+            //   << "  - nUPGate:          " << nUPGate << "\n";
+}
 
 int costKindToNumNormalizedCycle(Instruction::CostKind kind) {
     switch (kind) {
@@ -109,6 +110,16 @@ int costKindToNumNormalizedCycle(Instruction::CostKind kind) {
         assert(false && "Unreachable");
         return 0;
     }
+}
+
+FPGAInstGenConfig getConfig(int nLocalQubits) {
+    return {
+        .nLocalQubits = nLocalQubits,
+        .gridSize = 4,
+        .selectiveGenerationMode = true,
+        .maxUpSize = 5,
+        .tolerances = FPGAGateCategoryTolerance::Default,
+    };
 }
 
 // This will have severe memory leak (as our CircuitGraph does not release memory)
@@ -126,113 +137,20 @@ void runExperiment(std::function<CircuitGraph()> f) {
 
     int nLocalQubits = 14;
     int gridSize = 4;
-    FPGAFusionConfig fusionConfig {
-        .maxUnitaryPermutationSize = 8,
-        .ignoreSingleQubitNonCompGates = true,
-        .multiTraverse = true,
-        .tolerances = FPGAGateCategoryTolerance::Default,
-    };
 
     FPGACostConfig costConfig {
         .lowestQIdxForTwiceExtTime = 7
     };
 
-    FPGAInstGenConfig instGen11ConfigUp8 {
-        .nLocalQubits = nLocalQubits,
-        .gridSize = gridSize,
-        .selectiveGenerationMode = true,
-        .maxUpSize = 8,
-        .tolerances = FPGAGateCategoryTolerance::Default,
-    };
-
-    FPGAInstGenConfig instGen11Config {
-        .nLocalQubits = nLocalQubits,
-        .gridSize = gridSize,
-        .selectiveGenerationMode = true,
-        .maxUpSize = 5,
-        .tolerances = FPGAGateCategoryTolerance::Default,
-    };
-
-    FPGAInstGenConfig instGen10Config {
-        .nLocalQubits = nLocalQubits,
-        .gridSize = gridSize,
-        .selectiveGenerationMode = false,
-        .maxUpSize = 5,
-        .tolerances = FPGAGateCategoryTolerance::Default,
-    };
-
-    FPGAInstGenConfig instGen01Config {
-        .nLocalQubits = nLocalQubits,
-        .gridSize = gridSize,
-        .selectiveGenerationMode = true,
-        .maxUpSize = 0,
-        .tolerances = FPGAGateCategoryTolerance::Default,
-    };
-
-    FPGAInstGenConfig instGen00Config {
-        .nLocalQubits = nLocalQubits,
-        .gridSize = gridSize,
-        .selectiveGenerationMode = false,
-        .maxUpSize = 0,
-        .tolerances = FPGAGateCategoryTolerance::Default,
-    };
-
-    FPGAInstGenConfig instGenBadConfig {
-        .nLocalQubits = nLocalQubits,
-        .gridSize = gridSize,
-        .selectiveGenerationMode = false,
-        .maxUpSize = 0,
-        .tolerances = FPGAGateCategoryTolerance::Zero,
-    };
-
-    // std::cerr << YELLOW_FG << BOLD << "Test -1: Fusion  ON, InstGen ON, MaxUP = 8\n" << RESET;
-    // G = f();
-    // std::cerr << "Number of gates: " << G.countBlocks() << "\n";
-    // utils::timedExecute([&]() {
-    //     instructions = fpga::genInstruction(G, instGen11ConfigUp8);
-    // }, "Inst Gen Complete!");
-    // printInstructionStatistics(instructions, costConfig, G.nqubits > 22);
-
-
-    std::cerr << YELLOW_FG << BOLD << "Test 0: Fusion  ON, InstGen  ON\n" << RESET;
-    G = f();
-    std::cerr << "Number of gates: " << G.countBlocks() << "\n";
-    utils::timedExecute([&]() {
-        instructions = fpga::genInstruction(G, instGen11Config);
-    }, "Inst Gen Complete!");
-    printInstructionStatistics(instructions, costConfig, G.nqubits > 22);
-
-
-    std::cerr << YELLOW_FG << BOLD << "Test 1: Fusion  ON, InstGen OFF\n" << RESET;
-    G = f();
-    utils::timedExecute([&]() {
-        instructions = fpga::genInstruction(G, instGen10Config);
-    }, "Inst Gen Complete!");
-    printInstructionStatistics(instructions, costConfig, G.nqubits > 22);
-
-
-    std::cerr << YELLOW_FG << BOLD << "Test 2: Fusion OFF, InstGen  ON\n" << RESET;
-    G = f();
-    utils::timedExecute([&]() {
-        instructions = fpga::genInstruction(G, instGen01Config);
-    }, "Inst Gen Complete!");
-    printInstructionStatistics(instructions, costConfig, G.nqubits > 22);
-
-
-    std::cerr << YELLOW_FG << BOLD << "Test 3: Fusion OFF, InstGen OFF\n" << RESET;
-    G = f();
-    utils::timedExecute([&]() {
-        instructions = fpga::genInstruction(G, instGen00Config);
-    }, "Inst Gen Complete!");
-    printInstructionStatistics(instructions, costConfig, G.nqubits > 22);
-
-
-    std::cerr << YELLOW_FG << BOLD << "Test 4: Fusion OFF, InstGen OFF, No gate value tolerance\n" << RESET;
-    G = f();
-    utils::timedExecute([&]() {
-        instructions = fpga::genInstruction(G, instGenBadConfig);
-    }, "Inst Gen Complete!");
-    printInstructionStatistics(instructions, costConfig, G.nqubits > 22);
+    for (int nLocalQubits = 14; nLocalQubits > 0; nLocalQubits--) {
+        std::cerr << YELLOW_FG << BOLD << "NLocalQubits = " << nLocalQubits << "\n" << RESET;
+        G = f();
+        // std::cerr << "Number of gates: " << G.countBlocks() << "\n";
+        utils::timedExecute([&]() {
+            instructions = fpga::genInstruction(G, getConfig(nLocalQubits));
+        }, "Inst Gen Complete!");
+        printInstructionStatistics(instructions, costConfig, G.nqubits > 22);
+    }
 }
 
 int main(int argc, char** argv) {

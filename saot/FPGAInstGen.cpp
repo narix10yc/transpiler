@@ -345,9 +345,37 @@ public:
             }
         };
 
+        bool upFusionFlag = false;
         const auto generateUPBlock = [&](GateBlock* b) {
             popBlock(b);
-
+            GateBlock* lastUpBlock = nullptr;
+            assert(vacantGateIdx >= 0);
+            if (config.maxUpSize > 0
+                    && !instructions.empty()
+                    && instructions[vacantGateIdx - 1].gInst->getKind() == GOp_UP) {
+                lastUpBlock = instructions[vacantGateIdx - 1].gInst->block;
+                // check fusion condition
+                auto candidateQubits = lastUpBlock->quantumGate->qubits;
+                for (const auto& q : b->quantumGate->qubits)
+                    utils::pushBackIfNotInVector(candidateQubits, q);
+                // accept fusion
+                if (candidateQubits.size() <= config.maxUpSize) {
+                    // TODO: This will cause memory leak
+                    auto gate = b->quantumGate->lmatmul(*lastUpBlock->quantumGate);
+                    auto* node = new GateNode(gate.gateMatrix, gate.qubits);
+                    auto* block = new GateBlock(node);
+                    instructions[vacantGateIdx - 1].setGInst(
+                        std::make_unique<GInstUP>(block, FPGAGateCategory::NonComp));
+                    // std::cerr << "InstGen Time Fusion Accepted\n";
+                    if (upFusionFlag) {
+                        delete(lastUpBlock->dataVector[0].lhsEntry);
+                        delete(lastUpBlock);
+                    }
+                    upFusionFlag = true;
+                    return;
+                }
+            }
+            upFusionFlag = false;
             if (vacantGateIdx == instructions.size()) {
                 instructions.emplace_back(nullptr, std::make_unique<GInstUP>(b, getBlockKind(b)));
             } else {
@@ -495,11 +523,20 @@ public:
                 continue;
             }
             
+            if (upFusionFlag) {
+                if (auto* b = findBlockWithABK(ABK_UnitaryPerm)) {
+                    generateUPBlock(b);
+                    continue;
+                }
+            }
             // TODO: optimize this traversal
-            if (auto* b = findBlockWithABK(ABK_OnChipLocalSQ))
+            if (auto* b = findBlockWithABK(ABK_OnChipLocalSQ)) {
                 generateLocalSQBlock(b);
-            else if (auto* b = findBlockWithABK(ABK_UnitaryPerm))
+                continue;
+            }
+            if (auto* b = findBlockWithABK(ABK_UnitaryPerm)) {
                 generateUPBlock(b);
+            }
             else if (auto* b = findBlockWithABK(ABK_OnChipNonLocalSQ))
                 generateNonLocalSQBlock(b);
             else // no onChipBlock
