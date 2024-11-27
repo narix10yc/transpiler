@@ -10,39 +10,15 @@ bool utils::isPermutation(const std::vector<int> &v) {
   return true;
 }
 
-uint64_t utils::pdep64(uint64_t src, uint64_t mask) {
-  unsigned k = 0;
-  uint64_t dst = 0ULL;
-  for (unsigned i = 0; i < 64; ++i) {
-    if (mask & (1ULL << i)) {
-      if (src & (1ULL << i))
-        dst |= (1ULL << k);
-      ++k;
-    }
-  }
-  return dst;
-}
 
 uint64_t utils::pdep64(uint64_t src, uint64_t mask, int nbits) {
+  assert(0 <= nbits && nbits <= 64 && "nbits must be in [0, 64]");
+  uint64_t dst = 0;
   unsigned k = 0;
-  uint64_t dst = 0ULL;
-  for (unsigned i = 0; i < nbits; ++i) {
+  for (unsigned i = 0; i < nbits; i++) {
     if (mask & (1ULL << i)) {
-      if (src & (1ULL << i))
-        dst |= (1ULL << k);
-      ++k;
-    }
-  }
-  return dst;
-}
-
-uint32_t utils::pdep32(uint32_t src, uint32_t mask) {
-  unsigned k = 0;
-  uint32_t dst = 0U;
-  for (unsigned i = 0; i < 32; ++i) {
-    if (mask & (1U << i)) {
-      if (src & (1U << i))
-        dst |= (1U << k);
+      if (src & (1ULL << k))
+        dst |= (1ULL << i);
       ++k;
     }
   }
@@ -50,24 +26,25 @@ uint32_t utils::pdep32(uint32_t src, uint32_t mask) {
 }
 
 uint32_t utils::pdep32(uint32_t src, uint32_t mask, int nbits) {
+  assert(0 <= nbits && nbits <= 32 && "nbits must be in [0, 32]");
+  uint32_t dst = 0;
   unsigned k = 0;
-  uint32_t dst = 0U;
-  for (unsigned i = 0; i < nbits; ++i) {
+  for (unsigned i = 0; i < nbits; i++) {
     if (mask & (1U << i)) {
-      if (src & (1U << i))
-        dst |= (1U << k);
+      if (src & (1U << k))
+        dst |= (1U << i);
       ++k;
     }
   }
   return dst;
 }
 
-uint64_t utils::pext64(uint64_t src, uint64_t mask) {
+uint64_t utils::pext64(uint64_t src, uint64_t mask, int nbits) {
   assert(0 && "Not Implemented");
   return 0;
 }
 
-uint64_t utils::pext64(uint64_t src, uint64_t mask, int nbits) {
+uint32_t utils::pext32(uint32_t src, uint32_t mask, int nbits) {
   assert(0 && "Not Implemented");
   return 0;
 }
@@ -83,7 +60,7 @@ void utils::timedExecute(std::function<void()> f, const char* msg) {
   return;
 }
 
-std::ostream &utils::print_complex(std::ostream &os, std::complex<double> c,
+std::ostream& utils::print_complex(std::ostream& os, std::complex<double> c,
                                    int precision) {
   const double thres = 0.5 * std::pow(0.1, precision);
   if (c.real() >= -thres)
