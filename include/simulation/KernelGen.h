@@ -10,6 +10,7 @@ class QuantumGate;
 
 struct CPUKernelGenConfig {
   enum AmpFormat { AltFormat, SepFormat };
+  enum MatrixLoadMode { VectorInStack, ElemInStack, InMainBody };
 
   int simdS = 2;
   int precision = 64;
@@ -18,12 +19,15 @@ struct CPUKernelGenConfig {
   bool useFMS = true;
   // parallel bits deposite from BMI2
   bool usePDEP = false;
+  bool useImmValues = true;
   bool loadMatrixInEntry = true;
   bool loadVectorMatrix = false;
   bool forceDenseKernel = false;
   double zeroSkipThres = 1e-8;
   double shareMatrixElemThres = 0.0;
+  double oneTol = 1e-8;
   bool shareMatrixElemUseImmValue = false;
+  MatrixLoadMode matrixLoadMode;
 
   static const CPUKernelGenConfig NativeDefault;
 };

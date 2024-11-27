@@ -3,7 +3,9 @@
 
 #include "saot/ComplexMatrix.h"
 #include "saot/Polynomial.h"
+#include "saot/ScalarKind.h"
 #include "utils/utils.h"
+
 #include <array>
 #include <optional>
 #include <variant>
@@ -51,14 +53,6 @@ std::ostream &printConstantMatrix(
 std::ostream &printParametrizedMatrix(
     std::ostream &os,
     const complex_matrix::SquareMatrix<saot::Polynomial> &cMat);
-
-enum ScalarKind : int {
-  SK_Zero = 0,
-  SK_One = 1,
-  SK_MinusOne = -1,
-  SK_General = 2,
-  SK_ImmValue = 3,
-};
 
 class GateMatrix {
 public:

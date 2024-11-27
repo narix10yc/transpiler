@@ -16,7 +16,7 @@ uint64_t utils::pdep64(uint64_t src, uint64_t mask) {
   for (unsigned i = 0; i < 64; ++i) {
     if (mask & (1ULL << i)) {
       if (src & (1ULL << i))
-        dst |= (1 << k);
+        dst |= (1ULL << k);
       ++k;
     }
   }
@@ -29,11 +29,47 @@ uint64_t utils::pdep64(uint64_t src, uint64_t mask, int nbits) {
   for (unsigned i = 0; i < nbits; ++i) {
     if (mask & (1ULL << i)) {
       if (src & (1ULL << i))
-        dst |= (1 << k);
+        dst |= (1ULL << k);
       ++k;
     }
   }
   return dst;
+}
+
+uint32_t utils::pdep32(uint32_t src, uint32_t mask) {
+  unsigned k = 0;
+  uint32_t dst = 0U;
+  for (unsigned i = 0; i < 32; ++i) {
+    if (mask & (1U << i)) {
+      if (src & (1U << i))
+        dst |= (1U << k);
+      ++k;
+    }
+  }
+  return dst;
+}
+
+uint32_t utils::pdep32(uint32_t src, uint32_t mask, int nbits) {
+  unsigned k = 0;
+  uint32_t dst = 0U;
+  for (unsigned i = 0; i < nbits; ++i) {
+    if (mask & (1U << i)) {
+      if (src & (1U << i))
+        dst |= (1U << k);
+      ++k;
+    }
+  }
+  return dst;
+}
+
+uint64_t utils::pext64(uint64_t src, uint64_t mask) {
+  assert(0 && "Not Implemented");
+  return 0;
+}
+
+uint64_t utils::pext64(uint64_t src, uint64_t mask, int nbits) {
+  assert(0 && "Not Implemented");
+  return 0;
 }
 
 void utils::timedExecute(std::function<void()> f, const char* msg) {
