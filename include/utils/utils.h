@@ -36,8 +36,8 @@ static bool isOrdered(const std::vector<T> &vec, bool ascending = true) {
   }
 }
 
-std::ostream &print_complex(std::ostream &os, std::complex<double> c,
-                            int precision = 3);
+std::ostream &print_complex(
+  std::ostream &os, std::complex<double> c, int precision = 3);
 
 template <typename T>
 std::ostream &printVector(const std::vector<T> &v,
@@ -45,22 +45,22 @@ std::ostream &printVector(const std::vector<T> &v,
   if (v.empty())
     return os << "[]";
   auto it = v.cbegin();
-  os << "[" <<* it;
+  os << "[" << *it;
   while (++it != v.cend())
-    os << "," <<* it;
+    os << "," << *it;
   return os << "]";
 }
 
 template <typename T, unsigned N>
-std::ostream &printVector(const llvm::SmallVector<T, N> &v,
-                          std::ostream &os = std::cerr) {
+std::ostream &printLLVMSmallVector(
+    const llvm::SmallVector<T, N> &v, std::ostream &os = std::cerr) {
   if (v.empty())
     return os << "[]";
-  auto it = v.cbegin();
-  os << "[" <<* it;
-  while (++it != v.cend())
-    os << "," <<* it;
-  return os << "]";
+  const auto size = v.size();
+  os << "[";
+  for (unsigned i = 0; i < size-1; i++)
+    os << v[i] << ",";
+  return os << v[size-1] << "]";
 }
 
 // The printer is expected to take inputs (const T&, std::ostream&)
@@ -98,14 +98,11 @@ template <typename T = uint64_t> static T insertOneToBit(T x, int bit) {
   return (x & maskLo) | ((x & maskHi) << 1) | (1 << bit);
 }
 
-uint64_t pdep64(uint64_t src, uint64_t mask);
-uint64_t pdep64(uint64_t src, uint64_t mask, int nbits);
+uint64_t pdep64(uint64_t src, uint64_t mask, int nbits = 64);
+uint32_t pdep32(uint32_t src, uint32_t mask, int nbits = 32);
 
-uint32_t pdep32(uint32_t src, uint32_t mask);
-uint32_t pdep32(uint32_t src, uint32_t mask, int nbits);
-
-uint64_t pext64(uint64_t src, uint64_t mask);
-uint64_t pext64(uint64_t src, uint64_t mask, int nbits);
+uint64_t pext64(uint64_t src, uint64_t mask, int nbits = 64);
+uint32_t pext32(uint32_t src, uint32_t mask, int nbits = 32);
 
 class as0b {
   uint64_t v;
