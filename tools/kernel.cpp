@@ -9,7 +9,7 @@ int main(int argc, char** argv) {
   llvm::Module llvmModule("myModule", llvmContext);
 
   CPUKernelGenConfig config {
-    .simdS = 2,
+    .simdS = 3,
     .forceDenseKernel = true,
   };
 

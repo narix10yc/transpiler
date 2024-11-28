@@ -207,13 +207,25 @@ Function* saot::genCPUCode(llvm::Module &llvmModule,
       hiBits.push_back(*qubitsIt);
       ++qubitsIt;
   }
+
+  for (auto& b : loBits) {
+    if (b >= s)
+      ++b;
+  }
+  for (auto& b : simdBits) {
+    if (b >= s)
+      ++b;
+  }
+  for (auto& b : hiBits) {
+    if (b >= s)
+      ++b;
+  }
+
   sepBit = (s == 0) ? 0 : simdBits.back() + 1;
   }
 
   const unsigned vecSize = 1U << sepBit;
-  const unsigned vecSizex2 = vecSize << 1;
   auto* vecType = VectorType::get(scalarTy, vecSize, false);
-  auto* vecTypeX2 = VectorType::get(scalarTy, vecSizex2, false);
 
   const unsigned lk = loBits.size();
   const unsigned LK = 1 << lk;
@@ -222,9 +234,10 @@ Function* saot::genCPUCode(llvm::Module &llvmModule,
 
   // debug print qubit splits
   std::cerr << CYAN_FG << "-- qubit split done\n" << RESET;\
-  utils::printVector(loBits, std::cerr << "- lower bits: ") << "\n";
-  utils::printVector(simdBits, std::cerr << "- simd bits: ") << "\n";
-  utils::printVector(hiBits, std::cerr << "- higher bits: ") << "\n";
+  utils::printLLVMSmallVector(loBits, std::cerr << "- lower bits: ") << "\n";
+  utils::printLLVMSmallVector(simdBits, std::cerr << "- simd bits: ") << "\n";
+  utils::printLLVMSmallVector(hiBits, std::cerr << "- higher bits: ") << "\n";
+  std::cerr << "- reImBit: " << s << "\n";
   std::cerr << "sepBit:  " << sepBit << "\n";
   std::cerr << "vecSize: " << vecSize << "\n";
   
@@ -284,7 +297,7 @@ Function* saot::genCPUCode(llvm::Module &llvmModule,
   // the start pointer in the SV based on taskID
   Value* ptrSvBeginV = nullptr;
   if (hiBits.empty()) {
-    ptrSvBeginV = B.CreateGEP(vecTypeX2, args.pSvArg, taskIdV, "ptr.sv.begin");
+    ptrSvBeginV = B.CreateGEP(vecType, args.pSvArg, taskIdV, "ptr.sv.begin");
   } else {
     // the shift from args.pSvArg in the unit of vecTypeX2
     Value* idxStartV = B.getInt64(0ULL);
@@ -315,7 +328,7 @@ Function* saot::genCPUCode(llvm::Module &llvmModule,
     tmpCounterV = B.CreateAnd(taskIdV, mask, "tmp.taskid");
     tmpCounterV = B.CreateShl(tmpCounterV, hk, "tmp.taskid");
     idxStartV = B.CreateAdd(idxStartV, tmpCounterV, "idx.begin");
-    ptrSvBeginV = B.CreateGEP(vecTypeX2, args.pSvArg, idxStartV, "ptr.sv.begin");
+    ptrSvBeginV = B.CreateGEP(vecType, args.pSvArg, idxStartV, "ptr.sv.begin");
   }
 
 
@@ -332,19 +345,27 @@ Function* saot::genCPUCode(llvm::Module &llvmModule,
       (resp. imAmps) vector.
   */
 
+  // [re/im]SplitMasks are like flattened LK*S matrices
   SmallVector<int> reSplitMasks;
   SmallVector<int> imSplitMasks;
   {
-  const auto size = LK * S;
-  unsigned pdepMask = 0U;
+  unsigned pdepMaskS = 0U;
+  int pdepNbitsS = simdBits.empty() ? 0 : simdBits.back() + 1;
   for (const auto& b : simdBits)
-    pdepMask |= (1 << b);
-  
-  reSplitMasks.resize_for_overwrite(size);
-  imSplitMasks.resize_for_overwrite(size);
-  for (unsigned i = 0; i < size; i++) {
-    reSplitMasks[i] = utils::pdep32(i, pdepMask);
-    imSplitMasks[i] = reSplitMasks[i] | (1 << s);
+    pdepMaskS |= (1U << b);
+  unsigned pdepMaskL = 0U;
+  int pdepNbitsL = loBits.empty() ? 0 : loBits.back() + 1;
+  for (const auto& b : loBits)
+    pdepMaskL |= (1U << b);
+  reSplitMasks.resize_for_overwrite(LK * S);
+  imSplitMasks.resize_for_overwrite(LK * S);
+  // TODO: Optimize this double-loop
+  for (unsigned li = 0; li < LK; li++) {
+    for (unsigned si = 0; si < S; si++) {
+      reSplitMasks[li * S + si] = utils::pdep32(li, pdepMaskL, pdepNbitsL) | 
+                                  utils::pdep32(si, pdepMaskS, pdepNbitsS);
+      imSplitMasks[li * S + si] = reSplitMasks[li * S + si] | (1 << s);
+    }
   }
   std::cerr << "- reSplitMasks: [";
   for (const auto& e : reSplitMasks)
@@ -372,12 +393,11 @@ Function* saot::genCPUCode(llvm::Module &llvmModule,
     }
     idxShift >>= sepBit;
     std::cerr << "hi = " << hi << ": idxShift = "
-              << utils::as0b(idxShift, hiBits.back()) << "\n";
+              << utils::as0b(idxShift, hiBits.empty() ? 1 : hiBits.back()) << "\n";
     pSvs[hi] = B.CreateConstGEP1_64(
-      vecTypeX2, ptrSvBeginV, idxShift, "ptr.sv.hi." + std::to_string(hi));
-
+      vecType, ptrSvBeginV, idxShift, "ptr.sv.hi." + std::to_string(hi));
     auto* ampFull = B.CreateLoad(
-      vecTypeX2, pSvs[hi], "sv.full.hi." + std::to_string(hi));
+      vecType, pSvs[hi], "sv.full.hi." + std::to_string(hi));
 
     for (unsigned li = 0; li < LK; li++) {
       reAmps[hi * LK + li] = B.CreateShuffleVector(
@@ -389,6 +409,70 @@ Function* saot::genCPUCode(llvm::Module &llvmModule,
     }
   }
 
+  std::vector<std::vector<int>> mergeMasks;
+  mergeMasks.reserve(lk);
+  {
+  int idxL, idxR;
+  unsigned lCached; // length of cached array
+  std::vector<int> arr0(LK >> 1), arr1(LK >> 1), arr2(LK >> 1);
+  std::vector<int>& cacheLHS = arr0, &cacheRHS = arr1, &cacheCombined = arr2;
+  std::memcpy(arr0.data(), reSplitMasks.data(),     S * sizeof(int));
+  std::memcpy(arr1.data(), reSplitMasks.data() + S, S * sizeof(int));
+  for (int roundIdx = 0; roundIdx < lk; roundIdx++) {
+    lCached = S << roundIdx;
+    mergeMasks.emplace_back(lCached << 1);
+    auto& mask = mergeMasks.back();
+    
+    idxL = 0; idxR = 0;
+    for (int idxCombined = 0; idxCombined < (lCached << 1); idxCombined++) {
+      if (idxL == lCached) {
+        // append cacheRHS[idxR:] to cacheCombined
+        while (idxR < lCached) {
+          mask[idxCombined] = idxR + lCached;
+          cacheCombined[idxCombined++] = cacheRHS[idxR++];
+        }
+        break;
+      }
+      if (idxR == lCached) {
+        // append cacheLHS[idxL:] to cacheCombined
+        while (idxL < lCached) {
+          mask[idxCombined] = idxL;
+          cacheCombined[idxCombined++] = cacheLHS[idxL++];
+        }
+        break;
+      }
+      if (cacheLHS[idxL] < cacheRHS[idxR]) {
+        mask[idxCombined] = idxL;
+        cacheCombined[idxCombined] = cacheLHS[idxL];
+        ++idxL;
+      }
+      else {
+        mask[idxCombined] = idxR + lCached;
+        cacheCombined[idxCombined] = cacheRHS[idxR];
+        ++idxR;
+      }
+    }
+    // rotate the assignments of
+    // (cacheLHS, cacheRHS, cacheCombined) with (arr0, arr1, arr2)
+    cacheLHS = cacheCombined;
+    if (cacheLHS == arr2) {
+      cacheRHS = arr0;
+      cacheCombined = arr1;
+    } else if (cacheLHS == arr1) {
+      cacheRHS = arr2;
+      cacheCombined = arr0;
+    } else {
+      assert(cacheLHS == arr0);
+      cacheRHS = arr1;
+      cacheCombined = arr2;
+    }
+    for (int i = 0; i < lCached; i++) {
+      cacheRHS[i] = cacheLHS[i] + (1 << loBits[roundIdx]);
+    }
+
+  }
+  }
+
   SmallVector<Value*> updatedReAmps;
   SmallVector<Value*> updatedImAmps;
   updatedReAmps.resize_for_overwrite(LK);
@@ -397,33 +481,34 @@ Function* saot::genCPUCode(llvm::Module &llvmModule,
     // mat-vec mul
     std::memset(updatedReAmps.data(), 0, updatedReAmps.size_in_bytes());
     std::memset(updatedImAmps.data(), 0, updatedImAmps.size_in_bytes());
-    for (unsigned li = 0; li < LK; li++) {
-      for (unsigned k = 0; k < K; k++) {
-        updatedReAmps[li] = internal::genMulAdd(B,
-          matrixData[k].reVal, reAmps[k], updatedReAmps[li],
-          matrixData[k].reKind, 
-          "new.re." + std::to_string(hi) + "." + std::to_string(li) + ".");
-        updatedReAmps[li] = internal::genNegMulAdd(B,
-          matrixData[k].imVal, imAmps[k], updatedReAmps[li],
-          matrixData[k].imKind, 
-          "new.re." + std::to_string(hi) + "." + std::to_string(li) + ".");
+    // for (unsigned li = 0; li < LK; li++) {
+    //   for (unsigned k = 0; k < K; k++) {
+    //     updatedReAmps[li] = internal::genMulAdd(B,
+    //       matrixData[k].reVal, reAmps[k], updatedReAmps[li],
+    //       matrixData[k].reKind, 
+    //       "new.re." + std::to_string(hi) + "." + std::to_string(li) + ".");
+    //     updatedReAmps[li] = internal::genNegMulAdd(B,
+    //       matrixData[k].imVal, imAmps[k], updatedReAmps[li],
+    //       matrixData[k].imKind, 
+    //       "new.re." + std::to_string(hi) + "." + std::to_string(li) + ".");
 
-        updatedImAmps[li] = internal::genMulAdd(B,
-          matrixData[k].reVal, imAmps[k], updatedImAmps[li],
-          matrixData[k].reKind, 
-          "new.im." + std::to_string(hi) + "." + std::to_string(li) + ".");
-        updatedImAmps[li] = internal::genMulAdd(B,
-          matrixData[k].imVal, reAmps[k], updatedImAmps[li],
-          matrixData[k].imKind, 
-          "new.im." + std::to_string(hi) + "." + std::to_string(li) + ".");
-      }
-    }
+    //     updatedImAmps[li] = internal::genMulAdd(B,
+    //       matrixData[k].reVal, imAmps[k], updatedImAmps[li],
+    //       matrixData[k].reKind, 
+    //       "new.im." + std::to_string(hi) + "." + std::to_string(li) + ".");
+    //     updatedImAmps[li] = internal::genMulAdd(B,
+    //       matrixData[k].imVal, reAmps[k], updatedImAmps[li],
+    //       matrixData[k].imKind, 
+    //       "new.im." + std::to_string(hi) + "." + std::to_string(li) + ".");
+    //   }
+    // }
     
-    // store
+    // merge and store
+
 
   }
 
-
+  // entryBB->print(errs());
   loopBodyBB->print(errs());
 
   // increment counter and return
