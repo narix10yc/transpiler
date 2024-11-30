@@ -21,7 +21,7 @@ using utils::timedExecute;
 
 struct kernel_t {
   Function* llvmFunc;
-  void (*func)(double*, uint64_t, uint64_t, double* );
+  void (*func)(double*, uint64_t, uint64_t, double*);
 };
 
 int main(int argc, char* *argv) {
@@ -35,59 +35,57 @@ int main(int argc, char* *argv) {
   irConfig.usePDEP = false;
   Function* llvmFuncPrepareParam;
   std::vector<kernel_t> kernels;
-  void (*prepareParam)(double*, double* );
+  void (*prepareParam)(double*, double*);
 
   // parse
-  timedExecute(
-      [&]() {
-        openqasm::Parser qasmParser(argv[1], -1);
-        graph = qasmParser.parse()->toCircuitGraph();
-      },
-      "Parsing complete!");
+  timedExecute([&]() {
+    openqasm::Parser qasmParser(argv[1], -1);
+    graph = qasmParser.parse()->toCircuitGraph();
+  }, "Parsing complete!");
 
   // fusion
-  timedExecute([&]() { applyCPUGateFusion(fusionConfig, graph); },
-               "Fusion complete!");
+  timedExecute([&]() {
+    applyCPUGateFusion(fusionConfig, graph);
+  }, "Fusion complete!");
 
   // ir generation
-  timedExecute(
-      [&]() {
-        llvmFuncPrepareParam = G.generatePrepareParameter(graph);
-        auto allBlocks = graph.getAllBlocks();
-        std::cerr << "After fusion there are " << allBlocks.size()
-                  << " blocks\n";
-        kernels.reserve(allBlocks.size());
-        for (const auto &b : allBlocks) {
-          kernels.push_back({G.generateKernel(*b->quantumGate), nullptr});
-        }
-      },
-      "IR generation complete!");
+  timedExecute( [&]() {
+    llvmFuncPrepareParam = G.generatePrepareParameter(graph);
+    auto allBlocks = graph.getAllBlocks();
+    std::cerr << "After fusion there are " << allBlocks.size()
+              << " blocks\n";
+    kernels.reserve(allBlocks.size());
+    for (const auto &b : allBlocks) {
+      kernels.push_back({G.generateKernel(*b->quantumGate), nullptr});
+    }
+  }, "IR generation complete!");
 
   // optimize
-  timedExecute([&]() { G.applyLLVMOptimization(OptimizationLevel::O1); },
-               "Optimization complete!");
+  timedExecute([&]() {
+    G.applyLLVMOptimization(OptimizationLevel::O1);
+  }, "Optimization complete!");
 
   // jit
-  timedExecute([&]() { G.createJitSession(); }, "JIT session created!");
+  timedExecute([&]() {
+    G.createJitSession();
+  }, "JIT session created!");
 
   // function lookup
-  timedExecute(
-      [&]() {
-        auto* jitter = G.getJitter();
-        auto funcAddrOrErr = jitter->lookup(llvmFuncPrepareParam->getName());
-        if (!funcAddrOrErr) {
-          errs() << "Failed to look up function\n"
-                 << funcAddrOrErr.takeError() << "\n";
-        }
+  timedExecute( [&]() {
+    auto* jitter = G.getJitter();
+    auto funcAddrOrErr = jitter->lookup(llvmFuncPrepareParam->getName());
+    if (!funcAddrOrErr) {
+      errs() << "Failed to look up function\n"
+              << funcAddrOrErr.takeError() << "\n";
+    }
 
-        prepareParam = funcAddrOrErr->toPtr<void(double*, double* )>();
-        for (auto &kernel : kernels) {
-          kernel.func =
-              cantFail(jitter->lookup(llvmFuncPrepareParam->getName()))
-                  .toPtr<void(double*, uint64_t, uint64_t, double* )>();
-        }
-      },
-      "Function found");
+    prepareParam = funcAddrOrErr->toPtr<void(double*, double*)>();
+    for (auto &kernel : kernels) {
+      kernel.func =
+          cantFail(jitter->lookup(llvmFuncPrepareParam->getName()))
+              .toPtr<void(double*, uint64_t, uint64_t, double*)>();
+    }
+  }, "Function found");
 
   return 0;
 }
