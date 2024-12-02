@@ -29,44 +29,6 @@ struct matrix_data_t {
 };
 
 namespace {
-/// v0 and v1 are always sorted. Perform linear time merge
-/// @return (mask, vec)
-std::pair<std::vector<int>, std::vector<int>>
-getMaskToMerge(const std::vector<int> &v0, const std::vector<int> &v1) {
-  assert(v0.size() == v1.size());
-  const auto s = v0.size();
-  std::vector<int> mask(2 * s);
-  std::vector<int> vec(2 * s);
-  unsigned i0 = 0, i1 = 0, i;
-  int elem0, elem1;
-  while (i0 < s || i1 < s) {
-    i = i0 + i1;
-    if (i0 == s) {
-      vec[i] = v1[i1];
-      mask[i] = i1 + s;
-      i1++;
-      continue;
-    }
-    if (i1 == s) {
-      vec[i] = v0[i0];
-      mask[i] = i0;
-      i0++;
-      continue;
-    }
-    elem0 = v0[i0];
-    elem1 = v1[i1];
-    if (elem0 < elem1) {
-      vec[i] = elem0;
-      mask[i] = i0;
-      i0++;
-    } else {
-      vec[i] = elem1;
-      mask[i] = i1 + s;
-      i1++;
-    }
-  }
-  return std::make_pair(mask, vec);
-}
 
 struct CPUArgs {
   Argument* pSvArg;       // ptr to statevector
@@ -222,6 +184,8 @@ Function* saot::genCPUCode(llvm::Module &llvmModule,
   }
 
   sepBit = (s == 0) ? 0 : simdBits.back() + 1;
+  if (sepBit == s)
+    ++sepBit;
   }
 
   const unsigned vecSize = 1U << sepBit;
@@ -411,14 +375,21 @@ Function* saot::genCPUCode(llvm::Module &llvmModule,
 
   std::vector<std::vector<int>> mergeMasks;
   mergeMasks.reserve(lk);
+  std::vector<int> reimMergeMask;
+  reimMergeMask.reserve(vecSize);
   {
   int idxL, idxR;
   unsigned lCached; // length of cached array
-  std::vector<int> arr0(LK >> 1), arr1(LK >> 1), arr2(LK >> 1);
+  std::vector<int> arr0(LK * S), arr1(LK * S), arr2(LK * S);
   std::vector<int>& cacheLHS = arr0, &cacheRHS = arr1, &cacheCombined = arr2;
   std::memcpy(arr0.data(), reSplitMasks.data(),     S * sizeof(int));
   std::memcpy(arr1.data(), reSplitMasks.data() + S, S * sizeof(int));
-  for (int roundIdx = 0; roundIdx < lk; roundIdx++) {
+  int roundIdx = 0;
+  while (roundIdx < lk) {
+    std::cerr << "Round " << roundIdx << ": ";
+    utils::printVector(cacheLHS) << " and ";
+    utils::printVector(cacheRHS) << "\n";
+
     lCached = S << roundIdx;
     mergeMasks.emplace_back(lCached << 1);
     auto& mask = mergeMasks.back();
@@ -452,8 +423,14 @@ Function* saot::genCPUCode(llvm::Module &llvmModule,
         ++idxR;
       }
     }
+    std::cerr << "  To ";
+    utils::printVector(cacheCombined) << "\n";
+    std::cerr << "  Mask ";
+    utils::printVector(mask) << "\n";
     // rotate the assignments of
     // (cacheLHS, cacheRHS, cacheCombined) with (arr0, arr1, arr2)
+    if (++roundIdx == lk)
+      break;
     cacheLHS = cacheCombined;
     if (cacheLHS == arr2) {
       cacheRHS = arr0;
@@ -467,10 +444,19 @@ Function* saot::genCPUCode(llvm::Module &llvmModule,
       cacheCombined = arr2;
     }
     for (int i = 0; i < lCached; i++) {
-      cacheRHS[i] = cacheLHS[i] + (1 << loBits[roundIdx]);
+      assert((cacheLHS[i] & (1 << loBits[roundIdx])) == 0);
+      cacheRHS[i] = cacheLHS[i] | (1 << loBits[roundIdx]);
     }
-
   }
+  // init reimMergeMask
+  for (int pairIdx = 0; pairIdx < (vecSize >> s >> 1); pairIdx++) {
+    for (int i = 0; i < S; i++)
+      reimMergeMask.push_back(S * pairIdx + i);
+    for (int i = 0; i < S; i++)
+      reimMergeMask.push_back(S * pairIdx + i + (vecSize >> 1));
+  }
+  utils::printVector(reimMergeMask, std::cerr << "reimMergeMask: ") << "\n";
+  std::cerr << "- Merged masks init'ed\n";
   }
 
   SmallVector<Value*> updatedReAmps;
@@ -481,35 +467,52 @@ Function* saot::genCPUCode(llvm::Module &llvmModule,
     // mat-vec mul
     std::memset(updatedReAmps.data(), 0, updatedReAmps.size_in_bytes());
     std::memset(updatedImAmps.data(), 0, updatedImAmps.size_in_bytes());
-    // for (unsigned li = 0; li < LK; li++) {
-    //   for (unsigned k = 0; k < K; k++) {
-    //     updatedReAmps[li] = internal::genMulAdd(B,
-    //       matrixData[k].reVal, reAmps[k], updatedReAmps[li],
-    //       matrixData[k].reKind, 
-    //       "new.re." + std::to_string(hi) + "." + std::to_string(li) + ".");
-    //     updatedReAmps[li] = internal::genNegMulAdd(B,
-    //       matrixData[k].imVal, imAmps[k], updatedReAmps[li],
-    //       matrixData[k].imKind, 
-    //       "new.re." + std::to_string(hi) + "." + std::to_string(li) + ".");
+    for (unsigned li = 0; li < LK; li++) {
+      for (unsigned k = 0; k < K; k++) {
+        updatedReAmps[li] = internal::genMulAdd(B,
+          matrixData[k].reVal, reAmps[k], updatedReAmps[li],
+          matrixData[k].reKind, 
+          "new.re." + std::to_string(hi) + "." + std::to_string(li) + ".");
+        updatedReAmps[li] = internal::genNegMulAdd(B,
+          matrixData[k].imVal, imAmps[k], updatedReAmps[li],
+          matrixData[k].imKind, 
+          "new.re." + std::to_string(hi) + "." + std::to_string(li) + ".");
 
-    //     updatedImAmps[li] = internal::genMulAdd(B,
-    //       matrixData[k].reVal, imAmps[k], updatedImAmps[li],
-    //       matrixData[k].reKind, 
-    //       "new.im." + std::to_string(hi) + "." + std::to_string(li) + ".");
-    //     updatedImAmps[li] = internal::genMulAdd(B,
-    //       matrixData[k].imVal, reAmps[k], updatedImAmps[li],
-    //       matrixData[k].imKind, 
-    //       "new.im." + std::to_string(hi) + "." + std::to_string(li) + ".");
-    //   }
-    // }
+        updatedImAmps[li] = internal::genMulAdd(B,
+          matrixData[k].reVal, imAmps[k], updatedImAmps[li],
+          matrixData[k].reKind, 
+          "new.im." + std::to_string(hi) + "." + std::to_string(li) + ".");
+        updatedImAmps[li] = internal::genMulAdd(B,
+          matrixData[k].imVal, reAmps[k], updatedImAmps[li],
+          matrixData[k].imKind, 
+          "new.im." + std::to_string(hi) + "." + std::to_string(li) + ".");
+      }
+    }
     
     // merge and store
+    assert((1 << mergeMasks.size()) == updatedReAmps.size());
+    for (int mergeIdx = 0; mergeIdx < lk; mergeIdx++) {
+      for (unsigned pairIdx = 0; pairIdx < (LK >> mergeIdx >> 1); pairIdx++) {
+        unsigned idxL = pairIdx << mergeIdx;
+        unsigned idxR = idxL | (1 << mergeIdx);
+        updatedReAmps[idxL] = B.CreateShuffleVector(
+          updatedReAmps[idxL], updatedReAmps[idxR], mergeMasks[mergeIdx],
+          "re.merged." + std::to_string(mergeIdx) + "." + std::to_string(pairIdx));
+        updatedImAmps[idxL] = B.CreateShuffleVector(
+          updatedImAmps[idxL], updatedImAmps[idxR], mergeMasks[mergeIdx],
+          "im.merged." + std::to_string(mergeIdx) + "." + std::to_string(pairIdx));
+      }
+    }
 
+    auto* merged = B.CreateShuffleVector(
+      updatedReAmps[0], updatedImAmps[0], reimMergeMask,
+      "amp.merged." + std::to_string(hi));
+    B.CreateStore(merged, pSvs[hi]);
 
   }
 
   // entryBB->print(errs());
-  loopBodyBB->print(errs());
+  // loopBodyBB->print(errs());
 
   // increment counter and return
   auto* taskIdNextV = B.CreateAdd(taskIdV, B.getInt64(1), "taskid.next");

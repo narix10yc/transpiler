@@ -21,7 +21,7 @@ int main(int argc, char* *argv) {
   timer.setRunTime(0.5);
   // timer.setReplication(3);
   TimingResult rst;
-  real = (real_t* )std::aligned_alloc(64, 2 * (1ULL << DEFAULT_NQUBITS)* 
+  real = (real_t*)std::aligned_alloc(64, 2 * (1ULL << DEFAULT_NQUBITS)* 
                                               sizeof(real_t));
   imag = real + (1ULL << DEFAULT_NQUBITS);
 
