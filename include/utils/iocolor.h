@@ -1,6 +1,12 @@
 #ifndef UTILS_IOCOLOR_H
 #define UTILS_IOCOLOR_H
 
+#define RED(MSG) "\033[31m" << MSG << "\033[0m"
+#define BOLDRED(MSG) "\033[1m\033[31m" << MSG << "\033[0m"
+
+#define GREEN(MSG) "\033[32m" << MSG << "\033[0m"
+#define BOLDGREEN(MSG) "\033[1m\033[32m" << MSG << "\033[0m"
+
 namespace IOColor {
 static const char* RESET = "\033[0m";
 
