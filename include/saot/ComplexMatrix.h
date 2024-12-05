@@ -21,7 +21,7 @@ public:
 
   UnitaryPermutationMatrix() : data() {}
   UnitaryPermutationMatrix(size_t size) : data(size) {}
-  UnitaryPermutationMatrix(const std::vector<std::pair<size_t, data_t>> &data)
+  UnitaryPermutationMatrix(const std::vector<std::pair<size_t, data_t>>& data)
       : data(data) {}
   UnitaryPermutationMatrix(
       std::initializer_list<std::pair<size_t, data_t>> data)
@@ -36,7 +36,7 @@ public:
     return m;
   }
 
-  UnitaryPermutationMatrix permute(const std::vector<int> &flags) const {
+  UnitaryPermutationMatrix permute(const std::vector<int>& flags) const {
     if (std::all_of(flags.begin(), flags.end(),
                     [&flags](int i) { return flags[i] == i; }))
       return UnitaryPermutationMatrix(*this);
@@ -75,7 +75,7 @@ public:
   SquareMatrix(size_t edgeSize)
       : _edgeSize(edgeSize), data(edgeSize * edgeSize) {}
 
-  SquareMatrix(const std::vector<data_t> &data)
+  SquareMatrix(const std::vector<data_t>& data)
       : _edgeSize(std::sqrt(data.size())), data(data) {
     assert(checkSizeMatch());
   }
@@ -97,13 +97,13 @@ public:
   bool checkSizeMatch() const { return data.size() == _edgeSize * _edgeSize; }
 
   // get data by specifying row and col
-  const data_t &getRC(size_t row, size_t col) const {
+  const data_t& getRC(size_t row, size_t col) const {
     assert(row * _edgeSize + col < data.size());
     return data[row * _edgeSize + col];
   }
 
   // get data by specifying row and col
-  data_t &getRC(size_t row, size_t col) {
+  data_t& getRC(size_t row, size_t col) {
     assert(row * _edgeSize + col < data.size());
     return data[row * _edgeSize + col];
   }
@@ -176,7 +176,7 @@ public:
   //              data[12], data[14], data[13], data[15]}};
   // }
 
-  SquareMatrix permute(const std::vector<int> &flags) const {
+  SquareMatrix permute(const std::vector<int>& flags) const {
     assert(utils::isPermutation(flags));
     assert(checkSizeMatch());
     assert(1 << flags.size() == _edgeSize);

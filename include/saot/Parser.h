@@ -81,7 +81,7 @@ public:
   Token(TokenKind kind, const char* memRefBegin, const char* memRefEnd)
       : kind(kind), memRefBegin(memRefBegin), memRefEnd(memRefEnd) {}
 
-  std::ostream &print(std::ostream & = std::cerr) const;
+  std::ostream& print(std::ostream&  = std::cerr) const;
 
   bool is(TokenKind k) { return kind == k; }
   bool isNot(TokenKind k) { return kind != k; }
@@ -132,7 +132,7 @@ public:
     lineBegin = bufferBegin;
   }
 
-  void lex(Token &tok);
+  void lex(Token& tok);
 
   void skipLine();
 
@@ -159,9 +159,9 @@ public:
     lexer.lex(nextToken);
   }
 
-  void printLocation(std::ostream &os = std::cerr) const;
+  void printLocation(std::ostream& os = std::cerr) const;
 
-  std::ostream &logErr() const {
+  std::ostream& logErr() const {
     return std::cerr << IOColor::RED_FG << IOColor::BOLD
                      << "Parser Error: " << IOColor::RESET;
   }
@@ -202,7 +202,7 @@ public:
       return;
     }
 
-    auto &os = logErr();
+    auto& os = logErr();
     if (msg)
       os << msg;
     else
@@ -215,7 +215,7 @@ public:
   void requireCurTokenIs(TokenKind kind, const char* msg = nullptr) {
     if (curToken.is(kind))
       return;
-    auto &os = logErr();
+    auto& os = logErr();
     if (msg)
       os << msg;
     else

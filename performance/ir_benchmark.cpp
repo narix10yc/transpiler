@@ -47,7 +47,7 @@ int main(int argc, char* *argv) {
     // rst.display();
     tVec[i] = rst.min;
   }
-  for (const auto &t : tVec) {
+  for (const auto& t : tVec) {
     std::cerr << std::scientific << std::setprecision(4) << t << ",";
   }
   std::cerr << "\n";
@@ -66,7 +66,7 @@ int main(int argc, char* *argv) {
     // rst.display();
     tVec[i] = rst.min;
   }
-  for (const auto &t : tVec) {
+  for (const auto& t : tVec) {
     std::cerr << std::scientific << std::setprecision(4) << t << ",";
   }
   std::cerr << "\n";
@@ -86,7 +86,7 @@ int main(int argc, char* *argv) {
     // rst.display();
     tVec[i] = rst.min;
   }
-  for (const auto &t : tVec) {
+  for (const auto& t : tVec) {
     std::cerr << std::scientific << std::setprecision(4) << t << ",";
   }
   std::cerr << "\n";
@@ -105,7 +105,7 @@ int main(int argc, char* *argv) {
     // rst.display();
     tVec[i] = rst.min;
   }
-  for (const auto &t : tVec) {
+  for (const auto& t : tVec) {
     std::cerr << std::scientific << std::setprecision(4) << t << ",";
   }
   std::cerr << "\n";

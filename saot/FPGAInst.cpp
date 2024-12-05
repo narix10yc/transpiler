@@ -5,10 +5,10 @@ using namespace saot;
 using namespace saot::fpga;
 
 namespace {
-inline bool isRealOnlyGate(const QuantumGate &gate, double reTol) {
+inline bool isRealOnlyGate(const QuantumGate& gate, double reTol) {
   const auto* cMat = gate.gateMatrix.getConstantMatrix();
   assert(cMat);
-  for (const auto &cplx : cMat->data) {
+  for (const auto& cplx : cMat->data) {
     if (std::abs(cplx.imag()) > reTol)
       return false;
   }
@@ -17,7 +17,7 @@ inline bool isRealOnlyGate(const QuantumGate &gate, double reTol) {
 } // namespace
 
 FPGAGateCategory
-saot::fpga::getFPGAGateCategory(const QuantumGate &gate,
+saot::fpga::getFPGAGateCategory(const QuantumGate& gate,
                                 const FPGAGateCategoryTolerance &tolerances) {
   switch (gate.gateMatrix.gateKind) {
   case gX:
@@ -49,7 +49,7 @@ saot::fpga::getFPGAGateCategory(const QuantumGate &gate,
   if (const auto* p = gate.gateMatrix.getUnitaryPermMatrix(tolerances.upTol)) {
     if (std::all_of(
             p->data.begin(), p->data.end(),
-            [tol = tolerances.ncTol](const std::pair<size_t, double> &d) {
+            [tol = tolerances.ncTol](const std::pair<size_t, double>& d) {
               std::complex<double> cplx(std::cos(d.second), std::sin(d.second));
               return (std::abs(cplx - std::complex<double>(1.0, 0.0)) <= tol) ||
                      (std::abs(cplx - std::complex<double>(-1.0, 0.0)) <=

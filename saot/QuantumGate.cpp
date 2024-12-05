@@ -8,7 +8,7 @@
 using namespace saot;
 using namespace IOColor;
 
-std::ostream &QuantumGate::displayInfo(std::ostream &os) const {
+std::ostream& QuantumGate::displayInfo(std::ostream& os) const {
   os << CYAN_FG << "QuantumGate Info\n" << RESET << "- Target Qubits ";
   utils::printVector(qubits) << "\n";
   os << "- Matrix:\n";
@@ -50,17 +50,17 @@ inline uint64_t parallel_extraction(uint64_t word, uint64_t mask,
   return out;
 }
 
-inline QuantumGate lmatmul_up_up(const GateMatrix::up_matrix_t &aUp,
-                                 const GateMatrix::up_matrix_t &bUp,
-                                 const std::vector<int> &aQubits,
-                                 const std::vector<int> &bQubits) {
+inline QuantumGate lmatmul_up_up(const GateMatrix::up_matrix_t& aUp,
+                                 const GateMatrix::up_matrix_t& bUp,
+                                 const std::vector<int>& aQubits,
+                                 const std::vector<int>& bQubits) {
   const int aNqubits = aQubits.size();
   const int bNqubits = bQubits.size();
 
   std::vector<int> cQubits;
-  for (const auto &q : aQubits)
+  for (const auto& q : aQubits)
     cQubits.push_back(q);
-  for (const auto &q : bQubits) {
+  for (const auto& q : bQubits) {
     if (std::find(cQubits.begin(), cQubits.end(), q) == cQubits.end())
       cQubits.push_back(q);
   }
@@ -89,11 +89,11 @@ inline QuantumGate lmatmul_up_up(const GateMatrix::up_matrix_t &aUp,
 }
 } // anonymous namespace
 
-QuantumGate QuantumGate::lmatmul(const QuantumGate &other) const {
+QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
   // Matrix Mul A @ B = C
   // A is other, B is this
-  const auto &aQubits = other.qubits;
-  const auto &bQubits = qubits;
+  const auto& aQubits = other.qubits;
+  const auto& bQubits = qubits;
   const int aNqubits = aQubits.size();
   const int bNqubits = bQubits.size();
 
@@ -154,7 +154,7 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate &other) const {
   }
   int contractionWidth = aSharedQubitShifts.size();
   std::vector<int> cQubits;
-  for (const auto &tQubit : targetQubits)
+  for (const auto& tQubit : targetQubits)
     cQubits.push_back(tQubit.q);
 
   // std::cerr << CYAN_FG << "Debug:\n";
@@ -250,9 +250,9 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate &other) const {
 }
 
 namespace { // QuantumGate::opCount helper functions
-inline int opCount_c(const GateMatrix::c_matrix_t &mat, double thres) {
+inline int opCount_c(const GateMatrix::c_matrix_t& mat, double thres) {
   int count = 0;
-  for (const auto &data : mat.data) {
+  for (const auto& data : mat.data) {
     if (std::abs(data.real()) >= thres)
       ++count;
     if (std::abs(data.imag()) >= thres)
@@ -261,9 +261,9 @@ inline int opCount_c(const GateMatrix::c_matrix_t &mat, double thres) {
   return 2 * count;
 }
 
-inline int opCount_p(const GateMatrix::p_matrix_t &mat, double thres) {
+inline int opCount_p(const GateMatrix::p_matrix_t& mat, double thres) {
   int count = 0;
-  for (const auto &data : mat.data) {
+  for (const auto& data : mat.data) {
     auto ev = data.getValue();
     if (ev.first) {
       if (std::abs(ev.second.real()) >= thres)

@@ -14,8 +14,8 @@ using namespace saot;
 using namespace simulation;
 using namespace llvm;
 
-std::ostream &CodeGeneratorCPUConfig::display(int verbose,
-                                              std::ostream &os) const {
+std::ostream& CodeGeneratorCPUConfig::display(int verbose,
+                                              std::ostream& os) const {
   os << CYAN_FG << BOLD << "=== CodeGen Configuration ===\n" << RESET;
 
   os << "Multi-threading " << ((multiThreaded) ? "enabled" : "disabled")
@@ -34,7 +34,7 @@ std::ostream &CodeGeneratorCPUConfig::display(int verbose,
   return os;
 }
 
-void CodeGeneratorCPU::generate(const CircuitGraph &graph, int debugLevel,
+void CodeGeneratorCPU::generate(const CircuitGraph& graph, int debugLevel,
                                 bool forceInOrder) {
   bool isSepKernel =
       (config.irConfig.ampFormat == IRGeneratorConfig::SepFormat);
@@ -120,8 +120,8 @@ void CodeGeneratorCPU::generate(const CircuitGraph &graph, int debugLevel,
 
   IRGenerator irGenerator(config.irConfig,
                           "mod_" + std::to_string(allBlocks[0]->id));
-  for (const auto &block : allBlocks) {
-    const auto &gate =* (block->quantumGate);
+  for (const auto& block : allBlocks) {
+    const auto& gate =* (block->quantumGate);
     std::string kernelName = "kernel_block_" + std::to_string(block->id);
     irGenerator.generateKernelDebug(gate, debugLevel, kernelName);
     if (config.dumpIRToMultipleFiles) {
@@ -158,8 +158,8 @@ void CodeGeneratorCPU::generate(const CircuitGraph &graph, int debugLevel,
     metaDataSS << "(" << realTy << "[]){";
     const auto* cMat = block->quantumGate->gateMatrix.getConstantMatrix();
     assert(cMat);
-    const auto &cdata = cMat->data;
-    for (const auto &elem : cdata)
+    const auto& cdata = cMat->data;
+    for (const auto& elem : cdata)
       metaDataSS << std::setprecision(16) << elem.real() << ","
                  << std::setprecision(16) << elem.imag() << ", ";
     metaDataSS << "} },\n";
@@ -216,9 +216,9 @@ inline std::string getKernelName(GateBlock* block) {
 }
 
 // write meta data to a C header file
-void writeMetadataHeaderFile(const std::vector<GateBlock*> &allBlocks,
-                             int nqubits, const std::string &fileName,
-                             const CodeGeneratorCPUConfig &config) {
+void writeMetadataHeaderFile(const std::vector<GateBlock*>& allBlocks,
+                             int nqubits, const std::string& fileName,
+                             const CodeGeneratorCPUConfig& config) {
   bool isSepKernel =
       (config.irConfig.ampFormat == IRGeneratorConfig::SepFormat);
   const std::string realTy =
@@ -289,8 +289,8 @@ void writeMetadataHeaderFile(const std::vector<GateBlock*> &allBlocks,
              << "};\n"
              << "static const _meta_data_t_ _metaData[] = {\n";
 
-  for (const auto &block : allBlocks) {
-    const auto &gate =* (block->quantumGate);
+  for (const auto& block : allBlocks) {
+    const auto& gate =* (block->quantumGate);
     std::string kernelName = getKernelName(block);
 
     externSS << " void " << kernelName << "(" << realTy << "*, ";
@@ -313,8 +313,8 @@ void writeMetadataHeaderFile(const std::vector<GateBlock*> &allBlocks,
     metaDataSS << "(" << realTy << "[]){";
     const auto* cMat = block->quantumGate->gateMatrix.getConstantMatrix();
     assert(cMat);
-    const auto &cdata = cMat->data;
-    for (const auto &elem : cdata)
+    const auto& cdata = cMat->data;
+    for (const auto& elem : cdata)
       metaDataSS << std::setprecision(16) << elem.real() << ","
                  << std::setprecision(16) << elem.imag() << ", ";
     metaDataSS << "} },\n";
@@ -356,9 +356,9 @@ using clock = std::chrono::high_resolution_clock;
 // write kernel ir to a llvm ir file named <dir>/kernels_t<threadIdx>.ll.
 // This file will contain (blockIdx1 - blockIdx0) kernels.
 // This function will own its own instance of IRGenerator
-void writeKernelsSingleIrFile(const std::vector<GateBlock*> &allBlocks,
-                              const std::string &dir,
-                              const CodeGeneratorCPUConfig &config,
+void writeKernelsSingleIrFile(const std::vector<GateBlock*>& allBlocks,
+                              const std::string& dir,
+                              const CodeGeneratorCPUConfig& config,
                               int blockIdx0, int blockIdx1, double* irGenTime) {
 
   IRGenerator irGenerator(config.irConfig,
@@ -367,7 +367,7 @@ void writeKernelsSingleIrFile(const std::vector<GateBlock*> &allBlocks,
 
   auto tic = clock::now();
   for (int i = blockIdx0; i < blockIdx1; i++) {
-    const auto &gate =* (allBlocks[i]->quantumGate);
+    const auto& gate =* (allBlocks[i]->quantumGate);
     std::string kernelName = getKernelName(allBlocks[i]);
     irGenerator.generateKernel(gate, kernelName);
   }
@@ -389,9 +389,9 @@ void writeKernelsSingleIrFile(const std::vector<GateBlock*> &allBlocks,
   irFile.close();
 }
 
-void writeKernelsMultipleIrFiles(const std::vector<GateBlock*> &allBlocks,
-                                 const std::string &dir,
-                                 const CodeGeneratorCPUConfig &config,
+void writeKernelsMultipleIrFiles(const std::vector<GateBlock*>& allBlocks,
+                                 const std::string& dir,
+                                 const CodeGeneratorCPUConfig& config,
                                  int blockIdx0, int blockIdx1,
                                  double* irGenTime) {
 
@@ -405,7 +405,7 @@ void writeKernelsMultipleIrFiles(const std::vector<GateBlock*> &allBlocks,
   std::chrono::duration<double> duration = tok - tic;
 
   for (int i = blockIdx0; i < blockIdx1; i++) {
-    const auto &gate =* (allBlocks[i]->quantumGate);
+    const auto& gate =* (allBlocks[i]->quantumGate);
     std::string kernelName = getKernelName(allBlocks[i]);
     tic = clock::now();
     irGenerator.generateKernel(gate, kernelName);
@@ -439,9 +439,9 @@ void writeKernelsMultipleIrFiles(const std::vector<GateBlock*> &allBlocks,
 
 } // anonymous namespace
 
-void saot::generateCpuIrForRecompilation(const CircuitGraph &graph,
-                                         const std::string &dir,
-                                         const CodeGeneratorCPUConfig &config,
+void saot::generateCpuIrForRecompilation(const CircuitGraph& graph,
+                                         const std::string& dir,
+                                         const CodeGeneratorCPUConfig& config,
                                          int nthreads) {
 
   assert(nthreads > 0);
@@ -509,11 +509,11 @@ void saot::generateCpuIrForRecompilation(const CircuitGraph &graph,
   writeMetadataHeaderFile(allBlocks, graph.nqubits, dir + "/kernel_metadata.h",
                           config);
 
-  for (auto &t : threads)
+  for (auto& t : threads)
     t.join();
 
   double irGenTime = 0.0;
-  for (const auto &t : irGenTimes) {
+  for (const auto& t : irGenTimes) {
     if (t > irGenTime)
       irGenTime = t;
   }

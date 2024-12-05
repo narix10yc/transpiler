@@ -14,7 +14,7 @@ using namespace IOColor;
 using namespace llvm;
 using namespace simulation;
 
-Value* ParamValueFeeder::get(int v, IRBuilder<> &B, Type* Ty) {
+Value* ParamValueFeeder::get(int v, IRBuilder<>& B, Type* Ty) {
   if (v >= cache.size())
     cache.resize(v + 1);
 
@@ -26,12 +26,12 @@ Value* ParamValueFeeder::get(int v, IRBuilder<> &B, Type* Ty) {
   return cache[v] = B.CreateLoad(Ty, ptr, "param." + std::to_string(v));
 }
 
-bool IRGeneratorConfig::checkConfliction(std::ostream &os) const {
+bool IRGeneratorConfig::checkConfliction(std::ostream& os) const {
   bool check = true;
-  const auto warn = [&os]() -> std::ostream & {
+  const auto warn = [&os]() -> std::ostream&  {
     return os << YELLOW_FG << BOLD << "Config warning: " << RESET;
   };
-  const auto error = [&os, &check]() -> std::ostream & {
+  const auto error = [&os, &check]() -> std::ostream&  {
     check = false;
     return os << RED_FG << BOLD << "Config error: " << RESET;
   };
@@ -54,8 +54,8 @@ bool IRGeneratorConfig::checkConfliction(std::ostream &os) const {
   return check;
 }
 
-std::ostream &IRGeneratorConfig::display(int verbose, bool title,
-                                         std::ostream &os) const {
+std::ostream& IRGeneratorConfig::display(int verbose, bool title,
+                                         std::ostream& os) const {
   if (title)
     os << CYAN_FG << "===== IR Generator Config =====\n" << RESET;
 
@@ -86,7 +86,7 @@ std::ostream &IRGeneratorConfig::display(int verbose, bool title,
   return os;
 }
 
-void IRGenerator::loadFromFile(const std::string &fileName) {
+void IRGenerator::loadFromFile(const std::string& fileName) {
   SMDiagnostic err;
   _module = std::move(parseIRFile(fileName, err,* _context));
   if (_module == nullptr) {
@@ -125,7 +125,7 @@ void IRGenerator::applyLLVMOptimization(const OptimizationLevel &level) {
 }
 
 Value* IRGenerator::genMulAdd(Value* aa, Value* bb, Value* cc, int bbFlag,
-                              const Twine &bbccName, const Twine &aaName) {
+                              const Twine& bbccName, const Twine& aaName) {
   if (bbFlag == 0)
     return aa;
 
@@ -157,7 +157,7 @@ Value* IRGenerator::genMulAdd(Value* aa, Value* bb, Value* cc, int bbFlag,
 }
 
 Value* IRGenerator::genMulSub(Value* aa, Value* bb, Value* cc, int bbFlag,
-                              const Twine &bbccName, const Twine &aaName) {
+                              const Twine& bbccName, const Twine& aaName) {
   if (bbFlag == 0)
     return aa;
 
@@ -214,15 +214,15 @@ Value* IRGenerator::genFMul(Value* a, Value* b) {
 }
 
 std::pair<Value*, Value*> IRGenerator::genComplexMultiply(
-    const std::pair<llvm::Value*, llvm::Value*> &a,
-    const std::pair<llvm::Value*, llvm::Value*> &b) {
+    const std::pair<llvm::Value*, llvm::Value*>& a,
+    const std::pair<llvm::Value*, llvm::Value*>& b) {
   return {genFSub(genFMul(a.first, b.first), genFMul(a.second, b.second)),
           genFAdd(genFMul(a.first, b.second), genFMul(a.second, b.first))};
 }
 
 std::pair<Value*, Value*> IRGenerator::genComplexDotProduct(
-    const std::vector<Value*> &aRe, const std::vector<Value*> &aIm,
-    const std::vector<Value*> &bRe, const std::vector<Value*> &bIm) {
+    const std::vector<Value*>& aRe, const std::vector<Value*>& aIm,
+    const std::vector<Value*>& bRe, const std::vector<Value*>& bIm) {
   auto length = aRe.size();
   assert(aRe.size() == aIm.size());
   assert(aIm.size() == bRe.size());

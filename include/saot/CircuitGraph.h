@@ -26,7 +26,7 @@ public:
   GateMatrix gateMatrix;
   std::vector<gate_data> dataVector;
 
-  GateNode(const GateMatrix &gateMatrix, const std::vector<int> &qubits)
+  GateNode(const GateMatrix& gateMatrix, const std::vector<int>& qubits)
       : id(idCount++), nqubits(gateMatrix.nqubits()), gateMatrix(gateMatrix),
         dataVector(gateMatrix.nqubits()) {
     assert(gateMatrix.nqubits() == qubits.size());
@@ -45,7 +45,7 @@ public:
   }
 
   GateNode* findLHS(unsigned q) {
-    for (const auto &data : dataVector) {
+    for (const auto& data : dataVector) {
       if (data.qubit == q)
         return data.lhsGate;
     }
@@ -53,7 +53,7 @@ public:
   }
 
   GateNode* findRHS(unsigned q) {
-    for (const auto &data : dataVector) {
+    for (const auto& data : dataVector) {
       if (data.qubit == q)
         return data.rhsGate;
     }
@@ -95,11 +95,11 @@ public:
   GateBlock(GateNode* gateNode)
       : id(idCount++), dataVector(),
         quantumGate(std::make_unique<QuantumGate>(gateNode->toQuantumGate())) {
-    for (const auto &data : gateNode->dataVector)
+    for (const auto& data : gateNode->dataVector)
       dataVector.push_back({data.qubit, gateNode, gateNode});
   }
 
-  std::ostream &displayInfo(std::ostream &os) const;
+  std::ostream& displayInfo(std::ostream& os) const;
 
   std::vector<GateNode*> getOrderedGates() const;
 
@@ -129,10 +129,10 @@ public:
     return it;
   }
 
-  bool hasSameTargets(const GateBlock &other) const {
+  bool hasSameTargets(const GateBlock& other) const {
     if (nqubits() != other.nqubits())
       return false;
-    for (const auto &data : other.dataVector) {
+    for (const auto& data : other.dataVector) {
       if (findQubit(data.qubit) == dataVector.end())
         return false;
     }
@@ -168,7 +168,7 @@ public:
   static CircuitGraph QFTCircuit(int nqubits);
   static CircuitGraph ALACircuit(int nqubits, int nrounds);
 
-  static CircuitGraph GetTestCircuit(const GateMatrix &gateMatrix, int nqubits,
+  static CircuitGraph GetTestCircuit(const GateMatrix& gateMatrix, int nqubits,
                                      int nrounds);
 
   tile_t &tile() { return _tile; }
@@ -178,7 +178,7 @@ public:
   void eraseEmptyRows();
 
   bool isRowVacant(tile_iter_t it, const GateBlock* block) const {
-    for (const auto &q : block->getQubits())
+    for (const auto& q : block->getQubits())
       if ((*it)[q] != nullptr)
         return false;
     return true;
@@ -204,11 +204,11 @@ public:
   ///   there.
   tile_iter_t insertBlock(tile_iter_t it, GateBlock* block);
 
-  void addGate(const QuantumGate &gate) {
+  void addGate(const QuantumGate& gate) {
     return addGate(gate.gateMatrix, gate.qubits);
   }
 
-  void addGate(const GateMatrix &matrix, const std::vector<int> &qubits);
+  void addGate(const GateMatrix& matrix, const std::vector<int>& qubits);
 
   /// @return ordered vector of blocks
   std::vector<GateBlock*> getAllBlocks() const;
@@ -225,7 +225,7 @@ public:
   size_t countGates() const {
     const auto allBlocks = getAllBlocks();
     size_t sum = 0;
-    for (const auto &block : allBlocks)
+    for (const auto& block : allBlocks)
       sum += block->countGates();
     return sum;
   }
@@ -233,7 +233,7 @@ public:
   size_t countTotalOps() const {
     const auto allBlocks = getAllBlocks();
     size_t sum = 0;
-    for (const auto &block : allBlocks) {
+    for (const auto& block : allBlocks) {
       assert(block->quantumGate != nullptr);
       sum += block->quantumGate->opCount();
     }
@@ -244,9 +244,9 @@ public:
 
   /// @brief Console print the tile.
   /// @param verbose If > 1, also print the address of each row in front
-  std::ostream &print(std::ostream &os = std::cerr, int verbose = 1) const;
+  std::ostream& print(std::ostream& os = std::cerr, int verbose = 1) const;
 
-  std::ostream &displayInfo(std::ostream &os = std::cerr,
+  std::ostream& displayInfo(std::ostream& os = std::cerr,
                             int verbose = 1) const;
 };
 

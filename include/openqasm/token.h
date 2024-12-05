@@ -76,7 +76,7 @@ public:
   TokenTy type;
   std::string str;
   Token(TokenTy type) : type(type), str("") {}
-  Token(TokenTy type, const std::string &str) : type(type), str(str) {}
+  Token(TokenTy type, const std::string& str) : type(type), str(str) {}
 
   std::string toString() const;
 

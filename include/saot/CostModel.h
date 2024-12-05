@@ -13,7 +13,7 @@ class CostModel {
 public:
   ~CostModel() = default;
 
-  virtual int getCost(const QuantumGate &gate) const {
+  virtual int getCost(const QuantumGate& gate) const {
     assert(false && "Should not call from base class");
     return -1;
   }
@@ -27,12 +27,12 @@ public:
   StandardCostModel(int maxNQubits, int maxOp)
       : maxNQubits(maxNQubits), maxOp(maxOp) {}
 
-  int getCost(const QuantumGate &gate) const override;
+  int getCost(const QuantumGate& gate) const override;
 };
 
 class AdaptiveCostModel : public CostModel {
 public:
-  int getCost(const QuantumGate &gate) const override;
+  int getCost(const QuantumGate& gate) const override;
 };
 
 class PerformanceCache {
@@ -48,8 +48,8 @@ public:
 
   void addExperiments(int comprehensiveness);
 
-  void saveToCSV(const std::string &fileName) const;
-  static PerformanceCache LoadFromCSV(const std::string &fileName);
+  void saveToCSV(const std::string& fileName) const;
+  static PerformanceCache LoadFromCSV(const std::string& fileName);
 };
 
 } // namespace saot

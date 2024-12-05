@@ -21,7 +21,7 @@ namespace saot::fpga {
 // @param reOnlyTol: tolerance of the absolutae value of imaginary value of
 // each entry smaller than (or equal to) which can be considered zero;
 FPGAGateCategory
-getFPGAGateCategory(const QuantumGate &gate,
+getFPGAGateCategory(const QuantumGate& gate,
                     const FPGAGateCategoryTolerance &tolerances);
 
 enum GInstKind : int {
@@ -53,7 +53,7 @@ public:
   MInstKind getKind() const { return mKind; }
 
   bool isNull() { return getKind() == MOp_NUL; }
-  virtual std::ostream &print(std::ostream &os) const {
+  virtual std::ostream& print(std::ostream& os) const {
     assert(false && "Calling from base class");
     return os;
   }
@@ -64,7 +64,7 @@ class MInstNUL : public MemoryInst {
 public:
   MInstNUL() : MemoryInst(MOp_NUL) {}
 
-  std::ostream &print(std::ostream &os) const override {
+  std::ostream& print(std::ostream& os) const override {
     return os << "NUL" << std::string(12, ' ');
   }
 };
@@ -75,7 +75,7 @@ public:
   int qIdx;
   MInstSSR(int qIdx) : MemoryInst(MOp_SSR), qIdx(qIdx) {}
 
-  std::ostream &print(std::ostream &os) const override {
+  std::ostream& print(std::ostream& os) const override {
     return os << "SSR " << qIdx << std::string(10, ' ');
   }
 };
@@ -86,7 +86,7 @@ public:
   int qIdx;
   MInstSSC(int qIdx) : MemoryInst(MOp_SSC), qIdx(qIdx) {}
 
-  std::ostream &print(std::ostream &os) const override {
+  std::ostream& print(std::ostream& os) const override {
     return os << "SSC " << qIdx << std::string(10, ' ');
   }
 };
@@ -100,7 +100,7 @@ public:
   MInstFSR(int qIdx, int cycle)
       : MemoryInst(MOp_FSR), qIdx(qIdx), cycle(cycle) {}
 
-  std::ostream &print(std::ostream &os) const override {
+  std::ostream& print(std::ostream& os) const override {
     return os << "FSR <cycle=" << cycle << "> " << qIdx;
   }
 };
@@ -114,7 +114,7 @@ public:
   MInstFSC(int qIdx, int cycle)
       : MemoryInst(MOp_FSC), qIdx(qIdx), cycle(cycle) {}
 
-  std::ostream &print(std::ostream &os) const override {
+  std::ostream& print(std::ostream& os) const override {
     return os << "FSC <cycle=" << cycle << "> " << qIdx;
   }
 };
@@ -126,9 +126,9 @@ public:
 
   MInstEXT(std::initializer_list<int> flags)
       : MemoryInst(MOp_EXT), flags(flags) {}
-  MInstEXT(const std::vector<int> &flags) : MemoryInst(MOp_EXT), flags(flags) {}
+  MInstEXT(const std::vector<int>& flags) : MemoryInst(MOp_EXT), flags(flags) {}
 
-  std::ostream &print(std::ostream &os) const override;
+  std::ostream& print(std::ostream& os) const override;
 };
 
 class GateInst {
@@ -150,7 +150,7 @@ public:
   GInstKind getKind() const { return gKind; }
 
   bool isNull() const { return getKind() == GOp_NUL; }
-  virtual std::ostream &print(std::ostream &os) const {
+  virtual std::ostream& print(std::ostream& os) const {
     assert(false && "Calling from base class");
     return os;
   }
@@ -160,7 +160,7 @@ class GInstNUL : public GateInst {
 public:
   GInstNUL() : GateInst(GOp_NUL) {}
 
-  std::ostream &print(std::ostream &os) const override { return os << "NUL"; }
+  std::ostream& print(std::ostream& os) const override { return os << "NUL"; }
 };
 
 // Single Qubit Gate (SQ)
@@ -169,7 +169,7 @@ public:
   GInstSQ(GateBlock* block, FPGAGateCategory blockKind)
       : GateInst(GOp_SQ, block, blockKind) {}
 
-  std::ostream &print(std::ostream &os) const override;
+  std::ostream& print(std::ostream& os) const override;
 };
 
 // Unitary Permutation Gate (UP)
@@ -178,7 +178,7 @@ public:
   GInstUP(GateBlock* block, FPGAGateCategory blockKind)
       : GateInst(GOp_UP, block, blockKind) {}
 
-  std::ostream &print(std::ostream &os) const override;
+  std::ostream& print(std::ostream& os) const override;
 };
 
 struct FPGACostConfig {
@@ -208,7 +208,7 @@ public:
     setGInst(std::move(_gInst));
   }
 
-  std::ostream &print(std::ostream &os) const {
+  std::ostream& print(std::ostream& os) const {
     mInst->print(os) << " : ";
     gInst->print(os) << "\n";
     return os;
@@ -230,12 +230,12 @@ public:
     gInst = std::make_unique<GInstNUL>();
   }
 
-  CostKind getCostKind(const FPGACostConfig &) const;
+  CostKind getCostKind(const FPGACostConfig&) const;
 };
 
 // top-level function to generate FPGA instructions from a CircuitGraph
-std::vector<Instruction> genInstruction(const CircuitGraph &,
-                                        const FPGAInstGenConfig &);
+std::vector<Instruction> genInstruction(const CircuitGraph& ,
+                                        const FPGAInstGenConfig&);
 
 }; // namespace saot::fpga
 

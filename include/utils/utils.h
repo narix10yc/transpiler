@@ -14,10 +14,10 @@
 
 namespace utils {
 
-bool isPermutation(const std::vector<int> &v);
+bool isPermutation(const std::vector<int>& v);
 
 template <typename T>
-static bool isOrdered(const std::vector<T> &vec, bool ascending = true) {
+static bool isOrdered(const std::vector<T>& vec, bool ascending = true) {
   if (vec.empty())
     return true;
 
@@ -36,12 +36,12 @@ static bool isOrdered(const std::vector<T> &vec, bool ascending = true) {
   }
 }
 
-std::ostream &print_complex(
-  std::ostream &os, std::complex<double> c, int precision = 3);
+std::ostream& print_complex(
+  std::ostream& os, std::complex<double> c, int precision = 3);
 
 template <typename T>
-std::ostream &printVector(const std::vector<T> &v,
-                          std::ostream &os = std::cerr) {
+std::ostream& printVector(const std::vector<T>& v,
+                          std::ostream& os = std::cerr) {
   if (v.empty())
     return os << "[]";
   auto it = v.cbegin();
@@ -52,8 +52,8 @@ std::ostream &printVector(const std::vector<T> &v,
 }
 
 template <typename T, unsigned N>
-std::ostream &printLLVMSmallVector(
-    const llvm::SmallVector<T, N> &v, std::ostream &os = std::cerr) {
+std::ostream& printLLVMSmallVector(
+    const llvm::SmallVector<T, N>& v, std::ostream& os = std::cerr) {
   if (v.empty())
     return os << "[]";
   const auto size = v.size();
@@ -65,8 +65,8 @@ std::ostream &printLLVMSmallVector(
 
 // The printer is expected to take inputs (const T&, std::ostream&)
 template <typename T, typename Printer_T>
-std::ostream &printVectorWithPrinter(const std::vector<T> &v, Printer_T f,
-                                     std::ostream &os = std::cerr) {
+std::ostream& printVectorWithPrinter(const std::vector<T>& v, Printer_T f,
+                                     std::ostream& os = std::cerr) {
   if (v.empty())
     return os << "[]";
   auto it = v.cbegin();
@@ -78,8 +78,8 @@ std::ostream &printVectorWithPrinter(const std::vector<T> &v, Printer_T f,
 
 // @return true if elem is in vec
 template <typename T>
-static void pushBackIfNotInVector(std::vector<T> &vec, T elem) {
-  for (const auto &e : vec) {
+static void pushBackIfNotInVector(std::vector<T>& vec, T elem) {
+  for (const auto& e : vec) {
     if (e == elem)
       return;
   }
@@ -113,7 +113,7 @@ public:
     assert(nbits > 0 && nbits <= 64);
   }
 
-  friend std::ostream &operator<<(std::ostream &os, const as0b &n) {
+  friend std::ostream& operator<<(std::ostream& os, const as0b &n) {
     for (int i = n.nbits - 1; i >= 0; --i)
       os.put((n.v & (1 << i)) ? '1' : '0');
     return os;

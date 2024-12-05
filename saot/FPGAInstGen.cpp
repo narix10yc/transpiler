@@ -4,28 +4,28 @@
 using namespace saot;
 using namespace saot::fpga;
 
-std::ostream &MInstEXT::print(std::ostream &os) const {
+std::ostream& MInstEXT::print(std::ostream& os) const {
   os << "EXT ";
   utils::printVector(flags, os);
   return os;
 }
 
-std::ostream &GInstSQ::print(std::ostream &os) const {
+std::ostream& GInstSQ::print(std::ostream& os) const {
   os << "SQ<id=" << block->id << "> ";
-  for (const auto &data : block->dataVector)
+  for (const auto& data : block->dataVector)
     os << data.qubit << " ";
   return os;
 }
 
-std::ostream &GInstUP::print(std::ostream &os) const {
+std::ostream& GInstUP::print(std::ostream& os) const {
   os << "UP<id=" << block->id << "> ";
-  for (const auto &data : block->dataVector)
+  for (const auto& data : block->dataVector)
     os << data.qubit << " ";
   return os;
 }
 
 Instruction::CostKind
-Instruction::getCostKind(const FPGACostConfig &config) const {
+Instruction::getCostKind(const FPGACostConfig& config) const {
   if (mInst->getKind() == MOp_EXT) {
     auto extInst = dynamic_cast<const MInstEXT &>(*mInst);
     if (extInst.flags[0] < config.lowestQIdxForTwiceExtTime)
@@ -68,7 +68,7 @@ struct QubitStatus {
   QubitStatus() : kind(QK_Unknown), kindIdx(0) {}
   QubitStatus(QubitKind kind, int kindIdx) : kind(kind), kindIdx(kindIdx) {}
 
-  std::ostream &print(std::ostream &os) const {
+  std::ostream& print(std::ostream& os) const {
     os << "(";
     switch (kind) {
     case QK_Local:
@@ -119,7 +119,7 @@ private:
         : block(block), blockKind(blockKind) {}
 
     available_block_kind_t
-    getABK(const std::vector<QubitStatus> &qubitStatuses) const {
+    getABK(const std::vector<QubitStatus>& qubitStatuses) const {
       if (blockKind.is(FPGAGateCategory::fpgaNonComp))
         return ABK_NonComp;
       if (blockKind.is(FPGAGateCategory::fpgaUnitaryPerm))
@@ -138,7 +138,7 @@ private:
     }
   };
 
-  void init(const CircuitGraph &graph) {
+  void init(const CircuitGraph& graph) {
     // initialize qubit statuses
     std::vector<int> priorities(nqubits);
     for (int i = 0; i < nqubits; ++i)
@@ -175,7 +175,7 @@ private:
       }
 
       bool acceptFlag = true;
-      for (const auto &bData : cddBlock->dataVector) {
+      for (const auto& bData : cddBlock->dataVector) {
         if (unlockedRowIndices[bData.qubit] < row) {
           acceptFlag = false;
           break;
@@ -187,7 +187,7 @@ private:
   }
 
 public:
-  const FPGAInstGenConfig &config;
+  const FPGAInstGenConfig& config;
   int nrows;
   int nqubits;
   std::vector<QubitStatus> qubitStatuses;
@@ -196,14 +196,14 @@ public:
   std::vector<int> unlockedRowIndices;
   std::vector<available_blocks_t> availables;
 
-  InstGenState(const CircuitGraph &graph, const FPGAInstGenConfig &config)
+  InstGenState(const CircuitGraph& graph, const FPGAInstGenConfig& config)
       : config(config), nrows(graph.tile().size()), nqubits(graph.nqubits),
         qubitStatuses(graph.nqubits), tileBlocks(graph.tile().size() * nqubits),
         unlockedRowIndices(nqubits), availables() {
     init(graph);
   }
 
-  std::ostream &printQubitStatuses(std::ostream &os) const {
+  std::ostream& printQubitStatuses(std::ostream& os) const {
     auto it = qubitStatuses.cbegin();
     it->print(os << "0:");
     int i = 1;
@@ -226,11 +226,11 @@ public:
 
     // grab next availables
     std::vector<GateBlock*> candidateBlocks;
-    for (const auto &data : block->dataVector) {
-      const auto &qubit = data.qubit;
+    for (const auto& data : block->dataVector) {
+      const auto& qubit = data.qubit;
 
       GateBlock* cddBlock = nullptr;
-      for (auto &updatedRow = ++unlockedRowIndices[qubit]; updatedRow < nrows;
+      for (auto& updatedRow = ++unlockedRowIndices[qubit]; updatedRow < nrows;
            ++updatedRow) {
         auto idx = nqubits * updatedRow + qubit;
         cddBlock = tileBlocks[idx];
@@ -241,10 +241,10 @@ public:
                                 cddBlock) == candidateBlocks.end())
         candidateBlocks.push_back(cddBlock);
     }
-    for (const auto &b : candidateBlocks) {
+    for (const auto& b : candidateBlocks) {
       bool insertFlag = true;
       auto row = unlockedRowIndices[b->dataVector[0].qubit];
-      for (const auto &data : b->dataVector) {
+      for (const auto& data : b->dataVector) {
         if (unlockedRowIndices[data.qubit] != row) {
           insertFlag = false;
           break;
@@ -255,7 +255,7 @@ public:
     }
   }
 
-  void assignQubitStatuses(const std::vector<int> &priorities) {
+  void assignQubitStatuses(const std::vector<int>& priorities) {
     assert(utils::isPermutation(priorities));
     int nOnChipQubits = config.getNOnChipQubits();
 
@@ -292,7 +292,7 @@ public:
   }
 
   GateBlock* findBlockWithABK(available_block_kind_t abk) const {
-    for (const auto &candidate : availables) {
+    for (const auto& candidate : availables) {
       if (candidate.getABK(qubitStatuses) == abk)
         return candidate.block;
     }
@@ -372,7 +372,7 @@ public:
         lastUpBlock = instructions[vacantGateIdx - 1].gInst->block;
         // check fusion condition
         auto candidateQubits = lastUpBlock->quantumGate->qubits;
-        for (const auto &q : b->quantumGate->qubits)
+        for (const auto& q : b->quantumGate->qubits)
           utils::pushBackIfNotInVector(candidateQubits, q);
         // accept fusion
         if (candidateQubits.size() <= config.maxUpSize) {
@@ -396,7 +396,7 @@ public:
         instructions.emplace_back(
             nullptr, std::make_unique<GInstUP>(b, getBlockKind(b)));
       } else {
-        auto &inst = instructions[vacantGateIdx];
+        auto& inst = instructions[vacantGateIdx];
         assert(inst.gInst->isNull());
         inst.setGInst(std::make_unique<GInstUP>(b, getBlockKind(b)));
       }
@@ -435,7 +435,7 @@ public:
       generateLocalSQBlock(b);
     };
 
-    const auto insertExtMemInst = [&](const std::vector<int> &priorities) {
+    const auto insertExtMemInst = [&](const std::vector<int>& priorities) {
       int insertPosition = std::max(vacantMemIdx, sqGateBarrierIdx);
       instructions.insert(
           instructions.cbegin() + insertPosition,
@@ -473,8 +473,8 @@ public:
         availablesCopy.erase(it);
       }
       // no SQ gates, prioritize UP gates
-      for (const auto &avail : availablesCopy) {
-        for (const auto &data : avail.block->dataVector)
+      for (const auto& avail : availablesCopy) {
+        for (const auto& data : avail.block->dataVector)
           utils::pushBackIfNotInVector(priorities, data.qubit);
       }
       // to diminish external memory access overhead
@@ -507,7 +507,7 @@ public:
     while (!availables.empty()) {
       // TODO: handle non-comp gates (omit them for now)
       bool nonCompFlag = false;
-      for (const auto &avail : availables) {
+      for (const auto& avail : availables) {
         if (avail.blockKind.is(FPGAGateCategory::fpgaNonComp)) {
           // std::cerr << "Ignored block " << avail.block->id << " because it is
           // non-comp\n";
@@ -520,7 +520,7 @@ public:
         continue;
 
       if (!config.selectiveGenerationMode) {
-        auto &avail = availables[0];
+        auto& avail = availables[0];
         auto abk = avail.getABK(qubitStatuses);
         if (abk == ABK_OffChipSQ) {
           std::vector<int> priorities(nqubits);
@@ -570,8 +570,8 @@ public:
 } // anonymous namespace
 
 std::vector<Instruction>
-saot::fpga::genInstruction(const CircuitGraph &graph,
-                           const FPGAInstGenConfig &config) {
+saot::fpga::genInstruction(const CircuitGraph& graph,
+                           const FPGAInstGenConfig& config) {
   InstGenState state(graph, config);
 
   return state.generate();

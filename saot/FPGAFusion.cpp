@@ -13,7 +13,7 @@ using tile_iter_t = std::list<std::array<GateBlock*, 36>>::iterator;
 namespace {
 
 GateBlock* computeCandidate(const GateBlock* lhs, const GateBlock* rhs,
-                            const FPGAFusionConfig &config) {
+                            const FPGAFusionConfig& config) {
   if (lhs == nullptr || rhs == nullptr)
     return nullptr;
   if (lhs == rhs)
@@ -31,8 +31,8 @@ GateBlock* computeCandidate(const GateBlock* lhs, const GateBlock* rhs,
 
   // set up qubits of candidate block
   std::vector<int> blockQubits;
-  for (const auto &lData : lhs->dataVector) {
-    const auto &q = lData.qubit;
+  for (const auto& lData : lhs->dataVector) {
+    const auto& q = lData.qubit;
 
     GateNode* lhsEntry = lData.lhsEntry;
     GateNode* rhsEntry;
@@ -48,8 +48,8 @@ GateBlock* computeCandidate(const GateBlock* lhs, const GateBlock* rhs,
     block->dataVector.push_back({q, lhsEntry, rhsEntry});
     blockQubits.push_back(q);
   }
-  for (const auto &rData : rhs->dataVector) {
-    const auto &q = rData.qubit;
+  for (const auto& rData : rhs->dataVector) {
+    const auto& q = rData.qubit;
     if (lhs->findQubit(q) == lhs->dataVector.end()) {
       block->dataVector.push_back(rData);
       blockQubits.push_back(q);
@@ -111,8 +111,8 @@ GateBlock* computeCandidate(const GateBlock* lhs, const GateBlock* rhs,
   return block;
 }
 
-GateBlock* trySameWireFuse(CircuitGraph &graph, const tile_iter_t &itLHS,
-                           int q_, const FPGAFusionConfig &config) {
+GateBlock* trySameWireFuse(CircuitGraph& graph, const tile_iter_t& itLHS,
+                           int q_, const FPGAFusionConfig& config) {
   assert(itLHS != graph.tile().end());
   const auto itRHS = std::next(itLHS);
   if (itRHS == graph.tile().end())
@@ -133,9 +133,9 @@ GateBlock* trySameWireFuse(CircuitGraph &graph, const tile_iter_t &itLHS,
   // rhs->displayInfo(std::cerr);
   // block->displayInfo(std::cerr) << RESET;
 
-  for (const auto &q : lhs->getQubits())
+  for (const auto& q : lhs->getQubits())
     (*itLHS)[q] = nullptr;
-  for (const auto &q : rhs->getQubits())
+  for (const auto& q : rhs->getQubits())
     (*itRHS)[q] = nullptr;
 
   delete (lhs);
@@ -146,8 +146,8 @@ GateBlock* trySameWireFuse(CircuitGraph &graph, const tile_iter_t &itLHS,
   return block;
 }
 
-GateBlock* tryCrossWireFuse(CircuitGraph &graph, const tile_iter_t &tileIt,
-                            int q, const FPGAFusionConfig &config) {
+GateBlock* tryCrossWireFuse(CircuitGraph& graph, const tile_iter_t& tileIt,
+                            int q, const FPGAFusionConfig& config) {
   auto block0 = (*tileIt)[q];
   if (block0 == nullptr)
     return nullptr;
@@ -168,9 +168,9 @@ GateBlock* tryCrossWireFuse(CircuitGraph &graph, const tile_iter_t &tileIt,
 }
 } // anonymous namespace
 
-void saot::applyFPGAGateFusion(CircuitGraph &graph,
-                               const FPGAFusionConfig &config) {
-  auto &tile = graph.tile();
+void saot::applyFPGAGateFusion(CircuitGraph& graph,
+                               const FPGAFusionConfig& config) {
+  auto& tile = graph.tile();
   if (tile.size() < 2)
     return;
 

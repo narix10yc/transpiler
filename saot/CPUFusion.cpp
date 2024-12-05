@@ -33,7 +33,7 @@ CPUFusionConfig CPUFusionConfig::Aggressive =
                     .allowMultipleTraverse = true,
                     .incrementScheme = true};
 
-std::ostream &CPUFusionConfig::display(std::ostream &OS) const {
+std::ostream& CPUFusionConfig::display(std::ostream& OS) const {
   OS << CYAN_FG << "======== Fusion Config: ========\n" << RESET;
   OS << "max nqubits:          " << maxNQubits << "\n";
   OS << "max op count:         " << maxOpCount;
@@ -55,7 +55,7 @@ using tile_iter_t = std::list<std::array<GateBlock*, 36>>::iterator;
 
 namespace {
 GateBlock* computeCandidate(const GateBlock* lhs, const GateBlock* rhs,
-                            const CPUFusionConfig &config) {
+                            const CPUFusionConfig& config) {
   if (lhs == nullptr || rhs == nullptr)
     return nullptr;
 
@@ -73,8 +73,8 @@ GateBlock* computeCandidate(const GateBlock* lhs, const GateBlock* rhs,
   //   << " => candidate block " << block->id << "\n";
 
   std::vector<int> blockQubits;
-  for (const auto &lData : lhs->dataVector) {
-    const auto &q = lData.qubit;
+  for (const auto& lData : lhs->dataVector) {
+    const auto& q = lData.qubit;
 
     GateNode* lhsEntry = lData.lhsEntry;
     GateNode* rhsEntry;
@@ -91,8 +91,8 @@ GateBlock* computeCandidate(const GateBlock* lhs, const GateBlock* rhs,
     blockQubits.push_back(q);
   }
 
-  for (const auto &rData : rhs->dataVector) {
-    const auto &q = rData.qubit;
+  for (const auto& rData : rhs->dataVector) {
+    const auto& q = rData.qubit;
     if (lhs->findQubit(q) == lhs->dataVector.end()) {
       block->dataVector.push_back(rData);
       blockQubits.push_back(q);
@@ -121,8 +121,8 @@ GateBlock* computeCandidate(const GateBlock* lhs, const GateBlock* rhs,
   return block;
 }
 
-GateBlock* trySameWireFuse(const CPUFusionConfig &config, CircuitGraph &graph,
-                           const tile_iter_t &itLHS, int q_) {
+GateBlock* trySameWireFuse(const CPUFusionConfig& config, CircuitGraph& graph,
+                           const tile_iter_t& itLHS, int q_) {
   assert(itLHS != graph.tile().end());
   const auto itRHS = std::next(itLHS);
   if (itRHS == graph.tile().end())
@@ -143,9 +143,9 @@ GateBlock* trySameWireFuse(const CPUFusionConfig &config, CircuitGraph &graph,
   // rhs->displayInfo(std::cerr);
   // block->displayInfo(std::cerr) << RESET;
 
-  for (const auto &q : lhs->getQubits())
+  for (const auto& q : lhs->getQubits())
     (*itLHS)[q] = nullptr;
-  for (const auto &q : rhs->getQubits())
+  for (const auto& q : rhs->getQubits())
     (*itRHS)[q] = nullptr;
 
   delete (lhs);
@@ -156,8 +156,8 @@ GateBlock* trySameWireFuse(const CPUFusionConfig &config, CircuitGraph &graph,
   return block;
 }
 
-GateBlock* tryCrossWireFuse(const CPUFusionConfig &config, CircuitGraph &graph,
-                            const tile_iter_t &tileIt, int q) {
+GateBlock* tryCrossWireFuse(const CPUFusionConfig& config, CircuitGraph& graph,
+                            const tile_iter_t& tileIt, int q) {
   auto block0 = (*tileIt)[q];
   if (block0 == nullptr)
     return nullptr;
@@ -178,9 +178,9 @@ GateBlock* tryCrossWireFuse(const CPUFusionConfig &config, CircuitGraph &graph,
 }
 } // anonymous namespace
 
-void saot::applyCPUGateFusion(const CPUFusionConfig &originalConfig,
-                              CircuitGraph &graph) {
-  auto &tile = graph.tile();
+void saot::applyCPUGateFusion(const CPUFusionConfig& originalConfig,
+                              CircuitGraph& graph) {
+  auto& tile = graph.tile();
   if (tile.size() < 2)
     return;
 

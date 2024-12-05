@@ -15,12 +15,12 @@ inline size_t insertZeroBit(size_t number, int index) {
 }
 
 template <typename real_t = double>
-static void applyGeneral(std::complex<real_t>* sv, const saot::GateMatrix &gate,
-                         const std::vector<int> &qubits, unsigned nqubits) {
+static void applyGeneral(std::complex<real_t>* sv, const saot::GateMatrix& gate,
+                         const std::vector<int>& qubits, unsigned nqubits) {
   assert(gate.nqubits == qubits.size());
   assert(gate.isConstantMatrix());
-  const auto &constMatrix = gate.matrix.constantMatrix.data;
-  const auto &K = gate.N;
+  const auto& constMatrix = gate.matrix.constantMatrix.data;
+  const auto& K = gate.N;
 
   // std::cerr << "applyGeneral (nqubits = " << nqubits << ") on qubits ";
   // for (const auto& q : qubits)
@@ -29,7 +29,7 @@ static void applyGeneral(std::complex<real_t>* sv, const saot::GateMatrix &gate,
   // gate.printMatrix(std::cerr);
 
   std::vector<size_t> qubitsPower;
-  for (const auto &q : qubits)
+  for (const auto& q : qubits)
     qubitsPower.push_back(1 << q);
 
   auto qubitsSorted = qubits;

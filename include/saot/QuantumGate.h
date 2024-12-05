@@ -43,16 +43,16 @@ enum GateKind : int {
   // to be defined by nqubits directly
 };
 
-GateKind String2GateKind(const std::string &s);
+GateKind String2GateKind(const std::string& s);
 std::string GateKind2String(GateKind t);
 
-std::ostream &printConstantMatrix(
-    std::ostream &os,
-    const complex_matrix::SquareMatrix<std::complex<double>> &cMat);
+std::ostream& printConstantMatrix(
+    std::ostream& os,
+    const complex_matrix::SquareMatrix<std::complex<double>>& cMat);
 
-std::ostream &printParametrizedMatrix(
-    std::ostream &os,
-    const complex_matrix::SquareMatrix<saot::Polynomial> &cMat);
+std::ostream& printParametrizedMatrix(
+    std::ostream& os,
+    const complex_matrix::SquareMatrix<saot::Polynomial>& cMat);
 
 class GateMatrix {
 public:
@@ -109,14 +109,14 @@ public:
   GateMatrix(GateKind gateKind, const gate_params_t &params = {})
       : cache(), gateKind(gateKind), gateParameters(params) {}
 
-  GateMatrix(const up_matrix_t &upMat);
-  GateMatrix(const c_matrix_t &upMat);
-  GateMatrix(const p_matrix_t &upMat);
+  GateMatrix(const up_matrix_t& upMat);
+  GateMatrix(const c_matrix_t& upMat);
+  GateMatrix(const p_matrix_t& upMat);
 
-  static GateMatrix FromName(const std::string &name,
+  static GateMatrix FromName(const std::string& name,
                              const gate_params_t &params = {});
 
-  void permuteSelf(const std::vector<int> &flags);
+  void permuteSelf(const std::vector<int>& flags);
 
   // get cached unitary perm matrix object associated with this GateMatrix
   const up_matrix_t* getUnitaryPermMatrix(double tolerance = 0.0) const {
@@ -153,21 +153,21 @@ public:
   }
 
   // get cached parametrized matrix object associated with this GateMatrix
-  const p_matrix_t &getParametrizedMatrix() const {
+  const p_matrix_t& getParametrizedMatrix() const {
     if (cache.isConvertibleToPMat == Unknown)
       computeAndCachePMat();
     assert(cache.isConvertibleToPMat == Convertible);
     return cache.pMat;
   }
 
-  p_matrix_t &getParametrizedMatrix() {
+  p_matrix_t& getParametrizedMatrix() {
     if (cache.isConvertibleToPMat == Unknown)
       computeAndCachePMat();
     assert(cache.isConvertibleToPMat == Convertible);
     return cache.pMat;
   }
 
-  const sig_matrix_t &getSignatureMatrix(double zeroTol, double oneTol) const {
+  const sig_matrix_t& getSignatureMatrix(double zeroTol, double oneTol) const {
     if (cache.sigMat.edgeSize() == 0) {
       assert(cache.sigZeroTol < 0.0);
       assert(cache.sigOneTol < 0.0);
@@ -187,13 +187,13 @@ public:
   // @brief Get number of qubits
   int nqubits() const;
 
-  std::ostream &printCMat(std::ostream &os) const {
+  std::ostream& printCMat(std::ostream& os) const {
     const auto* cMat = getConstantMatrix();
     assert(cMat);
     return printConstantMatrix(os,* cMat);
   }
 
-  std::ostream &printPMat(std::ostream &os) const {
+  std::ostream& printPMat(std::ostream& os) const {
     return printParametrizedMatrix(os, getParametrizedMatrix());
   }
 
@@ -274,18 +274,18 @@ public:
 
   QuantumGate() : qubits(), gateMatrix() {}
 
-  QuantumGate(const GateMatrix &gateMatrix, int q)
+  QuantumGate(const GateMatrix& gateMatrix, int q)
       : gateMatrix(gateMatrix), qubits({q}) {
     assert(gateMatrix.nqubits() == 1);
   }
 
-  QuantumGate(const GateMatrix &gateMatrix, std::initializer_list<int> qubits)
+  QuantumGate(const GateMatrix& gateMatrix, std::initializer_list<int> qubits)
       : gateMatrix(gateMatrix), qubits(qubits) {
     assert(gateMatrix.nqubits() == qubits.size());
     sortQubits();
   }
 
-  QuantumGate(const GateMatrix &gateMatrix, const std::vector<int> &qubits)
+  QuantumGate(const GateMatrix& gateMatrix, const std::vector<int>& qubits)
       : gateMatrix(gateMatrix), qubits(qubits) {
     assert(gateMatrix.nqubits() == qubits.size());
     sortQubits();
@@ -305,7 +305,7 @@ public:
     return (gateMatrix.nqubits() == qubits.size());
   }
 
-  std::ostream &displayInfo(std::ostream &os) const;
+  std::ostream& displayInfo(std::ostream& os) const;
 
   int findQubit(int q) const {
     for (unsigned i = 0; i < qubits.size(); i++) {
@@ -318,7 +318,7 @@ public:
   void sortQubits();
 
   /// @brief B.lmatmul(A) will return AB
-  QuantumGate lmatmul(const QuantumGate &other) const;
+  QuantumGate lmatmul(const QuantumGate& other) const;
 
   int opCount(double zeroSkippingThres = 1e-8) const;
 

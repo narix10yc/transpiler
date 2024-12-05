@@ -54,7 +54,7 @@ struct kernel_t {
   CUfunction kernel;
 };
 
-static CircuitGraph &getCircuitH1(CircuitGraph &graph, int nqubits) {
+static CircuitGraph& getCircuitH1(CircuitGraph& graph, int nqubits) {
   auto mat = GateMatrix::FromName("h");
   for (int q = 0; q < nqubits; q++)
     graph.addGate(mat, {q});
@@ -62,7 +62,7 @@ static CircuitGraph &getCircuitH1(CircuitGraph &graph, int nqubits) {
   return graph;
 }
 
-static CircuitGraph &getCircuitU1(CircuitGraph &graph, int nqubits) {
+static CircuitGraph& getCircuitU1(CircuitGraph& graph, int nqubits) {
   auto mat = GateMatrix::FromName("u3", {0.92, 0.46, 0.22});
   for (int q = 0; q < nqubits; q++)
     graph.addGate(mat, {q});
@@ -70,7 +70,7 @@ static CircuitGraph &getCircuitU1(CircuitGraph &graph, int nqubits) {
   return graph;
 }
 
-static CircuitGraph &getCircuitH2(CircuitGraph &graph, int nqubits) {
+static CircuitGraph& getCircuitH2(CircuitGraph& graph, int nqubits) {
   auto mat = GateMatrix::MatrixH_c;
   for (int q = 0; q < nqubits; q++) {
     QuantumGate gate(mat, {q});
@@ -81,7 +81,7 @@ static CircuitGraph &getCircuitH2(CircuitGraph &graph, int nqubits) {
   return graph;
 }
 
-static CircuitGraph &getCircuitU2(CircuitGraph &graph, int nqubits) {
+static CircuitGraph& getCircuitU2(CircuitGraph& graph, int nqubits) {
   auto mat = GateMatrix::FromName("u3", {0.92, 0.46, 0.22});
   for (int q = 0; q < nqubits; q++) {
     QuantumGate gate(mat, {q});
@@ -92,7 +92,7 @@ static CircuitGraph &getCircuitU2(CircuitGraph &graph, int nqubits) {
   return graph;
 }
 
-static CircuitGraph &getCircuitH3(CircuitGraph &graph, int nqubits) {
+static CircuitGraph& getCircuitH3(CircuitGraph& graph, int nqubits) {
   auto mat = GateMatrix::FromName("h");
   for (int q = 0; q < nqubits; q++) {
     QuantumGate gate(mat, {q});
@@ -104,7 +104,7 @@ static CircuitGraph &getCircuitH3(CircuitGraph &graph, int nqubits) {
   return graph;
 }
 
-static CircuitGraph &getCircuitZ3(CircuitGraph &graph, int nqubits) {
+static CircuitGraph& getCircuitZ3(CircuitGraph& graph, int nqubits) {
   auto mat = GateMatrix::FromName("z");
   for (int q = 0; q < nqubits; q++) {
     QuantumGate gate(mat, {q});
@@ -116,7 +116,7 @@ static CircuitGraph &getCircuitZ3(CircuitGraph &graph, int nqubits) {
   return graph;
 }
 
-static CircuitGraph &getCircuitU3(CircuitGraph &graph, int nqubits) {
+static CircuitGraph& getCircuitU3(CircuitGraph& graph, int nqubits) {
   auto mat = GateMatrix::FromName("u3", {0.92, 0.46, 0.22});
   for (int q = 0; q < nqubits; q++) {
     QuantumGate gate(mat, {q});
@@ -128,7 +128,7 @@ static CircuitGraph &getCircuitU3(CircuitGraph &graph, int nqubits) {
   return graph;
 }
 
-static CircuitGraph &getCircuitH4(CircuitGraph &graph, int nqubits) {
+static CircuitGraph& getCircuitH4(CircuitGraph& graph, int nqubits) {
   auto mat = GateMatrix::FromName("h");
   for (int q = 0; q < nqubits; q++) {
     QuantumGate gate(mat, {q});
@@ -141,7 +141,7 @@ static CircuitGraph &getCircuitH4(CircuitGraph &graph, int nqubits) {
   return graph;
 }
 
-static CircuitGraph &getCircuitZ4(CircuitGraph &graph, int nqubits) {
+static CircuitGraph& getCircuitZ4(CircuitGraph& graph, int nqubits) {
   auto mat = GateMatrix::FromName("z");
   for (int q = 0; q < nqubits; q++) {
     QuantumGate gate(mat, {q});
@@ -191,7 +191,7 @@ int main(int argc, char* *argv) {
   };
 
   auto allBlocks = graph.getAllBlocks();
-  for (const auto &b : allBlocks)
+  for (const auto& b : allBlocks)
     G.generateCUDAKernel(*b->quantumGate, cudaGenConfig,
                          "kernel_block_" + std::to_string(b->id));
 
@@ -295,7 +295,7 @@ int main(int argc, char* *argv) {
 
   // calculate the length of matrix array needed
   unsigned lengthMatVec = 0;
-  for (const auto &b : allBlocks) {
+  for (const auto& b : allBlocks) {
     lengthMatVec += (1 << (2 * b->nqubits() + 1));
   }
 

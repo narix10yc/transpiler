@@ -6,7 +6,7 @@ using namespace openqasm::ast;
 saot::CircuitGraph RootNode::toCircuitGraph() const {
   saot::CircuitGraph graph;
   std::vector<int> qubits;
-  for (const auto &s : stmts) {
+  for (const auto& s : stmts) {
     saot::GateMatrix::gate_params_t params;
     int i = 0;
     auto gateApply = dynamic_cast<GateApplyStmt*>(s.get());
@@ -15,10 +15,10 @@ saot::CircuitGraph RootNode::toCircuitGraph() const {
       continue;
     }
     qubits.clear();
-    for (const auto &t : gateApply->targets) {
+    for (const auto& t : gateApply->targets) {
       qubits.push_back(static_cast<unsigned>(t->getIndex()));
     }
-    for (const auto &p : gateApply->parameters) {
+    for (const auto& p : gateApply->parameters) {
       auto ev = p->getExprValue();
       assert(ev.isConstant);
       params[i++] = ev.value;

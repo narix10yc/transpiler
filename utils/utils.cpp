@@ -1,6 +1,6 @@
 #include "utils/utils.h"
 
-bool utils::isPermutation(const std::vector<int> &v) {
+bool utils::isPermutation(const std::vector<int>& v) {
   auto copy = v;
   std::sort(copy.begin(), copy.end());
   for (size_t i = 0, S = copy.size(); i < S; i++) {

@@ -8,8 +8,8 @@ using namespace saot;
 using namespace saot::ast;
 
 template <typename T>
-std::ostream &printVector(std::ostream &os, const std::vector<T> &vec,
-                          const std::string &sep = ",") {
+std::ostream& printVector(std::ostream& os, const std::vector<T>& vec,
+                          const std::string& sep = ",") {
   if (vec.empty())
     return os;
   auto it = vec.cbegin();
@@ -19,7 +19,7 @@ std::ostream &printVector(std::ostream &os, const std::vector<T> &vec,
   return os;
 }
 
-std::ostream &printGateMatrix(std::ostream &os,
+std::ostream& printGateMatrix(std::ostream& os,
                               const GateMatrix::gate_params_t &params) {
   if (std::get_if<std::monostate>(&params[0]))
     return os;
@@ -45,29 +45,29 @@ std::ostream &printGateMatrix(std::ostream &os,
   return os;
 }
 
-std::ostream &MeasureStmt::print(std::ostream &os) const {
+std::ostream& MeasureStmt::print(std::ostream& os) const {
   os << "m ";
   printVector(os, qubits, " ");
   return os << "\n";
 }
 
-std::ostream &QuantumCircuit::print(std::ostream &os) const {
+std::ostream& QuantumCircuit::print(std::ostream& os) const {
   os << "circuit<nqubits=" << nqubits << ", nparams=" << nparams << "> " << name
      << " {\n";
-  for (const auto &s : stmts)
+  for (const auto& s : stmts)
     s->print(os);
   os << "\n";
-  for (const auto &def : paramDefs)
+  for (const auto& def : paramDefs)
     def.print(os);
 
   return os;
 }
 
-std::ostream &GateApplyStmt::print(std::ostream &os) const {
+std::ostream& GateApplyStmt::print(std::ostream& os) const {
   os << name;
   // parameter
   std::visit(
-      [&os](auto &&arg) {
+      [&os](auto&& arg) {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, int>) {
           os << "(#" << arg << ")";
@@ -86,7 +86,7 @@ std::ostream &GateApplyStmt::print(std::ostream &os) const {
   return os << "\n";
 }
 
-std::ostream &GateChainStmt::print(std::ostream &os) const {
+std::ostream& GateChainStmt::print(std::ostream& os) const {
   size_t size = gates.size();
   if (size == 0)
     return os;
@@ -97,7 +97,7 @@ std::ostream &GateChainStmt::print(std::ostream &os) const {
   return os;
 }
 
-std::ostream &ParameterDefStmt::print(std::ostream &os) const {
+std::ostream& ParameterDefStmt::print(std::ostream& os) const {
   assert(false && "Not Implemented");
   return os;
   // os << "#" << refNumber << " = { ";
@@ -118,7 +118,7 @@ std::ostream &ParameterDefStmt::print(std::ostream &os) const {
 }
 
 QuantumGate
-QuantumCircuit::gateApplyToQuantumGate(const GateApplyStmt &gaStmt) {
+QuantumCircuit::gateApplyToQuantumGate(const GateApplyStmt& gaStmt) {
   if (const auto* p = std::get_if<int>(&gaStmt.paramRefOrMatrix)) {
     const auto v =* p;
     auto it = std::find_if(
@@ -137,7 +137,7 @@ QuantumCircuit::gateApplyToQuantumGate(const GateApplyStmt &gaStmt) {
 
 CircuitGraph QuantumCircuit::toCircuitGraph() {
   CircuitGraph graph;
-  for (const auto &s : stmts) {
+  for (const auto& s : stmts) {
     const GateChainStmt* chain = dynamic_cast<const GateChainStmt*>(s.get());
     if (chain == nullptr) {
       std::cerr << YELLOW_FG << BOLD << "Warning: " << RESET
@@ -156,7 +156,7 @@ CircuitGraph QuantumCircuit::toCircuitGraph() {
   return graph;
 }
 
-QuantumCircuit QuantumCircuit::FromCircuitGraph(const CircuitGraph &G) {
+QuantumCircuit QuantumCircuit::FromCircuitGraph(const CircuitGraph& G) {
   const auto allBlocks = G.getAllBlocks();
 
   QuantumCircuit QC;

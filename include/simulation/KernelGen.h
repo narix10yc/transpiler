@@ -32,10 +32,10 @@ struct CPUKernelGenConfig {
   static const CPUKernelGenConfig NativeDefault;
 };
 
-llvm::Function* genCPUCode(llvm::Module &llvmModule,
-                           const CPUKernelGenConfig &config,
-                           const QuantumGate &gate,
-                           const std::string &funcName);
+llvm::Function* genCPUCode(llvm::Module& llvmModule,
+                           const CPUKernelGenConfig& config,
+                           const QuantumGate& gate,
+                           const std::string& funcName);
 
 } // namespace saot
 

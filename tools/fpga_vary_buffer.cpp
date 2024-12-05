@@ -14,11 +14,11 @@ using namespace saot::fpga;
 
 using namespace IOColor;
 
-void printInstructionStatistics(const std::vector<fpga::Instruction> &insts,
-                                const FPGACostConfig &costConfig,
+void printInstructionStatistics(const std::vector<fpga::Instruction>& insts,
+                                const FPGACostConfig& costConfig,
                                 bool additionalExtMemOp) {
   int nNonExtMemInst = 0, nExtMemInst = 0, nSqGateInst = 0, nUpGateInst = 0;
-  for (const auto &inst : insts) {
+  for (const auto& inst : insts) {
     if (inst.gInst->getKind() == GOp_SQ)
       ++nSqGateInst;
     else if (inst.gInst->getKind() == GOp_UP)
@@ -35,7 +35,7 @@ void printInstructionStatistics(const std::vector<fpga::Instruction> &insts,
   int nGeneralSQGate = 0, nRealOnlySQGate = 0, nUPGate = 0;
   int nOverlappingInst = 0;
 
-  for (const auto &inst : insts) {
+  for (const auto& inst : insts) {
     // inst.print(std::cerr);
     if (!inst.mInst->isNull() && !inst.gInst->isNull())
       nOverlappingInst++;
@@ -137,7 +137,7 @@ void runExperiment(std::function<CircuitGraph()> f) {
   using clock = std::chrono::high_resolution_clock;
   auto tic = clock::now();
   auto tok = clock::now();
-  auto log = [&]() -> std::ostream & {
+  auto log = [&]() -> std::ostream&  {
     const auto t_ms =
         std::chrono::duration_cast<std::chrono::milliseconds>(tok - tic)
             .count();

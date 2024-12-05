@@ -16,14 +16,14 @@ class Lexer {
   std::ifstream file;
 
 public:
-  Lexer(const std::string &fileName) : fileName(fileName) {}
+  Lexer(const std::string& fileName) : fileName(fileName) {}
   ~Lexer() { file.close(); }
 
   int peekChar();
 
   Token getToken();
 
-  void logError(const std::string &msg) const {
+  void logError(const std::string& msg) const {
     std::cerr << "== Lexer Error == " << msg << "\n";
   }
 

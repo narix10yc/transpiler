@@ -4,7 +4,7 @@ using namespace saot;
 using namespace llvm;
 
 Value* saot::internal::genMulAdd(
-    IRBuilder<> &B, Value* a, Value* b, Value* c,
+    IRBuilder<>& B, Value* a, Value* b, Value* c,
     ScalarKind aKind, const Twine& name) {
   assert(b && "operand b cannot be null when calling genMulAdd");
   switch (aKind) {
@@ -37,7 +37,7 @@ Value* saot::internal::genMulAdd(
 }
 
 Value* saot::internal::genNegMulAdd(
-    IRBuilder<> &B, Value* a, Value* b, Value* c,
+    IRBuilder<>& B, Value* a, Value* b, Value* c,
     ScalarKind aKind, const Twine& name) {
   assert(b && "operand b cannot be null when calling genNegMulAdd");
   // special-a cases

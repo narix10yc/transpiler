@@ -4,7 +4,7 @@
 
 using namespace saot;
 
-std::ostream &VariableSumNode::print(std::ostream &os) const {
+std::ostream& VariableSumNode::print(std::ostream& os) const {
   assert(!vars.empty() || constant != 0.0);
 
   if (vars.empty()) {
@@ -38,7 +38,7 @@ std::ostream &VariableSumNode::print(std::ostream &os) const {
   return os << ")";
 }
 
-std::ostream &Monomial::print(std::ostream &os) const {
+std::ostream& Monomial::print(std::ostream& os) const {
   // coef
   bool coefFlag = (coef.real() != 0.0 && coef.imag() != 0.0);
   bool mulSign = true;
@@ -98,7 +98,7 @@ std::ostream &Monomial::print(std::ostream &os) const {
   return os;
 }
 
-std::ostream &Polynomial::print(std::ostream &os) const {
+std::ostream& Polynomial::print(std::ostream& os) const {
   if (_monomials.empty())
     return os << "0";
   _monomials[0].print(os);
@@ -108,7 +108,7 @@ std::ostream &Polynomial::print(std::ostream &os) const {
   return os;
 }
 
-int VariableSumNode::compare(const VariableSumNode &other) const {
+int VariableSumNode::compare(const VariableSumNode& other) const {
   if (op < other.op)
     return -1;
   if (op > other.op)
@@ -134,7 +134,7 @@ int VariableSumNode::compare(const VariableSumNode &other) const {
   return 0;
 }
 
-bool VariableSumNode::operator==(const VariableSumNode &N) const {
+bool VariableSumNode::operator==(const VariableSumNode& N) const {
   if (constant != N.constant)
     return false;
   if (op != N.op)
@@ -151,7 +151,7 @@ bool VariableSumNode::operator==(const VariableSumNode &N) const {
   return true;
 }
 
-bool VariableSumNode::operator!=(const VariableSumNode &N) const {
+bool VariableSumNode::operator!=(const VariableSumNode& N) const {
   if (constant != N.constant)
     return true;
   if (op != N.op)
@@ -168,7 +168,7 @@ bool VariableSumNode::operator!=(const VariableSumNode &N) const {
   return false;
 }
 
-int Monomial::compare(const Monomial &other) const {
+int Monomial::compare(const Monomial& other) const {
   size_t aSize, bSize;
   aSize = _mulTerms.size();
   bSize = other._mulTerms.size();
@@ -199,7 +199,7 @@ int Monomial::compare(const Monomial &other) const {
   return 0;
 }
 
-bool Monomial::mergeable(const Monomial &M) const {
+bool Monomial::mergeable(const Monomial& M) const {
   auto mSize = _mulTerms.size();
   if (mSize != M._mulTerms.size())
     return false;
@@ -218,7 +218,7 @@ bool Monomial::mergeable(const Monomial &M) const {
   return true;
 }
 
-Polynomial &Polynomial::operator+=(const Monomial &M) {
+Polynomial& Polynomial::operator+=(const Monomial& M) {
   auto it = std::lower_bound(_monomials.begin(), _monomials.end(), M);
   if (it == _monomials.end()) {
     _monomials.push_back(M);
@@ -234,22 +234,22 @@ Polynomial &Polynomial::operator+=(const Monomial &M) {
   return *this;
 }
 
-Monomial &Monomial::operator*=(const Monomial &monomial) {
+Monomial& Monomial::operator*=(const Monomial& monomial) {
   coef *= monomial.coef;
-  for (const auto &t : monomial._mulTerms)
+  for (const auto& t : monomial._mulTerms)
     insertMulTerm(t);
-  for (const auto &v : monomial._expiVars)
+  for (const auto& v : monomial._expiVars)
     insertExpiVar(v);
   return *this;
 }
 
-VariableSumNode &VariableSumNode::simplify(
-    const std::vector<std::pair<int, double>> &varValues) {
+VariableSumNode& VariableSumNode::simplify(
+    const std::vector<std::pair<int, double>>& varValues) {
   std::vector<int> updatedVars;
   for (const int var : vars) {
     auto it = std::find_if(
         varValues.cbegin(), varValues.cend(),
-        [var](const std::pair<int, double> &p) { return p.first == var; });
+        [var](const std::pair<int, double>& p) { return p.first == var; });
     if (it == varValues.cend())
       updatedVars.push_back(var);
     else
@@ -270,18 +270,18 @@ VariableSumNode &VariableSumNode::simplify(
   return *this;
 }
 
-Monomial &
-Monomial::simplify(const std::vector<std::pair<int, double>> &varValues) {
+Monomial& 
+Monomial::simplify(const std::vector<std::pair<int, double>>& varValues) {
   if (coef == std::complex<double>(0.0, 0.0)) {
     _mulTerms.clear();
     _expiVars.clear();
     return *this;
   }
-  for (auto &M : _mulTerms)
+  for (auto& M : _mulTerms)
     M.simplify(varValues);
 
   std::vector<VariableSumNode> updatedMulTerms;
-  for (const auto &M : _mulTerms) {
+  for (const auto& M : _mulTerms) {
     if (M.op == VariableSumNode::None && M.vars.empty())
       coef *= M.constant;
     else
@@ -290,7 +290,7 @@ Monomial::simplify(const std::vector<std::pair<int, double>> &varValues) {
   _mulTerms = std::move(updatedMulTerms);
 
   _expiVars.erase(std::remove_if(_expiVars.begin(), _expiVars.end(),
-                                 [&varValues, this](const ExpiVar &E) {
+                                 [&varValues, this](const ExpiVar& E) {
                                    auto it = varValues.cbegin();
                                    while (true) {
                                      if (it->first == E.var) {
@@ -308,25 +308,25 @@ Monomial::simplify(const std::vector<std::pair<int, double>> &varValues) {
   return *this;
 }
 
-Polynomial &Polynomial::removeSmallMonomials(double thres) {
+Polynomial& Polynomial::removeSmallMonomials(double thres) {
   _monomials.erase(std::remove_if(_monomials.begin(), _monomials.end(),
-                                  [thres](const Monomial &M) {
+                                  [thres](const Monomial& M) {
                                     return std::abs(M.coef) < thres;
                                   }),
                    _monomials.end());
   return *this;
 }
 
-Polynomial &
-Polynomial::simplifySelf(const std::vector<std::pair<int, double>> &varValues) {
+Polynomial& 
+Polynomial::simplifySelf(const std::vector<std::pair<int, double>>& varValues) {
   if (varValues.empty())
     return *this;
-  for (auto &M : _monomials)
+  for (auto& M : _monomials)
     M.simplify(varValues);
 
   std::complex<double> cons(0.0, 0.0);
   _monomials.erase(std::remove_if(_monomials.begin(), _monomials.end(),
-                                  [&cons](const Monomial &M) {
+                                  [&cons](const Monomial& M) {
                                     if (M.isConstant())
                                       cons += M.coef;
                                     return true;

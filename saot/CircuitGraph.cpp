@@ -32,7 +32,7 @@ int GateNode::connect(GateNode* rhsGate, int q) {
     return 1;
   }
   int count = 0;
-  for (auto &data : dataVector) {
+  for (auto& data : dataVector) {
     auto rhsIt = rhsGate->findQubit(data.qubit);
     if (rhsIt == rhsGate->dataVector.end())
       continue;
@@ -56,7 +56,7 @@ int GateBlock::connect(GateBlock* rhsBlock, int q) {
     return 1;
   }
   int count = 0;
-  for (auto &data : dataVector) {
+  for (auto& data : dataVector) {
     auto rhsIt = rhsBlock->findQubit(data.qubit);
     if (rhsIt == rhsBlock->dataVector.end())
       continue;
@@ -84,7 +84,7 @@ CircuitGraph CircuitGraph::ALACircuit(int nqubits, int nrounds) {
   return graph;
 }
 
-CircuitGraph CircuitGraph::GetTestCircuit(const GateMatrix &gateMatrix,
+CircuitGraph CircuitGraph::GetTestCircuit(const GateMatrix& gateMatrix,
                                           int nqubits, int nrounds) {
   CircuitGraph graph;
   auto nqubitsGate = gateMatrix.nqubits();
@@ -108,7 +108,7 @@ CircuitGraph::tile_iter_t CircuitGraph::insertBlock(tile_iter_t it,
   // try insert to current row
   if (isRowVacant(it, block)) {
     // insert at it
-    for (const auto &q : qubits) {
+    for (const auto& q : qubits) {
       assert((*it)[q] == nullptr);
       (*it)[q] = block;
     }
@@ -119,13 +119,13 @@ CircuitGraph::tile_iter_t CircuitGraph::insertBlock(tile_iter_t it,
   it++;
   if (it == _tile.end()) {
     row_t row{nullptr};
-    for (const auto &q : qubits)
+    for (const auto& q : qubits)
       row[q] = block;
     return _tile.insert(it, row);
   }
   if (isRowVacant(it, block)) {
     // insert at it
-    for (const auto &q : qubits) {
+    for (const auto& q : qubits) {
       assert((*it)[q] == nullptr);
       (*it)[q] = block;
     }
@@ -134,17 +134,17 @@ CircuitGraph::tile_iter_t CircuitGraph::insertBlock(tile_iter_t it,
 
   // insert to between current and next row
   row_t row{nullptr};
-  for (const auto &q : qubits)
+  for (const auto& q : qubits)
     row[q] = block;
   return _tile.insert(it, row);
 }
 
-void CircuitGraph::addGate(const GateMatrix &matrix,
-                           const std::vector<int> &qubits) {
+void CircuitGraph::addGate(const GateMatrix& matrix,
+                           const std::vector<int>& qubits) {
   assert(matrix.nqubits() == qubits.size());
 
   // update nqubits
-  for (const auto &q : qubits) {
+  for (const auto& q : qubits) {
     if (q >= nqubits)
       nqubits = q + 1;
   }
@@ -157,7 +157,7 @@ void CircuitGraph::addGate(const GateMatrix &matrix,
   auto rit = _tile.rbegin();
   while (rit != _tile.rend()) {
     bool vacant = true;
-    for (const auto &q : qubits) {
+    for (const auto& q : qubits) {
       if ((*rit)[q] != nullptr) {
         vacant = false;
         break;
@@ -171,7 +171,7 @@ void CircuitGraph::addGate(const GateMatrix &matrix,
     _tile.push_back({nullptr});
   else
     rit--;
-  for (const auto &q : qubits)
+  for (const auto& q : qubits)
     (*rit)[q] = block;
 
   // set up gate and block connections
@@ -181,7 +181,7 @@ void CircuitGraph::addGate(const GateMatrix &matrix,
 
   tile_iter_t itLHS;
   GateBlock* lhsBlock;
-  for (const auto &q : qubits) {
+  for (const auto& q : qubits) {
     itLHS = itRHS;
     while (--itLHS != _tile.begin()) {
       if ((*itLHS)[q])
@@ -196,16 +196,16 @@ void CircuitGraph::addGate(const GateMatrix &matrix,
 std::vector<GateBlock*> CircuitGraph::getAllBlocks() const {
   std::vector<GateBlock*> allBlocks;
   std::vector<GateBlock*> rowBlocks;
-  for (const auto &row : _tile) {
+  for (const auto& row : _tile) {
     rowBlocks.clear();
-    for (const auto &block : row) {
+    for (const auto& block : row) {
       if (block == nullptr)
         continue;
       if (std::find(rowBlocks.begin(), rowBlocks.end(), block) ==
           rowBlocks.end())
         rowBlocks.push_back(block);
     }
-    for (const auto &block : rowBlocks)
+    for (const auto& block : rowBlocks)
       allBlocks.push_back(block);
   }
   return allBlocks;
@@ -224,7 +224,7 @@ CircuitGraph::tile_iter_t CircuitGraph::repositionBlockUpward(tile_iter_t it,
   while (true) {
     newIt--;
     vacant = true;
-    for (const auto &data : block->dataVector) {
+    for (const auto& data : block->dataVector) {
       if ((*newIt)[data.qubit] != nullptr) {
         vacant = false;
         break;
@@ -240,8 +240,8 @@ CircuitGraph::tile_iter_t CircuitGraph::repositionBlockUpward(tile_iter_t it,
 
   if (newIt == it)
     return newIt;
-  for (const auto &data : block->dataVector) {
-    const auto &q = data.qubit;
+  for (const auto& data : block->dataVector) {
+    const auto& q = data.qubit;
     (*it)[q] = nullptr;
     (*newIt)[q] = block;
   }
@@ -261,7 +261,7 @@ CircuitGraph::repositionBlockDownward(tile_riter_t it, size_t q_) {
   while (true) {
     newIt--;
     vacant = true;
-    for (const auto &data : block->dataVector) {
+    for (const auto& data : block->dataVector) {
       if ((*newIt)[data.qubit] != nullptr) {
         vacant = false;
         break;
@@ -277,8 +277,8 @@ CircuitGraph::repositionBlockDownward(tile_riter_t it, size_t q_) {
 
   if (newIt == it)
     return newIt;
-  for (const auto &data : block->dataVector) {
-    const auto &q = data.qubit;
+  for (const auto& data : block->dataVector) {
+    const auto& q = data.qubit;
     (*it)[q] = nullptr;
     (*newIt)[q] = block;
   }
@@ -330,7 +330,7 @@ void CircuitGraph::updateTileDownward() {
   eraseEmptyRows();
 }
 
-std::ostream &CircuitGraph::print(std::ostream &os, int verbose) const {
+std::ostream& CircuitGraph::print(std::ostream& os, int verbose) const {
   auto nBlocks = countBlocks();
   if (nBlocks == 0)
     return os << "<empty tile>\n";
@@ -358,9 +358,9 @@ std::ostream &CircuitGraph::print(std::ostream &os, int verbose) const {
   return os;
 }
 
-std::ostream &GateBlock::displayInfo(std::ostream &os) const {
+std::ostream& GateBlock::displayInfo(std::ostream& os) const {
   os << "Block " << id << ": [";
-  for (const auto &data : dataVector) {
+  for (const auto& data : dataVector) {
     os << "(" << data.qubit << ":";
     GateNode* gate = data.lhsEntry;
     assert(gate);
@@ -413,7 +413,7 @@ std::vector<std::vector<int>> CircuitGraph::getBlockOpCountHistogram() const {
   return hist;
 }
 
-std::ostream &CircuitGraph::displayInfo(std::ostream &os, int verbose) const {
+std::ostream& CircuitGraph::displayInfo(std::ostream& os, int verbose) const {
   os << CYAN_FG << "=== CircuitGraph Info (verbose " << verbose << ") ===\n"
      << RESET;
 
@@ -468,19 +468,19 @@ std::vector<GateNode*> GateBlock::getOrderedGates() const {
   std::deque<GateNode*> queue;
   // vector should be more efficient as we expect small size here
   std::vector<GateNode*> gates;
-  for (const auto &data : dataVector) {
+  for (const auto& data : dataVector) {
     if (std::find(queue.begin(), queue.end(), data.rhsEntry) == queue.end())
       queue.push_back(data.rhsEntry);
   }
 
   while (!queue.empty()) {
-    const auto &gate = queue.back();
+    const auto& gate = queue.back();
     if (std::find(gates.begin(), gates.end(), gate) != gates.end()) {
       queue.pop_back();
       continue;
     }
     std::vector<GateNode*> higherPriorityGates;
-    for (const auto &data : this->dataVector) {
+    for (const auto& data : this->dataVector) {
       if (gate == data.lhsEntry)
         continue;
       auto it = gate->findQubit(data.qubit);
@@ -501,7 +501,7 @@ std::vector<GateNode*> GateBlock::getOrderedGates() const {
       queue.pop_back();
       gates.push_back(gate);
     } else {
-      for (const auto &g : higherPriorityGates)
+      for (const auto& g : higherPriorityGates)
         queue.push_back(g);
     }
   }

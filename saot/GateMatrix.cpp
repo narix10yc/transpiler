@@ -8,7 +8,7 @@
 using namespace IOColor;
 using namespace saot;
 
-GateKind saot::String2GateKind(const std::string &s) {
+GateKind saot::String2GateKind(const std::string& s) {
   if (s == "x")
     return gX;
   if (s == "y")
@@ -61,10 +61,10 @@ using up_matrix_t = GateMatrix::up_matrix_t;
 using c_matrix_t = GateMatrix::c_matrix_t;
 using gate_params_t = GateMatrix::gate_params_t;
 
-std::ostream &saot::printConstantMatrix(std::ostream &os,
-                                        const c_matrix_t &cMat) {
+std::ostream& saot::printConstantMatrix(std::ostream& os,
+                                        const c_matrix_t& cMat) {
   const auto edgeSize = cMat.edgeSize();
-  const auto &data = cMat.data;
+  const auto& data = cMat.data;
   os << "[";
   for (size_t r = 0; r < edgeSize; r++) {
     for (size_t c = 0; c < edgeSize; c++) {
@@ -81,8 +81,8 @@ std::ostream &saot::printConstantMatrix(std::ostream &os,
   return os;
 }
 
-std::ostream &saot::printParametrizedMatrix(std::ostream &os,
-                                            const p_matrix_t &pMat) {
+std::ostream& saot::printParametrizedMatrix(std::ostream& os,
+                                            const p_matrix_t& pMat) {
   auto edgeSize = pMat.edgeSize();
   for (size_t r = 0; r < edgeSize; r++) {
     for (size_t c = 0; c < edgeSize; c++) {
@@ -244,7 +244,7 @@ int getNumActiveParams(const gate_params_t &params) {
   return s;
 }
 
-GateMatrix::GateMatrix(const up_matrix_t &upMat) : cache(), gateParameters() {
+GateMatrix::GateMatrix(const up_matrix_t& upMat) : cache(), gateParameters() {
   auto size = upMat.getSize();
   gateKind = static_cast<GateKind>(static_cast<int>(std::log2(size)));
   assert(1 << static_cast<int>(gateKind) == size);
@@ -253,7 +253,7 @@ GateMatrix::GateMatrix(const up_matrix_t &upMat) : cache(), gateParameters() {
   cache.isConvertibleToUpMat = Convertible;
 }
 
-GateMatrix::GateMatrix(const c_matrix_t &cMat) : cache(), gateParameters() {
+GateMatrix::GateMatrix(const c_matrix_t& cMat) : cache(), gateParameters() {
   auto size = cMat.edgeSize();
   gateKind = static_cast<GateKind>(static_cast<int>(std::log2(size)));
   assert(1 << static_cast<int>(gateKind) == size);
@@ -262,7 +262,7 @@ GateMatrix::GateMatrix(const c_matrix_t &cMat) : cache(), gateParameters() {
   cache.isConvertibleToCMat = Convertible;
 }
 
-GateMatrix::GateMatrix(const p_matrix_t &pMat) : cache(), gateParameters() {
+GateMatrix::GateMatrix(const p_matrix_t& pMat) : cache(), gateParameters() {
   auto size = pMat.edgeSize();
   gateKind = static_cast<GateKind>(static_cast<int>(std::log2(size)));
   assert(1 << static_cast<int>(gateKind) == size);
@@ -271,7 +271,7 @@ GateMatrix::GateMatrix(const p_matrix_t &pMat) : cache(), gateParameters() {
   cache.isConvertibleToPMat = Convertible;
 }
 
-GateMatrix GateMatrix::FromName(const std::string &name,
+GateMatrix GateMatrix::FromName(const std::string& name,
                                 const gate_params_t &params) {
   if (name == "x") {
     assert(getNumActiveParams(params) == 0 && "X gate has 0 parameter");
@@ -327,7 +327,7 @@ GateMatrix GateMatrix::FromName(const std::string &name,
   return GateMatrix(gUndef);
 }
 
-void GateMatrix::permuteSelf(const std::vector<int> &flags) {
+void GateMatrix::permuteSelf(const std::vector<int>& flags) {
   switch (gateKind) {
   case gX:
     assert(flags.size() == 1);
@@ -488,11 +488,11 @@ inline p_matrix_t matCvt_gp_to_p(GateKind kind, const gate_params_t &params) {
   }
 }
 
-inline c_matrix_t matCvt_up_to_c(const up_matrix_t &up) {
+inline c_matrix_t matCvt_up_to_c(const up_matrix_t& up) {
   c_matrix_t cmat(up.getSize());
   for (unsigned i = 0; i < up.getSize(); i++) {
-    const auto &idx = up.data[i].first;
-    const auto &phase = up.data[i].second;
+    const auto& idx = up.data[i].first;
+    const auto& phase = up.data[i].second;
     cmat.data[idx] = {std::cos(phase), std::sin(phase)};
   }
   return cmat;
@@ -564,7 +564,7 @@ void GateMatrix::computeAndCacheUpMat(double tolerance) const {
   for (size_t r = 0; r < edgeSize; r++) {
     bool rowFlag = false;
     for (size_t c = 0; c < edgeSize; c++) {
-      const auto &cplx = cMat->data[r * edgeSize + c];
+      const auto& cplx = cMat->data[r * edgeSize + c];
       if (std::abs(cplx) > tolerance) {
         if (rowFlag) {
           cache.isConvertibleToUpMat = UnConvertible;
@@ -590,8 +590,8 @@ void GateMatrix::computeAndCacheCMat() const {
     const auto edgeSize = cache.upMat.getSize();
     cache.cMat = c_matrix_t(edgeSize);
     for (unsigned i = 0; i < edgeSize; ++i) {
-      const auto &idx = cache.upMat.data[i].first;
-      const auto &phase = cache.upMat.data[i].second;
+      const auto& idx = cache.upMat.data[i].first;
+      const auto& phase = cache.upMat.data[i].second;
       cache.cMat.data[idx] = {std::cos(phase), std::sin(phase)};
     }
     cache.isConvertibleToCMat = Convertible;
@@ -712,15 +712,15 @@ void GateMatrix::computeAndCachePMat() const {
 
 namespace {
 
-inline void computeSigMatAfresh(const GateMatrix::c_matrix_t &cMat,
+inline void computeSigMatAfresh(const GateMatrix::c_matrix_t& cMat,
                                 double zeroTol, double oneTol,
-                                GateMatrix::sig_matrix_t &sigMat) {
+                                GateMatrix::sig_matrix_t& sigMat) {
 
   assert(sigMat.data.empty());
   auto edgeSize = cMat.edgeSize();
   sigMat.data.reserve(edgeSize * edgeSize);
 
-  for (const auto &cplx : cMat.data) {
+  for (const auto& cplx : cMat.data) {
     std::complex<ScalarKind> skCplx(SK_General, SK_General);
     if (std::abs(cplx.real()) <= zeroTol)
       skCplx.real(SK_Zero);

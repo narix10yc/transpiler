@@ -17,7 +17,7 @@ public:
   double min, med, q1, q3;
   int n_sig_dig = 4;
   TimingResult() {}
-  TimingResult(int repeat, int replication, const std::vector<double> &tarr)
+  TimingResult(int repeat, int replication, const std::vector<double>& tarr)
       : repeat(repeat), replication(replication), tarr(tarr) {
     assert(repeat >= 1);
     assert(replication >= 1);
@@ -26,7 +26,7 @@ public:
 
   static std::string timeToString(double, int);
 
-  std::ostream &display(int nsig = 4, std::ostream &os = std::cerr) const;
+  std::ostream& display(int nsig = 4, std::ostream& os = std::cerr) const;
 
   std::string raw_string() const;
 

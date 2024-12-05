@@ -32,7 +32,7 @@ public:
   ParamValueFeeder(llvm::Value* basePtrV)
       : basePtrV(basePtrV), cache(128, nullptr) {}
 
-  llvm::Value* get(int v, llvm::IRBuilder<> &B, llvm::Type* Ty);
+  llvm::Value* get(int v, llvm::IRBuilder<>& B, llvm::Type* Ty);
 };
 
 struct IRGeneratorConfig {
@@ -52,10 +52,10 @@ struct IRGeneratorConfig {
   double shareMatrixElemThres = 0.0;
   bool shareMatrixElemUseImmValue = false;
 
-  bool checkConfliction(std::ostream &os) const;
+  bool checkConfliction(std::ostream& os) const;
 
-  std::ostream &display(int verbose = 1, bool title = true,
-                        std::ostream &os = std::cerr) const;
+  std::ostream& display(int verbose = 1, bool title = true,
+                        std::ostream& os = std::cerr) const;
 };
 
 /// @brief IR Generator.
@@ -72,13 +72,13 @@ public:
   using AmpFormat = IRGeneratorConfig::AmpFormat;
 
 public:
-  IRGenerator(const std::string &moduleName = "myModule")
+  IRGenerator(const std::string& moduleName = "myModule")
       : _jitter(nullptr), _context(std::make_unique<llvm::LLVMContext>()),
         _module(std::make_unique<llvm::Module>(moduleName,* _context)),
         builder(*_context), _config() {}
 
-  IRGenerator(const IRGeneratorConfig &irConfig,
-              const std::string &moduleName = "myModule")
+  IRGenerator(const IRGeneratorConfig& irConfig,
+              const std::string& moduleName = "myModule")
       : _jitter(nullptr), _context(std::make_unique<llvm::LLVMContext>()),
         _module(std::make_unique<llvm::Module>(moduleName,* _context)),
         builder(*_context), _config(irConfig) {}
@@ -110,14 +110,14 @@ public:
     return _jitter.get();
   }
 
-  llvm::IRBuilder<> &getBuilder() { return builder; }
+  llvm::IRBuilder<>& getBuilder() { return builder; }
 
-  IRGeneratorConfig &config() { return _config; }
-  const IRGeneratorConfig &config() const { return _config; }
+  IRGeneratorConfig& config() { return _config; }
+  const IRGeneratorConfig& config() const { return _config; }
 
-  void loadFromFile(const std::string &fileName);
+  void loadFromFile(const std::string& fileName);
 
-  void applyLLVMOptimization(const llvm::OptimizationLevel &);
+  void applyLLVMOptimization(const llvm::OptimizationLevel&);
 
   void dumpToStderr() const { _module->print(llvm::errs(), nullptr); }
 
@@ -136,8 +136,8 @@ public:
   /// @param bbFlag special values are +1, -1, or 0
   /// @return aa + bb * cc. Possible nullptr, when aa is nullptr and bbFlag = 0
   llvm::Value* genMulAdd(llvm::Value* aa, llvm::Value* bb, llvm::Value* cc,
-                         int bbFlag, const llvm::Twine &bbccName = "",
-                         const llvm::Twine &aaName = "");
+                         int bbFlag, const llvm::Twine& bbccName = "",
+                         const llvm::Twine& aaName = "");
 
   /// @brief Generate the IR that applies new_aa = aa - bb * cc
   /// @param aa can be nullptr. In such case, new_aa will be assigned to -bb* 
@@ -145,8 +145,8 @@ public:
   /// @param bbFlag special values are +1, -1, or 0
   /// @return aa - bb * cc. Possible nullptr, when aa is nullptr and bbFlag = 0
   llvm::Value* genMulSub(llvm::Value* aa, llvm::Value* bb, llvm::Value* cc,
-                         int bbFlag, const llvm::Twine &bbccName = "",
-                         const llvm::Twine &aaName = "");
+                         int bbFlag, const llvm::Twine& bbccName = "",
+                         const llvm::Twine& aaName = "");
 
   // fadd, accepting nullable inputs
   llvm::Value* genFAdd(llvm::Value* a, llvm::Value* b);
@@ -156,35 +156,35 @@ public:
   llvm::Value* genFMul(llvm::Value* a, llvm::Value* b);
 
   std::pair<llvm::Value*, llvm::Value*>
-  genComplexMultiply(const std::pair<llvm::Value*, llvm::Value*> &,
-                     const std::pair<llvm::Value*, llvm::Value*> &);
+  genComplexMultiply(const std::pair<llvm::Value*, llvm::Value*>& ,
+                     const std::pair<llvm::Value*, llvm::Value*>&);
 
   std::pair<llvm::Value*, llvm::Value*>
-  genComplexDotProduct(const std::vector<llvm::Value*> &aRe,
-                       const std::vector<llvm::Value*> &aIm,
-                       const std::vector<llvm::Value*> &bRe,
-                       const std::vector<llvm::Value*> &bIm);
+  genComplexDotProduct(const std::vector<llvm::Value*>& aRe,
+                       const std::vector<llvm::Value*>& aIm,
+                       const std::vector<llvm::Value*>& bRe,
+                       const std::vector<llvm::Value*>& bIm);
 
-  llvm::Function* generateKernel(const saot::QuantumGate &gate,
-                                 const std::string &funcName = "") {
+  llvm::Function* generateKernel(const saot::QuantumGate& gate,
+                                 const std::string& funcName = "") {
     return generateKernelDebug(gate, 0, funcName);
   }
 
-  llvm::Function* generateKernelDebug(const saot::QuantumGate &gate,
+  llvm::Function* generateKernelDebug(const saot::QuantumGate& gate,
                                       int debugLevel,
-                                      const std::string &funcName = "");
+                                      const std::string& funcName = "");
 
-  llvm::Function* generateCUDAKernel(const saot::QuantumGate &gate,
-                                     const CUDAGenerationConfig &config,
-                                     const std::string &funcName = "");
+  llvm::Function* generateCUDAKernel(const saot::QuantumGate& gate,
+                                     const CUDAGenerationConfig& config,
+                                     const std::string& funcName = "");
 
   std::pair<llvm::Value*, llvm::Value*>
-  generatePolynomial(const saot::Polynomial &polynomial,
+  generatePolynomial(const saot::Polynomial& polynomial,
                      ParamValueFeeder &feeder);
 
   // Generate a function that prepares matrices in simulation.
   // @return A function void(void* param, void* matrix).
-  llvm::Function* generatePrepareParameter(const saot::CircuitGraph &graph);
+  llvm::Function* generatePrepareParameter(const saot::CircuitGraph& graph);
 };
 
 } // namespace simulation

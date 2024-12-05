@@ -26,7 +26,7 @@ struct matrix_data_t {
 /// v0 and v1 are always sorted. Perform linear time merge
 /// @return (mask, vec)
 std::pair<std::vector<int>, std::vector<int>>
-getMaskToMerge(const std::vector<int> &v0, const std::vector<int> &v1) {
+getMaskToMerge(const std::vector<int>& v0, const std::vector<int>& v1) {
   assert(v0.size() == v1.size());
   const auto s = v0.size();
   std::vector<int> mask(2 * s);
@@ -62,9 +62,9 @@ getMaskToMerge(const std::vector<int> &v0, const std::vector<int> &v1) {
   return std::make_pair(mask, vec);
 }
 
-Function* IRGenerator::generateKernelDebug(const QuantumGate &gate,
+Function* IRGenerator::generateKernelDebug(const QuantumGate& gate,
                                            int debugLevel,
-                                           const std::string &funcName) {
+                                           const std::string& funcName) {
   const uint64_t s = _config.simd_s;
   const uint64_t S = 1ULL << s;
   const uint64_t k = gate.qubits.size();
@@ -130,7 +130,7 @@ Function* IRGenerator::generateKernelDebug(const QuantumGate &gate,
     // set up matrix flags
     std::vector<std::pair<double, int>> uniqueEntries;
     std::vector<int> uniqueEntryIndices(2 * matrix.size());
-    for (auto &m : matrix) {
+    for (auto& m : matrix) {
       m.realLoadNeg = false;
       m.imagLoadNeg = false;
     }
@@ -392,7 +392,7 @@ Function* IRGenerator::generateKernelDebug(const QuantumGate &gate,
     if (debugLevel > 1) {
       std::cerr << CYAN_FG << "-- loading (split) masks prepared\n" << RESET;
       std::cerr << "splits: [";
-      for (const auto &split : splits) {
+      for (const auto& split : splits) {
         std::cerr << "\n ";
         printVector(split);
       }

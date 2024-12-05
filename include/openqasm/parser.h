@@ -16,7 +16,7 @@ class Parser {
   Token curToken;
 
 public:
-  Parser(const std::string &fileName, int debugLevel = 1)
+  Parser(const std::string& fileName, int debugLevel = 1)
       : debugLevel(debugLevel), lexer(std::make_unique<Lexer>(fileName)),
         curToken(TokenTy::Unknown) {}
 
@@ -101,7 +101,7 @@ private:
   std::unique_ptr<ast::Expression> parseExpr();
 
   std::unique_ptr<ast::Expression>
-  parseExprRHS(BinaryOp lhsBinop, std::unique_ptr<ast::Expression> &&lhs);
+  parseExprRHS(BinaryOp lhsBinop, std::unique_ptr<ast::Expression>&& lhs);
 
   /*
       There are 3 types of primary expr:

@@ -24,7 +24,7 @@ std::unique_ptr<ast::Expression> Parser::parseExpr() {
 
 std::unique_ptr<ast::Expression>
 Parser::parseExprRHS(BinaryOp lhsBinop,
-                     std::unique_ptr<ast::Expression> &&lhs) {
+                     std::unique_ptr<ast::Expression>&& lhs) {
   logDebug(3, "Expression: ready to parse rhs");
   auto rhs = parsePrimaryExpr();
   if (!rhs) {

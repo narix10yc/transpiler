@@ -56,7 +56,7 @@ int main(int argc, char* *argv) {
     tarr[i] = rst.min;
   }
   // easy to copy paste
-  for (const auto &t : tarr)
+  for (const auto& t : tarr)
     std::cerr << std::fixed << std::setprecision(4) << t << ",";
   std::cerr << "\n";
 

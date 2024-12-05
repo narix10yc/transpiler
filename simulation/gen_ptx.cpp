@@ -15,7 +15,7 @@ using namespace saot;
 
 namespace {
 
-Value* genOptFMul(Value* a, Value* b, ScalarKind aKind, IRBuilder<> &builder) {
+Value* genOptFMul(Value* a, Value* b, ScalarKind aKind, IRBuilder<>& builder) {
   switch (aKind) {
   case SK_General:
     assert(a);
@@ -34,7 +34,7 @@ Value* genOptFMul(Value* a, Value* b, ScalarKind aKind, IRBuilder<> &builder) {
 
 // return a * b + c
 Value* genMulAndAdd(Value* a, Value* b, Value* c, ScalarKind aKind,
-                    IRBuilder<> &builder) {
+                    IRBuilder<>& builder) {
   assert(b);
 
   switch (aKind) {
@@ -61,10 +61,10 @@ Value* genMulAndAdd(Value* a, Value* b, Value* c, ScalarKind aKind,
 
 } // namespace
 
-Function* IRGenerator::generateCUDAKernel(const QuantumGate &gate,
-                                          const CUDAGenerationConfig &config,
-                                          const std::string &funcName) {
-  const auto &qubits = gate.qubits;
+Function* IRGenerator::generateCUDAKernel(const QuantumGate& gate,
+                                          const CUDAGenerationConfig& config,
+                                          const std::string& funcName) {
+  const auto& qubits = gate.qubits;
   const int nqubits = qubits.size();
 
   auto* gateCMat = gate.gateMatrix.getConstantMatrix();
@@ -195,7 +195,7 @@ Function* IRGenerator::generateCUDAKernel(const QuantumGate &gate,
   auto sigMat =
       gate.gateMatrix.getSignatureMatrix(config.zeroTol, config.oneTol);
   if (config.forceDenseKernel) {
-    for (auto &sig : sigMat.data) {
+    for (auto& sig : sigMat.data) {
       sig.real(SK_General);
       sig.imag(SK_General);
     }

@@ -39,7 +39,7 @@ std::string saot::parse::getNameOfTokenKind(TokenKind kind) {
   }
 }
 
-void Parser::printLocation(std::ostream &os) const {
+void Parser::printLocation(std::ostream& os) const {
   auto lineInfo = lexer.getCurLineInfo();
   os << std::setw(5) << std::setfill(' ') << lineInfo.line << " | ";
   os.write(lineInfo.memRefBegin, lineInfo.memRefEnd - lineInfo.memRefBegin);
@@ -53,7 +53,7 @@ void Parser::printLocation(std::ostream &os) const {
      << RESET;
 }
 
-std::ostream &Token::print(std::ostream &os) const {
+std::ostream& Token::print(std::ostream& os) const {
   os << "tok(";
 
   if (kind == tk_Numeric) {
@@ -126,7 +126,7 @@ std::ostream &Token::print(std::ostream &os) const {
   return os << IOColor::RESET << ")";
 }
 
-void Lexer::lex(Token &tok) {
+void Lexer::lex(Token& tok) {
   const auto assignTok = [&](TokenKind kind, int nchars = 1) {
     tok = Token(kind, curPtr, curPtr + nchars);
   };
@@ -308,7 +308,7 @@ GateApplyStmt Parser::parseGateApply() {
     } else {
       // up to 3 parameters
       stmt.paramRefOrMatrix = GateMatrix::gate_params_t();
-      auto &parameters =
+      auto& parameters =
           std::get<GateMatrix::gate_params_t>(stmt.paramRefOrMatrix);
       for (int i = 0; i < 4; i++) {
         if (curToken.is(tk_Numeric)) {

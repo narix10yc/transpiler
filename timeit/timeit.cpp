@@ -9,7 +9,7 @@
 using namespace timeit;
 
 namespace {
-double getMedian(const std::vector<double> &arr, size_t start, size_t end) {
+double getMedian(const std::vector<double>& arr, size_t start, size_t end) {
   auto l = end - start;
   if (l % 2 == 0)
     return 0.5 * (arr[start + l / 2 - 1] + arr[start + l / 2]);
@@ -65,7 +65,7 @@ std::string TimingResult::timeToString(double t, int n_sig_dig) {
   return stream.str();
 }
 
-std::ostream &TimingResult::display(int n_sig_dig, std::ostream &os) const {
+std::ostream& TimingResult::display(int n_sig_dig, std::ostream& os) const {
   os << replication << " replications (" << repeat << " repeats each): "
      << "min " << timeToString(min, n_sig_dig) << "; median "
      << timeToString(med, n_sig_dig) << "\n";

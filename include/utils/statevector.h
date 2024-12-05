@@ -41,7 +41,7 @@ public:
     // std::cerr << "StatevectorSep(int)\n";
   }
 
-  StatevectorSep(const StatevectorSep &that)
+  StatevectorSep(const StatevectorSep& that)
       : nqubits(that.nqubits), N(that.N) {
     real = (real_t*)aligned_alloc(64, N * sizeof(real_t));
     imag = (real_t*)aligned_alloc(64, N * sizeof(real_t));
@@ -52,7 +52,7 @@ public:
     }
   }
 
-  StatevectorSep(StatevectorSep &&that)
+  StatevectorSep(StatevectorSep&&that)
       : nqubits(that.nqubits), N(that.N), real(that.real), imag(that.imag) {
     that.real = nullptr;
     that.imag = nullptr;
@@ -65,7 +65,7 @@ public:
     // std::cerr << "~StatevectorSep\n";
   }
 
-  StatevectorSep &operator=(const StatevectorSep &that) {
+  StatevectorSep& operator=(const StatevectorSep& that) {
     if (this != &that) {
       for (size_t i = 0; i < N; i++) {
         real[i] = that.real[i];
@@ -76,7 +76,7 @@ public:
     return *this;
   }
 
-  StatevectorSep &operator=(StatevectorSep &&that) {
+  StatevectorSep& operator=(StatevectorSep&&that) {
     this->~StatevectorSep();
     real = that.real;
     imag = that.imag;
@@ -117,11 +117,11 @@ public:
       threads[i] = std::thread(f, i0, i1, std::ref(sums[i]));
     }
 
-    for (auto &thread : threads)
+    for (auto& thread : threads)
       thread.join();
 
     double sum = 0.0;
-    for (const auto &s : sums)
+    for (const auto& s : sums)
       sum += s;
     return sum;
   }
@@ -151,7 +151,7 @@ public:
       threads[i] = std::thread(f, i0, i1);
     }
 
-    for (auto &thread : threads)
+    for (auto& thread : threads)
       thread.join();
   }
 
@@ -180,12 +180,12 @@ public:
       threads[i] = std::thread(f, i0, i1);
     }
 
-    for (auto &thread : threads)
+    for (auto& thread : threads)
       thread.join();
     normalize(nthreads);
   }
 
-  std::ostream &print(std::ostream &os) const {
+  std::ostream& print(std::ostream& os) const {
     if (N > 32) {
       os << IOColor::BOLD << IOColor::CYAN_FG << "Warning: " << IOColor::RESET
          << "statevector has more than 5 qubits, "
@@ -216,18 +216,18 @@ public:
     }
   }
 
-  StatevectorAlt(const StatevectorAlt &that)
+  StatevectorAlt(const StatevectorAlt& that)
       : nqubits(that.nqubits), N(that.N) {
     data = (real_t*)aligned_alloc(64, 2 * N * sizeof(real_t));
     for (size_t i = 0; i < 2 * that.N; i++)
       data[i] = that.data[i];
   }
 
-  StatevectorAlt(StatevectorAlt &&) = delete;
+  StatevectorAlt(StatevectorAlt&&) = delete;
 
   ~StatevectorAlt() { std::free(data); }
 
-  StatevectorAlt &operator=(const StatevectorAlt &that) {
+  StatevectorAlt& operator=(const StatevectorAlt& that) {
     if (this != &that) {
       for (size_t i = 0; i < 2 * N; i++)
         data[i] = that.data[i];
@@ -235,7 +235,7 @@ public:
     return *this;
   }
 
-  StatevectorAlt &operator=(StatevectorAlt &&) = delete;
+  StatevectorAlt& operator=(StatevectorAlt&&) = delete;
 
   // void copyValueFrom(const StatevectorSep<real_t>&);
 
@@ -263,19 +263,19 @@ public:
     normalize();
   }
 
-  real_t &real(size_t idx) { return data[utils::insertZeroToBit(idx, simd_s)]; }
+  real_t& real(size_t idx) { return data[utils::insertZeroToBit(idx, simd_s)]; }
 
-  real_t &imag(size_t idx) { return data[utils::insertOneToBit(idx, simd_s)]; }
+  real_t& imag(size_t idx) { return data[utils::insertOneToBit(idx, simd_s)]; }
 
-  const real_t &real(size_t idx) const {
+  const real_t& real(size_t idx) const {
     return data[utils::insertZeroToBit(idx, simd_s)];
   }
 
-  const real_t &imag(size_t idx) const {
+  const real_t& imag(size_t idx) const {
     return data[utils::insertOneToBit(idx, simd_s)];
   }
 
-  std::ostream &print(std::ostream &os) const {
+  std::ostream& print(std::ostream& os) const {
     if (N > 32) {
       os << IOColor::BOLD << IOColor::CYAN_FG << "Warning: " << IOColor::RESET
          << "statevector has more than 5 qubits, "
@@ -303,17 +303,17 @@ public:
 
   ~StatevectorComp() { delete[] data; }
 
-  StatevectorComp(StatevectorComp &&) = delete;
-  StatevectorComp &operator=(StatevectorComp &&) = delete;
+  StatevectorComp(StatevectorComp&&) = delete;
+  StatevectorComp& operator=(StatevectorComp&&) = delete;
 
-  StatevectorComp(const StatevectorComp &that)
+  StatevectorComp(const StatevectorComp& that)
       : nqubits(that.nqubits), N(that.N) {
     data = new complex_t[N];
     for (size_t i = 0; i < N; i++)
       data[i] = that.data[i];
   }
 
-  StatevectorComp &operator=(const StatevectorComp &that) {
+  StatevectorComp& operator=(const StatevectorComp& that) {
     assert(nqubits == that.nqubits);
     if (this == &that)
       return *this;
@@ -355,7 +355,7 @@ public:
     normalize();
   }
 
-  std::ostream &print(std::ostream &os) const {
+  std::ostream& print(std::ostream& os) const {
     using namespace IOColor;
 
     if (N > 32) {
@@ -373,8 +373,8 @@ public:
 };
 
 template <typename real_t>
-static double fidelity(const StatevectorSep<real_t> &sv1,
-                       const StatevectorSep<real_t> &sv2) {
+static double fidelity(const StatevectorSep<real_t>& sv1,
+                       const StatevectorSep<real_t>& sv2) {
   assert(sv1.nqubits == sv2.nqubits);
 
   double re = 0.0, im = 0.0;

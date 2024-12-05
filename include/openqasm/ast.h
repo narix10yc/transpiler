@@ -42,19 +42,19 @@ class Node {
 public:
   virtual ~Node() = default;
   virtual std::string toString() const = 0;
-  virtual void prettyPrint(std::ostream &f, int depth) const = 0;
+  virtual void prettyPrint(std::ostream& f, int depth) const = 0;
 };
 
 class Statement : public Node {
 public:
   std::string toString() const override { return "statement"; }
-  void prettyPrint(std::ostream &f, int depth) const override {}
+  void prettyPrint(std::ostream& f, int depth) const override {}
 };
 
 class Expression : public Node {
 public:
   std::string toString() const override { return "expression"; }
-  void prettyPrint(std::ostream &f, int depth) const override {}
+  void prettyPrint(std::ostream& f, int depth) const override {}
   virtual ExpressionValue getExprValue() const { return false; }
 };
 
@@ -67,7 +67,7 @@ public:
     return "(" + std::to_string(value) + ")";
   }
 
-  void prettyPrint(std::ostream &f, int depth) const override;
+  void prettyPrint(std::ostream& f, int depth) const override;
 
   double getValue() const { return value; }
   ExpressionValue getExprValue() const override { return value; }
@@ -82,7 +82,7 @@ public:
   std::string getName() const { return name; }
 
   std::string toString() const override { return "(" + name + ")"; }
-  void prettyPrint(std::ostream &f, int depth) const override;
+  void prettyPrint(std::ostream& f, int depth) const override;
 
   ExpressionValue getExprValue() const override {
     return (name == "pi") ? 3.14159265358979323846 : false;
@@ -101,7 +101,7 @@ public:
   std::string toString() const override {
     return name + "[" + std::to_string(index) + "]";
   }
-  void prettyPrint(std::ostream &f, int depth) const override;
+  void prettyPrint(std::ostream& f, int depth) const override;
 
   ExpressionValue getExprValue() const override { return false; }
 };
@@ -114,10 +114,10 @@ public:
   UnaryExpr(UnaryOp op, std::unique_ptr<Expression> expr)
       : op(op), expr(std::move(expr)) {}
   std::string toString() const override { return "UnaryExpr"; }
-  void prettyPrint(std::ostream &f, int depth) const override;
+  void prettyPrint(std::ostream& f, int depth) const override;
 
   UnaryOp getOp() const { return op; }
-  const Expression &getExpr() const { return *expr; }
+  const Expression& getExpr() const { return *expr; }
 
   ExpressionValue getExprValue() const override {
     auto exprValue = expr->getExprValue();
@@ -144,10 +144,10 @@ public:
       : op(op), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
 
   std::string toString() const override { return "BinaryExpr"; }
-  void prettyPrint(std::ostream &f, int depth) const override;
+  void prettyPrint(std::ostream& f, int depth) const override;
 
-  const Expression &getLHS() const { return *lhs; }
-  const Expression &getRHS() const { return *rhs; }
+  const Expression& getLHS() const { return *lhs; }
+  const Expression& getRHS() const { return *rhs; }
   BinaryOp getOp() const { return op; }
   ExpressionValue getExprValue() const override {
     auto lhsValue = lhs->getExprValue();
@@ -182,7 +182,7 @@ public:
 
   std::string toString() const override { return "IfThenElseStmt"; }
 
-  void prettyPrint(std::ostream &f, int depth) const override;
+  void prettyPrint(std::ostream& f, int depth) const override;
 
   void addThenBody(std::unique_ptr<Statement> stmt) {
     thenBody.push_back(std::move(stmt));
@@ -202,19 +202,19 @@ public:
 
   std::string toString() const override { return "Version(" + version + ")"; }
 
-  void prettyPrint(std::ostream &f, int depth) const override;
+  void prettyPrint(std::ostream& f, int depth) const override;
 };
 
 class IncludeStmt : public Statement {
   std::string fileName;
 
 public:
-  IncludeStmt(const std::string &fileName) : fileName(fileName) {}
+  IncludeStmt(const std::string& fileName) : fileName(fileName) {}
   std::string getFileName() const { return fileName; }
 
   std::string toString() const override { return "Include(" + fileName + ")"; }
 
-  void prettyPrint(std::ostream &f, int depth) const override {}
+  void prettyPrint(std::ostream& f, int depth) const override {}
 };
 
 class QRegStmt : public Statement {
@@ -231,7 +231,7 @@ public:
     return "QReg(" + name + ", " + std::to_string(size) + ")";
   }
 
-  void prettyPrint(std::ostream &f, int depth) const override;
+  void prettyPrint(std::ostream& f, int depth) const override;
 };
 
 class CRegStmt : public Statement {
@@ -248,7 +248,7 @@ public:
     return "CReg(" + name + ", " + std::to_string(size) + ")";
   }
 
-  void prettyPrint(std::ostream &f, int depth) const override;
+  void prettyPrint(std::ostream& f, int depth) const override;
 };
 
 class GateApplyStmt : public Statement {
@@ -269,7 +269,7 @@ public:
 
   std::string toString() const override { return "gate " + name; }
 
-  void prettyPrint(std::ostream &f, int depth) const override;
+  void prettyPrint(std::ostream& f, int depth) const override;
 };
 
 class RootNode : public Node {
@@ -277,7 +277,7 @@ class RootNode : public Node {
 
 public:
   std::string toString() const override { return "Root"; }
-  void prettyPrint(std::ostream &f, int depth) const override;
+  void prettyPrint(std::ostream& f, int depth) const override;
   void addStmt(std::unique_ptr<Statement> stmt) {
     stmts.push_back(std::move(stmt));
   }

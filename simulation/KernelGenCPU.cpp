@@ -121,17 +121,17 @@ inline std::vector<MatData> cpuGetMatData(
 
 } // anonymous namespace
 
-Function* saot::genCPUCode(llvm::Module &llvmModule,
-                           const CPUKernelGenConfig &config,
-                           const QuantumGate &gate,
-                           const std::string &funcName) {
+Function* saot::genCPUCode(llvm::Module& llvmModule,
+                           const CPUKernelGenConfig& config,
+                           const QuantumGate& gate,
+                           const std::string& funcName) {
   const unsigned s = config.simdS;
   const unsigned S = 1ULL << s;
   const unsigned k = gate.qubits.size();
   const unsigned K = 1ULL << k;
   const unsigned KK = K * K;
 
-  auto &llvmContext = llvmModule.getContext();
+  auto& llvmContext = llvmModule.getContext();
 
   IRBuilder<> B(llvmContext);
   Type* scalarTy = (config.precision == 32) ? B.getFloatTy() : B.getDoubleTy();

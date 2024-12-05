@@ -29,21 +29,21 @@ public:
 
   bool isNot(Kind kind) const { return !is(kind); }
 
-  FPGAGateCategory &operator|=(const Kind &kind) {
+  FPGAGateCategory& operator|=(const Kind& kind) {
     category |= static_cast<unsigned>(kind);
     return *this;
   }
 
-  FPGAGateCategory operator|(const Kind &kind) const {
+  FPGAGateCategory operator|(const Kind& kind) const {
     return FPGAGateCategory(category | static_cast<unsigned>(kind));
   }
 
-  FPGAGateCategory &operator|=(const FPGAGateCategory &other) {
+  FPGAGateCategory& operator|=(const FPGAGateCategory& other) {
     category |= static_cast<unsigned>(other.category);
     return *this;
   }
 
-  FPGAGateCategory operator|(const FPGAGateCategory &other) const {
+  FPGAGateCategory operator|(const FPGAGateCategory& other) const {
     return FPGAGateCategory(category | static_cast<unsigned>(other.category));
   }
 

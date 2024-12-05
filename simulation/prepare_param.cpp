@@ -7,9 +7,9 @@ using namespace simulation;
 using namespace saot;
 
 std::pair<Value*, Value*>
-IRGenerator::generatePolynomial(const Polynomial &P, ParamValueFeeder &feeder) {
+IRGenerator::generatePolynomial(const Polynomial& P, ParamValueFeeder &feeder) {
   P.print(std::cerr << "generating polynomial: ") << "\n";
-  const auto generateMonomial = [&](const Monomial &M) {
+  const auto generateMonomial = [&](const Monomial& M) {
     std::pair<Value*, Value*> resultV{
         (M.coef.real() == 0.0) ? nullptr
                                : ConstantFP::get(getScalarTy(), M.coef.real()),
@@ -19,7 +19,7 @@ IRGenerator::generatePolynomial(const Polynomial &P, ParamValueFeeder &feeder) {
     assert((resultV.first || resultV.second) && "coef should not be 0");
     // mul terms
     Value* mulTermsV = nullptr;
-    for (const auto &T : M.mulTerms()) {
+    for (const auto& T : M.mulTerms()) {
       assert(!T.vars.empty() && "should be absorbed into M.coef");
       auto it = T.vars.cbegin();
       mulTermsV = feeder.get(*it, builder, getScalarTy());
@@ -72,7 +72,7 @@ IRGenerator::generatePolynomial(const Polynomial &P, ParamValueFeeder &feeder) {
   return polyV;
 }
 
-Function* IRGenerator::generatePrepareParameter(const CircuitGraph &graph) {
+Function* IRGenerator::generatePrepareParameter(const CircuitGraph& graph) {
   Type* scalarTy = getScalarTy();
 
   auto* funcTy = FunctionType::get(
@@ -95,9 +95,9 @@ Function* IRGenerator::generatePrepareParameter(const CircuitGraph &graph) {
     GateBlock* gateBlock = allBlocks[i];
     uint64_t numCompMatrixEntries = (1ULL << (2 * gateBlock->nqubits()));
 
-    const GateMatrix &gateMatrix = gateBlock->quantumGate->gateMatrix;
+    const GateMatrix& gateMatrix = gateBlock->quantumGate->gateMatrix;
     if (const auto* cMat = gateMatrix.getConstantMatrix()) {
-      const auto &cData = cMat->data;
+      const auto& cData = cMat->data;
       for (uint64_t d = 0; d < numCompMatrixEntries; d++) {
         std::string gepName;
         Value* matPtrV;
@@ -116,7 +116,7 @@ Function* IRGenerator::generatePrepareParameter(const CircuitGraph &graph) {
                             matPtrV);
       }
     } else {
-      const auto &pData = gateMatrix.getParametrizedMatrix().data;
+      const auto& pData = gateMatrix.getParametrizedMatrix().data;
       for (uint64_t d = 0; d < numCompMatrixEntries; d++) {
         auto polyV = generatePolynomial(pData[d], feeder);
         std::string gepName;

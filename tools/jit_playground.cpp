@@ -55,7 +55,7 @@ int main(int argc, char* *argv) {
     std::cerr << "After fusion there are " << allBlocks.size()
               << " blocks\n";
     kernels.reserve(allBlocks.size());
-    for (const auto &b : allBlocks) {
+    for (const auto& b : allBlocks) {
       kernels.push_back({G.generateKernel(*b->quantumGate), nullptr});
     }
   }, "IR generation complete!");
@@ -80,7 +80,7 @@ int main(int argc, char* *argv) {
     }
 
     prepareParam = funcAddrOrErr->toPtr<void(double*, double*)>();
-    for (auto &kernel : kernels) {
+    for (auto& kernel : kernels) {
       kernel.func =
           cantFail(jitter->lookup(llvmFuncPrepareParam->getName()))
               .toPtr<void(double*, uint64_t, uint64_t, double*)>();
