@@ -16,7 +16,7 @@ using real_t = double;
 using namespace timeit;
 
 int main(int argc, char* *argv) {
-  real_t* real,* imag;
+  real_t* real, *imag;
   Timer timer;
   timer.setRunTime(0.5);
   // timer.setReplication(3);

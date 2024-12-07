@@ -74,13 +74,13 @@ public:
 public:
   IRGenerator(const std::string& moduleName = "myModule")
       : _jitter(nullptr), _context(std::make_unique<llvm::LLVMContext>()),
-        _module(std::make_unique<llvm::Module>(moduleName,* _context)),
+        _module(std::make_unique<llvm::Module>(moduleName, *_context)),
         builder(*_context), _config() {}
 
   IRGenerator(const IRGeneratorConfig& irConfig,
               const std::string& moduleName = "myModule")
       : _jitter(nullptr), _context(std::make_unique<llvm::LLVMContext>()),
-        _module(std::make_unique<llvm::Module>(moduleName,* _context)),
+        _module(std::make_unique<llvm::Module>(moduleName, *_context)),
         builder(*_context), _config(irConfig) {}
 
   const llvm::LLVMContext* getContext() const {

@@ -190,7 +190,7 @@ public:
   std::ostream& printCMat(std::ostream& os) const {
     const auto* cMat = getConstantMatrix();
     assert(cMat);
-    return printConstantMatrix(os,* cMat);
+    return printConstantMatrix(os, *cMat);
   }
 
   std::ostream& printPMat(std::ostream& os) const {

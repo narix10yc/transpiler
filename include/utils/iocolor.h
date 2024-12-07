@@ -7,6 +7,18 @@
 #define GREEN(MSG) "\033[32m" << MSG << "\033[0m"
 #define BOLDGREEN(MSG) "\033[1m\033[32m" << MSG << "\033[0m"
 
+#define YELLOW(MSG) "\033[33m" << MSG << "\033[0m"
+#define BOLDYELLOW(MSG) "\033[1m\033[33m" << MSG << "\033[0m"
+
+#define BLUE(MSG) "\033[34m" << MSG << "\033[0m"
+#define BOLDBLUE(MSG) "\033[1m\033[34m" << MSG << "\033[0m"
+
+#define MAGENTA(MSG) "\033[35m" << MSG << "\033[0m"
+#define BOLDMAGENTA(MSG) "\033[1m\033[35m" << MSG << "\033[0m"
+
+#define CYAN(MSG) "\033[36m" << MSG << "\033[0m"
+#define BOLDCYAN(MSG) "\033[1m\033[36m" << MSG << "\033[0m"
+
 namespace IOColor {
 static const char* RESET = "\033[0m";
 

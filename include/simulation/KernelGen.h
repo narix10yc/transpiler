@@ -10,7 +10,7 @@ class QuantumGate;
 
 struct CPUKernelGenConfig {
   enum AmpFormat { AltFormat, SepFormat };
-  enum MatrixLoadMode { VectorInStack, ElemInStack, InMainBody };
+  enum MatrixLoadMode { UseMatImmValues, StackLoadMatElems, StackLoadMatVecs };
 
   int simdS = 2;
   int precision = 64;
@@ -27,11 +27,15 @@ struct CPUKernelGenConfig {
   double shareMatrixElemThres = 0.0;
   double oneTol = 1e-8;
   bool shareMatrixElemUseImmValue = false;
-  MatrixLoadMode matrixLoadMode;
+  MatrixLoadMode matrixLoadMode = UseMatImmValues;
 
-  static const CPUKernelGenConfig NativeDefault;
+  static const CPUKernelGenConfig NativeDefaultF32;
+  static const CPUKernelGenConfig NativeDefaultF64;
 };
 
+/// @return A function that takes in 4 arguments: (void*, uint64_t, uint64_t,
+/// void*). Pointer to statevector array, taskID begin, taskID end, and pointer
+/// to matrix array (could be null).
 llvm::Function* genCPUCode(llvm::Module& llvmModule,
                            const CPUKernelGenConfig& config,
                            const QuantumGate& gate,

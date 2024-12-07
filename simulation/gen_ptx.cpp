@@ -68,12 +68,12 @@ Function* IRGenerator::generateCUDAKernel(const QuantumGate& gate,
   const int nqubits = qubits.size();
 
   auto* gateCMat = gate.gateMatrix.getConstantMatrix();
-  // printConstantMatrix(std::cerr,* gateCMat);
+  // printConstantMatrix(std::cerr, *gateCMat);
 
   Type* scalarTy =
       (config.precision == 32) ? builder.getFloatTy() : builder.getDoubleTy();
   Function* func;
-  Argument* pSvArg,* pMatArg;
+  Argument* pSvArg, *pMatArg;
   { /* function declaration */
 
     /*
@@ -253,7 +253,7 @@ Function* IRGenerator::generateCUDAKernel(const QuantumGate& gate,
     // Alternative version, potentially having better locality
     // updatedReAmp = sum(reAmps_i * reMats_i) - sum(imAmps_i * imMats_i)
     // updatedImAmp = sum(reAmps_i * imMats_i) + sum(imAmps_i * reMats_i)
-    Value* reMatPtr,* imMatPtr,* reMat,* imMat;
+    Value* reMatPtr, *imMatPtr, *reMat, *imMat;
     if (sigMat.getRC(0, 0).real() == SK_General) {
       if (config.useImmValues && gateCMat) {
         reMat = ConstantFP::get(scalarTy, gateCMat->getRC(0, 0).real());

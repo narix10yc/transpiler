@@ -16,6 +16,15 @@ Value* saot::internal::genMulAdd(
         a->getType(), Intrinsic::fmuladd, {a, b, c}, nullptr, name);
     return B.CreateFMul(a, b, name);
   }
+  case SK_ImmValue: {
+    // (imm value) a * b + c
+    assert(a && "ImmValue 'a' must be non-null");
+    assert(a->getType() == b->getType());
+    if (c)
+      return B.CreateIntrinsic(
+        a->getType(), Intrinsic::fmuladd, {a, b, c}, nullptr, name);
+    return B.CreateFMul(a, b, name);
+  }
   case SK_One: {
     // b + c
     if (c)
@@ -59,15 +68,30 @@ Value* saot::internal::genNegMulAdd(
   default:
     break;
   }
-  assert(aKind == SK_General);
-  assert(a && "General kind 'a' operand cannot be null");
 
-  // -a * b + c
   auto* aNeg = B.CreateFNeg(a, "a.neg");
-  if (c)
-    return B.CreateIntrinsic(
-      aNeg->getType(), Intrinsic::fmuladd, {aNeg, b, c}, nullptr, name);
-  return B.CreateMul(aNeg, b, name);
+  switch (aKind) {
+  case SK_General: {
+    assert(a && "General kind 'a' operand cannot be null");
+    assert(a->getType() == b->getType());
+    // -a * b + c
+    if (c)
+      return B.CreateIntrinsic(
+        aNeg->getType(), Intrinsic::fmuladd, {aNeg, b, c}, nullptr, name);
+    return B.CreateMul(aNeg, b, name);
+  }
+  case SK_ImmValue: {
+    // -(imm value)a * b + c
+    assert(a && "ImmValue 'a' must be non-null");
+    if (c)
+      return B.CreateIntrinsic(
+        aNeg->getType(), Intrinsic::fmuladd, {aNeg, b, c}, nullptr, name);
+    return B.CreateMul(aNeg, b, name);
+  }
+  default:
+    llvm_unreachable("Unknown ScalarKind");
+    return nullptr;
+  }
 }
 
 

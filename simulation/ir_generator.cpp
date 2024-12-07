@@ -88,7 +88,7 @@ std::ostream& IRGeneratorConfig::display(int verbose, bool title,
 
 void IRGenerator::loadFromFile(const std::string& fileName) {
   SMDiagnostic err;
-  _module = std::move(parseIRFile(fileName, err,* _context));
+  _module = std::move(parseIRFile(fileName, err, *_context));
   if (_module == nullptr) {
     err.print("IRGenerator::loadFromFile", llvm::errs());
     llvm_unreachable("Failed to load from file");

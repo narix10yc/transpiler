@@ -1,5 +1,5 @@
-#ifndef SAOT_SCALARKINE_H
-#define SAOT_SCALARKINE_H
+#ifndef SAOT_SCALARKIND_H
+#define SAOT_SCALARKIND_H
 
 namespace saot {
 
@@ -15,4 +15,4 @@ enum ScalarKind : int {
 
 }
 
-#endif // SAOT_SCALARKINE_H
+#endif // SAOT_SCALARKIND_H

@@ -71,9 +71,9 @@ inline QuantumGate lmatmul_up_up(const GateMatrix::up_matrix_t& aUp,
   uint64_t aMask = 0;
   uint64_t bMask = 0;
   for (auto it = cQubits.begin(); it != cQubits.end(); it++) {
-    if (std::find(aQubits.begin(), aQubits.end(),* it) != aQubits.end())
+    if (std::find(aQubits.begin(), aQubits.end(), *it) != aQubits.end())
       aMask |= (1 << i);
-    if (std::find(bQubits.begin(), bQubits.end(),* it) != bQubits.end())
+    if (std::find(bQubits.begin(), bQubits.end(), *it) != bQubits.end())
       bMask |= (1 << i);
     i++;
   }

@@ -82,7 +82,7 @@ Function* IRGenerator::generateKernelDebug(const QuantumGate& gate,
   Type* scalarTy =
       (_config.precision == 32) ? builder.getFloatTy() : builder.getDoubleTy();
   Function* func;
-  Argument* pSvArg,* pReArg,* pImArg,* ctrBeginArg,* ctrEndArg,* pMatArg;
+  Argument* pSvArg, *pReArg, *pImArg, *ctrBeginArg, *ctrEndArg, *pMatArg;
   { /* start of function declaration */
     auto argType =
         (_config.ampFormat == IRGeneratorConfig::SepFormat)
@@ -414,7 +414,7 @@ Function* IRGenerator::generateKernelDebug(const QuantumGate& gate,
   std::vector<Value*> real(K, nullptr), imag(K, nullptr);
   std::vector<Value*> pSv(HK, nullptr), pRe(HK, nullptr), pIm(HK, nullptr);
   { /* load amplitude registers */
-    Value* svFull,* reFull,* imFull;
+    Value* svFull, *reFull, *imFull;
     for (unsigned hi = 0; hi < HK; hi++) {
       unsigned keyStart = 0;
       uint64_t idxShift = 0ULL;
@@ -512,7 +512,7 @@ Function* IRGenerator::generateKernelDebug(const QuantumGate& gate,
         }
       } else {
         assert(_config.shareMatrixElemThres <= 0.0 && "Not Implemented");
-        Value* newRe0 = nullptr,* newRe1 = nullptr;
+        Value* newRe0 = nullptr, *newRe1 = nullptr;
         for (unsigned c = 0; c < K; c++) {
           newRe0 = genMulAdd(newRe0, matrix[r * K + c].realVal, real[c],
                              matrix[r * K + c].realFlag, "", nameRe);
@@ -568,9 +568,9 @@ Function* IRGenerator::generateKernelDebug(const QuantumGate& gate,
                     << " => " << storeIdx << "\n";
 
         newReal[storeIdx] = builder.CreateShuffleVector(
-            newReal[mergeIdx], newReal[mergeIdx + 1],* maskIt, "re.merge");
+            newReal[mergeIdx], newReal[mergeIdx + 1], *maskIt, "re.merge");
         newImag[storeIdx] = builder.CreateShuffleVector(
-            newImag[mergeIdx], newImag[mergeIdx + 1],* maskIt, "im.merge");
+            newImag[mergeIdx], newImag[mergeIdx + 1], *maskIt, "im.merge");
         maskIt++;
       }
     }

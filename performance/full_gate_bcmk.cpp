@@ -20,7 +20,7 @@ int main(int argc, char* *argv) {
   assert(argc > 1);
   const std::string test_name = argv[1];
 
-  real_t* real,* imag;
+  real_t* real, *imag;
   Timer timer;
   timer.setRunTime(0.5);
   // timer.setReplication(3);

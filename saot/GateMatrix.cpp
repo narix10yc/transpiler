@@ -526,7 +526,7 @@ void GateMatrix::computeAndCacheUpMat(double tolerance) const {
       cache.isConvertibleToUpMat = UnConvertible;
       return;
     }
-    cache.upMat = up_matrix_t{{0, 0.0}, {1,* plambd}};
+    cache.upMat = up_matrix_t{{0, 0.0}, {1, *plambd}};
     cache.isConvertibleToUpMat = Convertible;
     return;
   }
@@ -546,7 +546,7 @@ void GateMatrix::computeAndCacheUpMat(double tolerance) const {
       cache.isConvertibleToUpMat = UnConvertible;
       return;
     }
-    cache.upMat = up_matrix_t{{0, 0.0}, {0, 0.0}, {0, 0.0}, {1,* plambd}};
+    cache.upMat = up_matrix_t{{0, 0.0}, {0, 0.0}, {0, 0.0}, {1, *plambd}};
     cache.isConvertibleToUpMat = Convertible;
     return;
   }

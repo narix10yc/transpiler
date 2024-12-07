@@ -15,7 +15,8 @@ namespace saot::complex_matrix {
 /// entry of the form expi(phi).
 /// @param data The (i, data[i].first) entry of the matrix is
 /// expi(data[i].second)
-template <typename data_t> class UnitaryPermutationMatrix {
+template<typename data_t>
+class UnitaryPermutationMatrix {
 public:
   std::vector<std::pair<size_t, data_t>> data;
 
@@ -64,7 +65,8 @@ public:
 /// data.push_back, it is required to call updateSize() which will check
 /// dimension consistency.
 /// @tparam data_t
-template <typename data_t> class SquareMatrix {
+template<typename data_t>
+class SquareMatrix {
   size_t _edgeSize;
 
 public:

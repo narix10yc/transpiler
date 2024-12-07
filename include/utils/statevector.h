@@ -15,11 +15,14 @@
 
 namespace utils::statevector {
 
-template <typename real_t> class StatevectorSep;
+template<typename real_t>
+class StatevectorSep;
 
-template <typename real_t, unsigned simd_s> class StatevectorAlt;
+template<typename real_t, unsigned simd_s>
+class StatevectorAlt;
 
-template <typename real_t> class StatevectorSep {
+template<typename real_t>
+class StatevectorSep {
 public:
   unsigned nqubits;
   uint64_t N;
@@ -92,7 +95,6 @@ public:
   // void copyValueFrom(const StatevectorAlt<real_t>&);
 
   double normSquared(int nthreads = 1) const {
-
     const auto f = [&](uint64_t i0, uint64_t i1, double &rst) {
       double sum = 0.0;
       for (uint64_t i = i0; i < i1; i++) {
@@ -200,27 +202,28 @@ public:
   }
 };
 
-template <typename real_t, unsigned simd_s> class StatevectorAlt {
+template<typename real_t, unsigned simd_s>
+class StatevectorAlt {
 public:
-  unsigned nqubits;
+  int nqubits;
   uint64_t N;
+  size_t memSize;
   real_t* data;
 
-  StatevectorAlt(unsigned nqubits, bool initialize = false)
-      : nqubits(nqubits), N(1ULL << nqubits) {
-    data = (real_t*)aligned_alloc(64, 2 * N * sizeof(real_t));
+  StatevectorAlt(int nqubits, bool initialize = false)
+      : nqubits(nqubits), N(1ULL << nqubits)
+      , memSize(2ULL << nqubits * sizeof(real_t)) {
+    data = (real_t*)aligned_alloc(64, memSize);
     if (initialize) {
-      for (size_t i = 0; i < (1 << (nqubits + 1)); i++)
-        data[i] = 0;
-      data[0] = 1;
+      std::memset(data, 0, memSize);
+      data[0] = 1.0;
     }
   }
 
   StatevectorAlt(const StatevectorAlt& that)
-      : nqubits(that.nqubits), N(that.N) {
-    data = (real_t*)aligned_alloc(64, 2 * N * sizeof(real_t));
-    for (size_t i = 0; i < 2 * that.N; i++)
-      data[i] = that.data[i];
+      : nqubits(that.nqubits), N(that.N), memSize(that.memSize) {
+    data = (real_t*)aligned_alloc(64, memSize);
+    std::memcpy(data, that.data, memSize);
   }
 
   StatevectorAlt(StatevectorAlt&&) = delete;
@@ -236,8 +239,6 @@ public:
   }
 
   StatevectorAlt& operator=(StatevectorAlt&&) = delete;
-
-  // void copyValueFrom(const StatevectorSep<real_t>&);
 
   double normSquared() const {
     double s = 0;
@@ -275,13 +276,13 @@ public:
     return data[utils::insertOneToBit(idx, simd_s)];
   }
 
-  std::ostream& print(std::ostream& os) const {
+  std::ostream& print(std::ostream& os = std::cerr) const {
     if (N > 32) {
-      os << IOColor::BOLD << IOColor::CYAN_FG << "Warning: " << IOColor::RESET
+      os << BOLDCYAN("Warning: ")
          << "statevector has more than 5 qubits, "
             "only the first 32 entries are shown.\n";
     }
-    for (size_t i = 0; i < ((N > 32) ? 32 : N); i++) {
+    for (size_t i = 0; i < std::min(32ULL, N); i++) {
       os << i << ": ";
       utils::print_complex(os, {real(i), imag(i)});
       os << "\n";
@@ -290,89 +291,7 @@ public:
   }
 };
 
-template <typename real_t> class StatevectorComp {
-  using complex_t = std::complex<real_t>;
-
-public:
-  unsigned nqubits;
-  size_t N;
-  complex_t* data;
-  StatevectorComp(unsigned nqubits) : nqubits(nqubits), N(1 << nqubits) {
-    data = new complex_t[N];
-  }
-
-  ~StatevectorComp() { delete[] data; }
-
-  StatevectorComp(StatevectorComp&&) = delete;
-  StatevectorComp& operator=(StatevectorComp&&) = delete;
-
-  StatevectorComp(const StatevectorComp& that)
-      : nqubits(that.nqubits), N(that.N) {
-    data = new complex_t[N];
-    for (size_t i = 0; i < N; i++)
-      data[i] = that.data[i];
-  }
-
-  StatevectorComp& operator=(const StatevectorComp& that) {
-    assert(nqubits == that.nqubits);
-    if (this == &that)
-      return *this;
-
-    for (size_t i = 0; i < N; i++)
-      data[i] = that.data[i];
-    return *this;
-  }
-
-  double normSquared() const {
-    double sum = 0;
-    for (size_t i = 0; i < N; i++) {
-      sum += data[i].real() * data[i].real();
-      sum += data[i].imag() * data[i].imag();
-    }
-    return sum;
-  }
-
-  double norm() const { return std::sqrt(normSquared()); }
-
-  void normalize() {
-    double n = norm();
-    for (size_t i = 0; i < N; i++)
-      data[i] /= n;
-  }
-
-  void zeroState() {
-    for (size_t i = 0; i < N; i++)
-      data[i] = {0.0, 0.0};
-    data[0] = {1.0, 0.0};
-  }
-
-  void randomize() {
-    std::random_device rd;
-    std::mt19937 gen{rd()};
-    std::normal_distribution<real_t> d{0, 1};
-    for (size_t i = 0; i < N; i++)
-      data[i] = {d(gen), d(gen)};
-    normalize();
-  }
-
-  std::ostream& print(std::ostream& os) const {
-    using namespace IOColor;
-
-    if (N > 32) {
-      os << BOLD << CYAN_FG << "Warning: " << RESET
-         << "statevector has more "
-            "than 5 qubits, only the first 32 entries are shown.\n";
-    }
-    for (size_t i = 0; i < ((N > 32) ? 32 : N); i++) {
-      os << std::bitset<5>(i) << ": ";
-      print_complex(os, data[i]);
-      os << "\n";
-    }
-    return os;
-  }
-};
-
-template <typename real_t>
+template<typename real_t>
 static double fidelity(const StatevectorSep<real_t>& sv1,
                        const StatevectorSep<real_t>& sv2) {
   assert(sv1.nqubits == sv2.nqubits);

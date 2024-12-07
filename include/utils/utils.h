@@ -16,7 +16,7 @@ namespace utils {
 
 bool isPermutation(const std::vector<int>& v);
 
-template <typename T>
+template<typename T>
 static bool isOrdered(const std::vector<T>& vec, bool ascending = true) {
   if (vec.empty())
     return true;
@@ -36,10 +36,10 @@ static bool isOrdered(const std::vector<T>& vec, bool ascending = true) {
   }
 }
 
-std::ostream& print_complex(
-  std::ostream& os, std::complex<double> c, int precision = 3);
+std::ostream&
+print_complex(std::ostream& os, std::complex<double> c, int precision = 3);
 
-template <typename T>
+template<typename T>
 std::ostream& printVector(const std::vector<T>& v,
                           std::ostream& os = std::cerr) {
   if (v.empty())
@@ -51,7 +51,7 @@ std::ostream& printVector(const std::vector<T>& v,
   return os << "]";
 }
 
-template <typename T, unsigned N>
+template<typename T, unsigned N>
 std::ostream& printLLVMSmallVector(
     const llvm::SmallVector<T, N>& v, std::ostream& os = std::cerr) {
   if (v.empty())
@@ -63,10 +63,10 @@ std::ostream& printLLVMSmallVector(
   return os << v[size-1] << "]";
 }
 
-// The printer is expected to take inputs (const T&, std::ostream&)
-template <typename T, typename Printer_T>
-std::ostream& printVectorWithPrinter(const std::vector<T>& v, Printer_T f,
-                                     std::ostream& os = std::cerr) {
+// @param f: The printer is expected to take inputs (const T&, std::ostream&)
+template<typename T, typename Printer_T>
+std::ostream& printVectorWithPrinter(
+    const std::vector<T>& v, Printer_T f, std::ostream& os = std::cerr) {
   if (v.empty())
     return os << "[]";
   auto it = v.cbegin();
@@ -76,8 +76,7 @@ std::ostream& printVectorWithPrinter(const std::vector<T>& v, Printer_T f,
   return os << "]";
 }
 
-// @return true if elem is in vec
-template <typename T>
+template<typename T>
 static void pushBackIfNotInVector(std::vector<T>& vec, T elem) {
   for (const auto& e : vec) {
     if (e == elem)
@@ -86,24 +85,31 @@ static void pushBackIfNotInVector(std::vector<T>& vec, T elem) {
   vec.push_back(elem);
 }
 
-template <typename T = uint64_t> static T insertZeroToBit(T x, int bit) {
+template<typename T = uint64_t>
+static T insertZeroToBit(T x, int bit) {
   T maskLo = (1 << bit) - 1;
   T maskHi = ~maskLo;
   return (x & maskLo) + ((x & maskHi) << 1);
 }
 
-template <typename T = uint64_t> static T insertOneToBit(T x, int bit) {
+template<typename T = uint64_t>
+static T insertOneToBit(T x, int bit) {
   T maskLo = (1 << bit) - 1;
   T maskHi = ~maskLo;
   return (x & maskLo) | ((x & maskHi) << 1) | (1 << bit);
 }
 
+// parallel bit deposition
 uint64_t pdep64(uint64_t src, uint64_t mask, int nbits = 64);
 uint32_t pdep32(uint32_t src, uint32_t mask, int nbits = 32);
 
+// parallel bit extraction
 uint64_t pext64(uint64_t src, uint64_t mask, int nbits = 64);
 uint32_t pext32(uint32_t src, uint32_t mask, int nbits = 32);
 
+
+// as0b: helper class to print binary of an integer
+// uses: 'std::cerr << as0b(123, 12)' to print 12 LSB of integer 123.
 class as0b {
   uint64_t v;
   int nbits;

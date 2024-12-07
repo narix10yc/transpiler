@@ -7,7 +7,7 @@ using namespace IOColor;
 using namespace saot;
 using namespace saot::ast;
 
-template <typename T>
+template<typename T>
 std::ostream& printVector(std::ostream& os, const std::vector<T>& vec,
                           const std::string& sep = ",") {
   if (vec.empty())
@@ -103,9 +103,9 @@ std::ostream& ParameterDefStmt::print(std::ostream& os) const {
   // os << "#" << refNumber << " = { ";
   // if (gateMatrix.isConstantMatrix()) {
   //     auto it = gateMatrix.cData().cbegin();
-  //     utils::print_complex(os,* it);
+  //     utils::print_complex(os, *it);
   //     while (++it != gateMatrix.cData().cend())
-  //         utils::print_complex(os << ", ",* it);
+  //         utils::print_complex(os << ", ", *it);
   //     return os << " }\n";
   // }
 
@@ -131,7 +131,7 @@ QuantumCircuit::gateApplyToQuantumGate(const GateApplyStmt& gaStmt) {
   }
   if (const auto* p =
           std::get_if<GateMatrix::gate_params_t>(&gaStmt.paramRefOrMatrix))
-    return QuantumGate(GateMatrix::FromName(gaStmt.name,* p), gaStmt.qubits);
+    return QuantumGate(GateMatrix::FromName(gaStmt.name, *p), gaStmt.qubits);
   return QuantumGate(GateMatrix::FromName(gaStmt.name), gaStmt.qubits);
 }
 
