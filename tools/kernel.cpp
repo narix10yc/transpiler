@@ -11,6 +11,7 @@ int main(int argc, char** argv) {
   CPUKernelGenConfig config {
     .simdS = 2,
     .forceDenseKernel = true,
+    .matrixLoadMode = CPUKernelGenConfig::StackLoadMatElems,
   };
 
   assert(argc > 1);

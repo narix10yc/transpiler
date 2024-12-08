@@ -204,6 +204,8 @@ Function* saot::genCPUCode(llvm::Module& llvmModule,
   // load matrix (if needed)
   switch (config.matrixLoadMode) {
   case CPUKernelGenConfig::UseMatImmValues: {
+    // Imm values are LLVM Constant. They will not appear as instructions in 
+    // the entry block.
     for (unsigned i = 0, n = matrixData.size(); i < n; i++) {
       if (matrixData[i].reElemVal) {
         matrixData[i].reVecVal = B.CreateVectorSplat(
@@ -216,82 +218,35 @@ Function* saot::genCPUCode(llvm::Module& llvmModule,
     }
     break;
   }
+  case CPUKernelGenConfig::StackLoadMatElems: {
+    for (unsigned i = 0, n = matrixData.size(); i < n; i++) {
+      if (matrixData[i].reKind == SK_General) {
+        auto* ptrV = B.CreateConstGEP1_32(
+          scalarTy, args.pMatArg, 2 * i, "p.mat.re." + std::to_string(i));
+        matrixData[i].reElemVal = B.CreateLoad(
+          scalarTy, ptrV, "mat.re." + std::to_string(i));
+        matrixData[i].reVecVal = B.CreateVectorSplat(
+          S, matrixData[i].reElemVal, "mat.re." + std::to_string(i) + ".vec");
+      }
+      if (matrixData[i].imKind == SK_General) {
+        auto* ptrV = B.CreateConstGEP1_32(
+          scalarTy, args.pMatArg, 2 * i + 1, "p.mat.im." + std::to_string(i));
+        matrixData[i].imElemVal = B.CreateLoad(
+          scalarTy, ptrV, "mat.im." + std::to_string(i));
+        matrixData[i].imVecVal = B.CreateVectorSplat(
+          S, matrixData[i].imElemVal, "mat.im." + std::to_string(i) + ".vec");
+      }
+    }
+    break;
+  }
   default: {
-    llvm_unreachable("Only supporting VectorInStack and ElemInStack modes");
+    llvm_unreachable(
+      "Only supporting UseMatImmValues and StackLoadMatElems modes");
     break;
   }
   }
 
-  // if (config.matrixLoadMode == CPUKernelGenConfig::VectorInStack) {
-  //   auto* matV = B.CreateLoad(
-  //       VectorType::get(scalarTy, 2 * KK, false), args.pMatArg, "matrix");
-  //   for (unsigned i = 0; i < KK; i++) {
-  //     switch (matrixData[i].reKind) {
-  //       case SK_General: {
-  //         assert(matrixData[i].reVal == nullptr);
-  //         matrixData[i].reVal = B.CreateShuffleVector(
-  //           matV, std::vector<int>(S, 2 * i), "m.re." + std::to_string(i));
-  //         break;
-  //       }
-  //       case SK_ImmValue: {
-  //         assert(false && "Not Implemented");
-  //         break;
-  //       }
-  //       default: {
-  //         assert(matrixData[i].reVal == nullptr);
-  //         break;
-  //       }
-  //     }
-  //     switch (matrixData[i].imKind) {
-  //       case SK_General: {
-  //         assert(matrixData[i].imVal == nullptr);
-  //         matrixData[i].imVal = B.CreateShuffleVector(
-  //           matV, std::vector<int>(S, 2 * i + 1), "m.im." + std::to_string(i));
-  //         break;
-  //       }
-  //       case SK_ImmValue: {
-  //         assert(false && "Not Implemented");
-  //         break;
-  //       }
-  //       default: {
-  //         assert(matrixData[i].imVal == nullptr);
-  //         break;
-  //       }
-  //     }
-  //   }
-  // } else if (config.matrixLoadMode == CPUKernelGenConfig::ElemInStack) {
-  //   Value* mReVal;
-  //   Value* mImVal;
-  //   for (unsigned i = 0; i < KK; i++) {
-  //     if (matrixData[i].reKind == SK_General) {
-  //       assert(matrixData[i].reVal == nullptr);
-  //       auto* pReVal = B.CreateConstGEP1_32(
-  //         scalarTy, args.pMatArg, 2 * i, "ptr.m.re." + std::to_string(i));
-  //       mReVal = B.CreateLoad(
-  //         scalarTy, pReVal, "m.re." + std::to_string(i) + ".elem");                             
-  //     }
-  //     else if (matrixData[i].reKind == SK_ImmValue) {
-  //       mReVal = ConstantFP::get(llvmContext,
-  //         APFloat(gate.gateMatrix.getConstantMatrix()->data[i].real()));
-  //     }
-  //     matrixData[i].reVal = B.CreateVectorSplat(
-  //       S, mReVal, "m.re." + std::to_string(i));
-
-  //     if (matrixData[i].imKind == SK_General) {
-  //       assert(matrixData[i].imVal == nullptr);
-  //       auto* pImVal = B.CreateConstGEP1_32(
-  //           scalarTy, args.pMatArg, 2 * i + 1, "ptr.m.im." + std::to_string(i));
-  //       mImVal = B.CreateLoad(
-  //         scalarTy, pImVal, "m.im." + std::to_string(i) + ".elem");
-  //     }
-  //     else if (matrixData[i].imKind == SK_ImmValue) {
-  //       mReVal = ConstantFP::get(llvmContext,
-  //         APFloat(gate.gateMatrix.getConstantMatrix()->data[i].imag()));
-  //     }
-  //     matrixData[i].imVal = B.CreateVectorSplat(
-  //       S, mImVal, "m.im." + std::to_string(i));
-  //   }
-  // }
+  // entryBB->print(errs());
 
   B.CreateBr(loopBB);
 
