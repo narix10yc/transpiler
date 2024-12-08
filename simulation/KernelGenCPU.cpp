@@ -1,4 +1,4 @@
-#define DEBUG_TYPE "cpu-codegen"
+#define DEBUG_TYPE "codegen-cpu"
 #include "llvm/Support/Debug.h"
 
 #include "saot/QuantumGate.h"
@@ -190,13 +190,15 @@ Function* saot::genCPUCode(llvm::Module& llvmModule,
   const unsigned HK = 1 << hk;
 
   // debug print qubit splits
-  std::cerr << CYAN_FG << "-- qubit split done\n" << RESET;\
-  utils::printLLVMSmallVector(loBits, std::cerr << "- lower bits: ") << "\n";
-  utils::printLLVMSmallVector(simdBits, std::cerr << "- simd bits: ") << "\n";
-  utils::printLLVMSmallVector(hiBits, std::cerr << "- higher bits: ") << "\n";
-  std::cerr << "- reImBit: " << s << "\n";
-  std::cerr << "sepBit:  " << sepBit << "\n";
-  std::cerr << "vecSize: " << vecSize << "\n";
+  LLVM_DEBUG(
+    dbgs() << CYAN_FG << "-- qubit split done\n" << RESET;\
+    utils::printLLVMSmallVector(loBits, std::cerr << "- lower bits: ") << "\n";
+    utils::printLLVMSmallVector(simdBits, std::cerr << "- simd bits: ") << "\n";
+    utils::printLLVMSmallVector(hiBits, std::cerr << "- higher bits: ") << "\n";
+    dbgs() << "- reImBit: " << s << "\n";
+    dbgs() << "sepBit:  " << sepBit << "\n";
+    dbgs() << "vecSize: " << vecSize << "\n";
+  );
   
   B.SetInsertPoint(entryBB);
   // load matrix (if needed)
@@ -326,13 +328,17 @@ Function* saot::genCPUCode(llvm::Module& llvmModule,
       tmpCounterV = B.CreateAnd(taskIdV, mask, "tmp.taskid");
       tmpCounterV = B.CreateShl(tmpCounterV, (qIdx - 1), "tmp.taskid");
       idxStartV = B.CreateAdd(idxStartV, tmpCounterV, "tmp.idx.begin");
-      std::cerr << "  (taskID & " << utils::as0b(mask, highestQ) << ") << "
-                << (qIdx - 1) << "\n";
+      LLVM_DEBUG(
+        std::cerr << "  (taskID & " << utils::as0b(mask, highestQ) << ") << "
+                  << (qIdx - 1) << "\n";
+      );
       mask = 0ULL;
     }
     mask = ~((1ULL << (highestQ - sepBit - hk + 1)) - 1);
-    std::cerr << "  (taskID & " << utils::as0b(mask, 16) << ") << "
-              << hk << "\n";
+    LLVM_DEBUG(
+      std::cerr << "  (taskID & " << utils::as0b(mask, 16) << ") << "
+                << hk << "\n";
+    );
 
     tmpCounterV = B.CreateAnd(taskIdV, mask, "tmp.taskid");
     tmpCounterV = B.CreateShl(tmpCounterV, hk, "tmp.taskid");
@@ -375,14 +381,16 @@ Function* saot::genCPUCode(llvm::Module& llvmModule,
       imSplitMasks[li * S + si] = reSplitMasks[li * S + si] | (1 << s);
     }
   }
-  std::cerr << "- reSplitMasks: [";
-  for (const auto& e : reSplitMasks)
-    std::cerr << utils::as0b(e, sepBit + 1) << ",";
-  std::cerr << "]\n";
-  std::cerr << "- imSplitMasks: [";
-  for (const auto& e : imSplitMasks)
-    std::cerr << utils::as0b(e, sepBit + 1) << ",";
-  std::cerr << "]\n";
+  LLVM_DEBUG(
+    std::cerr << "- reSplitMasks: [";
+    for (const auto& e : reSplitMasks)
+      std::cerr << utils::as0b(e, sepBit + 1) << ",";
+    std::cerr << "]\n";
+    std::cerr << "- imSplitMasks: [";
+    for (const auto& e : imSplitMasks)
+      std::cerr << utils::as0b(e, sepBit + 1) << ",";
+    std::cerr << "]\n";
+  );
   }
 
   // load vectors
@@ -400,8 +408,11 @@ Function* saot::genCPUCode(llvm::Module& llvmModule,
         idxShift += 1ULL << hiBits[hbit];
     }
     idxShift >>= sepBit;
-    std::cerr << "hi = " << hi << ": idxShift = "
-              << utils::as0b(idxShift, hiBits.empty() ? 1 : hiBits.back()) << "\n";
+    LLVM_DEBUG(
+      std::cerr << "hi = " << hi << ": idxShift = "
+                << utils::as0b(idxShift, hiBits.empty() ? 1 : hiBits.back())
+                << "\n";
+    );
     pSvs[hi] = B.CreateConstGEP1_64(
       vecType, ptrSvBeginV, idxShift, "ptr.sv.hi." + std::to_string(hi));
     auto* ampFull = B.CreateLoad(
@@ -430,9 +441,11 @@ Function* saot::genCPUCode(llvm::Module& llvmModule,
   std::memcpy(arr1.data(), reSplitMasks.data() + S, S * sizeof(int));
   int roundIdx = 0;
   while (roundIdx < lk) {
-    std::cerr << "Round " << roundIdx << ": ";
-    utils::printVector(cacheLHS) << " and ";
-    utils::printVector(cacheRHS) << "\n";
+    LLVM_DEBUG(
+      std::cerr << "Round " << roundIdx << ": ";
+      utils::printVector(cacheLHS) << " and ";
+      utils::printVector(cacheRHS) << "\n";
+    );
 
     lCached = S << roundIdx;
     mergeMasks.emplace_back(lCached << 1);
@@ -467,10 +480,10 @@ Function* saot::genCPUCode(llvm::Module& llvmModule,
         ++idxR;
       }
     }
-    std::cerr << "  To ";
-    utils::printVector(cacheCombined) << "\n";
-    std::cerr << "  Mask ";
-    utils::printVector(mask) << "\n";
+    LLVM_DEBUG(
+      utils::printVector(cacheCombined, std::cerr << "  Cach Combined: ") << "\n";
+      utils::printVector(mask, std::cerr << "  Mask: ") << "\n";
+    );
     // rotate the assignments of
     // (cacheLHS, cacheRHS, cacheCombined) with (arr0, arr1, arr2)
     if (++roundIdx == lk)
@@ -499,8 +512,10 @@ Function* saot::genCPUCode(llvm::Module& llvmModule,
     for (int i = 0; i < S; i++)
       reimMergeMask.push_back(S * pairIdx + i + (vecSize >> 1));
   }
-  utils::printVector(reimMergeMask, std::cerr << "reimMergeMask: ") << "\n";
-  std::cerr << "- Merged masks init'ed\n";
+  LLVM_DEBUG(
+    utils::printVector(reimMergeMask, std::cerr << "reimMergeMask: ") << "\n";
+    std::cerr << CYAN("- Merged masks init'ed\n");
+  );
   }
 
   SmallVector<Value*> updatedReAmps;
@@ -508,7 +523,6 @@ Function* saot::genCPUCode(llvm::Module& llvmModule,
   updatedReAmps.resize_for_overwrite(LK);
   updatedImAmps.resize_for_overwrite(LK);
   for (unsigned hi = 0; hi < HK; hi++) {
-    std::cerr << "- hi = " << hi << "(" << utils::as0b(hi, lk) << ")\n";
     // mat-vec mul
     std::memset(updatedReAmps.data(), 0, updatedReAmps.size_in_bytes());
     std::memset(updatedImAmps.data(), 0, updatedImAmps.size_in_bytes());
@@ -544,9 +558,11 @@ Function* saot::genCPUCode(llvm::Module& llvmModule,
       for (unsigned pairIdx = 0; pairIdx < (LK >> mergeIdx >> 1); pairIdx++) {
         unsigned idxL = pairIdx << mergeIdx;
         unsigned idxR = idxL | (1 << mergeIdx);
-        std::cerr << "(mergeIdx, pairIdx) = ("
-                  << mergeIdx << ", " << pairIdx << "): (idxL, idxR) = ("
-                  << idxL << ", " << idxR << ")\n";
+        LLVM_DEBUG(
+          dbgs() << "(mergeIdx, pairIdx) = ("
+                << mergeIdx << ", " << pairIdx << "): (idxL, idxR) = ("
+                << idxL << ", " << idxR << ")\n";
+        );
         updatedReAmps[idxL] = B.CreateShuffleVector(
           updatedReAmps[idxL], updatedReAmps[idxR], mergeMasks[mergeIdx],
           "re.merged." + std::to_string(mergeIdx) + "." + std::to_string(pairIdx));
