@@ -202,6 +202,14 @@ public:
   }
 };
 
+
+/// @brief StatevectorAlt stores statevector in a single array with alternating
+/// real and imaginary parts. The alternating pattern is controlled by
+/// \p simd_s. More precisely, the memory is stored as an iteration of $2^s$
+/// real parts followed by $2^s$ imaginary parts.
+/// For example,
+/// 000 001 010 011 100 101 110 111
+/// r00 r01 i00 i01 r10 r11 i10 i11
 template<typename real_t, unsigned simd_s>
 class StatevectorAlt {
 public:
@@ -210,14 +218,13 @@ public:
   size_t memSize;
   real_t* data;
 
-  StatevectorAlt(int nqubits, bool initialize = false)
+  StatevectorAlt(int nqubits, bool init = true)
       : nqubits(nqubits), N(1ULL << nqubits)
-      , memSize(2ULL << nqubits * sizeof(real_t)) {
-    data = (real_t*)aligned_alloc(64, memSize);
-    if (initialize) {
-      std::memset(data, 0, memSize);
-      data[0] = 1.0;
-    }
+      , memSize((2ULL << nqubits) * sizeof(real_t)) {
+    data = (real_t*)aligned_alloc(64, this->memSize);
+    assert(data && "Allocation Failed");
+    if (init)
+      initialize();
   }
 
   StatevectorAlt(const StatevectorAlt& that)
@@ -249,6 +256,11 @@ public:
 
   double norm() const { return std::sqrt(normSquared()); }
 
+  void initialize() {
+    std::memset(data, 0, memSize);
+    data[0] = 1.0;
+  }
+
   void normalize() {
     double n = norm();
     for (size_t i = 0; i < 2 * N; i++)
@@ -264,14 +276,15 @@ public:
     normalize();
   }
 
-  real_t& real(size_t idx) { return data[utils::insertZeroToBit(idx, simd_s)]; }
-
-  real_t& imag(size_t idx) { return data[utils::insertOneToBit(idx, simd_s)]; }
-
+  real_t& real(size_t idx) {
+    return data[utils::insertZeroToBit(idx, simd_s)];
+  }
+  real_t& imag(size_t idx) {
+    return data[utils::insertOneToBit(idx, simd_s)];
+  }
   const real_t& real(size_t idx) const {
     return data[utils::insertZeroToBit(idx, simd_s)];
   }
-
   const real_t& imag(size_t idx) const {
     return data[utils::insertOneToBit(idx, simd_s)];
   }
@@ -289,7 +302,27 @@ public:
     }
     return os;
   }
-};
+
+  /// @brief Compute the probability of measuring 1 on qubit q
+  double prob(int q) const {
+    double p = 0.0;
+    for (size_t i = 0; i < (N >> 1); i++) {
+      size_t idx = utils::insertZeroToBit(i, q);
+      const auto& re = real(idx);
+      const auto& im = imag(idx);
+      p += (re * re + im * im);
+    }
+    return 1 - p;
+  }
+
+  std::ostream& printProbabilities(std::ostream& os = std::cerr) const {
+    for (int q = 0; q < nqubits; q++) {
+      os << "qubit " << q << ": " << prob(q) << "\n";
+    }
+    return os;
+  }
+
+}; // class StatevectorAlt
 
 template<typename real_t>
 static double fidelity(const StatevectorSep<real_t>& sv1,

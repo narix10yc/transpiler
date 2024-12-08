@@ -40,8 +40,8 @@ std::ostream&
 print_complex(std::ostream& os, std::complex<double> c, int precision = 3);
 
 template<typename T>
-std::ostream& printVector(const std::vector<T>& v,
-                          std::ostream& os = std::cerr) {
+std::ostream& printVector(
+    const std::vector<T>& v, std::ostream& os = std::cerr) {
   if (v.empty())
     return os << "[]";
   auto it = v.cbegin();
@@ -87,14 +87,14 @@ static void pushBackIfNotInVector(std::vector<T>& vec, T elem) {
 
 template<typename T = uint64_t>
 static T insertZeroToBit(T x, int bit) {
-  T maskLo = (1 << bit) - 1;
+  T maskLo = (static_cast<T>(1) << bit) - 1;
   T maskHi = ~maskLo;
   return (x & maskLo) + ((x & maskHi) << 1);
 }
 
 template<typename T = uint64_t>
 static T insertOneToBit(T x, int bit) {
-  T maskLo = (1 << bit) - 1;
+  T maskLo = (static_cast<T>(1) << bit) - 1;
   T maskHi = ~maskLo;
   return (x & maskLo) | ((x & maskHi) << 1) | (1 << bit);
 }
@@ -116,7 +116,7 @@ class as0b {
 
 public:
   as0b(uint64_t v, int nbits) : v(v), nbits(nbits) {
-    assert(nbits > 0 && nbits <= 64);
+    assert(nbits >= 0 && nbits <= 64);
   }
 
   friend std::ostream& operator<<(std::ostream& os, const as0b &n) {

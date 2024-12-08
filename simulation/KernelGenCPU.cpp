@@ -513,33 +513,40 @@ Function* saot::genCPUCode(llvm::Module& llvmModule,
     std::memset(updatedReAmps.data(), 0, updatedReAmps.size_in_bytes());
     std::memset(updatedImAmps.data(), 0, updatedImAmps.size_in_bytes());
     for (unsigned li = 0; li < LK; li++) {
-      for (unsigned k = 0; k < K; k++) {
+      unsigned r = hi * LK + li; // row
+      for (unsigned c = 0; c < K; c++) { // column
+        // updatedReAmps = sum of reAmps * reMats - imAmps * imMats
+        const auto& matrixEntry = matrixData[r * K + c];
         updatedReAmps[li] = internal::genMulAdd(B,
-          matrixData[k].reVecVal, reAmps[k], updatedReAmps[li],
-          matrixData[k].reKind, 
+          matrixEntry.reVecVal, reAmps[c], updatedReAmps[li],
+          matrixEntry.reKind, 
           "new.re." + std::to_string(hi) + "." + std::to_string(li) + ".");
         updatedReAmps[li] = internal::genNegMulAdd(B,
-          matrixData[k].imVecVal, imAmps[k], updatedReAmps[li],
-          matrixData[k].imKind, 
+          matrixEntry.imVecVal, imAmps[c], updatedReAmps[li],
+          matrixEntry.imKind, 
           "new.re." + std::to_string(hi) + "." + std::to_string(li) + ".");
 
+        // updatedImAmps = sum of reAmps * imMats + imAmps * reMats
         updatedImAmps[li] = internal::genMulAdd(B,
-          matrixData[k].reVecVal, imAmps[k], updatedImAmps[li],
-          matrixData[k].reKind, 
+          matrixEntry.reVecVal, imAmps[c], updatedImAmps[li],
+          matrixEntry.reKind, 
           "new.im." + std::to_string(hi) + "." + std::to_string(li) + ".");
         updatedImAmps[li] = internal::genMulAdd(B,
-          matrixData[k].imVecVal, reAmps[k], updatedImAmps[li],
-          matrixData[k].imKind, 
+          matrixEntry.imVecVal, reAmps[c], updatedImAmps[li],
+          matrixEntry.imKind, 
           "new.im." + std::to_string(hi) + "." + std::to_string(li) + ".");
       }
     }
     
-    // merge and store
+    // merge
     assert((1 << mergeMasks.size()) == updatedReAmps.size());
     for (int mergeIdx = 0; mergeIdx < lk; mergeIdx++) {
       for (unsigned pairIdx = 0; pairIdx < (LK >> mergeIdx >> 1); pairIdx++) {
         unsigned idxL = pairIdx << mergeIdx;
         unsigned idxR = idxL | (1 << mergeIdx);
+        std::cerr << "(mergeIdx, pairIdx) = ("
+                  << mergeIdx << ", " << pairIdx << "): (idxL, idxR) = ("
+                  << idxL << ", " << idxR << ")\n";
         updatedReAmps[idxL] = B.CreateShuffleVector(
           updatedReAmps[idxL], updatedReAmps[idxR], mergeMasks[mergeIdx],
           "re.merged." + std::to_string(mergeIdx) + "." + std::to_string(pairIdx));
@@ -549,9 +556,10 @@ Function* saot::genCPUCode(llvm::Module& llvmModule,
       }
     }
 
+    // store
     auto* merged = B.CreateShuffleVector(
       updatedReAmps[0], updatedImAmps[0], reimMergeMask,
-      "amp.merged." + std::to_string(hi));
+      "amp.merged.hi." + std::to_string(hi));
     B.CreateStore(merged, pSvs[hi]);
 
   }
