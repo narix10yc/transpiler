@@ -40,8 +40,18 @@ uint32_t utils::pdep32(uint32_t src, uint32_t mask, int nbits) {
 }
 
 uint64_t utils::pext64(uint64_t src, uint64_t mask, int nbits) {
-  assert(0 && "Not Implemented");
-  return 0;
+  assert(0 <= nbits && nbits <= 64 && "nbits must be in [0, 64]");
+  uint64_t dst = 0;
+  unsigned k = 0;
+  for (unsigned i = 0; i < nbits; i++) {
+    if (mask & (1ULL << i)) {
+      if (src & (1ULL << i))
+        dst |= (1 << k);
+      ++k;
+    }
+  }
+
+  return dst;
 }
 
 uint32_t utils::pext32(uint32_t src, uint32_t mask, int nbits) {

@@ -9,6 +9,7 @@
 #include <iostream>
 #include <vector>
 
+// TODO: Deprecate this file and use utils::complex_matrix instead
 namespace saot::complex_matrix {
 
 /// @brief A square matrix that each row or column has exactly one non-zero
@@ -108,6 +109,14 @@ public:
   data_t& getRC(size_t row, size_t col) {
     assert(row * _edgeSize + col < data.size());
     return data[row * _edgeSize + col];
+  }
+
+  const data_t& rc(size_t r, size_t c) const {
+    return getRC(r, c);
+  }
+
+  data_t& rc(size_t r, size_t c) {
+    return getRC(r, c);
   }
 
   // static SquareMatrix Identity(size_t edgeSize) {

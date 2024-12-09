@@ -59,6 +59,14 @@ public:
       const std::vector<float>& aVec, const std::vector<float>& bVec,
       const std::string& title, const std::string& info, float tol=1e-4);
 
+  void assertAllClose(
+      const double* aArr, const double* bArr, size_t length,
+      const std::string& title, const std::string& info, double tol=1e-8);
+  
+  void assertAllClose(
+      const float* aArr, const float* bArr, size_t length,
+      const std::string& title, const std::string& info, float tol=1e-4);
+
 };
 
 

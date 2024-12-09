@@ -16,16 +16,16 @@ using namespace llvm;
 // testH
 #include "test_h.inc"
 
-template<unsigned simdS>
+template<unsigned simd_s>
 void testU() {
-  TestSuite suite("Gate U with simdS = " + std::to_string(simdS));
+  TestSuite suite("Gate U with simd_s = " + std::to_string(simd_s));
   suite.assertClose(1e-10, 0.0, GET_INFO("1e-10 is close to 0.0"));
 
   auto llvmContext = std::make_unique<llvm::LLVMContext>();
   auto llvmModule = std::make_unique<llvm::Module>("myModule", *llvmContext);
 
   CPUKernelGenConfig cpuConfig;
-  cpuConfig.simdS = simdS;
+  cpuConfig.simd_s = simd_s;
   cpuConfig.forceDenseKernel = true;
   cpuConfig.matrixLoadMode = CPUKernelGenConfig::StackLoadMatElems;
 
@@ -43,28 +43,7 @@ void testU() {
   auto f_h2 = jit->lookup("gate_u_2")->toPtr<FUNC_TYPE>();
   auto f_h3 = jit->lookup("gate_u_3")->toPtr<FUNC_TYPE>();
 
-  StatevectorAlt<double, simdS> sv(/* nqubits */ 6, /* initialize */ true);
-  suite.assertClose(sv.norm(), 1.0, GET_INFO("SV Initialization: Norm"));
-  suite.assertClose(sv.prob(0), 0.0, GET_INFO("SV Initialization: Prob"));
-
-  f_h0(sv.data, 0ULL, 1ULL << (sv.nqubits - 1 - cpuConfig.simdS), nullptr);
-  suite.assertClose(sv.norm(), 1.0, GET_INFO("Apply H at 0: Norm"));
-  suite.assertClose(sv.prob(0), 0.5, GET_INFO("Apply H at 0: Prob"));
-  
-  sv.initialize();
-  f_h1(sv.data, 0ULL, 1ULL << (sv.nqubits - 1 - cpuConfig.simdS), nullptr);
-  suite.assertClose(sv.norm(), 1.0, GET_INFO("Apply H at 1: Norm"));
-  suite.assertClose(sv.prob(1), 0.5, GET_INFO("Apply H at 1: Prob"));
-
-  sv.initialize();
-  f_h2(sv.data, 0ULL, 1ULL << (sv.nqubits - 1 - cpuConfig.simdS), nullptr);
-  suite.assertClose(sv.norm(), 1.0, GET_INFO("Apply H at 2: Norm"));
-  suite.assertClose(sv.prob(2), 0.5, GET_INFO("Apply H at 2: Prob"));
-
-  sv.initialize();
-  f_h3(sv.data, 0ULL, 1ULL << (sv.nqubits - 1 - cpuConfig.simdS), nullptr);
-  suite.assertClose(sv.norm(), 1.0, GET_INFO("Apply H at 3: Norm"));
-  suite.assertClose(sv.prob(3), 0.5, GET_INFO("Apply H at 3: Prob"));
+  StatevectorAlt<double, simd_s> sv(/* nqubits */ 6, /* initialize */ true);
 
   // randomized tests
   std::vector<double> pBefore(sv.nqubits), pAfter(sv.nqubits);
@@ -73,7 +52,7 @@ void testU() {
 
   for (int q = 0; q < sv.nqubits; q++)
     pBefore[q] = sv.prob(q);
-  f_h0(sv.data, 0ULL, 1ULL << (sv.nqubits - 1 - cpuConfig.simdS), nullptr);
+  f_h0(sv.data, 0ULL, 1ULL << (sv.nqubits - 1 - cpuConfig.simd_s), nullptr);
   for (int q = 0; q < sv.nqubits; q++)
     pAfter[q] = sv.prob(q);
   pAfter[0] = pBefore[0]; // probably could only change at the applied qubit
@@ -83,7 +62,7 @@ void testU() {
 
   for (int q = 0; q < sv.nqubits; q++)
     pBefore[q] = sv.prob(q);
-  f_h1(sv.data, 0ULL, 1ULL << (sv.nqubits - 1 - cpuConfig.simdS), nullptr);
+  f_h1(sv.data, 0ULL, 1ULL << (sv.nqubits - 1 - cpuConfig.simd_s), nullptr);
   for (int q = 0; q < sv.nqubits; q++)
     pAfter[q] = sv.prob(q);
   pAfter[1] = pBefore[1]; // probably could only change at the applied qubit
@@ -93,7 +72,7 @@ void testU() {
 
   for (int q = 0; q < sv.nqubits; q++)
     pBefore[q] = sv.prob(q);
-  f_h2(sv.data, 0ULL, 1ULL << (sv.nqubits - 1 - cpuConfig.simdS), nullptr);
+  f_h2(sv.data, 0ULL, 1ULL << (sv.nqubits - 1 - cpuConfig.simd_s), nullptr);
   for (int q = 0; q < sv.nqubits; q++)
     pAfter[q] = sv.prob(q);
   pAfter[2] = pBefore[2]; // probably could only change at the applied qubit
@@ -103,7 +82,7 @@ void testU() {
 
   for (int q = 0; q < sv.nqubits; q++)
     pBefore[q] = sv.prob(q);
-  f_h3(sv.data, 0ULL, 1ULL << (sv.nqubits - 1 - cpuConfig.simdS), nullptr);
+  f_h3(sv.data, 0ULL, 1ULL << (sv.nqubits - 1 - cpuConfig.simd_s), nullptr);
   for (int q = 0; q < sv.nqubits; q++)
     pAfter[q] = sv.prob(q);
   pAfter[3] = pBefore[3]; // probably could only change at the applied qubit
@@ -114,12 +93,56 @@ void testU() {
   suite.displayResult();
 }
 
-int main() {
-  testH</* simdS */ 1>();
-  testH</* simdS */ 2>();
+/// @brief Test utils::statevector<T>::applyGate(const QuantumGate&)
+template<unsigned simd_s>
+void test_applyGate() {
+  TestSuite suite("applyGate with simd_s = " + std::to_string(simd_s));
 
-  testU</* simdS */ 1>();
-  testU</* simdS */ 2>();
+  StatevectorAlt<double, simd_s> sv(5);
+  sv.initialize();
+  for (int q = 0; q < sv.nqubits; q++)
+    sv.applyGate(QuantumGate(GateMatrix::MatrixH_c, q));
+  for (int q = 0; q < sv.nqubits; q++) {
+    suite.assertClose(sv.prob(q), 0.5,
+      GET_INFO("Apply round H: Prob at qubit " + std::to_string(q)));
+  }
+
+  sv.randomize();
+  suite.assertClose(sv.norm(), 1.0, GET_INFO("Rand SV: Norm"));
+
+  // sv.initialize();
+  // sv.print() << "\n";
+  // sv.applyGate(QuantumGate(GateMatrix::FromName("p", {0.14}), 0));
+  // sv.print();
+
+  // phase gates do not change probabilities
+  for (int q = 0; q < sv.nqubits; q++) {
+    double pBefore = sv.prob(q);
+    auto gate0 = QuantumGate(GateMatrix::FromName("p", {0.14}), q);
+    auto gate1 = QuantumGate(GateMatrix::FromName("p", {0.41}), (q+1) % sv.nqubits);
+    auto gate = gate0.lmatmul(gate1);
+
+    sv.applyGate(gate);
+    std::stringstream ss;
+    ss << "Phase gate at qubits "
+       << q << " " << ((q+1) % sv.nqubits);
+    suite.assertClose(sv.norm(), 1.0, GET_INFO(ss.str() + ": Norm"));
+    suite.assertClose(pBefore, sv.prob(q), GET_INFO(ss.str() + ": Prob"));
+  }
+
+  
+  suite.displayResult();
+}
+
+int main() {
+  testH</* simd_s */ 1>();
+  testH</* simd_s */ 2>();
+
+  // testU</* simd_s */ 1>();
+  // testU</* simd_s */ 2>();
+
+  test_applyGate<1>();
+  // test_applyGate<2>();
 
   return 0;
 }

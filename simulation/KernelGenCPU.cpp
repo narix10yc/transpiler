@@ -118,7 +118,7 @@ Function* saot::genCPUCode(llvm::Module& llvmModule,
                            const CPUKernelGenConfig& config,
                            const QuantumGate& gate,
                            const std::string& funcName) {
-  const unsigned s = config.simdS;
+  const unsigned s = config.simd_s;
   const unsigned S = 1ULL << s;
   const unsigned k = gate.qubits.size();
   const unsigned K = 1ULL << k;

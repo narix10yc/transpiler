@@ -12,7 +12,7 @@ struct CPUKernelGenConfig {
   enum AmpFormat { AltFormat, SepFormat };
   enum MatrixLoadMode { UseMatImmValues, StackLoadMatElems, StackLoadMatVecs };
 
-  int simdS = 2;
+  int simd_s = 2;
   int precision = 64;
   AmpFormat ampFormat = AltFormat;
   bool useFMA = true;

@@ -232,37 +232,6 @@ public:
   static const p_matrix_t MatrixCZ_p;
 };
 
-// std::vector<std::complex<ScalarKind>> getScalarKinds(
-//         const GateMatrix& gateMatrix, double zeroTol, double oneTol) {
-//     std::vector<std::complex<ScalarKind>> skVec;
-//     const auto* cMat = gateMatrix.getConstantMatrix();
-//     assert(cMat);
-//     assert(cMat->edgeSize() > 0);
-
-//     auto edgeSize = cMat->edgeSize();
-//     skVec.reserve(edgeSize * edgeSize);
-
-//     for (const auto& cplx : cMat->data) {
-//         std::complex<ScalarKind> skCplx(SK_General, SK_General);
-//         if (std::abs(cplx.real()) <= zeroTol)
-//             skCplx.real(SK_Zero);
-//         else if (std::abs(cplx.real() - 1.0) <= oneTol)
-//             skCplx.real(SK_One);
-//         else if (std::abs(cplx.real() + 1.0) <= oneTol)
-//             skCplx.real(SK_MinusOne);
-
-//         if (std::abs(cplx.imag()) <= zeroTol)
-//             skCplx.imag(SK_Zero);
-//         else if (std::abs(cplx.imag() - 1.0) <= oneTol)
-//             skCplx.imag(SK_One);
-//         else if (std::abs(cplx.imag() + 1.0) <= oneTol)
-//             skCplx.imag(SK_MinusOne);
-//         skVec.push_back(skCplx);
-//     }
-
-//     return skVec;
-// }
-
 class QuantumGate {
 private:
   mutable int opCountCache = -1;

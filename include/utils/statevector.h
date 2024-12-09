@@ -10,6 +10,7 @@
 #include <random>
 #include <thread>
 
+#include "saot/QuantumGate.h"
 #include "utils/iocolor.h"
 #include "utils/utils.h"
 
@@ -320,6 +321,58 @@ public:
       os << "qubit " << q << ": " << prob(q) << "\n";
     }
     return os;
+  }
+
+  void applyGate(const saot::QuantumGate& gate) {
+    const auto* cMat = gate.gateMatrix.getConstantMatrix();
+    assert(cMat && "Can only apply constant gateMatrix");
+
+    unsigned k = gate.qubits.size();
+    unsigned K = 1 << k;
+    assert(cMat->edgeSize() == K);
+    std::vector<size_t> reIndices(K), imIndices(K);
+    std::vector<real_t> reUpdated(K), imUpdated(K);
+
+    size_t pdepMaskTask = ~static_cast<size_t>(0);
+    size_t pdepMaskAmp = 0;
+    for (const auto& q : gate.qubits) {
+      pdepMaskTask ^= (1ULL << q);
+      pdepMaskAmp |= (1ULL << q);
+    }
+
+    for (size_t taskId = 0; taskId < (N >> k); taskId++) {
+      size_t pdepTaskId = utils::pdep64(taskId, pdepMaskTask);
+      for (size_t ampId = 0; ampId < K; ampId++) {
+        reIndices[ampId] = pdepTaskId + utils::pdep64(ampId, pdepMaskAmp);
+        imIndices[ampId] = utils::insertOneToBit(reIndices[ampId], simd_s);
+        reIndices[ampId] = utils::insertZeroToBit(reIndices[ampId], simd_s);
+      }
+      // std::cerr << "taskId = " << taskId
+      //           << " (" << utils::as0b(taskId, nqubits - k) << "):\n";
+      // utils::printVectorWithPrinter(reIndices,
+      //   [&](size_t n, std::ostream& os) {
+      //     os << n << " (" << utils::as0b(n, nqubits + 1) << ")";
+      //   }, std::cerr << " reIndices: ") << "\n";
+      // utils::printVectorWithPrinter(imIndices,
+      //   [&](size_t n, std::ostream& os) {
+      //     os << n << " (" << utils::as0b(n, nqubits + 1) << ")";
+      //   }, std::cerr << " imIndices: ") << "\n";
+
+      std::memset(reUpdated.data(), 0, reUpdated.size() * sizeof(size_t));
+      std::memset(imUpdated.data(), 0, imUpdated.size() * sizeof(size_t));
+      for (unsigned r = 0; r < K; r++) {
+        for (unsigned c = 0; c < K; c++) {
+          reUpdated[r] +=
+            cMat->rc(r, c).real() * data[reIndices[c]] - cMat->rc(r, c).imag() * data[imIndices[c]];
+          imUpdated[r] +=
+            cMat->rc(r, c).real() * data[imIndices[c]] + cMat->rc(r, c).imag() * data[reIndices[c]];
+        }
+      }
+      for (unsigned r = 0; r < K; r++) {
+        data[reIndices[r]] = reUpdated[r];
+        data[imIndices[r]] = imUpdated[r];
+      }
+    }
   }
 
 }; // class StatevectorAlt

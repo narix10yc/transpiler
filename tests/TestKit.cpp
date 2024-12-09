@@ -103,3 +103,45 @@ void TestSuite::assertAllClose(
   ss << unmatchPos.back();
   failures.emplace_back(title, info, ss.str());
 }
+
+void TestSuite::assertAllClose(
+    const double* aArr, const double* bArr, size_t length,
+    const std::string& title, const std::string& info, double tol) {
+  ++nTests;
+  std::stringstream ss;
+
+  std::vector<int> unmatchPos;
+  for (int i = 0; i < length; i++) {
+    if (std::abs(aArr[i] - bArr[i]) > tol)
+      unmatchPos.push_back(i);
+  }
+  if (unmatchPos.empty())
+    return;
+  
+  ss << "Unmatch positions: ";
+  for (int i = 0, s = unmatchPos.size(); i < s-1; i++)
+    ss << unmatchPos[i] << ",";
+  ss << unmatchPos.back();
+  failures.emplace_back(title, info, ss.str());
+}
+
+void TestSuite::assertAllClose(
+    const float* aArr, const float* bArr, size_t length,
+    const std::string& title, const std::string& info, float tol) {
+  ++nTests;
+  std::stringstream ss;
+
+  std::vector<int> unmatchPos;
+  for (int i = 0; i < length; i++) {
+    if (std::abs(aArr[i] - bArr[i]) > tol)
+      unmatchPos.push_back(i);
+  }
+  if (unmatchPos.empty())
+    return;
+  
+  ss << "Unmatch positions: ";
+  for (int i = 0, s = unmatchPos.size(); i < s-1; i++)
+    ss << unmatchPos[i] << ",";
+  ss << unmatchPos.back();
+  failures.emplace_back(title, info, ss.str());
+}

@@ -39,7 +39,7 @@ static cl::opt<bool>
 UseF32("f32", cl::desc("use f32 (override -p)"), cl::init(false));
 
 static cl::opt<int>
-SimdS("S", cl::desc("vector size (s value)"), cl::Prefix, cl::init(1));
+simd_s("S", cl::desc("vector size (s value)"), cl::Prefix, cl::init(1));
 
 static cl::opt<bool>
 MultiThreaded("multi-thread", cl::desc("enable multi-threading"), cl::init(true));
@@ -187,7 +187,7 @@ int main(int argc, char* *argv) {
   cl::ParseCommandLineOptions(argc, argv);
 
   irConfig = IRGeneratorConfig{
-    .simd_s = SimdS,
+    .simd_s = simd_s,
     .precision = (UseF32 || Precision == "f32") ? 32 : 64,
     .ampFormat = ((AmpFormat == "sep") ? IRGeneratorConfig::SepFormat
                                         : IRGeneratorConfig::AltFormat),

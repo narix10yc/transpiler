@@ -148,7 +148,7 @@
 //     LoadVectorMatrix("load-vector-matrix", cl::desc(""), cl::init(true));
 
 //     cl::opt<unsigned>
-//     SimdS("S", cl::desc("vector size (s value)"), cl::Prefix, cl::init(1));
+//     simd_s("S", cl::desc("vector size (s value)"), cl::Prefix, cl::init(1));
 
 //     cl::opt<bool>
 //     UsePDEP("use-pdep", cl::desc("use pdep"), cl::init(true));
@@ -187,7 +187,7 @@
 //     }
 
 //     CodeGeneratorCPU codeGenerator(outputFilename);
-//     codeGenerator.config.simd_s = SimdS;
+//     codeGenerator.config.simd_s = simd_s;
 //     codeGenerator.config.loadMatrixInEntry = LoadMatrixInEntry;
 //     codeGenerator.config.loadVectorMatrix = LoadVectorMatrix;
 //     codeGenerator.config.usePDEP = UsePDEP;
