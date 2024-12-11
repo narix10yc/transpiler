@@ -8,9 +8,6 @@ target_link_libraries(qasm_to_saot saot qasm simulation)
 add_executable(kernel "kernel.cpp")
 target_link_libraries(kernel saot simulation utils)
 
-add_executable(correctness_kernel "correctness_kernel.cpp")
-target_link_libraries(correctness_kernel saot qasm simulation)
-
 add_executable(jit_playground "jit_playground.cpp")
 # llvm_map_components_to_libnames(llvm_libs orcjit native)
 target_link_libraries(jit_playground saot simulation qasm)
@@ -23,8 +20,8 @@ else()
     target_link_libraries(ptx_playground qasm saot simulation ${llvm_libs})
 endif()
 
-add_executable(pg_polynomial "pg_polynomial.cpp")
-target_link_libraries(pg_polynomial saot simulation)
+add_executable(scratch "scratch.cpp")
+target_link_libraries(scratch saot simulation utils)
 
 add_executable(fpga_playground "fpga_playground.cpp")
 target_link_libraries(fpga_playground qasm saot simulation)

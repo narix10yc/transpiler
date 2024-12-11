@@ -88,3 +88,28 @@ std::ostream& utils::print_complex(std::ostream& os, std::complex<double> c,
     os << std::fixed << std::setprecision(precision) << c.imag();
   return os << "i";
 }
+
+std::complex<double> utils::inner_product(
+    const std::complex<double>* aArr,
+    const std::complex<double>* bArr,
+    size_t length) {
+  std::complex<double> s = 0.0;
+  for (size_t i = 0; i < length; i++) {
+    // (ar - i ai) * (br + i bi) = (ar*br + ai*bi) + i * (ar*bi - ai*br)
+    s.real(s.real() +
+        aArr[i].real() * bArr[i].real() + aArr[i].imag() * bArr[i].imag());
+    s.imag(s.imag() +
+        aArr[i].real() * bArr[i].imag() - aArr[i].imag() * bArr[i].real());
+
+    // std::cerr << s << ", ";
+  }
+
+  return s;
+}
+
+double utils::norm_squared(const std::complex<double>* arr, size_t len) {
+  double s = 0.0;
+  for (size_t i = 0; i < len; i++)
+    s += arr[i].real() * arr[i].real() + arr[i].imag() * arr[i].imag();
+  return s;
+}

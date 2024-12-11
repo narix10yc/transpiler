@@ -17,7 +17,7 @@ namespace utils {
 bool isPermutation(const std::vector<int>& v);
 
 template<typename T>
-static bool isOrdered(const std::vector<T>& vec, bool ascending = true) {
+bool isOrdered(const std::vector<T>& vec, bool ascending = true) {
   if (vec.empty())
     return true;
 
@@ -77,7 +77,7 @@ std::ostream& printVectorWithPrinter(
 }
 
 template<typename T>
-static void pushBackIfNotInVector(std::vector<T>& vec, T elem) {
+void pushBackIfNotInVector(std::vector<T>& vec, T elem) {
   for (const auto& e : vec) {
     if (e == elem)
       return;
@@ -86,14 +86,14 @@ static void pushBackIfNotInVector(std::vector<T>& vec, T elem) {
 }
 
 template<typename T = uint64_t>
-static T insertZeroToBit(T x, int bit) {
+T insertZeroToBit(T x, int bit) {
   T maskLo = (static_cast<T>(1) << bit) - 1;
   T maskHi = ~maskLo;
   return (x & maskLo) + ((x & maskHi) << 1);
 }
 
 template<typename T = uint64_t>
-static T insertOneToBit(T x, int bit) {
+T insertOneToBit(T x, int bit) {
   T maskLo = (static_cast<T>(1) << bit) - 1;
   T maskHi = ~maskLo;
   return (x & maskLo) | ((x & maskHi) << 1) | (1 << bit);
@@ -127,6 +127,24 @@ public:
 };
 
 void timedExecute(std::function<void()> f, const char* msg);
+
+/// @brief a dagger dotted with b
+std::complex<double> inner_product(
+    const std::complex<double>* aArrBegin, 
+    const std::complex<double>* bArrBegin,
+    size_t length);
+
+double norm_squared(const std::complex<double>* arrBegin, size_t length);
+
+inline double norm(const std::complex<double>* arrBegin, size_t length) {
+  return std::sqrt(norm_squared(arrBegin, length));
+}
+
+inline void normalize(std::complex<double>* arrBegin, size_t length) {
+  double norm = utils::norm(arrBegin, length);
+  for (size_t i = 0; i < length; i++)
+    arrBegin[i] /= norm;
+}
 
 } // namespace utils
 

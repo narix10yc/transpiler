@@ -4,13 +4,13 @@ project(simulation LANGUAGES C CXX)
 
 message("############ Custom Setups ############")
 # Apple has a system LLVM. We need to use a specific version
-# specified by enviroment variable 'LLVM_ROOT' or 'llvm_root'
+# specified by environment variable 'LLVM_ROOT' or 'llvm_root'
 if(DEFINED ENV{llvm_root})
     set(LLVM_ROOT "$ENV{llvm_root}")
 elseif(DEFINED ENV{LLVM_ROOT})
     set(LLVM_ROOT "$ENV{LLVM_ROOT}")
 else()
-    message(FATAL_ERROR "Missing enviroment variable 'LLVM_ROOT' or 'llvm_root'")
+    message(FATAL_ERROR "Missing environment variable 'LLVM_ROOT' or 'llvm_root'")
 endif()
 
 message(STATUS "LLVM_ROOT: ${LLVM_ROOT}")
