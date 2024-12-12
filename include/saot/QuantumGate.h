@@ -1,7 +1,7 @@
 #ifndef SAOT_QUANTUM_GATE_H
 #define SAOT_QUANTUM_GATE_H
 
-#include "saot/ComplexMatrix.h"
+#include "saot/UnitaryPermMatrix.h"
 #include "saot/Polynomial.h"
 #include "saot/ScalarKind.h"
 #include "utils/square_matrix.h"
@@ -62,7 +62,7 @@ public:
   using gate_params_t =
       std::array<std::variant<std::monostate, int, double>, 3>;
   // unitary permutation matrix type
-  using up_matrix_t = complex_matrix::UnitaryPermutationMatrix<double>;
+  using up_matrix_t = saot::UnitaryPermutationMatrix<double>;
   // constant matrix type
   using c_matrix_t = utils::square_matrix<std::complex<double>>;
   // parametrised matrix type
