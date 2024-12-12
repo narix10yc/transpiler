@@ -4,11 +4,11 @@
 #include "saot/ComplexMatrix.h"
 #include "saot/Polynomial.h"
 #include "saot/ScalarKind.h"
-#include "utils/utils.h"
+#include "utils/square_matrix.h"
 
 #include <array>
-#include <optional>
 #include <variant>
+
 namespace saot {
 
 enum GateKind : int {
@@ -46,13 +46,15 @@ enum GateKind : int {
 GateKind String2GateKind(const std::string& s);
 std::string GateKind2String(GateKind t);
 
-std::ostream& printConstantMatrix(
+inline std::ostream& printConstantMatrix(
     std::ostream& os,
-    const complex_matrix::SquareMatrix<std::complex<double>>& cMat);
+    const utils::square_matrix<std::complex<double>>& cMat) {
+  return utils::printComplexMatrixF64(os, cMat);
+}
 
 std::ostream& printParametrizedMatrix(
     std::ostream& os,
-    const complex_matrix::SquareMatrix<saot::Polynomial>& cMat);
+    const utils::square_matrix<saot::Polynomial>& cMat);
 
 class GateMatrix {
 public:
@@ -62,11 +64,11 @@ public:
   // unitary permutation matrix type
   using up_matrix_t = complex_matrix::UnitaryPermutationMatrix<double>;
   // constant matrix type
-  using c_matrix_t = complex_matrix::SquareMatrix<std::complex<double>>;
+  using c_matrix_t = utils::square_matrix<std::complex<double>>;
   // parametrised matrix type
-  using p_matrix_t = complex_matrix::SquareMatrix<saot::Polynomial>;
+  using p_matrix_t = utils::square_matrix<saot::Polynomial>;
   // matrix signature type
-  using sig_matrix_t = complex_matrix::SquareMatrix<std::complex<ScalarKind>>;
+  using sig_matrix_t = utils::square_matrix<std::complex<ScalarKind>>;
 
 private:
   enum ConvertibleKind : int {
@@ -88,9 +90,9 @@ private:
     sig_matrix_t sigMat;
 
     Cache()
-        : isConvertibleToUpMat(Unknown), upMat(), isConvertibleToCMat(Unknown),
-          cMat(), isConvertibleToPMat(Unknown), pMat(), sigZeroTol(-1.0),
-          sigOneTol(-1.0), sigMat() {}
+      : isConvertibleToUpMat(Unknown), upMat(), isConvertibleToCMat(Unknown),
+        cMat(), isConvertibleToPMat(Unknown), pMat(), sigZeroTol(-1.0),
+        sigOneTol(-1.0), sigMat() {}
   };
 
   mutable Cache cache;
@@ -190,11 +192,11 @@ public:
   std::ostream& printCMat(std::ostream& os) const {
     const auto* cMat = getConstantMatrix();
     assert(cMat);
-    return printConstantMatrix(os, *cMat);
+    return saot::printConstantMatrix(os, *cMat);
   }
 
   std::ostream& printPMat(std::ostream& os) const {
-    return printParametrizedMatrix(os, getParametrizedMatrix());
+    return saot::printParametrizedMatrix(os, getParametrizedMatrix());
   }
 
   // preset unitary matrices

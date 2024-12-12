@@ -8,7 +8,7 @@ namespace {
 inline bool isRealOnlyGate(const QuantumGate& gate, double reTol) {
   const auto* cMat = gate.gateMatrix.getConstantMatrix();
   assert(cMat);
-  for (const auto& cplx : cMat->data) {
+  for (const auto& cplx : *cMat) {
     if (std::abs(cplx.imag()) > reTol)
       return false;
   }

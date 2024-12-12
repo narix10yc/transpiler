@@ -195,7 +195,7 @@ Function* IRGenerator::generateCUDAKernel(const QuantumGate& gate,
   auto sigMat =
       gate.gateMatrix.getSignatureMatrix(config.zeroTol, config.oneTol);
   if (config.forceDenseKernel) {
-    for (auto& sig : sigMat.data) {
+    for (auto& sig : sigMat) {
       sig.real(SK_General);
       sig.imag(SK_General);
     }
@@ -254,9 +254,9 @@ Function* IRGenerator::generateCUDAKernel(const QuantumGate& gate,
     // updatedReAmp = sum(reAmps_i * reMats_i) - sum(imAmps_i * imMats_i)
     // updatedImAmp = sum(reAmps_i * imMats_i) + sum(imAmps_i * reMats_i)
     Value* reMatPtr, *imMatPtr, *reMat, *imMat;
-    if (sigMat.getRC(0, 0).real() == SK_General) {
+    if (sigMat(0, 0).real() == SK_General) {
       if (config.useImmValues && gateCMat) {
-        reMat = ConstantFP::get(scalarTy, gateCMat->getRC(0, 0).real());
+        reMat = ConstantFP::get(scalarTy, gateCMat->rc(0, 0).real());
       } else {
         reMatPtr = builder.CreateConstGEP1_64(
             scalarTy, pMatArg, 0ULL, "mat.re.ptr." + std::to_string(r) + ".0");
@@ -264,9 +264,9 @@ Function* IRGenerator::generateCUDAKernel(const QuantumGate& gate,
                                    "mat.re." + std::to_string(r) + ".0");
       }
     }
-    if (sigMat.getRC(0, 0).imag() == SK_General) {
+    if (sigMat(0, 0).imag() == SK_General) {
       if (config.useImmValues && gateCMat) {
-        imMat = ConstantFP::get(scalarTy, gateCMat->getRC(0, 0).imag());
+        imMat = ConstantFP::get(scalarTy, gateCMat->rc(0, 0).imag());
       } else {
         imMatPtr = builder.CreateConstGEP1_64(
             scalarTy, pMatArg, 1ULL, "mat.im.ptr." + std::to_string(r) + ".0");
@@ -276,31 +276,31 @@ Function* IRGenerator::generateCUDAKernel(const QuantumGate& gate,
     }
 
     Value* updatedReAmp0 =
-        genOptFMul(reMat, reAmps[0], sigMat.getRC(0, 0).real(), builder);
+        genOptFMul(reMat, reAmps[0], sigMat(0, 0).real(), builder);
     Value* updatedReAmp1 =
-        genOptFMul(imMat, imAmps[0], sigMat.getRC(0, 0).imag(), builder);
+        genOptFMul(imMat, imAmps[0], sigMat(0, 0).imag(), builder);
     Value* updatedImAmp =
-        genOptFMul(reMat, imAmps[0], sigMat.getRC(0, 0).real(), builder);
+        genOptFMul(reMat, imAmps[0], sigMat(0, 0).real(), builder);
     updatedImAmp = genMulAndAdd(imMat, reAmps[0], updatedImAmp,
-                                sigMat.getRC(0, 0).imag(), builder);
+                                sigMat(0, 0).imag(), builder);
     for (int c = 1; c < N; c++) {
       std::string suffix = std::to_string(r) + "." + std::to_string(c);
       reMat = nullptr;
       imMat = nullptr;
 
       size_t matIdx = r * N + c;
-      if (sigMat.getRC(r, c).real() == SK_General) {
+      if (sigMat(r, c).real() == SK_General) {
         if (config.useImmValues && gateCMat) {
-          reMat = ConstantFP::get(scalarTy, gateCMat->getRC(r, c).real());
+          reMat = ConstantFP::get(scalarTy, gateCMat->rc(r, c).real());
         } else {
           reMatPtr = builder.CreateConstGEP1_64(
               scalarTy, pMatArg, 2ULL * matIdx, "idx.mat.re." + suffix);
           reMat = builder.CreateLoad(scalarTy, reMatPtr, "mat.re." + suffix);
         }
       }
-      if (sigMat.getRC(r, c).imag() == SK_General) {
+      if (sigMat(r, c).imag() == SK_General) {
         if (config.useImmValues && gateCMat) {
-          imMat = ConstantFP::get(scalarTy, gateCMat->getRC(r, c).imag());
+          imMat = ConstantFP::get(scalarTy, gateCMat->rc(r, c).imag());
         } else {
           imMatPtr = builder.CreateConstGEP1_64(
               scalarTy, pMatArg, 2ULL * matIdx + 1, "idx.mat.im." + suffix);
@@ -318,13 +318,13 @@ Function* IRGenerator::generateCUDAKernel(const QuantumGate& gate,
       //     scalarTy, Intrinsic::fmuladd, { imAmps[c], reMat, updatedImAmp });
 
       updatedReAmp0 = genMulAndAdd(reMat, reAmps[c], updatedReAmp0,
-                                   sigMat.getRC(r, c).real(), builder);
+                                   sigMat(r, c).real(), builder);
       updatedReAmp1 = genMulAndAdd(imMat, imAmps[c], updatedReAmp1,
-                                   sigMat.getRC(r, c).imag(), builder);
+                                   sigMat(r, c).imag(), builder);
       updatedImAmp = genMulAndAdd(reMat, imAmps[c], updatedImAmp,
-                                  sigMat.getRC(r, c).real(), builder);
+                                  sigMat(r, c).real(), builder);
       updatedImAmp = genMulAndAdd(imMat, reAmps[c], updatedImAmp,
-                                  sigMat.getRC(r, c).imag(), builder);
+                                  sigMat(r, c).imag(), builder);
     }
 
     Value* updatedReAmp = nullptr;

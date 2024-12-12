@@ -158,8 +158,7 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int debugLevel,
     metaDataSS << "(" << realTy << "[]){";
     const auto* cMat = block->quantumGate->gateMatrix.getConstantMatrix();
     assert(cMat);
-    const auto& cdata = cMat->data;
-    for (const auto& elem : cdata)
+    for (const auto& elem : *cMat)
       metaDataSS << std::setprecision(16) << elem.real() << ","
                  << std::setprecision(16) << elem.imag() << ", ";
     metaDataSS << "} },\n";
@@ -313,8 +312,7 @@ void writeMetadataHeaderFile(const std::vector<GateBlock*>& allBlocks,
     metaDataSS << "(" << realTy << "[]){";
     const auto* cMat = block->quantumGate->gateMatrix.getConstantMatrix();
     assert(cMat);
-    const auto& cdata = cMat->data;
-    for (const auto& elem : cdata)
+    for (const auto& elem : *cMat)
       metaDataSS << std::setprecision(16) << elem.real() << ","
                  << std::setprecision(16) << elem.imag() << ", ";
     metaDataSS << "} },\n";

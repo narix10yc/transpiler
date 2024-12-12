@@ -61,33 +61,13 @@ using up_matrix_t = GateMatrix::up_matrix_t;
 using c_matrix_t = GateMatrix::c_matrix_t;
 using gate_params_t = GateMatrix::gate_params_t;
 
-std::ostream& saot::printConstantMatrix(std::ostream& os,
-                                        const c_matrix_t& cMat) {
-  const auto edgeSize = cMat.edgeSize();
-  const auto& data = cMat.data;
-  os << "[";
-  for (size_t r = 0; r < edgeSize; r++) {
-    for (size_t c = 0; c < edgeSize; c++) {
-      utils::print_complex(os, data[r * edgeSize + c], 3);
-      if (c != edgeSize - 1 || r != edgeSize - 1)
-        os << ",";
-      os << " ";
-    }
-    if (r == edgeSize - 1)
-      os << "]\n";
-    else
-      os << "\n ";
-  }
-  return os;
-}
-
-std::ostream& saot::printParametrizedMatrix(std::ostream& os,
-                                            const p_matrix_t& pMat) {
+std::ostream& saot::printParametrizedMatrix(
+    std::ostream& os, const p_matrix_t& pMat) {
   auto edgeSize = pMat.edgeSize();
   for (size_t r = 0; r < edgeSize; r++) {
     for (size_t c = 0; c < edgeSize; c++) {
       os << "[" << r << "," << c << "]: ";
-      pMat.data[r * edgeSize + c].print(os) << "\n";
+      pMat(r, c).print(os) << "\n";
     }
   }
   return os;
@@ -448,31 +428,31 @@ inline p_matrix_t matCvt_gp_to_p(GateKind kind, const gate_params_t &params) {
     p_matrix_t pmat{{1.0, 0.0}, {-1.0, 0.0}, {1.0, 0.0}, {1.0, 0.0}};
     // theta
     if (p0C) {
-      pmat.data[0] *= std::complex<double>(std::cos(*p0C), 0.0);
-      pmat.data[1] *= std::complex<double>(std::sin(*p0C), 0.0);
-      pmat.data[2] *= std::complex<double>(std::sin(*p0C), 0.0);
-      pmat.data[3] *= std::complex<double>(std::cos(*p0C), 0.0);
+      pmat(0, 0) *= std::complex<double>(std::cos(*p0C), 0.0);
+      pmat(0, 1) *= std::complex<double>(std::sin(*p0C), 0.0);
+      pmat(1, 0) *= std::complex<double>(std::sin(*p0C), 0.0);
+      pmat(1, 1) *= std::complex<double>(std::cos(*p0C), 0.0);
     } else {
-      pmat.data[0] *= Monomial::Cosine(*p0V);
-      pmat.data[1] *= Monomial::Sine(*p0V);
-      pmat.data[2] *= Monomial::Sine(*p0V);
-      pmat.data[3] *= Monomial::Cosine(*p0V);
+      pmat(0, 0) *= Monomial::Cosine(*p0V);
+      pmat(0, 1) *= Monomial::Sine(*p0V);
+      pmat(1, 0) *= Monomial::Sine(*p0V);
+      pmat(1, 1) *= Monomial::Cosine(*p0V);
     }
     // phi
     if (p1C) {
-      pmat.data[2] *= std::complex<double>(std::cos(*p1C), std::sin(*p1C));
-      pmat.data[3] *= std::complex<double>(std::cos(*p1C), std::sin(*p1C));
+      pmat(1, 0) *= std::complex<double>(std::cos(*p1C), std::sin(*p1C));
+      pmat(1, 1) *= std::complex<double>(std::cos(*p1C), std::sin(*p1C));
     } else {
-      pmat.data[2] *= Monomial::Expi(*p1V);
-      pmat.data[3] *= Monomial::Expi(*p1V);
+      pmat(1, 0) *= Monomial::Expi(*p1V);
+      pmat(1, 1) *= Monomial::Expi(*p1V);
     }
     // lambda
     if (p2C) {
-      pmat.data[1] *= std::complex<double>(std::cos(*p2C), std::sin(*p2C));
-      pmat.data[3] *= std::complex<double>(std::cos(*p2C), std::sin(*p2C));
+      pmat(0, 1) *= std::complex<double>(std::cos(*p2C), std::sin(*p2C));
+      pmat(1, 1) *= std::complex<double>(std::cos(*p2C), std::sin(*p2C));
     } else {
-      pmat.data[1] *= Monomial::Expi(*p2V);
-      pmat.data[3] *= Monomial::Expi(*p2V);
+      pmat(0, 1) *= Monomial::Expi(*p2V);
+      pmat(1, 1) *= Monomial::Expi(*p2V);
     }
     return pmat;
   }
@@ -491,9 +471,9 @@ inline p_matrix_t matCvt_gp_to_p(GateKind kind, const gate_params_t &params) {
 inline c_matrix_t matCvt_up_to_c(const up_matrix_t& up) {
   c_matrix_t cmat(up.getSize());
   for (unsigned i = 0; i < up.getSize(); i++) {
-    const auto& idx = up.data[i].first;
-    const auto& phase = up.data[i].second;
-    cmat.data[idx] = {std::cos(phase), std::sin(phase)};
+    const auto& idx = up[i].first;
+    const auto& phase = up[i].second;
+    cmat[idx] = {std::cos(phase), std::sin(phase)};
   }
   return cmat;
 }
@@ -564,14 +544,14 @@ void GateMatrix::computeAndCacheUpMat(double tolerance) const {
   for (size_t r = 0; r < edgeSize; r++) {
     bool rowFlag = false;
     for (size_t c = 0; c < edgeSize; c++) {
-      const auto& cplx = cMat->data[r * edgeSize + c];
+      const auto& cplx = cMat->rc(r, c);
       if (std::abs(cplx) > tolerance) {
         if (rowFlag) {
           cache.isConvertibleToUpMat = UnConvertible;
           return;
         }
         rowFlag = true;
-        cache.upMat.data[r] = {c, std::atan2(cplx.imag(), cplx.real())};
+        cache.upMat[r] = {c, std::atan2(cplx.imag(), cplx.real())};
       }
     }
     if (!rowFlag) {
@@ -590,9 +570,9 @@ void GateMatrix::computeAndCacheCMat() const {
     const auto edgeSize = cache.upMat.getSize();
     cache.cMat = c_matrix_t(edgeSize);
     for (unsigned i = 0; i < edgeSize; ++i) {
-      const auto& idx = cache.upMat.data[i].first;
-      const auto& phase = cache.upMat.data[i].second;
-      cache.cMat.data[idx] = {std::cos(phase), std::sin(phase)};
+      const auto& idx = cache.upMat[i].first;
+      const auto& phase = cache.upMat[i].second;
+      cache.cMat[idx] = {std::cos(phase), std::sin(phase)};
     }
     cache.isConvertibleToCMat = Convertible;
     return;
@@ -701,7 +681,7 @@ void GateMatrix::computeAndCachePMat() const {
     auto edgeSize = cache.cMat.edgeSize();
     cache.pMat = p_matrix_t(edgeSize);
     for (size_t i = 0; i < edgeSize * edgeSize; ++i)
-      cache.pMat.data[i] = Polynomial(cache.cMat.data[i]);
+      cache.pMat[i] = Polynomial(cache.cMat[i]);
     cache.isConvertibleToPMat = Convertible;
     return;
   }
@@ -715,29 +695,26 @@ namespace {
 inline void computeSigMatAfresh(const GateMatrix::c_matrix_t& cMat,
                                 double zeroTol, double oneTol,
                                 GateMatrix::sig_matrix_t& sigMat) {
-
-  assert(sigMat.data.empty());
+  assert(sigMat.edgeSize() == 0);
   auto edgeSize = cMat.edgeSize();
-  sigMat.data.reserve(edgeSize * edgeSize);
+  sigMat = GateMatrix::sig_matrix_t(edgeSize);
 
-  for (const auto& cplx : cMat.data) {
-    std::complex<ScalarKind> skCplx(SK_General, SK_General);
+  for (size_t i = 0; i < edgeSize * edgeSize; ++i) {
+    const auto& cplx = cMat[i];
     if (std::abs(cplx.real()) <= zeroTol)
-      skCplx.real(SK_Zero);
+      sigMat[i].real(SK_Zero);
     else if (std::abs(cplx.real() - 1.0) <= oneTol)
-      skCplx.real(SK_One);
+      sigMat[i].real(SK_One);
     else if (std::abs(cplx.real() + 1.0) <= oneTol)
-      skCplx.real(SK_MinusOne);
+      sigMat[i].real(SK_MinusOne);
 
     if (std::abs(cplx.imag()) <= zeroTol)
-      skCplx.imag(SK_Zero);
+      sigMat[i].imag(SK_Zero);
     else if (std::abs(cplx.imag() - 1.0) <= oneTol)
-      skCplx.imag(SK_One);
+      sigMat[i].imag(SK_One);
     else if (std::abs(cplx.imag() + 1.0) <= oneTol)
-      skCplx.imag(SK_MinusOne);
-    sigMat.data.push_back(skCplx);
+      sigMat[i].imag(SK_MinusOne);
   }
-  sigMat.updateSize();
 }
 
 } // anonymous namespace

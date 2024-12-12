@@ -1,68 +1,155 @@
-#ifndef UTILS_SQUARE_MATRIX_H
-#define UTILS_SQUARE_MATRIX_H
+#ifndef Udata_tILS_SQUARE_MAdata_tRIX_H
+#define Udata_tILS_SQUARE_MAdata_tRIX_H
 
-#include <memory>
 #include <cassert>
 #include <complex>
 #include <iostream>
+#include <llvm/Support/FileSystem.h>
+#include <utils/utils.h>
+#include <valarray>
+#include <vector>
 
 namespace utils {
 
-/// @brief square_matrix<T>: a simple wrapper of square matrices. Elements are
+/// @brief square_matrix<data_t>: a simple wrapper of square matrices. Elements are
 /// by default 'not' initialized.
-template<typename T>
+template<typename data_t>
 class square_matrix {
 private:
-  T* _data;
   size_t _edgeSize; // use size_t here to avoid overflow
+  data_t* _data;
 public:
+  square_matrix() = default;
+
   square_matrix(unsigned edgeSize)
-      : _data((T*)std::malloc((size_t)(edgeSize) * edgeSize * sizeof(T)))
-      , _edgeSize(edgeSize) {
+    : _edgeSize(edgeSize)
+    , _data(new data_t[static_cast<size_t>(edgeSize) * edgeSize]) {
     assert(_data != nullptr);
   }
 
-  ~square_matrix() { std::free(_data); }
+  square_matrix(std::initializer_list<data_t> initData) {
+    auto size = initData.size();
+    if (size == 0) {
+      _edgeSize = 0;
+      _data = nullptr;
+      return;
+    }
+    _edgeSize = std::sqrt(size);
+    assert(_edgeSize * _edgeSize == size);
+    _data = new data_t[_edgeSize * _edgeSize];
+    size_t i = 0;
+    for (const auto& item : initData)
+      _data[i++] = item;
+  }
 
-  square_matrix(const square_matrix&) { assert(0 && "Not Implemented"); }
-  square_matrix(square_matrix&&) { assert(0 && "Not Implemented"); }
+  ~square_matrix() { delete[] _data; }
+
+  square_matrix(const square_matrix& other)
+    : _edgeSize(other.edgeSize())
+    , _data(new data_t[other.edgeSize() * other.edgeSize()]) {
+    for (size_t i = 0; i < _edgeSize * _edgeSize; i++)
+      _data[i] = other[i];
+  }
+
+  square_matrix(square_matrix&& other) noexcept
+    : _edgeSize(other.edgeSize())
+    , _data(other._data) {
+    other._data = nullptr;
+  }
   
-  square_matrix& operator=(const square_matrix&) { assert(0 && "Not Implemented"); }
-  square_matrix& operator=(square_matrix&&) { assert(0 && "Not Implemented"); }
+  square_matrix& operator=(const square_matrix& other) {
+    if (this == &other)
+      return *this;
 
-  T* data() { return _data; }
-  const T* data() const { return _data; }
+    this->~square_matrix();
+    new (this) square_matrix(other);
+    return *this;
+  }
 
-  T* row(unsigned r) {
+  square_matrix& operator=(square_matrix&& other) noexcept {
+    if (&other == this)
+      return *this;
+
+    this->~square_matrix();
+    new (this) square_matrix(std::move(other));
+    assert(other._data == nullptr);
+    return *this;
+  }
+
+  data_t* data() { return _data; }
+  const data_t* data() const { return _data; }
+
+  // get the pointer to the row r
+  data_t* row(unsigned r) {
     assert(r < _edgeSize);
     return _data + r * _edgeSize;
   }
-  const T* row(unsigned r) const {
+
+  // get the pointer to the row r
+  const data_t* row(unsigned r) const {
     assert(r < _edgeSize);
     return _data + r * _edgeSize;
   }
 
   // get element specified by row and column
-  T& rc(unsigned r, unsigned c) {
+  data_t& rc(unsigned r, unsigned c) {
     assert(r < _edgeSize && c < _edgeSize);
     return _data[r * _edgeSize + c];
   }
 
   // get element specified by row and column
-  const T& rc(unsigned r, unsigned c) const {
+  const data_t& rc(unsigned r, unsigned c) const {
     assert(r < _edgeSize && c < _edgeSize);
     return _data[r * _edgeSize + c];
   }
 
   // get element specified by row and column
-  T& operator()(unsigned r, unsigned c) { return rc(r, c); }
-  
+  data_t& operator()(unsigned r, unsigned c) { return rc(r, c); }
   // get element specified by row and column
-  const T& operator()(unsigned r, unsigned c) const { return rc(r, c); }
+  const data_t& operator()(unsigned r, unsigned c) const { return rc(r, c); }
+
+  data_t& operator[](size_t idx) { return _data[idx]; }
+  const data_t& operator[](size_t idx) const { return _data[idx]; }
+
+  data_t* begin() { return _data; }
+  data_t* end() { return _data + _edgeSize; }
+
+  const data_t* begin() const { return _data; }
+  const data_t* end() const { return _data + _edgeSize; }
 
   size_t edgeSize() const { return _edgeSize; }
 
-  size_t sizeInBytes() const { return _edgeSize * _edgeSize * sizeof(T); }
+  size_t sizeInBytes() const { return _edgeSize * _edgeSize * sizeof(data_t); }
+
+  square_matrix permute(const std::vector<int>& flags) const {
+    assert(utils::isPermutation(flags));
+    assert(1 << flags.size() == _edgeSize);
+
+    if (std::all_of(flags.begin(), flags.end(),
+        [&flags](int i) {
+          return flags[i] == i;
+        })
+      )
+      return square_matrix(*this);
+
+    const auto permuteIndex =
+      [&flags, k = flags.size()](unsigned idx) -> unsigned {
+      unsigned newIdx = 0;
+      for (unsigned b = 0; b < k; b++) {
+        newIdx += ((idx & (1ULL << b)) >> b) << flags[b];
+      }
+      return newIdx;
+    };
+
+    square_matrix matrix(_edgeSize);
+    for (unsigned r = 0; r < _edgeSize; r++) {
+      for (unsigned c = 0; c < _edgeSize; c++) {
+        matrix(permuteIndex(r), permuteIndex(c)) = this->rc(r, c);
+      }
+    }
+
+    return matrix;
+  }
 };
 
 square_matrix<std::complex<double>> randomUnitaryMatrix(unsigned edgeSize);
@@ -78,4 +165,4 @@ inline std::ostream& printComplexMatrixF64(
 
 } // namespace utils
 
-#endif // UTILS_SQUARE_MATRIX_H
+#endif // Udata_tILS_SQUARE_MAdata_tRIX_H

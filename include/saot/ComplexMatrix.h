@@ -31,6 +31,11 @@ public:
 
   size_t getSize() const { return data.size(); }
 
+  std::pair<size_t, data_t>& operator[](size_t index) { return data[index]; }
+  const std::pair<size_t, data_t>& operator[](size_t index) const {
+    return data[index];
+  }
+
   static UnitaryPermutationMatrix Identity(size_t size) {
     UnitaryPermutationMatrix m(size);
     for (size_t i = 0; i < size; i++)

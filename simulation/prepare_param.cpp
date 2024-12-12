@@ -97,7 +97,7 @@ Function* IRGenerator::generatePrepareParameter(const CircuitGraph& graph) {
 
     const GateMatrix& gateMatrix = gateBlock->quantumGate->gateMatrix;
     if (const auto* cMat = gateMatrix.getConstantMatrix()) {
-      const auto& cData = cMat->data;
+      const auto& cData = cMat->data();
       for (uint64_t d = 0; d < numCompMatrixEntries; d++) {
         std::string gepName;
         Value* matPtrV;
@@ -116,7 +116,7 @@ Function* IRGenerator::generatePrepareParameter(const CircuitGraph& graph) {
                             matPtrV);
       }
     } else {
-      const auto& pData = gateMatrix.getParametrizedMatrix().data;
+      const auto* pData = gateMatrix.getParametrizedMatrix().data();
       for (uint64_t d = 0; d < numCompMatrixEntries; d++) {
         auto polyV = generatePolynomial(pData[d], feeder);
         std::string gepName;

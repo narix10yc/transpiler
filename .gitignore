@@ -1,10 +1,13 @@
 .vscode/*
+.idea/*
 *.o
 *.exe
 examples/simple.qasm
 examples/complex.qasm
 *.rec
 build/*
+build-debug/*
+build-release/*
 tmp/*
 */gen_file*
 performance/obj

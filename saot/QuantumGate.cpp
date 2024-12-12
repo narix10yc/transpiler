@@ -218,7 +218,7 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
         }
         // std::cerr << "  aIdx = " << aIdx << ": " << aCMat->data[aIdx] << ";"
                   // << "  bIdx = " << bIdx << ": " << bCMat->data[bIdx] << "\n";
-        cCMat.data[i] += aCMat->data[aIdx] * bCMat->data[bIdx];
+        cCMat[i] += aCMat->data()[aIdx] * bCMat->data()[bIdx];
       }
     }
     return QuantumGate(GateMatrix(cCMat), cQubits);
@@ -242,7 +242,7 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
           bIdx += bSharedQubitShifts[bit];
         }
       }
-      cPMat.data[i] += aPMat.data[aIdx] * bPMat.data[bIdx];
+      cPMat[i] += aPMat[aIdx] * bPMat[bIdx];
     }
   }
 
@@ -252,7 +252,7 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
 namespace { // QuantumGate::opCount helper functions
 inline int opCount_c(const GateMatrix::c_matrix_t& mat, double thres) {
   int count = 0;
-  for (const auto& data : mat.data) {
+  for (const auto& data : mat) {
     if (std::abs(data.real()) >= thres)
       ++count;
     if (std::abs(data.imag()) >= thres)
@@ -263,7 +263,7 @@ inline int opCount_c(const GateMatrix::c_matrix_t& mat, double thres) {
 
 inline int opCount_p(const GateMatrix::p_matrix_t& mat, double thres) {
   int count = 0;
-  for (const auto& data : mat.data) {
+  for (const auto& data : mat) {
     auto ev = data.getValue();
     if (ev.first) {
       if (std::abs(ev.second.real()) >= thres)

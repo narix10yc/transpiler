@@ -144,8 +144,8 @@ Function* IRGenerator::generateKernelDebug(const QuantumGate& gate,
         matrix[i].imagFlag = 2;
         continue;
       }
-      auto real = cMat->data.at(i).real();
-      auto imag = cMat->data.at(i).imag();
+      auto real = cMat->data()[i].real();
+      auto imag = cMat->data()[i].imag();
 
       if (std::abs(real) < zeroSkipThres)
         matrix[i].realFlag = 0;

@@ -80,8 +80,8 @@ inline std::vector<MatData> getMatrixData(
       data[i].imKind = SK_General;
       continue;
     }
-    auto real = cMat->data[i].real();
-    auto imag = cMat->data[i].imag();
+    auto real = cMat->data()[i].real();
+    auto imag = cMat->data()[i].imag();
 
     if (std::abs(real) < zTol)
       data[i].reKind = SK_Zero;
