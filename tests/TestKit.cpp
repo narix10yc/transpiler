@@ -7,8 +7,7 @@ using namespace saot::test;
 bool TestSuite::displayResult() const {
   std::cerr << BOLDCYAN("Test Result of '" << name << "': ");
   if (failures.empty()) {
-    std::cerr << BOLDGREEN(nTests << "/" << nTests << " Passed!\n")
-              << GREEN("All tests passed!\n");
+    std::cerr << BOLDGREEN(nTests << "/" << nTests << " Passed!\n");
     return true;
   }
 

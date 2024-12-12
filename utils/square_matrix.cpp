@@ -13,27 +13,20 @@ utils::randomUnitaryMatrix(unsigned edgeSize) {
 
   square_matrix<std::complex<double>> matrix(edgeSize);
   for (unsigned r = 0; r < edgeSize; r++) {
-    for (unsigned c = 0; c < edgeSize; c++)       
+    for (unsigned c = 0; c < edgeSize; c++)
       matrix(r, c) = { dist(gen), dist(gen) };
-    
+
     // project
     for (unsigned rr = 0; rr < r; rr++) {
       auto coef = utils::inner_product(matrix.row(rr), matrix.row(r), edgeSize);
       for (unsigned c = 0; c < edgeSize; c++)
         matrix(r, c) -= coef * matrix(rr, c);
-      // printComplexMatrixF64(matrix);
-      // std::cerr << utils::inner_product(matrix.row(r), matrix.row(rr), edgeSize) << "\n";
       assert(std::abs(utils::inner_product(matrix.row(r), matrix.row(rr), edgeSize)) < 1e-8);
     }
 
     // normalize
-    // printComplexMatrixF64(matrix);
     utils::normalize(matrix.row(r), edgeSize);
-    // printComplexMatrixF64(matrix);
-
   }
-  std::cerr << utils::inner_product(matrix.row(0), matrix.row(1), edgeSize) << "\n";
-
   return matrix;
 }
 
@@ -52,7 +45,7 @@ std::ostream& utils::printComplexMatrixF64(
       utils::print_complex(os, matrix(r, c)) << ", ";
     os << "\n ";
   }
-  
+
   // last row
   for (unsigned c = 0; c < matrix.edgeSize(); c++)
     utils::print_complex(os, matrix(matrix.edgeSize() - 1, c)) << ", ";

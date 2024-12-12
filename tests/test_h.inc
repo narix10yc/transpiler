@@ -1,5 +1,5 @@
 template<unsigned simd_s>
-void testH() {
+void test_H() {
   TestSuite suite("Gate H with simd_s = " + std::to_string(simd_s));
   suite.assertClose(1e-10, 0.0, GET_INFO("1e-10 is close to 0.0"));
 

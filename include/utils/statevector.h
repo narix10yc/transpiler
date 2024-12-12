@@ -56,7 +56,7 @@ public:
     }
   }
 
-  StatevectorSep(StatevectorSep&&that)
+  StatevectorSep(StatevectorSep&& that) noexcept
       : nqubits(that.nqubits), N(that.N), real(that.real), imag(that.imag) {
     that.real = nullptr;
     that.imag = nullptr;
@@ -80,7 +80,7 @@ public:
     return *this;
   }
 
-  StatevectorSep& operator=(StatevectorSep&&that) {
+  StatevectorSep& operator=(StatevectorSep&&that) noexcept {
     this->~StatevectorSep();
     real = that.real;
     imag = that.imag;
@@ -323,7 +323,7 @@ public:
     return os;
   }
 
-  void applyGate(const saot::QuantumGate& gate) {
+  StatevectorAlt& applyGate(const saot::QuantumGate& gate) {
     const auto* cMat = gate.gateMatrix.getConstantMatrix();
     assert(cMat && "Can only apply constant gateMatrix");
 
@@ -373,6 +373,7 @@ public:
         data[imIndices[r]] = imUpdated[r];
       }
     }
+    return *this;
   }
 
 }; // class StatevectorAlt
