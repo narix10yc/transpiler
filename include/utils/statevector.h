@@ -1,20 +1,18 @@
 #ifndef UTILS_STATEVECTOR_H
 #define UTILS_STATEVECTOR_H
 
-#include <bitset>
-#include <cassert>
+#include <memory>
 #include <complex>
-#include <cstdlib>
-#include <functional>
 #include <iostream>
 #include <random>
 #include <thread>
+#include <cstdlib>
 
 #include "saot/QuantumGate.h"
 #include "utils/iocolor.h"
 #include "utils/utils.h"
 
-namespace utils::statevector {
+namespace utils {
 
 template<typename real_t>
 class StatevectorSep;

@@ -2,6 +2,9 @@ llvm_map_components_to_libnames(llvm_libs support core irreader orcjit native)
 target_link_libraries(simulation utils ${llvm_libs})
 target_link_libraries(saot utils ${llvm_libs})
 
+add_executable(unit_test "test_main.cpp")
+target_link_libraries(unit_test saot simulation TestKit)
+
 add_executable(qasm_to_saot "qasm_to_saot.cpp")
 target_link_libraries(qasm_to_saot saot qasm simulation)
 

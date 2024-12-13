@@ -1,15 +1,14 @@
-
 #ifndef SAOT_TESTS_TESTKIT_H
 #define SAOT_TESTS_TESTKIT_H
-
-#include "utils/iocolor.h"
 
 #include <vector>
 #include <sstream>
 
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
-#define GET_INFO(TITLE) TITLE, __FILE__ ":" TOSTRING(__LINE__)
+#define GET_INFO() __FILE__ ":" TOSTRING(__LINE__)
+
+#define CPU_FUNC_TYPE void(void*, uint64_t, uint64_t, const void*)
 
 namespace saot::test {
 
@@ -69,6 +68,18 @@ public:
 
 };
 
+void test_applyGate();
+void test_gateMatMul();
+
+void test_cpuH();
+void test_cpuU();
+
+inline void test_all() {
+  test_applyGate();
+  test_applyGate();
+  test_cpuH();
+  test_cpuU();
+}
 
 } // namespace saot::test
 

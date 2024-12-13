@@ -1,7 +1,14 @@
+#include "simulation/KernelGen.h"
+#include "simulation/JIT.h"
+#include "tests/TestKit.h"
+#include "utils/statevector.h"
+
+using namespace saot;
+using namespace utils;
+
 template<unsigned simd_s>
-void test_H() {
-  TestSuite suite("Gate H with simd_s = " + std::to_string(simd_s));
-  suite.assertClose(1e-10, 0.0, GET_INFO("1e-10 is close to 0.0"));
+static void internal() {
+  test::TestSuite suite("Gate H (s = " + std::to_string(simd_s) + ")");
 
   auto llvmContext = std::make_unique<llvm::LLVMContext>();
   auto llvmModule = std::make_unique<llvm::Module>("myModule", *llvmContext);
@@ -18,38 +25,38 @@ void test_H() {
   cantFail(jit->addIRModule(llvm::orc::ThreadSafeModule(
     std::move(llvmModule), std::move(llvmContext))));
 
-  auto f_h0 = jit->lookup("gate_h_0")->toPtr<FUNC_TYPE>();
-  auto f_h1 = jit->lookup("gate_h_1")->toPtr<FUNC_TYPE>();
-  auto f_h2 = jit->lookup("gate_h_2")->toPtr<FUNC_TYPE>();
-  auto f_h3 = jit->lookup("gate_h_3")->toPtr<FUNC_TYPE>();
+  auto f_h0 = jit->lookup("gate_h_0")->toPtr<CPU_FUNC_TYPE>();
+  auto f_h1 = jit->lookup("gate_h_1")->toPtr<CPU_FUNC_TYPE>();
+  auto f_h2 = jit->lookup("gate_h_2")->toPtr<CPU_FUNC_TYPE>();
+  auto f_h3 = jit->lookup("gate_h_3")->toPtr<CPU_FUNC_TYPE>();
 
   StatevectorAlt<double, simd_s> sv(/* nqubits */ 6, /* initialize */ true);
-  suite.assertClose(sv.norm(), 1.0, GET_INFO("SV Initialization: Norm"));
-  suite.assertClose(sv.prob(0), 0.0, GET_INFO("SV Initialization: Prob"));
+  suite.assertClose(sv.norm(), 1.0, "SV Initialization: Norm", GET_INFO());
+  suite.assertClose(sv.prob(0), 0.0, "SV Initialization: Prob", GET_INFO());
 
   f_h0(sv.data, 0ULL, 1ULL << (sv.nqubits - 1 - cpuConfig.simd_s), nullptr);
-  suite.assertClose(sv.norm(), 1.0, GET_INFO("Apply H at 0: Norm"));
-  suite.assertClose(sv.prob(0), 0.5, GET_INFO("Apply H at 0: Prob"));
-  
+  suite.assertClose(sv.norm(), 1.0, "Apply H at 0: Norm", GET_INFO());
+  suite.assertClose(sv.prob(0), 0.5, "Apply H at 0: Prob", GET_INFO());
+
   sv.initialize();
   f_h1(sv.data, 0ULL, 1ULL << (sv.nqubits - 1 - cpuConfig.simd_s), nullptr);
-  suite.assertClose(sv.norm(), 1.0, GET_INFO("Apply H at 1: Norm"));
-  suite.assertClose(sv.prob(1), 0.5, GET_INFO("Apply H at 1: Prob"));
+  suite.assertClose(sv.norm(), 1.0, "Apply H at 1: Norm", GET_INFO());
+  suite.assertClose(sv.prob(1), 0.5, "Apply H at 1: Prob", GET_INFO());
 
   sv.initialize();
   f_h2(sv.data, 0ULL, 1ULL << (sv.nqubits - 1 - cpuConfig.simd_s), nullptr);
-  suite.assertClose(sv.norm(), 1.0, GET_INFO("Apply H at 2: Norm"));
-  suite.assertClose(sv.prob(2), 0.5, GET_INFO("Apply H at 2: Prob"));
+  suite.assertClose(sv.norm(), 1.0, "Apply H at 2: Norm", GET_INFO());
+  suite.assertClose(sv.prob(2), 0.5, "Apply H at 2: Prob", GET_INFO());
 
   sv.initialize();
   f_h3(sv.data, 0ULL, 1ULL << (sv.nqubits - 1 - cpuConfig.simd_s), nullptr);
-  suite.assertClose(sv.norm(), 1.0, GET_INFO("Apply H at 3: Norm"));
-  suite.assertClose(sv.prob(3), 0.5, GET_INFO("Apply H at 3: Prob"));
+  suite.assertClose(sv.norm(), 1.0, "Apply H at 3: Norm", GET_INFO());
+  suite.assertClose(sv.prob(3), 0.5, "Apply H at 3: Prob", GET_INFO());
 
   // randomized tests
   std::vector<double> pBefore(sv.nqubits), pAfter(sv.nqubits);
   sv.randomize();
-  suite.assertClose(sv.norm(), 1.0, GET_INFO("SV Rand Init: Norm"));
+  suite.assertClose(sv.norm(), 1.0, "SV Rand Init: Norm", GET_INFO());
 
   for (int q = 0; q < sv.nqubits; q++)
     pBefore[q] = sv.prob(q);
@@ -57,9 +64,9 @@ void test_H() {
   for (int q = 0; q < sv.nqubits; q++)
     pAfter[q] = sv.prob(q);
   pAfter[0] = pBefore[0]; // probably could only change at the applied qubit
-  suite.assertClose(sv.norm(), 1.0, GET_INFO("Apply H to Rand SV at 0: Norm"));
+  suite.assertClose(sv.norm(), 1.0, "Apply H to Rand SV at 0: Norm", GET_INFO());
   suite.assertAllClose(
-    pBefore, pAfter, GET_INFO("Apply H to Rand SV at 0: Prob"));
+    pBefore, pAfter, "Apply H to Rand SV at 0: Prob", GET_INFO());
 
   for (int q = 0; q < sv.nqubits; q++)
     pBefore[q] = sv.prob(q);
@@ -67,9 +74,9 @@ void test_H() {
   for (int q = 0; q < sv.nqubits; q++)
     pAfter[q] = sv.prob(q);
   pAfter[1] = pBefore[1]; // probably could only change at the applied qubit
-  suite.assertClose(sv.norm(), 1.0, GET_INFO("Apply H to Rand SV at 1: Norm"));
+  suite.assertClose(sv.norm(), 1.0, "Apply H to Rand SV at 1: Norm", GET_INFO());
   suite.assertAllClose(
-    pBefore, pAfter, GET_INFO("Apply H to Rand SV at 1: Prob"));
+    pBefore, pAfter, "Apply H to Rand SV at 1: Prob", GET_INFO());
 
   for (int q = 0; q < sv.nqubits; q++)
     pBefore[q] = sv.prob(q);
@@ -77,9 +84,9 @@ void test_H() {
   for (int q = 0; q < sv.nqubits; q++)
     pAfter[q] = sv.prob(q);
   pAfter[2] = pBefore[2]; // probably could only change at the applied qubit
-  suite.assertClose(sv.norm(), 1.0, GET_INFO("Apply H to Rand SV at 2: Norm"));
+  suite.assertClose(sv.norm(), 1.0, "Apply H to Rand SV at 2: Norm", GET_INFO());
   suite.assertAllClose(
-    pBefore, pAfter, GET_INFO("Apply H to Rand SV at 2: Prob"));
+    pBefore, pAfter, "Apply H to Rand SV at 2: Prob", GET_INFO());
 
   for (int q = 0; q < sv.nqubits; q++)
     pBefore[q] = sv.prob(q);
@@ -87,9 +94,14 @@ void test_H() {
   for (int q = 0; q < sv.nqubits; q++)
     pAfter[q] = sv.prob(q);
   pAfter[3] = pBefore[3]; // probably could only change at the applied qubit
-  suite.assertClose(sv.norm(), 1.0, GET_INFO("Apply H to Rand SV at 3: Norm"));
+  suite.assertClose(sv.norm(), 1.0, "Apply H to Rand SV at 3: Norm", GET_INFO());
   suite.assertAllClose(
-    pBefore, pAfter, GET_INFO("Apply H to Rand SV at 3: Prob"));
+    pBefore, pAfter, "Apply H to Rand SV at 3: Prob", GET_INFO());
 
   suite.displayResult();
+}
+
+void test::test_cpuH() {
+  internal<1>();
+  internal<2>();
 }

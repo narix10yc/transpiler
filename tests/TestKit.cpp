@@ -1,5 +1,5 @@
 #include "tests/TestKit.h"
-
+#include "utils/iocolor.h"
 #include <iostream>
 
 using namespace saot::test;

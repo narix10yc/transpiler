@@ -1,5 +1,3 @@
-add_library(TestKit STATIC "TestKit.cpp")
+file(GLOB SRC_FILES "*.cpp")
 
-add_executable(unit_test "test_main.cpp")
-target_link_libraries(unit_test saot simulation TestKit utils)
-
+add_library(TestKit STATIC ${SRC_FILES})

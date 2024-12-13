@@ -1,11 +1,19 @@
+#include "simulation/KernelGen.h"
+#include "simulation/JIT.h"
+#include "tests/TestKit.h"
+#include "utils/statevector.h"
+
+using namespace saot;
+using namespace utils;
+
 /// @brief Test general single-qubit unitary gates
 template<unsigned simd_s>
-void test_U() {
-  TestSuite suite("Gate U with simd_s = " + std::to_string(simd_s));
+static void internal() {
+  test::TestSuite suite("Gate U (s = " + std::to_string(simd_s) + ")");
   constexpr int nqubits = 5;
   StatevectorAlt<double, simd_s> sv0(nqubits), sv1(nqubits);
   sv0.randomize();
-  suite.assertClose(sv0.norm(), 1.0, GET_INFO("Rand SV: Norm"));
+  suite.assertClose(sv0.norm(), 1.0, "Rand SV: Norm", GET_INFO());
   sv1 = sv0;
 
   auto randMatrix = utils::randomUnitaryMatrix(2);
@@ -30,30 +38,39 @@ void test_U() {
   cantFail(jit->addIRModule(llvm::orc::ThreadSafeModule(
     std::move(llvmModule), std::move(llvmContext))));
 
-  auto f_h0 = jit->lookup("gate_u_0")->toPtr<FUNC_TYPE>();
-  auto f_h1 = jit->lookup("gate_u_1")->toPtr<FUNC_TYPE>();
-  auto f_h2 = jit->lookup("gate_u_2")->toPtr<FUNC_TYPE>();
-  auto f_h3 = jit->lookup("gate_u_3")->toPtr<FUNC_TYPE>();
+  auto f_h0 = jit->lookup("gate_u_0")->toPtr<CPU_FUNC_TYPE>();
+  auto f_h1 = jit->lookup("gate_u_1")->toPtr<CPU_FUNC_TYPE>();
+  auto f_h2 = jit->lookup("gate_u_2")->toPtr<CPU_FUNC_TYPE>();
+  auto f_h3 = jit->lookup("gate_u_3")->toPtr<CPU_FUNC_TYPE>();
 
   f_h0(sv0.data, 0ULL, 1ULL << (nqubits - 1 - cpuConfig.simd_s), nullptr);
-  suite.assertClose(sv0.norm(), 1.0, GET_INFO("Apply U at 0: Norm"));
+  suite.assertClose(sv0.norm(), 1.0, "Apply U at 0: Norm", GET_INFO());
   sv1.applyGate(gate0);
-  suite.assertAllClose(sv0.data, sv1.data, 2ULL << nqubits, GET_INFO("Apply U at 0: Amplitudes"));
+  suite.assertAllClose(sv0.data, sv1.data, 2ULL << nqubits,
+                       "Apply U at 0: Amplitudes", GET_INFO());
 
   f_h1(sv0.data, 0ULL, 1ULL << (nqubits - 1 - cpuConfig.simd_s), nullptr);
-  suite.assertClose(sv0.norm(), 1.0, GET_INFO("Apply U at 1: Norm"));
+  suite.assertClose(sv0.norm(), 1.0, "Apply U at 1: Norm", GET_INFO());
   sv1.applyGate(gate1);
-  suite.assertAllClose(sv0.data, sv1.data, 2ULL << nqubits, GET_INFO("Apply U at 1: Amplitudes"));
+  suite.assertAllClose(sv0.data, sv1.data, 2ULL << nqubits,
+                       "Apply U at 1: Amplitudes", GET_INFO());
 
   f_h2(sv0.data, 0ULL, 1ULL << (nqubits - 1 - cpuConfig.simd_s), nullptr);
-  suite.assertClose(sv0.norm(), 1.0, GET_INFO("Apply U at 2: Norm"));
+  suite.assertClose(sv0.norm(), 1.0, "Apply U at 2: Norm", GET_INFO());
   sv1.applyGate(gate2);
-  suite.assertAllClose(sv0.data, sv1.data, 2ULL << nqubits, GET_INFO("Apply U at 2: Amplitudes"));
+  suite.assertAllClose(sv0.data, sv1.data, 2ULL << nqubits,
+                       "Apply U at 2: Amplitudes", GET_INFO());
 
   f_h3(sv0.data, 0ULL, 1ULL << (nqubits - 1 - cpuConfig.simd_s), nullptr);
-  suite.assertClose(sv0.norm(), 1.0, GET_INFO("Apply U at 3: Norm"));
+  suite.assertClose(sv0.norm(), 1.0, "Apply U at 3: Norm", GET_INFO());
   sv1.applyGate(gate3);
-  suite.assertAllClose(sv0.data, sv1.data, 2ULL << nqubits, GET_INFO("Apply U at 3: Amplitudes"));
+  suite.assertAllClose(sv0.data, sv1.data, 2ULL << nqubits,
+                       "Apply U at 3: Amplitudes", GET_INFO());
 
   suite.displayResult();
+}
+
+void test::test_cpuU() {
+  internal<1>();
+  internal<2>();
 }
