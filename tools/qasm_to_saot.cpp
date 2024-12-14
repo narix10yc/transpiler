@@ -57,7 +57,7 @@ static cl::opt<int>
 FusionLevel("fusion",
     cl::cat(GateCPUFusionConfigCategory),
     cl::desc("fusion level presets 0 (disable), 1 (two-qubit only), "
-             "2 (default), and 3 (aggresive)"),
+             "2 (default), and 3 (aggressive)"),
     cl::init(2));
 
 static cl::opt<int>
@@ -86,7 +86,7 @@ AllowMultipleTraverse("allow-multi-traverse",
     cl::init(true));
 
 static cl::opt<bool>
-EnableIncreamentScheme("increment-scheme",
+EnableIncrementScheme("increment-scheme",
     cl::cat(GateCPUFusionConfigCategory),
     cl::desc("enable increment fusion scheme"),
     cl::init(true));
@@ -121,7 +121,7 @@ UseFMS("use-fms",
 static cl::opt<bool>
 UsePDEP("use-pdep",
     cl::cat(IRGenerationConfigCategory),
-    cl::desc("use pdep (parallel bit deposite)"),
+    cl::desc("use pdep (parallel bit deposit)"),
     cl::init(PDEP_DEFAULT));
 
 static cl::opt<bool>
@@ -133,7 +133,7 @@ EnablePrefetch("enable-prefetch",
 static cl::opt<std::string>
 AmpFormat("amp-format",
     cl::cat(IRGenerationConfigCategory),
-    cl::desc("amplitude format (recommand 'alt')"),
+    cl::desc("amplitude format (reccommand 'alt')"),
     cl::init("alt"));
 
 static cl::opt<double>
@@ -218,7 +218,7 @@ int main(int argc, char* *argv) {
   } else
     fusionConfig = CPUFusionConfig::Preset(FusionLevel);
   fusionConfig.allowMultipleTraverse = AllowMultipleTraverse;
-  fusionConfig.incrementScheme = EnableIncreamentScheme;
+  fusionConfig.incrementScheme = EnableIncrementScheme;
 
   if (OutputDirectory != "") {
     cpuConfig = CodeGeneratorCPUConfig{

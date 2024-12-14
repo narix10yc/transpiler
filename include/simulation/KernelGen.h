@@ -8,6 +8,12 @@ namespace saot {
 
 class QuantumGate;
 
+struct KernelMetadata {
+  const QuantumGate* quantumGate;
+  std::string llvmFuncName;
+  const void* func;
+};
+
 struct CPUKernelGenConfig {
   enum AmpFormat { AltFormat, SepFormat };
   enum MatrixLoadMode { UseMatImmValues, StackLoadMatElems, StackLoadMatVecs };

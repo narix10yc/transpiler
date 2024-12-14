@@ -14,9 +14,11 @@ else()
 endif()
 
 message(STATUS "LLVM_ROOT: ${LLVM_ROOT}")
+set(LLVM_RELEASE_INSTALL_ROOT "${LLVM_ROOT}/release-install")
+set(LLVM_DEBUG_INSTALL_ROOT "${LLVM_ROOT}/debug-install")
 
-set(CMAKE_C_COMPILER "${LLVM_ROOT}/bin/clang")
-set(CMAKE_CXX_COMPILER "${LLVM_ROOT}/bin/clang++")
+set(CMAKE_C_COMPILER "${LLVM_RELEASE_INSTALL_ROOT}/bin/clang")
+set(CMAKE_CXX_COMPILER "${LLVM_RELEASE_INSTALL_ROOT}/bin/clang++")
 
 find_package(CUDA)
 set(CUDA_HOST_COMPILER "${CMAKE_CXX_COMPILER}")
@@ -45,11 +47,10 @@ if(DEFINED ENV{SELECT_GCC_TOOLCHAIN})
 endif()
 
 string(TOUPPER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_UPPER)
-if(DEFINED ENV{llvm_root_debug} AND CMAKE_BUILD_TYPE_UPPER STREQUAL "DEBUG")
-    message(STATUS "llvm_root_debug set to $ENV{llvm_root_debug}, will use it to find LLVM")
-    set(LLVM_DIR "$ENV{llvm_root_debug}/lib/cmake/llvm")
+if(CMAKE_BUILD_TYPE_UPPER STREQUAL "DEBUG")
+    set(LLVM_DIR "${LLVM_DEBUG_INSTALL_ROOT}/lib/cmake/llvm")
 else()
-    set(LLVM_DIR "${LLVM_ROOT}/lib/cmake/llvm")
+    set(LLVM_DIR "${LLVM_RELEASE_INSTALL_ROOT}/lib/cmake/llvm")
 endif()
 
 find_package(LLVM REQUIRED CONFIG)

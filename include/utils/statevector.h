@@ -207,8 +207,8 @@ public:
 /// \p simd_s. More precisely, the memory is stored as an iteration of $2^s$
 /// real parts followed by $2^s$ imaginary parts.
 /// For example,
-/// 000 001 010 011 100 101 110 111
-/// r00 r01 i00 i01 r10 r11 i10 i11
+/// memory index: 000 001 010 011 100 101 110 111
+/// amplitudes:   r00 r01 i00 i01 r10 r11 i10 i11
 template<typename real_t, unsigned simd_s>
 class StatevectorAlt {
 public:
@@ -286,6 +286,11 @@ public:
   }
   const real_t& imag(size_t idx) const {
     return data[utils::insertOneToBit(idx, simd_s)];
+  }
+
+  std::complex<real_t> amp(size_t idx) const {
+    size_t tmp = utils::insertZeroToBit(idx, simd_s);
+    return { data[tmp], data[tmp | (1 << simd_s)] };
   }
 
   std::ostream& print(std::ostream& os = std::cerr) const {
@@ -377,7 +382,7 @@ public:
 }; // class StatevectorAlt
 
 template<typename real_t>
-static double fidelity(const StatevectorSep<real_t>& sv1,
+double fidelity(const StatevectorSep<real_t>& sv1,
                        const StatevectorSep<real_t>& sv2) {
   assert(sv1.nqubits == sv2.nqubits);
 
@@ -385,6 +390,20 @@ static double fidelity(const StatevectorSep<real_t>& sv1,
   for (size_t i = 0; i < sv1.N; i++) {
     re += (sv1.real[i] * sv2.real[i] + sv1.imag[i] * sv2.imag[i]);
     im += (-sv1.real[i] * sv2.imag[i] + sv1.imag[i] * sv2.real[i]);
+  }
+  return re * re + im * im;
+}
+
+template<typename real_t, unsigned simd_s_A, unsigned simd_s_B>
+double fidelity(const StatevectorAlt<real_t, simd_s_A>& sv0,
+                const StatevectorAlt<real_t, simd_s_B>& sv1) {
+  assert(sv0.nqubits == sv1.nqubits);
+  double re = 0.0, im = 0.0;
+  for (size_t i = 0; i < sv0.N; i++) {
+    auto amp0 = sv0.amp(i);
+    auto amp1 = sv1.amp(i);
+    re += amp0.real() * amp1.real() + amp0.imag() * amp1.imag();
+    im -= amp0.real() * amp1.imag() + amp0.imag() * amp1.real();
   }
   return re * re + im * im;
 }

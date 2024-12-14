@@ -10,12 +10,8 @@
 
 #include "llvm/IR/IntrinsicsX86.h"
 
-#include <algorithm>
-#include <bitset>
 #include <cmath>
 
-using namespace IOColor;
-// using namespace utils;
 using namespace llvm;
 using namespace saot;
 
@@ -61,16 +57,15 @@ struct MatData {
 inline std::vector<MatData> getMatrixData(
     IRBuilder<>& B, const GateMatrix& gateMatrix,
     const CPUKernelGenConfig& config) {
-  int k = gateMatrix.nqubits();
-  unsigned K = 1 << k;
-  unsigned KK = K * K;
+  const int k = gateMatrix.nqubits();
+  const unsigned K = 1 << k;
+  const unsigned KK = K * K;
 
   std::vector<MatData> data;
   data.resize(KK);
 
-  double zTol = config.zeroSkipThres / K;
-  double oTol = config.oneTol / K;
-  double sTol = config.shareMatrixElemThres / K;
+  const double zTol = config.zeroSkipThres / K;
+  const double oTol = config.oneTol / K;
   const auto* cMat = gateMatrix.getConstantMatrix();
   assert(cMat && "Parametrized matrices codegen not implemented yet");
 
@@ -131,7 +126,8 @@ Function* saot::genCPUCode(llvm::Module& llvmModule,
   
   // init function
   CPUArgs args;
-  Function* func = cpuGetFunctionDeclaration(B, llvmModule, funcName, config, args);
+  Function* func = cpuGetFunctionDeclaration(
+    B, llvmModule, funcName, config, args);
 
   // init matrix
   auto matrixData = getMatrixData(B, gate.gateMatrix, config);
@@ -191,7 +187,7 @@ Function* saot::genCPUCode(llvm::Module& llvmModule,
 
   // debug print qubit splits
   LLVM_DEBUG(
-    dbgs() << CYAN_FG << "-- qubit split done\n" << RESET;\
+    dbgs() << CYAN("-- qubit split done\n");
     utils::printLLVMSmallVector(loBits, std::cerr << "- lower bits: ") << "\n";
     utils::printLLVMSmallVector(simdBits, std::cerr << "- simd bits: ") << "\n";
     utils::printLLVMSmallVector(hiBits, std::cerr << "- higher bits: ") << "\n";
@@ -436,7 +432,7 @@ Function* saot::genCPUCode(llvm::Module& llvmModule,
       }
     }
     LLVM_DEBUG(
-      utils::printVector(cacheCombined, std::cerr << "  Cach Combined: ") << "\n";
+      utils::printVector(cacheCombined, std::cerr << "  Cache Combined: ") << "\n";
       utils::printVector(mask, std::cerr << "  Mask: ") << "\n";
     );
     // rotate the assignments of
@@ -455,11 +451,12 @@ Function* saot::genCPUCode(llvm::Module& llvmModule,
       cacheRHS = arr1;
       cacheCombined = arr2;
     }
-    for (int i = 0; i < lCached; i++) {
+    for (int i = 0; i < (lCached << 1); i++) {
       assert((cacheLHS[i] & (1 << loBits[roundIdx])) == 0);
       cacheRHS[i] = cacheLHS[i] | (1 << loBits[roundIdx]);
     }
-  }
+  } // end while
+
   // init reimMergeMask
   for (int pairIdx = 0; pairIdx < (vecSize >> s >> 1); pairIdx++) {
     for (int i = 0; i < S; i++)
@@ -506,12 +503,17 @@ Function* saot::genCPUCode(llvm::Module& llvmModule,
           "new.im." + std::to_string(hi) + "." + std::to_string(li) + ".");
       }
     }
-    
-    // merge
+
+    /* Merge
+    Merge example
+    Round 0: (xxx0, xxx1) => xxx0
+    Round 1: (xx00, xx10) => xx00
+    Round 2: (x000, x100) => x000
+    */
     assert((1 << mergeMasks.size()) == updatedReAmps.size());
-    for (int mergeIdx = 0; mergeIdx < lk; mergeIdx++) {
+    for (unsigned mergeIdx = 0; mergeIdx < lk; mergeIdx++) {
       for (unsigned pairIdx = 0; pairIdx < (LK >> mergeIdx >> 1); pairIdx++) {
-        unsigned idxL = pairIdx << mergeIdx;
+        unsigned idxL = pairIdx << mergeIdx << 1;
         unsigned idxR = idxL | (1 << mergeIdx);
         LLVM_DEBUG(
           dbgs() << "(mergeIdx, pairIdx) = ("

@@ -25,10 +25,10 @@ static void internal() {
   cantFail(jit->addIRModule(llvm::orc::ThreadSafeModule(
     std::move(llvmModule), std::move(llvmContext))));
 
-  auto f_h0 = jit->lookup("gate_h_0")->toPtr<CPU_FUNC_TYPE>();
-  auto f_h1 = jit->lookup("gate_h_1")->toPtr<CPU_FUNC_TYPE>();
-  auto f_h2 = jit->lookup("gate_h_2")->toPtr<CPU_FUNC_TYPE>();
-  auto f_h3 = jit->lookup("gate_h_3")->toPtr<CPU_FUNC_TYPE>();
+  auto f_h0 = cantFail(jit->lookup("gate_h_0")).toPtr<CPU_FUNC_TYPE>();
+  auto f_h1 = cantFail(jit->lookup("gate_h_1")).toPtr<CPU_FUNC_TYPE>();
+  auto f_h2 = cantFail(jit->lookup("gate_h_2")).toPtr<CPU_FUNC_TYPE>();
+  auto f_h3 = cantFail(jit->lookup("gate_h_3")).toPtr<CPU_FUNC_TYPE>();
 
   StatevectorAlt<double, simd_s> sv(/* nqubits */ 6, /* initialize */ true);
   suite.assertClose(sv.norm(), 1.0, "SV Initialization: Norm", GET_INFO());
