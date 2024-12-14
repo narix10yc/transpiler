@@ -12,7 +12,3 @@ tmp/*
 */gen_file*
 performance/obj
 python_perf_tests/*
-
-=IF([@[Inst Gen Time (ms)]]>=1000,
-    TEXT([@[Inst Gen Time (ms)]] * 1e-3, "0.000") & " s",
-    TEXT([@[Inst Gen Time (ms)]], "0.000") & " ms")
