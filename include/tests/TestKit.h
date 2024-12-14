@@ -76,7 +76,7 @@ void test_cpuU();
 
 inline void test_all() {
   test_applyGate();
-  test_applyGate();
+  test_gateMatMul();
   test_cpuH();
   test_cpuU();
 }

@@ -5,15 +5,17 @@
 using namespace saot;
 using namespace utils;
 
-template<unsigned simd_s>
-static void internal() {
-  test::TestSuite suite("applyGate (s = " + std::to_string(simd_s) + ")");
+template<unsigned simd_s, unsigned nqubits>
+static void internal_U1q() {
+  std::stringstream ss;
+  ss << "applyGate U1q (s=" << simd_s << ", nqubits=" << nqubits << ")";
+  test::TestSuite suite(ss.str());
 
-  StatevectorAlt<double, simd_s> sv(5);
+  StatevectorAlt<double, simd_s> sv(nqubits);
   sv.initialize();
-  for (int q = 0; q < sv.nqubits; q++)
+  for (int q = 0; q < nqubits; q++)
     sv.applyGate(QuantumGate(GateMatrix::MatrixH_c, q));
-  for (int q = 0; q < sv.nqubits; q++) {
+  for (int q = 0; q < nqubits; q++) {
     suite.assertClose(sv.prob(q), 0.5,
       "Apply round H: Prob at qubit " + std::to_string(q), GET_INFO());
   }
@@ -40,6 +42,6 @@ static void internal() {
 }
 
 void test::test_applyGate() {
-  internal<1>();
-  internal<2>();
+  internal_U1q<1, 8>();
+  internal_U1q<2, 8>();
 }

@@ -152,6 +152,25 @@ public:
   }
 };
 
+/// The maximum norm (sometimes infinity norm) between two matrices is defined
+/// by the largest difference in absolute values in matrix entries. That is,
+/// max_{i,j} |A_ij - B_ij|
+template<typename data_t>
+double maximum_norm(
+    const square_matrix<data_t>& m0, const square_matrix<data_t>& m1) {
+  assert(m0.edgeSize() == m1.edgeSize());
+  double norm = 0.0;
+  double tmp;
+  for (unsigned r = 0; r < m0.edgeSize(); r++) {
+    for (unsigned c = 0; c < m1.edgeSize(); c++) {
+      tmp = std::abs(m0(r, c) - m1(r, c));
+      if (tmp > norm)
+        norm = tmp;
+    }
+  }
+  return norm;
+}
+
 square_matrix<std::complex<double>> randomUnitaryMatrix(unsigned edgeSize);
 
 std::ostream& printComplexMatrixF64(

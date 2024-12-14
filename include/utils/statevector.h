@@ -301,7 +301,7 @@ public:
     }
     for (size_t i = 0; i < std::min(32ULL, N); i++) {
       os << i << ": ";
-      utils::print_complex(os, {real(i), imag(i)});
+      utils::print_complex(os, {real(i), imag(i)}, 8);
       os << "\n";
     }
     return os;
@@ -330,11 +330,11 @@ public:
     const auto* cMat = gate.gateMatrix.getConstantMatrix();
     assert(cMat && "Can only apply constant gateMatrix");
 
-    unsigned k = gate.qubits.size();
-    unsigned K = 1 << k;
+    const unsigned k = gate.qubits.size();
+    const unsigned K = 1 << k;
     assert(cMat->edgeSize() == K);
-    std::vector<size_t> reIndices(K), imIndices(K);
-    std::vector<real_t> reUpdated(K), imUpdated(K);
+    std::vector<size_t> ampIndices(K);
+    std::vector<std::complex<real_t>> ampUpdated(K);
 
     size_t pdepMaskTask = ~static_cast<size_t>(0);
     size_t pdepMaskAmp = 0;
@@ -344,36 +344,27 @@ public:
     }
 
     for (size_t taskId = 0; taskId < (N >> k); taskId++) {
-      size_t pdepTaskId = utils::pdep64(taskId, pdepMaskTask);
+      auto pdepTaskId = utils::pdep64(taskId, pdepMaskTask);
       for (size_t ampId = 0; ampId < K; ampId++) {
-        reIndices[ampId] = pdepTaskId + utils::pdep64(ampId, pdepMaskAmp);
-        imIndices[ampId] = utils::insertOneToBit(reIndices[ampId], simd_s);
-        reIndices[ampId] = utils::insertZeroToBit(reIndices[ampId], simd_s);
+        ampIndices[ampId] = pdepTaskId + utils::pdep64(ampId, pdepMaskAmp);
       }
+
       // std::cerr << "taskId = " << taskId
       //           << " (" << utils::as0b(taskId, nqubits - k) << "):\n";
-      // utils::printVectorWithPrinter(reIndices,
+      // utils::printVectorWithPrinter(ampIndices,
       //   [&](size_t n, std::ostream& os) {
-      //     os << n << " (" << utils::as0b(n, nqubits + 1) << ")";
-      //   }, std::cerr << " reIndices: ") << "\n";
-      // utils::printVectorWithPrinter(imIndices,
-      //   [&](size_t n, std::ostream& os) {
-      //     os << n << " (" << utils::as0b(n, nqubits + 1) << ")";
-      //   }, std::cerr << " imIndices: ") << "\n";
+      //     os << n << " (" << utils::as0b(n, nqubits) << ")";
+      //   }, std::cerr << " ampIndices: ") << "\n";
 
-      std::memset(reUpdated.data(), 0, reUpdated.size() * sizeof(size_t));
-      std::memset(imUpdated.data(), 0, imUpdated.size() * sizeof(size_t));
       for (unsigned r = 0; r < K; r++) {
+        ampUpdated[r] = 0.0;
         for (unsigned c = 0; c < K; c++) {
-          reUpdated[r] +=
-            cMat->rc(r, c).real() * data[reIndices[c]] - cMat->rc(r, c).imag() * data[imIndices[c]];
-          imUpdated[r] +=
-            cMat->rc(r, c).real() * data[imIndices[c]] + cMat->rc(r, c).imag() * data[reIndices[c]];
+          ampUpdated[r] += cMat->rc(r, c) * this->amp(ampIndices[c]);
         }
       }
       for (unsigned r = 0; r < K; r++) {
-        data[reIndices[r]] = reUpdated[r];
-        data[imIndices[r]] = imUpdated[r];
+        this->real(ampIndices[r]) = ampUpdated[r].real();
+        this->imag(ampIndices[r]) = ampUpdated[r].imag();
       }
     }
     return *this;
@@ -394,16 +385,16 @@ double fidelity(const StatevectorSep<real_t>& sv1,
   return re * re + im * im;
 }
 
-template<typename real_t, unsigned simd_s_A, unsigned simd_s_B>
-double fidelity(const StatevectorAlt<real_t, simd_s_A>& sv0,
-                const StatevectorAlt<real_t, simd_s_B>& sv1) {
+template<typename real_t, unsigned simd_s>
+double fidelity(const StatevectorAlt<real_t, simd_s>& sv0,
+                const StatevectorAlt<real_t, simd_s>& sv1) {
   assert(sv0.nqubits == sv1.nqubits);
   double re = 0.0, im = 0.0;
   for (size_t i = 0; i < sv0.N; i++) {
     auto amp0 = sv0.amp(i);
     auto amp1 = sv1.amp(i);
     re += amp0.real() * amp1.real() + amp0.imag() * amp1.imag();
-    im -= amp0.real() * amp1.imag() + amp0.imag() * amp1.real();
+    im += amp0.real() * amp1.imag() - amp0.imag() * amp1.real();
   }
   return re * re + im * im;
 }

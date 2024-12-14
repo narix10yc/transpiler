@@ -300,6 +300,19 @@ public:
   bool isConvertibleToConstantGate() const {
     return gateMatrix.isConvertibleToConstantMatrix();
   }
+
+  static QuantumGate I1(int q) {
+    return QuantumGate(GateMatrix::MatrixI1_c, q);
+  }
+
+  static QuantumGate I2(int q0, int q1) {
+    return QuantumGate(GateMatrix::MatrixI2_c, {q0, q1});
+  }
+
+  static QuantumGate H(int q) {
+    return QuantumGate(GateMatrix::MatrixH_c, q);
+  }
+
 };
 
 } // namespace saot

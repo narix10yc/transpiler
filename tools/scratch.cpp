@@ -1,9 +1,15 @@
 #include "utils/square_matrix.h"
+#include "utils/statevector.h"
 #include "utils/utils.h"
+#include "saot/QuantumGate.h"
+
+using namespace saot;
+using namespace utils;
 
 int main() {
-  auto randomMat = utils::randomUnitaryMatrix(4);
+  StatevectorAlt<double, 1> sv(4);
+  QuantumGate gate(GateMatrix(randomUnitaryMatrix(2)), 1);
+  sv.applyGate(gate);
 
-  utils::printComplexMatrixF64(randomMat);
   return 0;
 }
