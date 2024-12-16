@@ -21,12 +21,16 @@ void IRGenerator::createJitSession() {
       orc::ThreadSafeModule(std::move(_module), std::move(_context))));
 }
 
-std::unique_ptr<llvm::orc::LLJIT> saot::createJITSession(std::unique_ptr<llvm::Module> llvmModule) {
+std::unique_ptr<orc::LLJIT> saot::createJITSession(
+    std::unique_ptr<Module> llvmModule,
+    std::unique_ptr<LLVMContext> llvmContext) {
   InitializeNativeTarget();
   InitializeNativeTargetAsmParser();
   InitializeNativeTargetAsmPrinter();
   auto jit = std::move(cantFail(orc::LLJITBuilder().create()));
-  // if (llvmModule)
-    // cantFail(jit->addIRModule(llvm::orc::ThreadSafeModule(std::move(llvmModule))));
+  if (llvmModule && llvmContext) {
+    cantFail(jit->addIRModule(
+      orc::ThreadSafeModule(std::move(llvmModule), std::move(llvmContext))));
+  }
   return jit;
 }

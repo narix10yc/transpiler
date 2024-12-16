@@ -313,6 +313,18 @@ public:
     return QuantumGate(GateMatrix::MatrixH_c, q);
   }
 
+  static QuantumGate RandomU1q(int q) {
+    return QuantumGate(GateMatrix(utils::randomUnitaryMatrix(2)), q);
+  }
+
+  static QuantumGate RandomU2q(int q0, int q1) {
+    return QuantumGate(GateMatrix(utils::randomUnitaryMatrix(4)), {q0, q1});
+  }
+
+  static QuantumGate RandomU3q(int q0, int q1, int q2) {
+    return QuantumGate(
+      GateMatrix(utils::randomUnitaryMatrix(8)), {q0, q1, q2});
+  }
 };
 
 } // namespace saot

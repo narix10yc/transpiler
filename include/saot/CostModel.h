@@ -1,6 +1,7 @@
 #ifndef SAOT_COSTMODEL_H
 #define SAOT_COSTMODEL_H
 
+#include "simulation/KernelGen.h"
 #include <cassert>
 #include <string>
 #include <vector>
@@ -11,7 +12,7 @@ class QuantumGate;
 
 class CostModel {
 public:
-  ~CostModel() = default;
+  virtual ~CostModel() = default;
 
   virtual int getCost(const QuantumGate& gate) const {
     assert(false && "Should not call from base class");
@@ -37,16 +38,18 @@ public:
 
 class PerformanceCache {
 public:
-  struct Entry {
+  struct Item {
     int nqubits;
     int opCount;
+    int nThreads;
     double memUpdateSpeed;
   };
 
-  std::vector<Entry> entries;
-  PerformanceCache() : entries() {}
+  std::vector<Item> items;
+  PerformanceCache() : items() {}
 
-  void addExperiments(int comprehensiveness);
+  void runExperiments(
+    const CPUKernelGenConfig& cpuConfig, int nqubits, int comprehensiveness);
 
   void saveToCSV(const std::string& fileName) const;
   

@@ -13,12 +13,12 @@ class TimingResult {
   int repeat, replication;
 
 public:
-  std::vector<double> tarr;
+  std::vector<double> tArr;
   double min, med, q1, q3;
   int n_sig_dig = 4;
-  TimingResult() {}
-  TimingResult(int repeat, int replication, const std::vector<double>& tarr)
-      : repeat(repeat), replication(replication), tarr(tarr) {
+  TimingResult() : repeat(0), replication(0), min(0), med(0), q1(0), q3(0) {}
+  TimingResult(int repeat, int replication, const std::vector<double>& tArr)
+      : repeat(repeat), replication(replication), tArr(tArr) {
     assert(repeat >= 1);
     assert(replication >= 1);
     calcStats();
@@ -60,8 +60,13 @@ public:
   }
 
   TimingResult timeit(
-      std::function<void()> method, std::function<void()> setup = []() {},
-      std::function<void()> teardown = []() {});
+      std::function<void()> method,
+      std::function<void()> setup,
+      std::function<void()> teardown);
+
+  TimingResult timeit(const std::function<void()> &method) {
+    return timeit(method, []() {}, []() {});
+  }
 
   TimingResult timeitFixedRepeat(
       std::function<void()> method, int _repeat,

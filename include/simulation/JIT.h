@@ -6,8 +6,12 @@
 
 namespace saot {
 
-std::unique_ptr<llvm::orc::LLJIT>
-createJITSession(std::unique_ptr<llvm::Module> = nullptr);
+std::unique_ptr<llvm::orc::LLJIT> createJITSession(
+  std::unique_ptr<llvm::Module>, std::unique_ptr<llvm::LLVMContext>);
+
+inline std::unique_ptr<llvm::orc::LLJIT> createJITSession() {
+  return createJITSession(nullptr, nullptr);
+}
 
 } // namespace saot
 

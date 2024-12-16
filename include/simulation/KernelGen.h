@@ -4,6 +4,8 @@
 #include <llvm/IR/Module.h>
 #include <memory>
 
+#define CPU_FUNC_TYPE void(void*, uint64_t, uint64_t, const void*)
+
 namespace saot {
 
 class QuantumGate;

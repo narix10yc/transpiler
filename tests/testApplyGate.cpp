@@ -11,7 +11,7 @@ static void internal_U1q() {
   ss << "applyGate U1q (s=" << simd_s << ", nqubits=" << nqubits << ")";
   test::TestSuite suite(ss.str());
 
-  StatevectorAlt<double, simd_s> sv(nqubits);
+  StatevectorAlt<double> sv(nqubits, simd_s);
   sv.initialize();
   for (int q = 0; q < nqubits; q++)
     sv.applyGate(QuantumGate(GateMatrix::MatrixH_c, q));

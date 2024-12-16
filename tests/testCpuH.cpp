@@ -30,7 +30,8 @@ static void internal() {
   auto f_h2 = cantFail(jit->lookup("gate_h_2")).toPtr<CPU_FUNC_TYPE>();
   auto f_h3 = cantFail(jit->lookup("gate_h_3")).toPtr<CPU_FUNC_TYPE>();
 
-  StatevectorAlt<double, simd_s> sv(/* nqubits */ 6, /* initialize */ true);
+  StatevectorAlt<double> sv(6, simd_s);
+  sv.initialize();
   suite.assertClose(sv.norm(), 1.0, "SV Initialization: Norm", GET_INFO());
   suite.assertClose(sv.prob(0), 0.0, "SV Initialization: Prob", GET_INFO());
 

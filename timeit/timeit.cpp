@@ -18,7 +18,7 @@ double getMedian(const std::vector<double>& arr, size_t start, size_t end) {
 } // namespace
 
 void TimingResult::calcStats() {
-  auto l = tarr.size();
+  auto l = tArr.size();
   if (repeat == 0) {
     return;
   }
@@ -26,15 +26,15 @@ void TimingResult::calcStats() {
     return;
   }
   if (l == 1) {
-    min = tarr[0];
-    med = tarr[0];
+    min = tArr[0];
+    med = tArr[0];
     return;
   }
-  std::sort(tarr.begin(), tarr.end());
-  min = tarr[0] / repeat;
-  med = getMedian(tarr, 0, tarr.size()) / repeat;
-  q1 = getMedian(tarr, 0, tarr.size() / 2) / repeat;
-  q3 = getMedian(tarr, tarr.size() / 2, tarr.size()) / repeat;
+  std::sort(tArr.begin(), tArr.end());
+  min = tArr[0] / repeat;
+  med = getMedian(tArr, 0, tArr.size()) / repeat;
+  q1 = getMedian(tArr, 0, tArr.size() / 2) / repeat;
+  q3 = getMedian(tArr, tArr.size() / 2, tArr.size()) / repeat;
 }
 
 std::string TimingResult::timeToString(double t, int n_sig_dig) {
@@ -73,15 +73,15 @@ std::ostream& TimingResult::display(int n_sig_dig, std::ostream& os) const {
 }
 
 std::string TimingResult::raw_string() const {
-  if (tarr.size() == 0) {
+  if (tArr.size() == 0) {
     return "[]";
   }
   std::stringstream ss;
   ss << "[" << std::scientific;
-  for (size_t i = 0; i < tarr.size() - 1; ++i) {
-    ss << (tarr[i] / repeat) << " ";
+  for (size_t i = 0; i < tArr.size() - 1; ++i) {
+    ss << (tArr[i] / repeat) << " ";
   }
-  ss << (tarr[tarr.size() - 1] / repeat) << "]";
+  ss << (tArr[tArr.size() - 1] / repeat) << "]";
   return ss.str();
 }
 

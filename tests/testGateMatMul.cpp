@@ -32,7 +32,7 @@ static void basics() {
   suite.displayResult();
 }
 
-template<unsigned simd_s, unsigned nqubits>
+template<unsigned nqubits, unsigned simd_s>
 static void internal() {
   std::stringstream titleSS;
   titleSS << "MatMul between Gates (s=" << simd_s
@@ -49,7 +49,7 @@ static void internal() {
     QuantumGate gate1(utils::randomUnitaryMatrix(2), b);
     auto gate = gate0.lmatmul(gate1);
 
-    utils::StatevectorAlt<double, simd_s> sv0(nqubits), sv1(nqubits);
+    utils::StatevectorAlt<double> sv0(nqubits, simd_s), sv1(nqubits, simd_s);
     sv0.randomize();
     sv1 = sv0;
 
@@ -68,6 +68,6 @@ static void internal() {
 
 void saot::test::test_gateMatMul() {
   basics();
-  internal<1, 4>();
-  // internal<2, 8>();
+  internal<4, 1>();
+  internal<8, 2>();
 }

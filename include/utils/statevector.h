@@ -17,7 +17,7 @@ namespace utils {
 template<typename real_t>
 class StatevectorSep;
 
-template<typename real_t, unsigned simd_s>
+template<typename real_t>
 class StatevectorAlt;
 
 template<typename real_t>
@@ -209,16 +209,17 @@ public:
 /// For example,
 /// memory index: 000 001 010 011 100 101 110 111
 /// amplitudes:   r00 r01 i00 i01 r10 r11 i10 i11
-template<typename real_t, unsigned simd_s>
+template<typename real_t>
 class StatevectorAlt {
 public:
+  int simd_s;
   int nqubits;
   uint64_t N;
   size_t memSize;
   real_t* data;
 
-  StatevectorAlt(int nqubits, bool init = true)
-      : nqubits(nqubits), N(1ULL << nqubits)
+  StatevectorAlt(int nqubits, int simd_s, bool init = true)
+      : simd_s(simd_s), nqubits(nqubits), N(1ULL << nqubits)
       , memSize((2ULL << nqubits) * sizeof(real_t)) {
     data = (real_t*)aligned_alloc(64, this->memSize);
     assert(data && "Allocation Failed");
@@ -385,9 +386,9 @@ double fidelity(const StatevectorSep<real_t>& sv1,
   return re * re + im * im;
 }
 
-template<typename real_t, unsigned simd_s>
-double fidelity(const StatevectorAlt<real_t, simd_s>& sv0,
-                const StatevectorAlt<real_t, simd_s>& sv1) {
+template<typename real_t>
+double fidelity(const StatevectorAlt<real_t>& sv0,
+                const StatevectorAlt<real_t>& sv1) {
   assert(sv0.nqubits == sv1.nqubits);
   double re = 0.0, im = 0.0;
   for (size_t i = 0; i < sv0.N; i++) {

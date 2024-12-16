@@ -11,7 +11,7 @@ static void internal_U1q() {
   test::TestSuite suite(
     "Gate U1q (s=" + std::to_string(simd_s) +
     ", n=" + std::to_string(nqubits) + ")");
-  utils::StatevectorAlt<double, simd_s> sv0(nqubits), sv1(nqubits);
+  utils::StatevectorAlt<double> sv0(nqubits, simd_s), sv1(nqubits, simd_s);
 
   auto llvmContext = std::make_unique<llvm::LLVMContext>();
   auto llvmModule = std::make_unique<llvm::Module>("myModule", *llvmContext);
@@ -79,7 +79,8 @@ static void internal_U2q() {
   test::TestSuite suite(
     "Gate U2q (s=" + std::to_string(simd_s) +
     ", n=" + std::to_string(nqubits) + ")");
-  utils::StatevectorAlt<double, simd_s> sv0(nqubits), sv1(nqubits), sv2(nqubits);
+  utils::StatevectorAlt<double>
+  sv0(nqubits, simd_s), sv1(nqubits, simd_s), sv2(nqubits, simd_s);
 
   const auto randomizeSV = [&sv0, &sv1, &sv2]() {
     sv0.randomize();

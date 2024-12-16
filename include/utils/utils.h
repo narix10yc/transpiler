@@ -119,10 +119,64 @@ public:
     assert(nbits >= 0 && nbits <= 64);
   }
 
-  friend std::ostream& operator<<(std::ostream& os, const as0b &n) {
+  friend std::ostream& operator<<(std::ostream& os, const as0b& n) {
     for (int i = n.nbits - 1; i >= 0; --i)
       os.put((n.v & (1 << i)) ? '1' : '0');
     return os;
+  }
+};
+
+class time_fmt {
+  double t_in_sec;
+public:
+  explicit time_fmt(double t_in_sec) : t_in_sec(t_in_sec) {
+    assert(t_in_sec >= 0.0);
+  }
+
+  friend std::ostream& operator<<(std::ostream& os, const time_fmt& tm) {
+    // seconds
+    if (tm.t_in_sec >= 1e3)
+      return os << static_cast<unsigned>(tm.t_in_sec) << " s";
+    if (tm.t_in_sec >= 1e2)
+      return os << std::fixed << std::setprecision(1)
+                << tm.t_in_sec << " s";
+    if (tm.t_in_sec >= 1e1)
+      return os << std::fixed << std::setprecision(2)
+                << tm.t_in_sec << " s";
+    if (tm.t_in_sec >= 1.0)
+      return os << std::fixed << std::setprecision(3)
+                << tm.t_in_sec << " s";
+    // milliseconds
+    if (tm.t_in_sec >= 1e-1)
+      return os << std::fixed << std::setprecision(1)
+                << 1e3 * tm.t_in_sec << " ms";
+    if (tm.t_in_sec >= 1e-2)
+      return os << std::fixed << std::setprecision(2)
+                << 1e3 * tm.t_in_sec << " ms";
+    if (tm.t_in_sec >= 1e-3)
+      return os << std::fixed << std::setprecision(3)
+                << 1e3 * tm.t_in_sec << " ms";
+    // microseconds
+    if (tm.t_in_sec >= 1e-4)
+      return os << std::fixed << std::setprecision(1)
+                << 1e6 * tm.t_in_sec << " us";
+    if (tm.t_in_sec >= 1e-5)
+      return os << std::fixed << std::setprecision(2)
+                << 1e6 * tm.t_in_sec << " us";
+    if (tm.t_in_sec >= 1e-6)
+      return os << std::fixed << std::setprecision(3)
+                << 1e6 * tm.t_in_sec << " us";
+    // nanoseconds
+    if (tm.t_in_sec >= 1e-7)
+      return os << std::fixed << std::setprecision(1)
+                << 1e9 * tm.t_in_sec << " ns";
+    if (tm.t_in_sec >= 1e-8)
+      return os << std::fixed << std::setprecision(2)
+                << 1e9 * tm.t_in_sec << " ns";
+    if (tm.t_in_sec >= 1e-9)
+      return os << std::fixed << std::setprecision(3)
+                << 1e9 * tm.t_in_sec << " ns";
+    return os << "< 1.0 ns";
   }
 };
 

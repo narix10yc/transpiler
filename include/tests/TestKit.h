@@ -1,14 +1,13 @@
 #ifndef SAOT_TESTS_TESTKIT_H
 #define SAOT_TESTS_TESTKIT_H
 
+#include "utils/utils.h"
 #include <vector>
 #include <sstream>
 
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 #define GET_INFO() __FILE__ ":" TOSTRING(__LINE__)
-
-#define CPU_FUNC_TYPE void(void*, uint64_t, uint64_t, const void*)
 
 namespace saot::test {
 
@@ -75,10 +74,15 @@ void test_cpuH();
 void test_cpuU();
 
 inline void test_all() {
-  test_applyGate();
-  test_gateMatMul();
-  test_cpuH();
-  test_cpuU();
+  utils::timedExecute([] {
+    test_applyGate();
+    test_gateMatMul();
+  }, "Gate Multiplication Test Finished!");
+
+  utils::timedExecute([] {
+    test_cpuH();
+    test_cpuU();
+  }, "CPU Codegen Test Finished!");
 }
 
 } // namespace saot::test

@@ -61,13 +61,14 @@ uint32_t utils::pext32(uint32_t src, uint32_t mask, int nbits) {
 
 void utils::timedExecute(std::function<void()> f, const char* msg) {
   using clock = std::chrono::high_resolution_clock;
-  auto tic = clock::now();
+  const auto tic = clock::now();
   f();
-  auto tok = clock::now();
-  const auto t_ms =
-      std::chrono::duration_cast<std::chrono::milliseconds>(tok - tic).count();
-  std::cerr << "-- (" << t_ms << " ms) " << msg << "\n";
-  return;
+  const auto tok = clock::now();
+  const auto t_in_sec =
+      std::chrono::duration_cast<std::chrono::microseconds>(tok - tic).count();
+  std::cerr << "-- ("
+            << time_fmt(static_cast<double>(t_in_sec) * 1e-6)
+            << ") " << msg << "\n";
 }
 
 std::ostream& utils::print_complex(std::ostream& os, std::complex<double> c,
