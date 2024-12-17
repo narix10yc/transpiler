@@ -69,7 +69,7 @@ std::unique_ptr<ast::Expression> Parser::parsePrimaryExpr() {
     expr = parseNumericExpr();
   else if (curToken.type == TokenTy::Identifier)
     expr = parseVariableExpr();
-  else if (curToken.type == TokenTy::L_RoundBraket)
+  else if (curToken.type == TokenTy::L_RoundBracket)
     expr = parseParenExpr();
   else {
     logError("Unknown token when expecting a primary expression");
@@ -94,11 +94,11 @@ std::unique_ptr<ast::NumericExpr> Parser::parseNumericExpr() {
 std::unique_ptr<ast::Expression> Parser::parseVariableExpr() {
   auto next = peek();
 
-  if (next.type == TokenTy::L_RoundBraket) {
+  if (next.type == TokenTy::L_RoundBracket) {
     // funcCall
     logError("funcCall not implemented yet");
     return nullptr;
-  } else if (next.type == TokenTy::L_SquareBraket) {
+  } else if (next.type == TokenTy::L_SquareBracket) {
     // subscript
     return parseSubscriptExpr();
   }
@@ -111,7 +111,7 @@ std::unique_ptr<ast::Expression> Parser::parseVariableExpr() {
 
 std::unique_ptr<ast::SubscriptExpr> Parser::parseSubscriptExpr() {
   auto name = curToken.str;
-  if (!expectNextToken(TokenTy::L_SquareBraket)) {
+  if (!expectNextToken(TokenTy::L_SquareBracket)) {
     logError("Subscript expr: expect '['");
     return nullptr;
   }
@@ -123,7 +123,7 @@ std::unique_ptr<ast::SubscriptExpr> Parser::parseSubscriptExpr() {
     return nullptr;
   }
   int index = static_cast<int>(numericExpr->getValue());
-  if (curToken.type != TokenTy::R_SquareBraket) {
+  if (curToken.type != TokenTy::R_SquareBracket) {
     logError("Subscript Expression: expect ']'");
     return nullptr;
   }
@@ -138,7 +138,7 @@ std::unique_ptr<ast::Expression> Parser::parseParenExpr() {
   if (!expr) {
     return nullptr;
   }
-  if (curToken.type != TokenTy::R_RoundBraket) {
+  if (curToken.type != TokenTy::R_RoundBracket) {
     logError("Expected ')'");
     return nullptr;
   }

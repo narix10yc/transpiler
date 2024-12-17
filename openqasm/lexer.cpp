@@ -79,21 +79,21 @@ Token Lexer::getToken() {
   case ';':
     return TokenTy::Semicolon;
   case '(':
-    return TokenTy::L_RoundBraket;
+    return TokenTy::L_RoundBracket;
   case ')':
-    return TokenTy::R_RoundBraket;
+    return TokenTy::R_RoundBracket;
   case '[':
-    return TokenTy::L_SquareBraket;
+    return TokenTy::L_SquareBracket;
   case ']':
-    return TokenTy::R_SquareBraket;
+    return TokenTy::R_SquareBracket;
   case '{':
-    return TokenTy::L_CurlyBraket;
+    return TokenTy::L_CurlyBracket;
   case '}':
-    return TokenTy::R_CurlyBraket;
+    return TokenTy::R_CurlyBracket;
   case '<':
-    return TokenTy::L_AngleBraket;
+    return TokenTy::L_AngleBracket;
   case '>':
-    return TokenTy::R_AngleBraket;
+    return TokenTy::R_AngleBracket;
   case '\'':
     return TokenTy::SingleQuote;
   case '\"':

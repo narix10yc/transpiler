@@ -36,14 +36,14 @@ enum class TokenTy : int {
 
   Comma = -104,          // ,
   Semicolon = -105,      // ;
-  L_RoundBraket = -106,  // (
-  R_RoundBraket = -107,  // )
-  L_SquareBraket = -108, // [
-  R_SquareBraket = -109, // ]
-  L_AngleBraket = -110,  // <
-  R_AngleBraket = -111,  // >
-  L_CurlyBraket = -112,  // {
-  R_CurlyBraket = -113,  // }
+  L_RoundBracket = -106,  // (
+  R_RoundBracket = -107,  // )
+  L_SquareBracket = -108, // [
+  R_SquareBracket = -109, // ]
+  L_AngleBracket = -110,  // <
+  R_AngleBracket = -111,  // >
+  L_CurlyBracket = -112,  // {
+  R_CurlyBracket = -113,  // }
   SingleQuote = -114,    // '
   DoubleQuote = -115,    // "
 

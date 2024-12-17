@@ -12,14 +12,14 @@ std::ostream& MInstEXT::print(std::ostream& os) const {
 
 std::ostream& GInstSQ::print(std::ostream& os) const {
   os << "SQ<id=" << block->id << "> ";
-  for (const auto& data : block->dataVector)
+  for (const auto& data : block->items)
     os << data.qubit << " ";
   return os;
 }
 
 std::ostream& GInstUP::print(std::ostream& os) const {
   os << "UP<id=" << block->id << "> ";
-  for (const auto& data : block->dataVector)
+  for (const auto& data : block->items)
     os << data.qubit << " ";
   return os;
 }
@@ -126,8 +126,8 @@ private:
         return ABK_UnitaryPerm;
       // single-qubit block
       assert(blockKind.is(FPGAGateCategory::fpgaSingleQubit));
-      assert(block->dataVector.size() == 1);
-      int q = block->dataVector[0].qubit;
+      assert(block->items.size() == 1);
+      int q = block->items[0].qubit;
       if (qubitStatuses[q].kind == QK_OffChip)
         return ABK_OffChipSQ;
       if (qubitStatuses[q].kind == QK_Local)
@@ -175,7 +175,7 @@ private:
       }
 
       bool acceptFlag = true;
-      for (const auto& bData : cddBlock->dataVector) {
+      for (const auto& bData : cddBlock->items) {
         if (unlockedRowIndices[bData.qubit] < row) {
           acceptFlag = false;
           break;
@@ -226,7 +226,7 @@ public:
 
     // grab next availables
     std::vector<GateBlock*> candidateBlocks;
-    for (const auto& data : block->dataVector) {
+    for (const auto& data : block->items) {
       const auto& qubit = data.qubit;
 
       GateBlock* cddBlock = nullptr;
@@ -243,8 +243,8 @@ public:
     }
     for (const auto& b : candidateBlocks) {
       bool insertFlag = true;
-      auto row = unlockedRowIndices[b->dataVector[0].qubit];
-      for (const auto& data : b->dataVector) {
+      auto row = unlockedRowIndices[b->items[0].qubit];
+      for (const auto& data : b->items) {
         if (unlockedRowIndices[data.qubit] != row) {
           insertFlag = false;
           break;
@@ -384,7 +384,7 @@ public:
               std::make_unique<GInstUP>(block, FPGAGateCategory::NonComp));
           // std::cerr << "InstGen Time Fusion Accepted\n";
           if (upFusionFlag) {
-            delete (lastUpBlock->dataVector[0].lhsEntry);
+            delete (lastUpBlock->items[0].lhsEntry);
             delete (lastUpBlock);
           }
           upFusionFlag = true;
@@ -468,13 +468,13 @@ public:
         if (it == availablesCopy.end())
           break;
         assert(it->block->nqubits() == 1);
-        int q = it->block->dataVector[0].qubit;
+        int q = it->block->items[0].qubit;
         utils::pushBackIfNotInVector(priorities, q);
         availablesCopy.erase(it);
       }
       // no SQ gates, prioritize UP gates
       for (const auto& avail : availablesCopy) {
-        for (const auto& data : avail.block->dataVector)
+        for (const auto& data : avail.block->items)
           utils::pushBackIfNotInVector(priorities, data.qubit);
       }
       // to diminish external memory access overhead
@@ -524,8 +524,8 @@ public:
         auto abk = avail.getABK(qubitStatuses);
         if (abk == ABK_OffChipSQ) {
           std::vector<int> priorities(nqubits);
-          assert(avail.block->dataVector.size() == 1);
-          int q = avail.block->dataVector[0].qubit;
+          assert(avail.block->items.size() == 1);
+          int q = avail.block->items[0].qubit;
           priorities[0] = q;
           for (int i = 1; i < nqubits; i++)
             priorities[i] = (i <= q) ? (i - 1) : i;

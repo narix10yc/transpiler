@@ -3,65 +3,88 @@
 
 #include "saot/QuantumGate.h"
 
-#include <memory>
-
 namespace saot {
 class CircuitGraph;
 }
 
 namespace saot::ast {
 
-class CircuitCompatibleStmt {
+class Statement {
 public:
-  virtual ~CircuitCompatibleStmt() = default;
+  enum StatementKind {
+    SK_Measure,
+    SK_ParamDef,
+    SK_GateApply,
+    SK_GateChain,
+  };
+private:
+  StatementKind _kind;
+public:
+  Statement(StatementKind kind) : _kind(kind) {}
+
+  bool is(StatementKind kind) const { return _kind == kind; }
+  bool isNot(StatementKind kind) const { return _kind != kind; }
+
+  virtual ~Statement() = default;
 
   virtual std::ostream& print(std::ostream& os) const = 0;
 };
 
-class MeasureStmt : public CircuitCompatibleStmt {
+class MeasureStmt : public Statement {
 public:
   std::vector<int> qubits;
-  MeasureStmt(std::initializer_list<int> qubits) : qubits(qubits) {}
-  MeasureStmt(const std::vector<int>& qubits) : qubits(qubits) {}
+
+  explicit MeasureStmt(int q) : Statement(SK_Measure), qubits({q}) {}
+
+  MeasureStmt(std::initializer_list<int> qubits)
+    : Statement(SK_Measure), qubits(qubits) {}
+
+  explicit MeasureStmt(const std::vector<int>& qubits)
+    : Statement(SK_Measure), qubits(qubits) {}
 
   std::ostream& print(std::ostream& os) const override;
 };
 
 /// @brief '#'<number:int> '=' '{' ... '}'';'
-class ParameterDefStmt {
+class ParameterDefStmt : public Statement {
 public:
   int refNumber;
-  GateMatrix gateMatrix;
+  std::unique_ptr<GateMatrix> gateMatrix;
 
-  ParameterDefStmt(int refNumber, const GateMatrix& gateMatrix = {})
-      : refNumber(refNumber), gateMatrix(gateMatrix) {}
-
-  std::ostream& print(std::ostream& os) const;
-};
-
-class GateApplyStmt : public CircuitCompatibleStmt {
-public:
-  std::string name;
-  std::variant<std::monostate, int, GateMatrix::gate_params_t> paramRefOrMatrix;
-  std::vector<int> qubits;
-
-  GateApplyStmt(const std::string& name)
-      : name(name), paramRefOrMatrix(), qubits() {}
-
-  GateApplyStmt(const std::string& name,
-                const std::variant<std::monostate, int,
-                                   GateMatrix::gate_params_t>& paramRefOrMatrix,
-                const std::vector<int>& qubits = {})
-      : name(name), paramRefOrMatrix(paramRefOrMatrix), qubits(qubits) {}
+  ParameterDefStmt(int refNumber, std::unique_ptr<GateMatrix> gateMatrix)
+    : Statement(SK_ParamDef)
+    , refNumber(refNumber)
+    , gateMatrix(std::move(gateMatrix)) {}
 
   std::ostream& print(std::ostream& os) const override;
 };
 
-class GateChainStmt : public CircuitCompatibleStmt {
+class GateApplyStmt : public Statement {
+  using arg_t = std::variant<std::monostate, int, GateMatrix::gate_params_t>;
+public:
+  std::string name;
+  arg_t paramRefOrMatrix;
+  std::vector<int> qubits;
+
+  GateApplyStmt(const std::string& name, const std::vector<int>& qubits)
+    : Statement(SK_GateApply), name(name), paramRefOrMatrix(), qubits(qubits) {}
+
+  GateApplyStmt(
+      const std::string& name, const arg_t& paramRefOrMatrix,
+      const std::vector<int>& qubits)
+    : Statement(SK_GateApply)
+    , name(name)
+    , paramRefOrMatrix(paramRefOrMatrix)
+    , qubits(qubits) {}
+
+  std::ostream& print(std::ostream& os) const override;
+};
+
+class GateChainStmt : public Statement {
 public:
   std::vector<GateApplyStmt> gates;
 
-  GateChainStmt() : gates() {}
+  GateChainStmt() : Statement(SK_GateChain), gates() {}
 
   std::ostream& print(std::ostream& os) const override;
 };
@@ -71,7 +94,7 @@ public:
   std::string name;
   int nqubits;
   int nparams;
-  std::vector<std::unique_ptr<CircuitCompatibleStmt>> stmts;
+  std::vector<std::unique_ptr<Statement>> stmts;
   std::vector<ParameterDefStmt> paramDefs;
 
   QuantumCircuit(const std::string& name = "qc")
@@ -81,9 +104,9 @@ public:
 
   std::ostream& print(std::ostream& os) const;
 
-  QuantumGate gateApplyToQuantumGate(const GateApplyStmt& );
+  QuantumGate gateApplyToQuantumGate(const GateApplyStmt&) const;
 
-  CircuitGraph toCircuitGraph();
+  CircuitGraph toCircuitGraph() const;
 };
 
 } // namespace saot::ast

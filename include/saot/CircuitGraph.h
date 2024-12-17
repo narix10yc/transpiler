@@ -5,7 +5,6 @@
 
 #include <array>
 #include <list>
-#include <memory>
 #include <set>
 #include <vector>
 
@@ -16,7 +15,7 @@ private:
   static int idCount;
 
 public:
-  struct gate_data {
+  struct Item {
     int qubit;
     GateNode* lhsGate;
     GateNode* rhsGate;
@@ -24,36 +23,42 @@ public:
   const int id;
   unsigned nqubits;
   GateMatrix gateMatrix;
-  std::vector<gate_data> dataVector;
+  std::vector<Item> items;
 
   GateNode(const GateMatrix& gateMatrix, const std::vector<int>& qubits)
       : id(idCount++), nqubits(gateMatrix.nqubits()), gateMatrix(gateMatrix),
-        dataVector(gateMatrix.nqubits()) {
+        items(gateMatrix.nqubits()) {
     assert(gateMatrix.nqubits() == qubits.size());
     for (unsigned i = 0; i < qubits.size(); i++)
-      dataVector[i] = {qubits[i], nullptr, nullptr};
+      items[i] = {qubits[i], nullptr, nullptr};
   }
 
-  std::vector<gate_data>::iterator findQubit(unsigned q) {
-    auto it = dataVector.begin();
-    while (it != dataVector.end()) {
-      if (it->qubit == q)
-        break;
-      it++;
+  Item* findQubit(int q) {
+    for (auto& item : items) {
+      if (item.qubit == q)
+        return &item;
     }
-    return it;
+    return nullptr;
   }
 
-  GateNode* findLHS(unsigned q) {
-    for (const auto& data : dataVector) {
+  const Item* findQubit(int q) const {
+    for (const auto& item : items) {
+      if (item.qubit == q)
+        return &item;
+    }
+    return nullptr;
+  }
+
+  GateNode* findLHS(unsigned q) const {
+    for (const auto& data : items) {
       if (data.qubit == q)
         return data.lhsGate;
     }
     return nullptr;
   }
 
-  GateNode* findRHS(unsigned q) {
-    for (const auto& data : dataVector) {
+  GateNode* findRHS(unsigned q) const {
+    for (const auto& data : items) {
       if (data.qubit == q)
         return data.rhsGate;
     }
@@ -65,7 +70,7 @@ public:
   std::vector<int> getQubits() const {
     std::vector<int> qubits(nqubits);
     for (unsigned i = 0; i < nqubits; i++)
-      qubits[i] = dataVector[i].qubit;
+      qubits[i] = items[i].qubit;
 
     return qubits;
   }
@@ -80,23 +85,23 @@ private:
   static int idCount;
 
 public:
-  struct block_data {
+  struct Item {
     int qubit;
     GateNode* lhsEntry;
     GateNode* rhsEntry;
   };
 
   int id;
-  std::vector<block_data> dataVector;
+  std::vector<Item> items;
   std::unique_ptr<QuantumGate> quantumGate;
 
-  GateBlock() : id(idCount++), dataVector(), quantumGate(nullptr) {}
+  GateBlock() : id(idCount++), items(), quantumGate(nullptr) {}
 
   GateBlock(GateNode* gateNode)
-      : id(idCount++), dataVector(),
+      : id(idCount++), items(),
         quantumGate(std::make_unique<QuantumGate>(gateNode->toQuantumGate())) {
-    for (const auto& data : gateNode->dataVector)
-      dataVector.push_back({data.qubit, gateNode, gateNode});
+    for (const auto& data : gateNode->items)
+      items.push_back({data.qubit, gateNode, gateNode});
   }
 
   std::ostream& displayInfo(std::ostream& os) const;
@@ -107,44 +112,40 @@ public:
 
   int connect(GateBlock* rhsBlock, int q = -1);
 
-  int nqubits() const { return dataVector.size(); }
+  int nqubits() const { return items.size(); }
 
-  std::vector<block_data>::iterator findQubit(unsigned q) {
-    auto it = dataVector.begin();
-    while (it != dataVector.end()) {
-      if (it->qubit == q)
-        break;
-      it++;
+  Item* findQubit(int q) {
+    for (auto& item : items) {
+      if (item.qubit == q)
+        return &item;
     }
-    return it;
+    return nullptr;
   }
 
-  std::vector<block_data>::const_iterator findQubit(unsigned q) const {
-    auto it = dataVector.cbegin();
-    while (it != dataVector.cend()) {
-      if (it->qubit == q)
-        break;
-      it++;
+  const Item* findQubit(int q) const {
+    for (const auto& item : items) {
+      if (item.qubit == q)
+        return &item;
     }
-    return it;
+    return nullptr;
   }
 
   bool hasSameTargets(const GateBlock& other) const {
     if (nqubits() != other.nqubits())
       return false;
-    for (const auto& data : other.dataVector) {
-      if (findQubit(data.qubit) == dataVector.end())
+    for (const auto& data : other.items) {
+      if (findQubit(data.qubit) == nullptr)
         return false;
     }
     return true;
   }
 
   // TODO: This should be identical to quantumGate->qubits
-  // Find a way to remove the redundency
+  // Find a way to remove the redundancy
   std::vector<int> getQubits() const {
-    std::vector<int> vec(dataVector.size());
-    for (unsigned i = 0; i < dataVector.size(); i++)
-      vec[i] = dataVector[i].qubit;
+    std::vector<int> vec(items.size());
+    for (unsigned i = 0; i < items.size(); i++)
+      vec[i] = items[i].qubit;
     return vec;
   }
 
@@ -168,11 +169,11 @@ public:
   static CircuitGraph QFTCircuit(int nqubits);
   static CircuitGraph ALACircuit(int nqubits, int nrounds);
 
-  static CircuitGraph GetTestCircuit(const GateMatrix& gateMatrix, int nqubits,
-                                     int nrounds);
+  static CircuitGraph GetTestCircuit(
+    const GateMatrix& gateMatrix, int nqubits, int nrounds);
 
-  tile_t &tile() { return _tile; }
-  const tile_t &tile() const { return _tile; }
+  tile_t& tile() { return _tile; }
+  const tile_t& tile() const { return _tile; }
 
   /// @brief Erase empty rows in the tile
   void eraseEmptyRows();
@@ -240,14 +241,14 @@ public:
     return sum;
   }
 
-  void relabelBlocks();
+  void relabelBlocks() const;
 
   /// @brief Console print the tile.
   /// @param verbose If > 1, also print the address of each row in front
   std::ostream& print(std::ostream& os = std::cerr, int verbose = 1) const;
 
-  std::ostream& displayInfo(std::ostream& os = std::cerr,
-                            int verbose = 1) const;
+  std::ostream& displayInfo(
+    std::ostream& os = std::cerr, int verbose = 1) const;
 };
 
 }; // namespace saot

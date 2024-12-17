@@ -25,7 +25,7 @@ struct CPUKernelGenConfig {
   AmpFormat ampFormat = AltFormat;
   bool useFMA = true;
   bool useFMS = true;
-  // parallel bits deposite from BMI2
+  // parallel bits deposit from BMI2
   bool usePDEP = false;
   bool useImmValues = true;
   bool loadMatrixInEntry = true;
@@ -41,13 +41,20 @@ struct CPUKernelGenConfig {
   static const CPUKernelGenConfig NativeDefaultF64;
 };
 
-/// @return A function that takes in 4 arguments: (void*, uint64_t, uint64_t,
-/// void*). Pointer to statevector array, taskID begin, taskID end, and pointer
-/// to matrix array (could be null).
-llvm::Function* genCPUCode(llvm::Module& llvmModule,
-                           const CPUKernelGenConfig& config,
-                           const QuantumGate& gate,
-                           const std::string& funcName);
+/// @return A function that takes in 4 arguments (void*, uint64_t, uint64_t,
+/// void*) and returns void. Arguments are: pointer to statevector array,
+/// taskID begin, taskID end, and pointer to matrix array (could be null).
+llvm::Function* genCPUCode(
+  llvm::Module& llvmModule, const CPUKernelGenConfig& config,
+  const QuantumGate& gate, const std::string& funcName);
+
+/// @return A function that takes in 4 arguments (void*, uint64_t, uint64_t,
+/// void*) and returns void. Arguments are: pointer to statevector array,
+/// taskID begin, taskID end, and pointer to measurement probability to write on
+llvm::Function* genCPUMeasure(
+  llvm::Module& llvmModule, const CPUKernelGenConfig& config,
+  int q, const std::string& funcName);
+
 
 } // namespace saot
 

@@ -72,13 +72,13 @@ std::unique_ptr<ast::QRegStmt> Parser::parseQRegStmt() {
     return nullptr;
 
   auto name = curToken.str;
-  if (!expectNextToken(TokenTy::L_SquareBraket))
+  if (!expectNextToken(TokenTy::L_SquareBracket))
     return nullptr;
   if (!expectNextToken(TokenTy::Numeric))
     return nullptr;
 
   int size = std::stoi(curToken.str);
-  if (!expectNextToken(TokenTy::R_SquareBraket))
+  if (!expectNextToken(TokenTy::R_SquareBracket))
     return nullptr;
 
   auto stmt = std::make_unique<ast::QRegStmt>(name, size);
@@ -91,13 +91,13 @@ std::unique_ptr<ast::CRegStmt> Parser::parseCRegStmt() {
     return nullptr;
 
   auto name = curToken.str;
-  if (!expectNextToken(TokenTy::L_SquareBraket))
+  if (!expectNextToken(TokenTy::L_SquareBracket))
     return nullptr;
   if (!expectNextToken(TokenTy::Numeric))
     return nullptr;
 
   int size = std::stoi(curToken.str);
-  if (!expectNextToken(TokenTy::R_SquareBraket))
+  if (!expectNextToken(TokenTy::R_SquareBracket))
     return nullptr;
   nextToken();
 
@@ -110,11 +110,11 @@ std::unique_ptr<ast::GateApplyStmt> Parser::parseGateApplyStmt() {
   auto stmt = std::make_unique<ast::GateApplyStmt>(curToken.str);
   nextToken(); // eat the identifier
   logDebug(2, "parsing GateApplyStmt " + stmt->name);
-  if (curToken.type == TokenTy::L_RoundBraket) {
+  if (curToken.type == TokenTy::L_RoundBracket) {
     // parameters
     nextToken(); // eat '('
     while (true) {
-      if (curToken.type == TokenTy::R_RoundBraket) {
+      if (curToken.type == TokenTy::R_RoundBracket) {
         nextToken();
         break;
       }

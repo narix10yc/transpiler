@@ -15,12 +15,12 @@ std::unique_ptr<ast::IfThenElseStmt> Parser::parseIfThenElseStmt() {
       std::make_unique<ast::IfThenElseStmt>(std::move(ifExpr));
 
   // parse then block
-  if (curToken.type != TokenTy::L_CurlyBraket) {
+  if (curToken.type != TokenTy::L_CurlyBracket) {
     ifThenElseStmr->addThenBody(parseStmt());
     logDebug(2, "IfThenElseStmt: thenBody successfully parsed");
   } else {
     nextToken(); // eat '{'
-    while (curToken.type != TokenTy::R_CurlyBraket) {
+    while (curToken.type != TokenTy::R_CurlyBracket) {
       auto item = parseStmt();
       if (!item) {
         logError("IfThenElseStmt: cannot parse thenBody stmt");
@@ -40,12 +40,12 @@ std::unique_ptr<ast::IfThenElseStmt> Parser::parseIfThenElseStmt() {
   }
 
   nextToken(); // eat 'else'
-  if (curToken.type != TokenTy::L_CurlyBraket) {
+  if (curToken.type != TokenTy::L_CurlyBracket) {
     ifThenElseStmr->addElseBody(parseStmt());
     logDebug(2, "IfThenElseStmt: elseBody successfully parsed");
   } else {
     nextToken(); // eat '{'
-    while (curToken.type != TokenTy::R_CurlyBraket) {
+    while (curToken.type != TokenTy::R_CurlyBracket) {
       auto item = parseStmt();
       if (!item) {
         logError("IfThenElseStmt: cannot parse elseBody stmt");

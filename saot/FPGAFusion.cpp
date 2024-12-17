@@ -31,13 +31,13 @@ GateBlock* computeCandidate(const GateBlock* lhs, const GateBlock* rhs,
 
   // set up qubits of candidate block
   std::vector<int> blockQubits;
-  for (const auto& lData : lhs->dataVector) {
+  for (const auto& lData : lhs->items) {
     const auto& q = lData.qubit;
 
     GateNode* lhsEntry = lData.lhsEntry;
     GateNode* rhsEntry;
     auto it = rhs->findQubit(q);
-    if (it == rhs->dataVector.end())
+    if (it == nullptr)
       rhsEntry = lData.rhsEntry;
     else
       rhsEntry = it->rhsEntry;
@@ -45,13 +45,13 @@ GateBlock* computeCandidate(const GateBlock* lhs, const GateBlock* rhs,
     assert(lhsEntry);
     assert(rhsEntry);
 
-    block->dataVector.push_back({q, lhsEntry, rhsEntry});
+    block->items.push_back({q, lhsEntry, rhsEntry});
     blockQubits.push_back(q);
   }
-  for (const auto& rData : rhs->dataVector) {
+  for (const auto& rData : rhs->items) {
     const auto& q = rData.qubit;
-    if (lhs->findQubit(q) == lhs->dataVector.end()) {
-      block->dataVector.push_back(rData);
+    if (lhs->findQubit(q) == nullptr) {
+      block->items.push_back(rData);
       blockQubits.push_back(q);
     }
   }

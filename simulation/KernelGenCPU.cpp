@@ -109,10 +109,9 @@ inline std::vector<MatData> getMatrixData(
 
 } // anonymous namespace
 
-Function* saot::genCPUCode(llvm::Module& llvmModule,
-                           const CPUKernelGenConfig& config,
-                           const QuantumGate& gate,
-                           const std::string& funcName) {
+Function* saot::genCPUCode(
+    Module& llvmModule, const CPUKernelGenConfig& config,
+    const QuantumGate& gate, const std::string& funcName) {
   const unsigned s = config.simd_s;
   const unsigned S = 1ULL << s;
   const unsigned k = gate.qubits.size();
@@ -548,4 +547,11 @@ Function* saot::genCPUCode(llvm::Module& llvmModule,
   B.CreateRetVoid();
 
   return func;
+}
+
+Function* saot::genCPUMeasure(
+    Module& llvmModule, const CPUKernelGenConfig &config,
+    int q, const std::string &funcName) {
+  assert(0 && "Not Implemented");
+  return nullptr;
 }

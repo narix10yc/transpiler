@@ -23,7 +23,7 @@ namespace IOColor {
 static const char* RESET = "\033[0m";
 
 static const char* BOLD = "\033[1m";
-static const char* ITATIC = "\033[3m";
+static const char* ITALIC = "\033[3m";
 
 static const char* DEFAULT_FG = "\033[30m";
 static const char* RED_FG = "\033[31m";

@@ -4,11 +4,11 @@
 
 #include "utils/iocolor.h"
 
-using namespace saot::parse;
+using namespace saot;
 using namespace saot::ast;
 using namespace IOColor;
 
-std::string saot::parse::getNameOfTokenKind(TokenKind kind) {
+std::string saot::getNameOfTokenKind(TokenKind kind) {
   switch (kind) {
   case tk_Eof:
     return "EoF";
@@ -19,13 +19,13 @@ std::string saot::parse::getNameOfTokenKind(TokenKind kind) {
   case tk_Identifier:
     return "Identifier";
 
-  case tk_L_RoundBraket:
+  case tk_L_RoundBracket:
     return "(";
-  case tk_R_RoundBraket:
+  case tk_R_RoundBracket:
     return ")";
-  case tk_L_CurlyBraket:
+  case tk_L_CurlyBracket:
     return "{";
-  case tk_R_CurlyBraket:
+  case tk_R_CurlyBracket:
     return "}";
 
   case tk_Comma:
@@ -44,13 +44,8 @@ void Parser::printLocation(std::ostream& os) const {
   os << std::setw(5) << std::setfill(' ') << lineInfo.line << " | ";
   os.write(lineInfo.memRefBegin, lineInfo.memRefEnd - lineInfo.memRefBegin);
   os << "      | "
-     << std::string(static_cast<size_t>(curToken.memRefBegin - lexer.lineBegin),
-                    ' ')
-     << GREEN_FG << BOLD
-     << std::string(
-            static_cast<size_t>(curToken.memRefEnd - curToken.memRefBegin), '^')
-     << "\n"
-     << RESET;
+     << std::string(curToken.memRefBegin - lexer.lineBegin,' ')
+     << BOLDGREEN(std::string(curToken.length(), '^') << "\n");
 }
 
 std::ostream& Token::print(std::ostream& os) const {
@@ -80,22 +75,22 @@ std::ostream& Token::print(std::ostream& os) const {
     os << "\\n";
     break;
 
-  case tk_L_RoundBraket:
+  case tk_L_RoundBracket:
     os << "(";
     break;
-  case tk_R_RoundBraket:
+  case tk_R_RoundBracket:
     os << ")";
     break;
-  case tk_L_SquareBraket:
+  case tk_L_SquareBracket:
     os << "[";
     break;
-  case tk_R_SquareBraket:
+  case tk_R_SquareBracket:
     os << "]";
     break;
-  case tk_L_CurlyBraket:
+  case tk_L_CurlyBracket:
     os << "{";
     break;
-  case tk_R_CurlyBraket:
+  case tk_R_CurlyBracket:
     os << "}";
     break;
   case tk_Less:
@@ -136,9 +131,9 @@ void Lexer::lex(Token& tok) {
     return;
   }
 
-  char c =* (curPtr++);
+  char c = *curPtr++;
   while (c == ' ' || c == '\r')
-    c =* (curPtr++);
+    c = *curPtr++;
 
   switch (c) {
   case '\0':
@@ -152,22 +147,22 @@ void Lexer::lex(Token& tok) {
   }
 
   case '(':
-    assignTok(tk_L_RoundBraket);
+    assignTok(tk_L_RoundBracket);
     return;
   case ')':
-    assignTok(tk_R_RoundBraket);
+    assignTok(tk_R_RoundBracket);
     return;
   case '[':
-    assignTok(tk_L_SquareBraket);
+    assignTok(tk_L_SquareBracket);
     return;
   case ']':
-    assignTok(tk_R_SquareBraket);
+    assignTok(tk_R_SquareBracket);
     return;
   case '{':
-    assignTok(tk_L_CurlyBraket);
+    assignTok(tk_L_CurlyBracket);
     return;
   case '}':
-    assignTok(tk_R_CurlyBraket);
+    assignTok(tk_R_CurlyBracket);
     return;
   case '<':
     assignTok(tk_Less);
@@ -191,7 +186,7 @@ void Lexer::lex(Token& tok) {
 
   // '*' or '**'
   case '*': {
-    if (*(curPtr++) == '*')
+    if (*curPtr++ == '*')
       assignTok(tk_Pow, 2);
     else {
       --curPtr;
@@ -202,17 +197,18 @@ void Lexer::lex(Token& tok) {
 
   default:
     auto* memRefBegin = --curPtr;
-    if ('0' <= c && c <= '9') {
-      c =* (++curPtr);
-      while (c == '.' || ('0' <= c && c <= '9'))
-        c =* (++curPtr);
+    if (c == '-' || ('0' <= c && c <= '9')) {
+      c = *(++curPtr);
+      while (c == 'e' || c == '+' || c == '-' || c == '.' ||
+             ('0' <= c && c <= '9'))
+        c = *(++curPtr);
       tok = Token(tk_Numeric, memRefBegin, curPtr);
       return;
     }
     assert(std::isalpha(c) && "Can only parse identifiers now");
-    c =* (++curPtr);
+    c = *(++curPtr);
     while (c == '_' || std::isalnum(c))
-      c =* (++curPtr);
+      c = *(++curPtr);
     tok = Token(tk_Identifier, memRefBegin, curPtr);
     return;
   }
@@ -220,7 +216,7 @@ void Lexer::lex(Token& tok) {
 
 void Lexer::skipLine() {
   while (curPtr < bufferEnd) {
-    if (*(curPtr++) == '\n') {
+    if (*curPtr++ == '\n') {
       ++line;
       lineBegin = curPtr;
       break;
@@ -228,20 +224,20 @@ void Lexer::skipLine() {
   }
 }
 
-Lexer::line_info_t Lexer::getCurLineInfo() const {
+Lexer::LineInfo Lexer::getCurLineInfo() const {
   auto* lineEnd = curPtr;
   while (lineEnd < bufferEnd) {
-    if (*(lineEnd++) == '\n')
+    if (*lineEnd++ == '\n')
       break;
   }
-  return line_info_t{
+  return LineInfo{
       .line = line, .memRefBegin = lineBegin, .memRefEnd = lineEnd};
 }
 
 std::complex<double> Parser::parseComplexNumber() {
   double multiple = 1.0;
-  // general complex number, paranthesis required
-  if (optionalAdvance(tk_L_RoundBraket)) {
+  // general complex number, parenthesis required
+  if (optionalAdvance(tk_L_RoundBracket)) {
     if (curToken.is(tk_Sub)) {
       advance(tk_Sub);
       multiple = -1.0;
@@ -262,7 +258,7 @@ std::complex<double> Parser::parseComplexNumber() {
     double im = multiple * curToken.toDouble();
     advance(tk_Numeric);
 
-    requiredAdvance(tk_R_RoundBraket);
+    requiredAdvance(tk_R_RoundBracket);
     return {re, im};
   }
 
@@ -295,11 +291,11 @@ std::complex<double> Parser::parseComplexNumber() {
 
 GateApplyStmt Parser::parseGateApply() {
   requireCurTokenIs(tk_Identifier);
-  GateApplyStmt stmt(std::string(curToken.memRefBegin, curToken.memRefEnd));
+  GateApplyStmt stmt(std::string(curToken.memRefBegin, curToken.memRefEnd), {});
   advance(tk_Identifier);
 
   // parameters (optional)
-  if (optionalAdvance(tk_L_RoundBraket)) {
+  if (optionalAdvance(tk_L_RoundBracket)) {
     if (optionalAdvance(tk_Hash)) {
       // parameter ref #N
       requireCurTokenIs(tk_Numeric);
@@ -323,7 +319,7 @@ GateApplyStmt Parser::parseGateApply() {
         optionalAdvance(tk_Comma);
       }
     }
-    requiredAdvance(tk_R_RoundBraket);
+    requiredAdvance(tk_R_RoundBracket);
   }
 
   // target qubits
@@ -372,12 +368,12 @@ QuantumCircuit Parser::parseQuantumCircuit() {
   advance(tk_Identifier);
   skipLineBreaks();
 
-  requiredAdvance(tk_L_CurlyBraket);
+  requiredAdvance(tk_L_CurlyBracket);
   skipLineBreaks();
 
   // circuit body
   while (true) {
-    if (optionalAdvance(tk_R_CurlyBraket))
+    if (optionalAdvance(tk_R_CurlyBracket))
       break;
     circuit.stmts.push_back(std::make_unique<GateChainStmt>(parseGateChain()));
     skipLineBreaks();

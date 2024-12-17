@@ -661,7 +661,7 @@ void GateMatrix::computeAndCacheCMat() const {
 
 void GateMatrix::computeAndCachePMat() const {
   if (cache.isConvertibleToCMat == Convertible) {
-    auto edgeSize = cache.cMat.edgeSize();
+    const auto edgeSize = cache.cMat.edgeSize();
     cache.pMat = p_matrix_t(edgeSize);
     for (size_t i = 0; i < edgeSize * edgeSize; ++i)
       cache.pMat[i] = Polynomial(cache.cMat[i]);
@@ -679,7 +679,7 @@ inline void computeSigMatAfresh(const GateMatrix::c_matrix_t& cMat,
                                 double zeroTol, double oneTol,
                                 GateMatrix::sig_matrix_t& sigMat) {
   assert(sigMat.edgeSize() == 0);
-  auto edgeSize = cMat.edgeSize();
+  const auto edgeSize = cMat.edgeSize();
   sigMat = GateMatrix::sig_matrix_t(edgeSize);
 
   for (size_t i = 0; i < edgeSize * edgeSize; ++i) {

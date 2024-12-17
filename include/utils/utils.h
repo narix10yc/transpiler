@@ -40,14 +40,32 @@ bool isOrdered(const std::vector<T>& vec, bool ascending = true) {
 std::ostream&
 print_complex(std::ostream& os, std::complex<double> c, int precision = 3);
 
+
 template<typename T>
-std::ostream& printVectorFormat(std::ostream& os, std::span<T> s) {
+std::ostream& printArrayNoBrackets(
+    std::ostream& os, std::span<T> s, const char sep = ',') {
+  if (s.empty())
+    return os;
+  auto it = s.begin();
+  os << *it;
+  while (++it != s.end()) {
+    os.put(sep);
+    os << *it;
+  }
+  return os;
+}
+
+template<typename T>
+std::ostream& printArray(
+    std::ostream& os, std::span<T> s, const char sep = ',') {
   if (s.empty())
     return os << "[]";
-  auto it = s.cbegin();
+  auto it = s.begin();
   os << "[" << *it;
-  while (++it != s.cend())
-    os << "," << *it;
+  while (++it != s.end()) {
+    os.put(sep);
+    os << *it;
+  }
   return os << "]";
 }
 

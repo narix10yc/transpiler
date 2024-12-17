@@ -110,16 +110,17 @@ void CodeGeneratorCPU::generate(const CircuitGraph& graph, int debugLevel,
 
   auto allBlocks = graph.getAllBlocks();
   if (forceInOrder)
-    std::sort(allBlocks.begin(), allBlocks.end(),
-              [](GateBlock* a, GateBlock* b) { return a->id < b->id; });
+    std::ranges::sort(allBlocks, [](GateBlock* a, GateBlock* b) {
+      return a->id < b->id;
+    });
 
   std::string kernelDir = fileName + "_kernels";
   if (config.dumpIRToMultipleFiles) {
     sys::fs::create_directory(kernelDir);
   }
 
-  IRGenerator irGenerator(config.irConfig,
-                          "mod_" + std::to_string(allBlocks[0]->id));
+  IRGenerator irGenerator(
+    config.irConfig, "mod_" + std::to_string(allBlocks[0]->id));
   for (const auto& block : allBlocks) {
     const auto& gate =* (block->quantumGate);
     std::string kernelName = "kernel_block_" + std::to_string(block->id);
@@ -214,7 +215,7 @@ inline std::string getKernelName(GateBlock* block) {
   return "kernel_" + std::to_string(block->id);
 }
 
-// write meta data to a C header file
+// write metadata to a C header file
 void writeMetadataHeaderFile(const std::vector<GateBlock*>& allBlocks,
                              int nqubits, const std::string& fileName,
                              const CodeGeneratorCPUConfig& config) {
@@ -228,7 +229,7 @@ void writeMetadataHeaderFile(const std::vector<GateBlock*>& allBlocks,
 
   externSS << "extern \"C\" {\n";
 
-  // simulation kernel declearation
+  // simulation kernel declaration
   kernelSS << "void simulation_kernel(";
   if (isSepKernel)
     kernelSS << realTy << "* re, " << realTy << "* im, ";
@@ -445,8 +446,9 @@ void saot::generateCpuIrForRecompilation(const CircuitGraph& graph,
   assert(nthreads > 0);
   auto allBlocks = graph.getAllBlocks();
   if (config.forceInOrder)
-    std::sort(allBlocks.begin(), allBlocks.end(),
-              [](GateBlock* a, GateBlock* b) { return a->id < b->id; });
+    std::ranges::sort(allBlocks, [](GateBlock* a, GateBlock* b) {
+      return a->id < b->id;
+    });
 
   sys::fs::create_directory(dir);
   if (config.rmFilesInsideOutputDirectory) {

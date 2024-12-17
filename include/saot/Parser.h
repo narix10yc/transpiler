@@ -1,6 +1,8 @@
 #ifndef SAOT_NEWPARSER_H
 #define SAOT_NEWPARSER_H
 
+#include "saot/ast.h"
+
 #include <cassert>
 #include <complex>
 #include <fstream>
@@ -12,13 +14,8 @@ namespace saot {
 class CircuitGraph;
 }
 
-namespace saot::ast {
-class GateApplyStmt;
-class GateChainStmt;
-class QuantumCircuit;
-} // namespace saot::ast
 
-namespace saot::parse {
+namespace saot {
 
 enum TokenKind : int {
   tk_Eof = -1,
@@ -44,12 +41,12 @@ enum TokenKind : int {
   // symbols
   tk_Comma = -104,          // ,
   tk_Semicolon = -105,      // ;
-  tk_L_RoundBraket = -106,  // (
-  tk_R_RoundBraket = -107,  // )
-  tk_L_SquareBraket = -108, // [
-  tk_R_SquareBraket = -109, // ]
-  tk_L_CurlyBraket = -112,  // {
-  tk_R_CurlyBraket = -113,  // }
+  tk_L_RoundBracket = -106,  // (
+  tk_R_RoundBracket = -107,  // )
+  tk_L_SquareBracket = -108, // [
+  tk_R_SquareBracket = -109, // ]
+  tk_L_CurlyBracket = -112,  // {
+  tk_R_CurlyBracket = -113,  // }
   tk_SingleQuote = -114,    // '
   tk_DoubleQuote = -115,    // "
   tk_AtSymbol = -116,       // @
@@ -83,13 +80,12 @@ public:
 
   std::ostream& print(std::ostream&  = std::cerr) const;
 
-  bool is(TokenKind k) { return kind == k; }
-  bool isNot(TokenKind k) { return kind != k; }
+  bool is(TokenKind k) const { return kind == k; }
+  bool isNot(TokenKind k) const { return kind != k; }
 
   // is the token the literal 'i'
-  bool isI() {
-    return kind == tk_Identifier && memRefBegin + 1 == memRefEnd &&
-          * memRefBegin == 'i';
+  bool isI() const {
+    return kind == tk_Identifier && length() == 1 && *memRefBegin == 'i';
   }
 
   double toDouble() const {
@@ -101,6 +97,8 @@ public:
     assert(memRefBegin < memRefEnd);
     return std::stoi(std::string(memRefBegin, memRefEnd));
   }
+
+  size_t length() const { return memRefEnd - memRefBegin; }
 };
 
 class Lexer {
@@ -136,13 +134,13 @@ public:
 
   void skipLine();
 
-  struct line_info_t {
+  struct LineInfo {
     int line;
     const char* memRefBegin;
     const char* memRefEnd;
   };
 
-  line_info_t getCurLineInfo() const;
+  LineInfo getCurLineInfo() const;
 };
 
 class Parser {
@@ -162,14 +160,11 @@ public:
   void printLocation(std::ostream& os = std::cerr) const;
 
   std::ostream& logErr() const {
-    return std::cerr << IOColor::RED_FG << IOColor::BOLD
-                     << "Parser Error: " << IOColor::RESET;
+    return std::cerr << BOLDRED("Parser Error: ");
   }
 
   void failAndExit() const {
-    std::cerr << IOColor::RED_FG << IOColor::BOLD
-              << "Parsing failed. Exiting...\n"
-              << IOColor::RESET;
+    std::cerr << BOLDRED("Parsing failed. Exiting...\n");
     exit(1);
   }
 
@@ -188,6 +183,7 @@ public:
     advance();
   }
 
+  /// Advance if curToken matches @p kind; Otherwise nothing happens
   bool optionalAdvance(TokenKind kind) {
     if (curToken.is(kind)) {
       advance();
@@ -196,6 +192,7 @@ public:
     return false;
   }
 
+  /// Advance such that curToken must have \p kind. Otherwise, error is thrown
   void requiredAdvance(TokenKind kind, const char* msg = nullptr) {
     if (curToken.is(kind)) {
       advance();
@@ -212,7 +209,7 @@ public:
     failAndExit();
   }
 
-  void requireCurTokenIs(TokenKind kind, const char* msg = nullptr) {
+  void requireCurTokenIs(TokenKind kind, const char* msg = nullptr) const {
     if (curToken.is(kind))
       return;
     auto& os = logErr();
