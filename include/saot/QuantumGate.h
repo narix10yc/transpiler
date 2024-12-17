@@ -62,12 +62,12 @@ public:
   using gate_params_t =
       std::array<std::variant<std::monostate, int, double>, 3>;
   // unitary permutation matrix type
-  using up_matrix_t = saot::UnitaryPermutationMatrix<double>;
+  using up_matrix_t = saot::UnitaryPermutationMatrix;
   // constant matrix type
   using c_matrix_t = utils::square_matrix<std::complex<double>>;
   // parametrised matrix type
   using p_matrix_t = utils::square_matrix<saot::Polynomial>;
-  // matrix signature type
+  // signature matrix type
   using sig_matrix_t = utils::square_matrix<std::complex<ScalarKind>>;
 
 private:
@@ -199,13 +199,14 @@ public:
     return saot::printParametrizedMatrix(os, getParametrizedMatrix());
   }
 
-  // preset unitary matrices
+  // preset unitary permutation matrices
   static const up_matrix_t MatrixI1_up;
   static const up_matrix_t MatrixI2_up;
 
   static const up_matrix_t MatrixX_up;
   static const up_matrix_t MatrixY_up;
   static const up_matrix_t MatrixZ_up;
+
   static const up_matrix_t MatrixCX_up;
   static const up_matrix_t MatrixCZ_up;
 
@@ -288,7 +289,7 @@ public:
 
   void sortQubits();
 
-  /// @brief B.lmatmul(A) will return AB
+  /// @brief B.lmatmul(A) will return AB. That is, gate B will be applied first.
   QuantumGate lmatmul(const QuantumGate& other) const;
 
   int opCount(double zeroSkippingThres = 1e-8) const;

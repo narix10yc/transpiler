@@ -3,7 +3,6 @@
 #include "utils/utils.h"
 #include <cmath>
 #include <iomanip>
-#include <type_traits>
 
 using namespace IOColor;
 using namespace saot;
@@ -225,7 +224,7 @@ int getNumActiveParams(const gate_params_t &params) {
 }
 
 GateMatrix::GateMatrix(const up_matrix_t& upMat) : cache(), gateParameters() {
-  auto size = upMat.getSize();
+  auto size = upMat.edgeSize();
   gateKind = static_cast<GateKind>(static_cast<int>(std::log2(size)));
   assert(1 << static_cast<int>(gateKind) == size);
 
@@ -469,12 +468,11 @@ inline p_matrix_t matCvt_gp_to_p(GateKind kind, const gate_params_t &params) {
 }
 
 inline c_matrix_t matCvt_up_to_c(const up_matrix_t& up) {
-  c_matrix_t cmat(up.getSize());
-  for (unsigned i = 0; i < up.getSize(); i++) {
-    const auto& idx = up[i].first;
-    const auto& phase = up[i].second;
-    cmat[idx] = {std::cos(phase), std::sin(phase)};
-  }
+  const auto s = up.edgeSize();
+  c_matrix_t cmat(s);
+  for (unsigned i = 0; i < s; i++)
+    cmat[up[i].index] = {std::cos(up[i].phase), std::sin(up[i].phase)};
+
   return cmat;
 }
 
@@ -567,11 +565,11 @@ void GateMatrix::computeAndCacheCMat() const {
   assert(cache.isConvertibleToUpMat == Unknown);
   // try convert from upMat
   if (cache.isConvertibleToUpMat == Convertible) {
-    const auto edgeSize = cache.upMat.getSize();
+    const auto edgeSize = cache.upMat.edgeSize();
     cache.cMat = c_matrix_t(edgeSize);
     for (unsigned i = 0; i < edgeSize; ++i) {
-      const auto& idx = cache.upMat[i].first;
-      const auto& phase = cache.upMat[i].second;
+      const auto& idx = cache.upMat[i].index;
+      const auto& phase = cache.upMat[i].phase;
       cache.cMat[idx] = {std::cos(phase), std::sin(phase)};
     }
     cache.isConvertibleToCMat = Convertible;
@@ -617,15 +615,12 @@ void GateMatrix::computeAndCacheCMat() const {
     const double* p1 = std::get_if<double>(&gateParameters[1]);
     const double* p2 = std::get_if<double>(&gateParameters[2]);
     if (p0 && p1 && p2) {
-      // std::cerr << "(theta, phi, lambd) = " <<* p0 << " " <<* p1 << " " <<
-      //* p2 << "\n";
-      cache.cMat = c_matrix_t(
-          {{std::cos(*p0), 0.0},
-           {-std::cos(*p2) * std::sin(*p0), -std::sin(*p2) * std::sin(*p0)},
-           {std::cos(*p1) * std::sin(*p0), std::sin(*p1) * std::sin(*p0)},
-           {std::cos(*p1 +* p2) * std::cos(*p0),
-            std::sin(*p1 +* p2) * std::cos(*p0)}});
-      // printConstantMatrix(std::cerr, cache.cMat);
+      cache.cMat = c_matrix_t({
+        {std::cos(*p0), 0.0},
+        {-std::cos(*p2) * std::sin(*p0), -std::sin(*p2) * std::sin(*p0)},
+        {std::cos(*p1) * std::sin(*p0), std::sin(*p1) * std::sin(*p0)},
+        {std::cos(*p1 + *p2) * std::cos(*p0), std::sin(*p1 + *p2) * std::cos(*p0)}
+      });
       cache.isConvertibleToCMat = Convertible;
       return;
     }
@@ -649,22 +644,10 @@ void GateMatrix::computeAndCacheCMat() const {
       return;
     }
     cache.cMat = c_matrix_t({
-        {1.0, 0.0},
-        {0.0, 0.0},
-        {0.0, 0.0},
-        {0.0, 0.0},
-        {0.0, 0.0},
-        {1.0, 0.0},
-        {0.0, 0.0},
-        {0.0, 0.0},
-        {0.0, 0.0},
-        {0.0, 0.0},
-        {1.0, 0.0},
-        {0.0, 0.0},
-        {0.0, 0.0},
-        {0.0, 0.0},
-        {0.0, 0.0},
-        {std::cos(*p0), std::sin(*p0)},
+        {1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0},
+        {0.0, 0.0}, {1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0},
+        {0.0, 0.0}, {0.0, 0.0}, {1.0, 0.0}, {0.0, 0.0},
+        {0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {std::cos(*p0), std::sin(*p0)},
     });
     cache.isConvertibleToCMat = Convertible;
     return;
@@ -719,8 +702,8 @@ inline void computeSigMatAfresh(const GateMatrix::c_matrix_t& cMat,
 
 } // anonymous namespace
 
-// TODO: when there exists cached sigMat already, we can update sigMat more
-// efficiently
+/// TODO: when there exists cached sigMat already, we can update sigMat more
+/// efficiently
 void GateMatrix::computeAndCacheSigMat(double zeroTol, double oneTol) const {
   const auto* cMat = getConstantMatrix();
   assert(cMat);

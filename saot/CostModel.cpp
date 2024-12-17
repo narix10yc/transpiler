@@ -125,7 +125,8 @@ void PerformanceCache::runExperiments(
         u1qGates[q].first.gateMatrix.getConstantMatrix()->data());
     });
 
-    std::cerr << "U3q @ [" << q << "," << (q+1) % nqubits << "," << (q+2) % nqubits << "]: "
+    std::cerr << "U3q @ [" << q << ","
+              << (q+1) % nqubits << "," << (q+2) % nqubits << "]: "
               << calculateMemUpdateSpeed(nqubits, 64, tr.min) << " GiBps\n";
   }
   // assert(0 && "Not Implemented");

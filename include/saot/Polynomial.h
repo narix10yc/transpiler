@@ -11,8 +11,8 @@ namespace saot {
 
 class CasNode {
 public:
-  virtual std::ostream& print(std::ostream& ) const = 0;
-  ~CasNode() = default;
+  virtual std::ostream &print(std::ostream &) const = 0;
+  virtual ~CasNode() = default;
 };
 
 /// @brief op(vars[0] + vars[1] + <other vars> + constant)
@@ -51,7 +51,7 @@ public:
   }
 
   void addVar(int v) {
-    auto it = std::lower_bound(vars.begin(), vars.end(), v);
+    auto it = std::ranges::lower_bound(vars, v);
     vars.insert(it, v);
   }
 
@@ -169,9 +169,9 @@ public:
       _expiVars.push_back(E);
       return;
     }
-    auto it = std::upper_bound(_expiVars.begin(), _expiVars.end(),
-                               ExpiVar(E.var, true));
-    it--;
+    auto it = std::upper_bound(
+      _expiVars.begin(), _expiVars.end(), ExpiVar(E.var, true));
+    --it;
     if (it->var == E.var && (it->isPlus ^ E.isPlus)) {
       _expiVars.erase(it);
       return;
@@ -247,8 +247,9 @@ public:
   /// @brief Remove Monomials whose coefficient is less than a given threshold
   /// @return updated* this
   Polynomial& removeSmallMonomials(double thres = 1e-8);
-  Polynomial& 
-  simplifySelf(const std::vector<std::pair<int, double>>& varValues = {});
+
+  Polynomial& simplifySelf(
+    const std::vector<std::pair<int, double>>& varValues = {});
 
   Polynomial& operator+=(const Monomial&);
 
@@ -270,8 +271,6 @@ public:
 
   Polynomial& operator*=(const Monomial& M) {
     auto size = _monomials.size();
-    // we cannot use range-based iteration here as multiplication can
-    // insert more terms
     for (unsigned i = 0; i < size; i++)
       _monomials[i] *= M;
     return *this;

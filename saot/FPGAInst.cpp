@@ -47,18 +47,22 @@ saot::fpga::getFPGAGateCategory(const QuantumGate& gate,
     cate |= FPGAGateCategory::SingleQubit;
 
   if (const auto* p = gate.gateMatrix.getUnitaryPermMatrix(tolerances.upTol)) {
-    if (std::all_of(
-            p->data.begin(), p->data.end(),
-            [tol = tolerances.ncTol](const std::pair<size_t, double>& d) {
-              std::complex<double> cplx(std::cos(d.second), std::sin(d.second));
-              return (std::abs(cplx - std::complex<double>(1.0, 0.0)) <= tol) ||
-                     (std::abs(cplx - std::complex<double>(-1.0, 0.0)) <=
-                      tol) ||
-                     (std::abs(cplx - std::complex<double>(0.0, 1.0)) <= tol) ||
-                     (std::abs(cplx - std::complex<double>(0.0, -1.0)) <= tol);
-            })) {
+    bool nonCompFlag = true;
+    for (const auto& entry : *p) {
+      auto normedPhase = entry.normedPhase();
+      if (std::abs(normedPhase) > tolerances.ncTol &&
+          std::abs(normedPhase - M_PI_2) > tolerances.ncTol &&
+          std::abs(normedPhase + M_PI_2) > tolerances.ncTol &&
+          std::abs(normedPhase - M_PI) > tolerances.ncTol &&
+          std::abs(normedPhase + M_PI) > tolerances.ncTol) {
+        nonCompFlag = false;
+        break;
+      }
+    }
+
+    if (nonCompFlag)
       cate |= FPGAGateCategory::NonComp;
-    } else
+    else
       cate = FPGAGateCategory::UnitaryPerm;
   }
 

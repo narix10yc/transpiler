@@ -9,6 +9,7 @@
 #include <iomanip>
 #include <iostream>
 #include <vector>
+#include <span>
 
 #include <llvm/ADT/SmallVector.h>
 
@@ -38,6 +39,17 @@ bool isOrdered(const std::vector<T>& vec, bool ascending = true) {
 
 std::ostream&
 print_complex(std::ostream& os, std::complex<double> c, int precision = 3);
+
+template<typename T>
+std::ostream& printVectorFormat(std::ostream& os, std::span<T> s) {
+  if (s.empty())
+    return os << "[]";
+  auto it = s.cbegin();
+  os << "[" << *it;
+  while (++it != s.cend())
+    os << "," << *it;
+  return os << "]";
+}
 
 template<typename T>
 std::ostream& printVector(

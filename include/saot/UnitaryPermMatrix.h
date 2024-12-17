@@ -11,50 +11,113 @@ namespace saot {
 /// entry of the form expi(phi).
 /// @param data The (i, data[i].first) entry of the matrix is
 /// expi(data[i].second)
-template<typename data_t>
 class UnitaryPermutationMatrix {
 public:
-  std::vector<std::pair<size_t, data_t>> data;
+  struct Entry {
+    size_t index;
+    double phase;
 
-  UnitaryPermutationMatrix() : data() {}
-  UnitaryPermutationMatrix(size_t size) : data(size) {}
-  UnitaryPermutationMatrix(const std::vector<std::pair<size_t, data_t>>& data)
-      : data(data) {}
-  UnitaryPermutationMatrix(
-      std::initializer_list<std::pair<size_t, data_t>> data)
-      : data(data) {}
+    double normedPhase() const {
+      auto p = std::fmod(phase, M_2_PI);
+      if (p >= M_PI)
+        return p - M_2_PI;
+      if (p < -M_PI)
+        return p + M_2_PI;
+      return p;
+    }
+  };
+private:
+  Entry* _data;
+  size_t _edgeSize;
 
-  size_t getSize() const { return data.size(); }
+public:
+  ~UnitaryPermutationMatrix() { std::free(_data); }
 
-  std::pair<size_t, data_t>& operator[](size_t index) { return data[index]; }
-  const std::pair<size_t, data_t>& operator[](size_t index) const {
-    return data[index];
+  UnitaryPermutationMatrix() : _data(nullptr), _edgeSize(0) {}
+  UnitaryPermutationMatrix(size_t edgeSize)
+    : _data(static_cast<Entry*>(std::malloc(edgeSize * sizeof(Entry))))
+    , _edgeSize(edgeSize) {}
+
+  UnitaryPermutationMatrix(std::initializer_list<Entry> data) {
+    _edgeSize = data.size();
+    if (_edgeSize == 0) {
+      _data = nullptr;
+      return;
+    }
+    _data = static_cast<Entry*>(std::malloc(_edgeSize * sizeof(Entry)));
+    size_t i = 0;
+    for (const auto& item : data)
+      _data[i++] = item;
   }
 
-  static UnitaryPermutationMatrix Identity(size_t size) {
-    UnitaryPermutationMatrix m(size);
-    for (size_t i = 0; i < size; i++)
-      m.data[i] = std::make_pair<size_t, data_t>(i, 0.0);
-    return m;
+  UnitaryPermutationMatrix(const UnitaryPermutationMatrix& other) {
+    _data = static_cast<Entry*>(std::malloc(other._edgeSize * sizeof(Entry)));
+    _edgeSize = other._edgeSize;
+    std::memcpy(_data, other._data, other._edgeSize * sizeof(Entry));
   }
+
+  UnitaryPermutationMatrix& operator=(const UnitaryPermutationMatrix& other) {
+    if (this == &other)
+      return *this;
+
+    this->~UnitaryPermutationMatrix();
+    new (this) UnitaryPermutationMatrix(other);
+    return *this;
+  }
+
+  UnitaryPermutationMatrix(UnitaryPermutationMatrix&& other) noexcept {
+    _data = other._data;
+    _edgeSize = other._edgeSize;
+    other._data = nullptr;
+  }
+
+  UnitaryPermutationMatrix& operator=(
+      UnitaryPermutationMatrix&& other) noexcept {
+    if (this == &other)
+      return *this;
+
+    this->~UnitaryPermutationMatrix();
+    new (this) UnitaryPermutationMatrix(std::move(other));
+    assert(other._data == nullptr);
+    return *this;
+  }
+
+  size_t edgeSize() const { return _edgeSize; }
+
+  Entry& operator[](size_t index) {
+    assert(index < _edgeSize);
+    return _data[index];
+  }
+  const Entry& operator[](size_t index) const {
+    assert(index < _edgeSize);
+    return _data[index];
+  }
+
+  Entry* begin() { return _data; }
+  Entry* end() { return _data + _edgeSize; }
+
+  const Entry* begin() const { return _data; }
+  const Entry* end() const { return _data + _edgeSize; }
 
   UnitaryPermutationMatrix permute(const std::vector<int>& flags) const {
+    assert(flags.size() == _edgeSize);
+    if (_edgeSize == 0)
+      return UnitaryPermutationMatrix();
     if (std::all_of(flags.begin(), flags.end(),
                     [&flags](int i) { return flags[i] == i; }))
       return UnitaryPermutationMatrix(*this);
 
-    const auto permuteIndex = [&flags, k = flags.size()](size_t idx) -> size_t {
-      size_t newIdx = 0;
-      for (unsigned b = 0; b < k; b++) {
-        newIdx += ((idx & (1ULL << b)) >> b) << flags[b];
-      }
-      return newIdx;
+    const auto permuteIndex = [&flags, k = flags.size()](size_t src) -> size_t {
+      size_t dst = 0;
+      for (unsigned b = 0; b < k; b++)
+        dst += ((src & (1ULL << b)) >> b) << flags[b];
+      return dst;
     };
+    const auto s = edgeSize();
+    UnitaryPermutationMatrix matrix(s);
 
-    UnitaryPermutationMatrix matrix(data.size());
-    for (size_t r = 0; r < data.size(); r++)
-      matrix.data[permuteIndex(r)] = {permuteIndex(data[r].first),
-                                      data[r].second};
+    for (size_t r = 0; r < s; r++)
+      matrix[permuteIndex(r)] = {permuteIndex(_data[r].index), _data[r].phase};
 
     return matrix;
   }
