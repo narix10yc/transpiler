@@ -1,5 +1,5 @@
-#include "simulation/ir_generator.h"
 #include "simulation/JIT.h"
+#include "simulation/ir_generator.h"
 
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 
@@ -7,6 +7,8 @@
 
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
+
+#include "llvm/Passes/PassBuilder.h"
 
 using namespace saot;
 using namespace llvm;
@@ -33,4 +35,26 @@ std::unique_ptr<orc::LLJIT> saot::createJITSession(
       orc::ThreadSafeModule(std::move(llvmModule), std::move(llvmContext))));
   }
   return jit;
+}
+
+void saot::applyLLVMOptimization(
+    Module& llvmModule, const OptimizationLevel& level) {
+  // ChatGPT:
+  // These must be declared in this order so that they are destroyed in the
+  // correct order due to inter-analysis-manager references.
+  LoopAnalysisManager LAM;
+  FunctionAnalysisManager FAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
+
+  PassBuilder PB;
+
+  PB.registerLoopAnalyses(LAM);
+  PB.registerFunctionAnalyses(FAM);
+  PB.registerCGSCCAnalyses(CGAM);
+  PB.registerModuleAnalyses(MAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+  ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(level);
+  MPM.run(llvmModule, MAM);
 }

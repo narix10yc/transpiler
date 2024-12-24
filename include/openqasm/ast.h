@@ -285,7 +285,7 @@ public:
   size_t countStmts() { return stmts.size(); }
   Statement getStmt(size_t index) { return *(stmts[index]); }
 
-  saot::CircuitGraph toCircuitGraph() const;
+  void toCircuitGraph(saot::CircuitGraph&) const;
 };
 
 } // namespace openqasm::ast

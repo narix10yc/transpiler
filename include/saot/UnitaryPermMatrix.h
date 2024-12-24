@@ -99,7 +99,7 @@ public:
   const Entry* begin() const { return _data; }
   const Entry* end() const { return _data + _edgeSize; }
 
-  UnitaryPermutationMatrix permute(const std::vector<int>& flags) const {
+  UnitaryPermutationMatrix permute(const llvm::SmallVector<int>& flags) const {
     assert(flags.size() == _edgeSize);
     if (_edgeSize == 0)
       return UnitaryPermutationMatrix();

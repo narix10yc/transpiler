@@ -39,9 +39,9 @@ struct CPUFusionConfig {
   std::ostream& display(std::ostream& ) const;
 };
 
-void applyCPUGateFusion(const CPUFusionConfig& , CircuitGraph&);
+void applyCPUGateFusion(const CPUFusionConfig&, CircuitGraph&);
 
-void applyFPGAGateFusion(CircuitGraph& , const FPGAFusionConfig&);
+// void applyFPGAGateFusion(CircuitGraph&, const FPGAFusionConfig&);
 
 } // namespace saot
 

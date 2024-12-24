@@ -24,7 +24,7 @@ else()
 endif()
 
 add_executable(scratch "scratch.cpp")
-target_link_libraries(scratch qasm saot utils)
+target_link_libraries(scratch saot utils)
 
 add_executable(fpga_playground "fpga_playground.cpp")
 target_link_libraries(fpga_playground qasm saot simulation)
@@ -34,3 +34,5 @@ target_link_libraries(fpga_vary_buffer qasm saot simulation)
 
 add_executable(cost_model "cost_model.cpp")
 target_link_libraries(cost_model qasm saot simulation timeit)
+
+add_executable(blank "blank.cpp")

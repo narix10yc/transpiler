@@ -2,107 +2,89 @@
 #define SAOT_CIRCUITGRAPH_H
 
 #include "saot/QuantumGate.h"
+#include "utils/ObjectPool.h"
+#include "utils/List.h"
+
+#include "llvm/ADT/SmallVector.h"
 
 #include <array>
-#include <list>
-#include <set>
 #include <vector>
 
 namespace saot {
+
+// We forward CircuitGraph declaration here because GateNode constructor needs
+// it to set up connection
+class CircuitGraph;
 
 class GateNode {
 private:
   static int idCount;
 
 public:
-  struct Item {
+  struct ConnectionInfo {
     int qubit;
     GateNode* lhsGate;
     GateNode* rhsGate;
   };
-  const int id;
-  unsigned nqubits;
-  GateMatrix gateMatrix;
-  std::vector<Item> items;
 
-  GateNode(const GateMatrix& gateMatrix, const std::vector<int>& qubits)
-      : id(idCount++), nqubits(gateMatrix.nqubits()), gateMatrix(gateMatrix),
-        items(gateMatrix.nqubits()) {
-    assert(gateMatrix.nqubits() == qubits.size());
-    for (unsigned i = 0; i < qubits.size(); i++)
-      items[i] = {qubits[i], nullptr, nullptr};
-  }
+  int id;
+  // If this GateNode resides inside a GateBlock, quantumGate here will be null
+  // as its memory is managed by GateBlock.
+  std::unique_ptr<QuantumGate> quantumGate;
+  std::vector<ConnectionInfo> connections;
 
-  Item* findQubit(int q) {
-    for (auto& item : items) {
-      if (item.qubit == q)
+  GateNode(std::unique_ptr<QuantumGate> quantumGate, const CircuitGraph& graph);
+
+  static int getIdCount() { return idCount; }
+
+  ConnectionInfo* findConnection(int qubit) {
+    for (auto& item : connections) {
+      if (item.qubit == qubit)
         return &item;
     }
     return nullptr;
   }
 
-  const Item* findQubit(int q) const {
-    for (const auto& item : items) {
-      if (item.qubit == q)
+  const ConnectionInfo* findConnection(int qubit) const {
+    for (const auto& item : connections) {
+      if (item.qubit == qubit)
         return &item;
     }
     return nullptr;
   }
 
-  GateNode* findLHS(unsigned q) const {
-    for (const auto& data : items) {
-      if (data.qubit == q)
-        return data.lhsGate;
-    }
-    return nullptr;
-  }
-
-  GateNode* findRHS(unsigned q) const {
-    for (const auto& data : items) {
-      if (data.qubit == q)
-        return data.rhsGate;
-    }
-    return nullptr;
-  }
-
-  int connect(GateNode* rhsGate, int q = -1);
-
-  std::vector<int> getQubits() const {
-    std::vector<int> qubits(nqubits);
-    for (unsigned i = 0; i < nqubits; i++)
-      qubits[i] = items[i].qubit;
-
-    return qubits;
-  }
-
-  QuantumGate toQuantumGate() const {
-    return QuantumGate(gateMatrix, getQubits());
-  }
+  void connect(GateNode* rhsGate, int q);
 };
 
+/// \brief A \c GateBlock is an aggregate of \c GateNode 's
+/// It is the primary layer for gate fusion. Aggregation relation is maintained
+/// by the \c wires variable, which is internally a vector of \c WireInfo that
+/// specifies qubit, left entry node, and right entry node.
 class GateBlock {
 private:
   static int idCount;
 
 public:
-  struct Item {
+  struct WireInfo {
     int qubit;
     GateNode* lhsEntry;
     GateNode* rhsEntry;
   };
 
   int id;
-  std::vector<Item> items;
+  std::vector<WireInfo> wires;
   std::unique_ptr<QuantumGate> quantumGate;
 
-  GateBlock() : id(idCount++), items(), quantumGate(nullptr) {}
+  GateBlock() : id(idCount++), wires(), quantumGate(nullptr) {}
 
   GateBlock(GateNode* gateNode)
-      : id(idCount++), items(),
-        quantumGate(std::make_unique<QuantumGate>(gateNode->toQuantumGate())) {
-    for (const auto& data : gateNode->items)
-      items.push_back({data.qubit, gateNode, gateNode});
+      : id(idCount++), quantumGate(std::move(gateNode->quantumGate)) {
+    wires.reserve(quantumGate->nqubits());
+    for (const auto& data : gateNode->connections)
+      wires.emplace_back(data.qubit, gateNode, gateNode);
   }
+
+  static int getIdCount() { return idCount; }
 
   std::ostream& displayInfo(std::ostream& os) const;
 
@@ -112,20 +94,20 @@ public:
 
   int connect(GateBlock* rhsBlock, int q = -1);
 
-  int nqubits() const { return items.size(); }
+  int nqubits() const { return wires.size(); }
 
-  Item* findQubit(int q) {
-    for (auto& item : items) {
-      if (item.qubit == q)
-        return &item;
+  WireInfo* findWire(int qubit) {
+    for (auto& wire : wires) {
+      if (wire.qubit == qubit)
+        return &wire;
     }
     return nullptr;
   }
 
-  const Item* findQubit(int q) const {
-    for (const auto& item : items) {
-      if (item.qubit == q)
-        return &item;
+  const WireInfo* findWire(int qubit) const {
+    for (const auto& wire : wires) {
+      if (wire.qubit == qubit)
+        return &wire;
     }
     return nullptr;
   }
@@ -133,38 +115,41 @@ public:
   bool hasSameTargets(const GateBlock& other) const {
     if (nqubits() != other.nqubits())
       return false;
-    for (const auto& data : other.items) {
-      if (findQubit(data.qubit) == nullptr)
+    for (const auto& data : other.wires) {
+      if (findWire(data.qubit) == nullptr)
         return false;
     }
     return true;
   }
 
-  // TODO: This should be identical to quantumGate->qubits
-  // Find a way to remove the redundancy
-  std::vector<int> getQubits() const {
-    std::vector<int> vec(items.size());
-    for (unsigned i = 0; i < items.size(); i++)
-      vec[i] = items[i].qubit;
-    return vec;
-  }
-
   void internalFuse() { assert(false && "Not Implemented"); }
 };
 
+
 class CircuitGraph {
 private:
-  using row_t = std::array<GateBlock*, 36>;
-  using tile_t = std::list<row_t>;
-  using tile_iter_t = std::list<row_t>::iterator;
-  using tile_riter_t = std::list<row_t>::reverse_iterator;
-  using tile_const_iter_t = std::list<row_t>::const_iterator;
-  tile_t _tile;
+  /// Memory management of CircuitGraph
+  utils::ObjectPool<GateNode> gateNodePool;
+  utils::ObjectPool<GateBlock> gateBlockPool;
 
+public:
+  using row_t = std::array<GateBlock*, 36>;
+  using tile_t = utils::List<row_t>;
+  using list_node_t = tile_t::Node;
+  // iterator
+  using iter_t = tile_t::iterator;
+  // using citer_t = tile_t::const_iterator;
+  // using riter_t = tile_t::reverse_iterator;
+  // using criter_t = tile_t::const_reverse_iterator;
+
+private:
+  tile_t _tile;
 public:
   int nqubits;
 
-  CircuitGraph() : _tile(1, {nullptr}), nqubits(0) {}
+  CircuitGraph() : _tile(), nqubits(0) {
+    _tile.emplace_back();
+  }
 
   static CircuitGraph QFTCircuit(int nqubits);
   static CircuitGraph ALACircuit(int nqubits, int nrounds);
@@ -175,73 +160,93 @@ public:
   tile_t& tile() { return _tile; }
   const tile_t& tile() const { return _tile; }
 
+  template<typename... Args>
+  GateNode* acquireGateNode(Args&&... args) {
+    return gateNodePool.acquire(std::forward<Args>(args)...);
+  }
+
+  template<typename... Args>
+  GateBlock* acquireGateBlock(Args&&... args) {
+    return gateBlockPool.acquire(std::forward<Args>(args)...);
+  }
+
+  void releaseGateNode(GateNode* gateNode) {
+    gateNodePool.release(gateNode);
+  }
+
+  void releaseGateBlock(GateBlock* gateBlock) {
+    gateBlockPool.release(gateBlock);
+  }
+
+  // add a quantum gate to the tile
+  void appendGate(std::unique_ptr<QuantumGate> quantumGate);
+
   /// @brief Erase empty rows in the tile
   void eraseEmptyRows();
 
-  bool isRowVacant(tile_iter_t it, const GateBlock* block) const {
-    for (const auto& q : block->getQubits())
-      if ((*it)[q] != nullptr)
+  bool isRowVacant(const row_t& row, const GateBlock* block) const {
+    for (const auto& q : block->quantumGate->qubits)
+      if (row[q] != nullptr)
         return false;
     return true;
   }
 
-  tile_iter_t repositionBlockUpward(tile_iter_t it, size_t q_);
-  tile_iter_t repositionBlockUpward(tile_riter_t it, size_t q_) {
-    return repositionBlockUpward(--(it.base()), q_);
+  /// Update connections of blocks. By assumption nodes connections are always
+  /// preserved. In Debug mode this function will check for node connections.
+  void updateBlockConnections(iter_t it, int q);
+
+  list_node_t* repositionBlockUpward(list_node_t* ln, int q);
+  iter_t repositionBlockUpward(iter_t it, int q) {
+    return iter_t(repositionBlockUpward(it.raw_ptr(), q));
   }
 
-  tile_riter_t repositionBlockDownward(tile_riter_t it, size_t q_);
-  tile_riter_t repositionBlockDownward(tile_iter_t it, size_t q_) {
-    return repositionBlockDownward(--std::make_reverse_iterator(it), q_);
+  list_node_t* repositionBlockDownward(list_node_t* ln, int q);
+  iter_t repositionBlockDownward(iter_t it, int q) {
+    return iter_t(repositionBlockDownward(it.raw_ptr(), q));
   }
 
-  void updateTileUpward();
-  void updateTileDownward();
+  // Squeeze graph and make it compact
+  void squeeze();
 
   /// @brief Try to insert block to a specified row. Three outcome may happen:
   /// - If \p it is vacant, insert \p block there. Otherwise,
   /// - If \p it+1 is vacant, insert \p block there. Otherwise,
   /// - Insert a separate row between \p it and \p it+1 and place \p block
   ///   there.
-  tile_iter_t insertBlock(tile_iter_t it, GateBlock* block);
-
-  void addGate(const QuantumGate& gate) {
-    return addGate(gate.gateMatrix, gate.qubits);
-  }
-
-  void addGate(const GateMatrix& matrix, const std::vector<int>& qubits);
+  iter_t insertBlock(iter_t it, GateBlock* block);
 
   /// @return ordered vector of blocks
-  std::vector<GateBlock*> getAllBlocks() const;
+  // std::vector<GateBlock*> getAllBlocks() const;
 
   /// @brief Get the number of blocks with each size.
   /// @return ret[i] is the number of blocks with size i. Therefore, ret[0] is
   /// always 0, and ret.size() == largest_size + 1.
   std::vector<int> getBlockSizes() const;
-
-  std::vector<std::vector<int>> getBlockOpCountHistogram() const;
-
-  size_t countBlocks() const { return getAllBlocks().size(); }
-
-  size_t countGates() const {
-    const auto allBlocks = getAllBlocks();
-    size_t sum = 0;
-    for (const auto& block : allBlocks)
-      sum += block->countGates();
-    return sum;
-  }
-
-  size_t countTotalOps() const {
-    const auto allBlocks = getAllBlocks();
-    size_t sum = 0;
-    for (const auto& block : allBlocks) {
-      assert(block->quantumGate != nullptr);
-      sum += block->quantumGate->opCount();
-    }
-    return sum;
-  }
-
-  void relabelBlocks() const;
+  std::vector<GateBlock*> getAllBlocks() const;
+  //
+  // std::vector<std::vector<int>> getBlockOpCountHistogram() const;
+  //
+  // size_t countBlocks() const { return getAllBlocks().size(); }
+  //
+  // size_t countGates() const {
+  //   const auto allBlocks = getAllBlocks();
+  //   size_t sum = 0;
+  //   for (const auto& block : allBlocks)
+  //     sum += block->countGates();
+  //   return sum;
+  // }
+  //
+  // size_t countTotalOps() const {
+  //   const auto allBlocks = getAllBlocks();
+  //   size_t sum = 0;
+  //   for (const auto& block : allBlocks) {
+  //     assert(block->quantumGate != nullptr);
+  //     sum += block->quantumGate->opCount();
+  //   }
+  //   return sum;
+  // }
+  //
+  // void relabelBlocks() const;
 
   /// @brief Console print the tile.
   /// @param verbose If > 1, also print the address of each row in front

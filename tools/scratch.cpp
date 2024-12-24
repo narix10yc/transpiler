@@ -1,10 +1,32 @@
-#include "saot/Parser.h"
+#include <iostream>
+#include <typeinfo>
 
-using namespace saot;
+void printNames() {}
+
+template<typename First, typename... Args>
+void printNames(First first, Args... args) {
+  if constexpr (sizeof...(Args) == 0) {
+    std::cerr << typeid(first).name() << "]";
+    return;
+  }
+  std::cerr << typeid(first).name() << ", ";
+  printNames(std::forward<Args>(args)...);
+}
+
+template<typename... Args>
+void printNamesEntry(Args... args) {
+  std::cerr << "[";
+  printNames(std::forward<Args>(args)...);
+}
+
+template<typename... Args>
+void printNamesNice(Args&&... args) {
+// ((std::cerr << typeid(args).name() << (sizeof...(Args) == 1 ? "" : ", ")), ...) << '\n';
+  ((std::cerr << "[") << ... << (typeid(args).name()));
+}
 
 int main() {
-  Parser parser("../examples/parse/p1.qch");
-  auto qc = parser.parseQuantumCircuit();
-  qc.print(std::cerr << "== Recovered: == \n") << "\n";
+  printNamesNice(1, 2ULL, 3.0f);
+
   return 0;
 }

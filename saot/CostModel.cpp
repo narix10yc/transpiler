@@ -30,7 +30,7 @@ void PerformanceCache::saveToCSV(const std::string& _fileName) const {
   assert(file.is_open());
 
   file << "nqubits,op_count,nthreads,time\n";
-  for (const auto &[nqubits, opCount, nThreads, memUpdateSpeed] : items) {
+  for (const auto& [nqubits, opCount, nThreads, memUpdateSpeed] : items) {
     file << nqubits << "," << opCount << "," << nThreads << ","
          << std::scientific << std::setw(6) << memUpdateSpeed << "\n";
   }
@@ -78,16 +78,20 @@ void PerformanceCache::runExperiments(
   }, "Generate random unitary gates");
 
   utils::timedExecute([&]() {
-    for (const auto &[gate, name] : u1qGates)
+    for (const auto& [gate, name] : u1qGates)
       genCPUCode(*llvmModule, cpuConfig, gate, name);
-    for (const auto &[gate, name] : u2qGates)
+    for (const auto& [gate, name] : u2qGates)
       genCPUCode(*llvmModule, cpuConfig, gate, name);
-    for (const auto &[gate, name] : u3qGates)
+    for (const auto& [gate, name] : u3qGates)
       genCPUCode(*llvmModule, cpuConfig, gate, name);
   }, "Code Generation");
 
+  utils::timedExecute([&]() {
+    saot::applyLLVMOptimization(*llvmModule, llvm::OptimizationLevel::O1);
+  }, "JIT IR Optimization");
 
   auto jit = createJITSession(std::move(llvmModule), std::move(llvmContext));
+
   timeit::Timer timer;
   timeit::TimingResult tr;
 

@@ -32,14 +32,14 @@ public:
 
 class MeasureStmt : public Statement {
 public:
-  std::vector<int> qubits;
+  llvm::SmallVector<int> qubits;
 
   explicit MeasureStmt(int q) : Statement(SK_Measure), qubits({q}) {}
 
   MeasureStmt(std::initializer_list<int> qubits)
     : Statement(SK_Measure), qubits(qubits) {}
 
-  explicit MeasureStmt(const std::vector<int>& qubits)
+  explicit MeasureStmt(const llvm::SmallVector<int>& qubits)
     : Statement(SK_Measure), qubits(qubits) {}
 
   std::ostream& print(std::ostream& os) const override;
@@ -64,14 +64,14 @@ class GateApplyStmt : public Statement {
 public:
   std::string name;
   arg_t paramRefOrMatrix;
-  std::vector<int> qubits;
+  llvm::SmallVector<int> qubits;
 
-  GateApplyStmt(const std::string& name, const std::vector<int>& qubits)
+  GateApplyStmt(const std::string& name, const llvm::SmallVector<int>& qubits)
     : Statement(SK_GateApply), name(name), paramRefOrMatrix(), qubits(qubits) {}
 
   GateApplyStmt(
       const std::string& name, const arg_t& paramRefOrMatrix,
-      const std::vector<int>& qubits)
+      const llvm::SmallVector<int>& qubits)
     : Statement(SK_GateApply)
     , name(name)
     , paramRefOrMatrix(paramRefOrMatrix)
@@ -82,7 +82,7 @@ public:
 
 class GateChainStmt : public Statement {
 public:
-  std::vector<GateApplyStmt> gates;
+  llvm::SmallVector<GateApplyStmt> gates;
 
   GateChainStmt() : Statement(SK_GateChain), gates() {}
 
@@ -94,8 +94,8 @@ public:
   std::string name;
   int nqubits;
   int nparams;
-  std::vector<std::unique_ptr<Statement>> stmts;
-  std::vector<ParameterDefStmt> paramDefs;
+  llvm::SmallVector<std::unique_ptr<Statement>> stmts;
+  llvm::SmallVector<ParameterDefStmt> paramDefs;
 
   QuantumCircuit(const std::string& name = "qc")
       : name(name), nqubits(0), nparams(0), stmts(), paramDefs() {}
@@ -106,7 +106,7 @@ public:
 
   QuantumGate gateApplyToQuantumGate(const GateApplyStmt&) const;
 
-  CircuitGraph toCircuitGraph() const;
+  void toCircuitGraph(CircuitGraph&) const;
 };
 
 } // namespace saot::ast

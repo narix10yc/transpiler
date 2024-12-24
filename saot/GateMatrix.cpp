@@ -306,7 +306,7 @@ GateMatrix GateMatrix::FromName(const std::string& name,
   return GateMatrix(gUndef);
 }
 
-void GateMatrix::permuteSelf(const std::vector<int>& flags) {
+void GateMatrix::permuteSelf(const llvm::SmallVector<int>& flags) {
   switch (gateKind) {
   case gX:
     assert(flags.size() == 1);

@@ -1,11 +1,12 @@
 #include "openqasm/ast.h"
 #include "saot/CircuitGraph.h"
 
+#include "llvm/ADT/SmallVector.h"
+
 using namespace openqasm::ast;
 
-saot::CircuitGraph RootNode::toCircuitGraph() const {
-  saot::CircuitGraph graph;
-  std::vector<int> qubits;
+void RootNode::toCircuitGraph(saot::CircuitGraph& graph) const {
+  llvm::SmallVector<int> qubits;
   for (const auto& s : stmts) {
     saot::GateMatrix::gate_params_t params;
     int i = 0;
@@ -29,8 +30,6 @@ saot::CircuitGraph RootNode::toCircuitGraph() const {
      * p *= 0.5;
     }
     auto matrix = saot::GateMatrix::FromName(gateApply->name, params);
-    graph.addGate(matrix, qubits);
+    graph.appendGate(std::make_unique<saot::QuantumGate>(matrix, qubits));
   }
-
-  return graph;
 }

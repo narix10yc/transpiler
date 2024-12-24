@@ -142,8 +142,8 @@ Function* saot::genCPUCode(
   SmallVector<int, 8U> simdBits, hiBits, loBits;
   { /* split qubits */
   unsigned q = 0;
-  auto qubitsIt = gate.qubits.cbegin();
-  const auto qubitsEnd = gate.qubits.cend();
+  auto qubitsIt = gate.qubits.begin();
+  const auto qubitsEnd = gate.qubits.end();
   while (simdBits.size() != s) {
     if (qubitsIt != qubitsEnd && *qubitsIt == q) {
       loBits.push_back(q);
@@ -187,9 +187,9 @@ Function* saot::genCPUCode(
   // debug print qubit splits
   LLVM_DEBUG(
     dbgs() << CYAN("-- qubit split done\n");
-    utils::printLLVMSmallVector(loBits, std::cerr << "- lower bits: ") << "\n";
-    utils::printLLVMSmallVector(simdBits, std::cerr << "- simd bits: ") << "\n";
-    utils::printLLVMSmallVector(hiBits, std::cerr << "- higher bits: ") << "\n";
+    utils::printArray(std::cerr << "- lower bits: ", loBits) << "\n";
+    utils::printArray(std::cerr << "- simd bits: ", simdBits) << "\n";
+    utils::printArray(std::cerr << "- higher bits: ", hiBits) << "\n";
     dbgs() << "- reImBit: " << s << "\n";
     dbgs() << "sepBit:  " << sepBit << "\n";
     dbgs() << "vecSize: " << vecSize << "\n";
@@ -393,8 +393,8 @@ Function* saot::genCPUCode(
   while (roundIdx < lk) {
     LLVM_DEBUG(
       std::cerr << "Round " << roundIdx << ": ";
-      utils::printVector(cacheLHS) << " and ";
-      utils::printVector(cacheRHS) << "\n";
+      utils::printArray(std::cerr, llvm::ArrayRef(cacheLHS)) << " and ";
+      utils::printArray(std::cerr, llvm::ArrayRef(cacheRHS)) << "\n";
     );
 
     lCached = S << roundIdx;
@@ -431,8 +431,8 @@ Function* saot::genCPUCode(
       }
     }
     LLVM_DEBUG(
-      utils::printVector(cacheCombined, std::cerr << "  Cache Combined: ") << "\n";
-      utils::printVector(mask, std::cerr << "  Mask: ") << "\n";
+      utils::printArray(std::cerr << "  Cache Combined: ", llvm::ArrayRef(cacheCombined)) << "\n";
+      utils::printArray(std::cerr << "  Mask: ", llvm::ArrayRef(mask)) << "\n";
     );
     // rotate the assignments of
     // (cacheLHS, cacheRHS, cacheCombined) with (arr0, arr1, arr2)
@@ -464,7 +464,7 @@ Function* saot::genCPUCode(
       reimMergeMask.push_back(S * pairIdx + i + (vecSize >> 1));
   }
   LLVM_DEBUG(
-    utils::printVector(reimMergeMask, std::cerr << "reimMergeMask: ") << "\n";
+    utils::printArray(std::cerr << "reimMergeMask: ", llvm::ArrayRef(reimMergeMask)) << "\n";
     std::cerr << CYAN("- Merged masks init'ed\n");
   );
   }

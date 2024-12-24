@@ -1,9 +1,9 @@
 #include "utils/utils.h"
 
-bool utils::isPermutation(const std::vector<int>& v) {
-  auto copy = v;
-  std::sort(copy.begin(), copy.end());
-  for (size_t i = 0, S = copy.size(); i < S; i++) {
+bool utils::isPermutation(llvm::ArrayRef<int> arr) {
+  std::vector<int> copy(arr.begin(), arr.end());
+  std::ranges::sort(copy);
+  for (unsigned i = 0, S = copy.size(); i < S; i++) {
     if (copy[i] != i)
       return false;
   }

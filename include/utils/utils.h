@@ -11,11 +11,12 @@
 #include <vector>
 #include <span>
 
-#include <llvm/ADT/SmallVector.h>
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/ArrayRef.h"
 
 namespace utils {
 
-bool isPermutation(const std::vector<int>& v);
+bool isPermutation(llvm::ArrayRef<int> arr);
 
 template<typename T>
 bool isOrdered(const std::vector<T>& vec, bool ascending = true) {
@@ -40,15 +41,14 @@ bool isOrdered(const std::vector<T>& vec, bool ascending = true) {
 std::ostream&
 print_complex(std::ostream& os, std::complex<double> c, int precision = 3);
 
-
 template<typename T>
 std::ostream& printArrayNoBrackets(
-    std::ostream& os, std::span<T> s, const char sep = ',') {
-  if (s.empty())
+    std::ostream& os, llvm::ArrayRef<T> arr, const char sep = ',') {
+  if (arr.empty())
     return os;
-  auto it = s.begin();
+  auto it = arr.begin();
   os << *it;
-  while (++it != s.end()) {
+  while (++it != arr.end()) {
     os.put(sep);
     os << *it;
   }
@@ -57,40 +57,22 @@ std::ostream& printArrayNoBrackets(
 
 template<typename T>
 std::ostream& printArray(
-    std::ostream& os, std::span<T> s, const char sep = ',') {
-  if (s.empty())
+    std::ostream& os, llvm::ArrayRef<T> arr, const char sep = ',') {
+  if (arr.empty())
     return os << "[]";
-  auto it = s.begin();
+  auto it = arr.begin();
   os << "[" << *it;
-  while (++it != s.end()) {
+  while (++it != arr.end()) {
     os.put(sep);
     os << *it;
   }
   return os << "]";
 }
 
-template<typename T>
-std::ostream& printVector(
-    const std::vector<T>& v, std::ostream& os = std::cerr) {
-  if (v.empty())
-    return os << "[]";
-  auto it = v.cbegin();
-  os << "[" << *it;
-  while (++it != v.cend())
-    os << "," << *it;
-  return os << "]";
-}
-
 template<typename T, unsigned N>
-std::ostream& printLLVMSmallVector(
-    const llvm::SmallVector<T, N>& v, std::ostream& os = std::cerr) {
-  if (v.empty())
-    return os << "[]";
-  const auto size = v.size();
-  os << "[";
-  for (unsigned i = 0; i < size-1; i++)
-    os << v[i] << ",";
-  return os << v[size-1] << "]";
+std::ostream& printArray(
+    std::ostream& os, const llvm::SmallVector<T, N>& arr, const char sep = ',') {
+  return printArray(os, llvm::ArrayRef<T>(arr), sep);
 }
 
 // @param f: The printer is expected to take inputs (const T&, std::ostream&)
@@ -114,6 +96,16 @@ void pushBackIfNotInVector(std::vector<T>& vec, T elem) {
   }
   vec.push_back(elem);
 }
+
+template<typename T, unsigned N>
+void pushBackIfNotInVector(llvm::SmallVector<T, N>& vec, T elem) {
+  for (const auto& e : vec) {
+    if (e == elem)
+      return;
+  }
+  vec.push_back(elem);
+}
+
 
 template<typename T = uint64_t>
 T insertZeroToBit(T x, int bit) {

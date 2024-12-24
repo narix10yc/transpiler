@@ -9,14 +9,14 @@ using namespace IOColor;
 
 std::ostream& QuantumGate::displayInfo(std::ostream& os) const {
   os << CYAN("QuantumGate Info\n") << "- Target Qubits ";
-  utils::printVector(qubits) << "\n";
+  utils::printArray(os, llvm::ArrayRef(qubits.begin(), qubits.size())) << "\n";
   os << "- Matrix:\n";
   return gateMatrix.printCMat(os);
 }
 
 void QuantumGate::sortQubits() {
   const auto nqubits = qubits.size();
-  std::vector<int> indices(nqubits);
+  llvm::SmallVector<int> indices(nqubits);
   for (unsigned i = 0; i < nqubits; i++)
     indices[i] = i;
 
@@ -24,54 +24,54 @@ void QuantumGate::sortQubits() {
     return qubits[i] < qubits[j];
   });
 
-  std::vector<int> newQubits(nqubits);
+  llvm::SmallVector<int> newQubits(nqubits);
   for (unsigned i = 0; i < nqubits; i++)
     newQubits[i] = qubits[indices[i]];
 
   qubits = std::move(newQubits);
-  gateMatrix.permuteSelf(indices);
+  gateMatrix.permuteSelf({indices.begin(), indices.end()});
 }
 
 // helper functions in QuantumGate::lmatmul
 namespace {
-inline QuantumGate lmatmul_up_up(
-    const GateMatrix::up_matrix_t& aUp,
-    const GateMatrix::up_matrix_t& bUp,
-    const std::vector<int>& aQubits,
-    const std::vector<int>& bQubits) {
-  const int aNqubits = aQubits.size();
-  const int bNqubits = bQubits.size();
-
-  std::vector<int> cQubits;
-  for (const auto& q : aQubits)
-    cQubits.push_back(q);
-  for (const auto& q : bQubits) {
-    if (std::ranges::find(cQubits, q) == cQubits.end())
-      cQubits.push_back(q);
-  }
-  std::ranges::sort(cQubits);
-
-  const int cNqubits = cQubits.size();
-  int i = 0;
-  uint64_t aMask = 0;
-  uint64_t bMask = 0;
-  for (auto it = cQubits.begin(); it != cQubits.end(); ++it) {
-    if (std::ranges::find(aQubits, *it) != aQubits.end())
-      aMask |= (1 << i);
-    if (std::ranges::find(bQubits, *it) != bQubits.end())
-      bMask |= (1 << i);
-    i++;
-  }
-
-  GateMatrix::up_matrix_t cUp(1 << cNqubits);
-  for (uint64_t idx = 0; idx < (1 << cNqubits); idx++) {
-    auto bIdx = utils::pext64(idx, bMask, cQubits.back());
-    auto aIdx = utils::pext64(idx, aMask, cQubits.back());
-    auto phase = bUp[bIdx].phase + aUp[aIdx].phase;
-    cUp[idx] = {bUp[bIdx].index, phase};
-  }
-  return QuantumGate(GateMatrix(cUp), cQubits);
-}
+// inline QuantumGate lmatmul_up_up(
+//     const GateMatrix::up_matrix_t& aUp,
+//     const GateMatrix::up_matrix_t& bUp,
+//     const llvm::SmallVector<int>& aQubits,
+//     const llvm::SmallVector<int>& bQubits) {
+//   const int aNqubits = aQubits.size();
+//   const int bNqubits = bQubits.size();
+//
+//   llvm::SmallVector<int> cQubits;
+//   for (const auto& q : aQubits)
+//     cQubits.push_back(q);
+//   for (const auto& q : bQubits) {
+//     if (std::ranges::find(cQubits, q) == cQubits.end())
+//       cQubits.push_back(q);
+//   }
+//   std::ranges::sort(cQubits);
+//
+//   const int cNqubits = cQubits.size();
+//   int i = 0;
+//   uint64_t aMask = 0;
+//   uint64_t bMask = 0;
+//   for (auto it = cQubits.begin(); it != cQubits.end(); ++it) {
+//     if (std::ranges::find(aQubits, *it) != aQubits.end())
+//       aMask |= (1 << i);
+//     if (std::ranges::find(bQubits, *it) != bQubits.end())
+//       bMask |= (1 << i);
+//     i++;
+//   }
+//
+//   GateMatrix::up_matrix_t cUp(1 << cNqubits);
+//   for (uint64_t idx = 0; idx < (1 << cNqubits); idx++) {
+//     auto bIdx = utils::pext64(idx, bMask, cQubits.back());
+//     auto aIdx = utils::pext64(idx, aMask, cQubits.back());
+//     auto phase = bUp[bIdx].phase + aUp[aIdx].phase;
+//     cUp[idx] = {bUp[bIdx].index, phase};
+//   }
+//   return QuantumGate(GateMatrix(cUp), cQubits);
+// }
 } // anonymous namespace
 
 QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
@@ -87,7 +87,7 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
   };
 
   // setup result gate target qubits
-  std::vector<TargetQubitsInfo> targetQubitsInfo;
+  llvm::SmallVector<TargetQubitsInfo> targetQubitsInfo;
   targetQubitsInfo.reserve(aNqubits + bNqubits);
   {
     int aIdx = 0, bIdx = 0;
@@ -121,7 +121,7 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
   uint64_t bPextMask = 0ULL;
   uint64_t aZeroingMask = ~0ULL;
   uint64_t bZeroingMask = ~0ULL;
-  std::vector<uint64_t> aSharedQubitShifts, bSharedQubitShifts;
+  llvm::SmallVector<uint64_t> aSharedQubitShifts, bSharedQubitShifts;
   for (unsigned i = 0; i < cNqubits; ++i) {
     const int aIdx = targetQubitsInfo[i].aIdx;
     const int bIdx = targetQubitsInfo[i].bIdx;
@@ -140,7 +140,7 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
       bPextMask |= (1 << i) + (1 << (i + cNqubits));
   }
   const int contractionWidth = aSharedQubitShifts.size();
-  std::vector<int> cQubits;
+  llvm::SmallVector<int> cQubits;
   cQubits.reserve(cNqubits);
   for (const auto& tQubit : targetQubitsInfo)
     cQubits.push_back(tQubit.q);

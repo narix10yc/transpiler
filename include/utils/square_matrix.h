@@ -121,7 +121,7 @@ public:
 
   size_t sizeInBytes() const { return _edgeSize * _edgeSize * sizeof(data_t); }
 
-  square_matrix permute(const std::vector<int>& flags) const {
+  square_matrix permute(const llvm::SmallVector<int>& flags) const {
     assert(utils::isPermutation(flags));
     assert(1 << flags.size() == _edgeSize);
 

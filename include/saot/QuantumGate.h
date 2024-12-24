@@ -118,7 +118,7 @@ public:
   static GateMatrix FromName(const std::string& name,
                              const gate_params_t &params = {});
 
-  void permuteSelf(const std::vector<int>& flags);
+  void permuteSelf(const llvm::SmallVector<int>& flags);
 
   // get cached unitary perm matrix object associated with this GateMatrix
   const up_matrix_t* getUnitaryPermMatrix(double tolerance = 0.0) const {
@@ -241,27 +241,46 @@ private:
 
 public:
   /// The canonical form of qubits is in ascending order
-  std::vector<int> qubits;
+ llvm::SmallVector<int> qubits;
   GateMatrix gateMatrix;
 
   QuantumGate() : qubits(), gateMatrix() {}
 
   QuantumGate(const GateMatrix& gateMatrix, int q)
-      : gateMatrix(gateMatrix), qubits({q}) {
+      : qubits({q}), gateMatrix(gateMatrix) {
+    assert(gateMatrix.nqubits() == 1);
+  }
+
+  QuantumGate(GateMatrix&& gateMatrix, int q)
+    : qubits({q}), gateMatrix(gateMatrix) {
     assert(gateMatrix.nqubits() == 1);
   }
 
   QuantumGate(const GateMatrix& gateMatrix, std::initializer_list<int> qubits)
-      : gateMatrix(gateMatrix), qubits(qubits) {
+      : qubits(qubits), gateMatrix(gateMatrix) {
     assert(gateMatrix.nqubits() == qubits.size());
     sortQubits();
   }
 
-  QuantumGate(const GateMatrix& gateMatrix, const std::vector<int>& qubits)
-      : gateMatrix(gateMatrix), qubits(qubits) {
+  QuantumGate(GateMatrix&& gateMatrix, std::initializer_list<int> qubits)
+    : qubits(qubits), gateMatrix(gateMatrix) {
     assert(gateMatrix.nqubits() == qubits.size());
     sortQubits();
   }
+
+  QuantumGate(const GateMatrix& gateMatrix, const llvm::SmallVector<int>& qubits)
+    : qubits(qubits), gateMatrix(gateMatrix) {
+    assert(gateMatrix.nqubits() == qubits.size());
+    sortQubits();
+  }
+
+  QuantumGate(GateMatrix&& gateMatrix, const llvm::SmallVector<int>& qubits)
+    : qubits(qubits), gateMatrix(gateMatrix) {
+    assert(gateMatrix.nqubits() == qubits.size());
+    sortQubits();
+  }
+
+  int nqubits() const { return qubits.size(); }
 
   bool isQubitsSorted() const {
     if (qubits.empty())

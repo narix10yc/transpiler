@@ -1,26 +1,26 @@
-#include "simulation/KernelGen.h"
-#include "saot/QuantumGate.h"
-#include "utils/square_matrix.h"
-
-#include "llvm/Support/CommandLine.h"
+#include "saot/Parser.h"
+#include "saot/CircuitGraph.h"
+#include "saot/Fusion.h"
 
 using namespace saot;
 
 int main(int argc, char** argv) {
-  llvm::cl::ParseCommandLineOptions(argc, argv);
-  llvm::LLVMContext llvmContext;
-  llvm::Module llvmModule("myModule", llvmContext);
+  Parser parser("../examples/parse/p1.qch");
+  auto qc = parser.parseQuantumCircuit();
+  qc.print(std::cerr);
 
-  CPUKernelGenConfig config {
-    .simd_s = 1,
-    // .forceDenseKernel = true,
-    .matrixLoadMode = CPUKernelGenConfig::UseMatImmValues,
-  };
+  CircuitGraph graph;
+  qc.toCircuitGraph(graph);
 
-  QuantumGate gate(GateMatrix(utils::randomUnitaryMatrix(4)), {0, 1});
+  graph.print(std::cerr << "Before Fusion:\n", 2) << "\n";
 
-  auto* llvmFunc = genCPUCode(llvmModule, config, gate, "kernel_");
-  // llvmFunc->print(llvm::errs(), nullptr);
+  CPUFusionConfig config = CPUFusionConfig::Default;
+  config.maxNQubits = 3;
+
+  applyCPUGateFusion(config, graph);
+  graph.print(std::cerr << "After Fusion:\n", 2);
+
+
 
   return 0;
 }
