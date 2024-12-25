@@ -266,15 +266,13 @@ inline int opCount_p(const GateMatrix::p_matrix_t& mat, double thres) {
 
 } // anonymous namespace
 
-int QuantumGate::opCount(double thres) const {
+int QuantumGate::opCount(double zeroTol) const {
   if (opCountCache >= 0)
     return opCountCache;
 
-  double normalizedThres = thres / std::pow(2.0, gateMatrix.nqubits());
-
   if (const auto* cMat = gateMatrix.getConstantMatrix())
-    return opCount_c(*cMat, normalizedThres);
-  return opCount_p(gateMatrix.getParametrizedMatrix(), normalizedThres);
+    return opCount_c(*cMat, zeroTol);
+  return opCount_p(gateMatrix.getParametrizedMatrix(), zeroTol);
 
   assert(false && "opCount Not Implemented");
 

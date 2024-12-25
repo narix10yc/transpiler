@@ -11,6 +11,7 @@
 #include "llvm/IR/IntrinsicsX86.h"
 
 #include <cmath>
+#include <utils/PODVector.h>
 
 using namespace llvm;
 using namespace saot;
@@ -54,17 +55,16 @@ struct MatData {
   ScalarKind imKind;
 };
 
-inline std::vector<MatData> getMatrixData(
+inline utils::PODVector<MatData> getMatrixData(
     IRBuilder<>& B, const GateMatrix& gateMatrix,
     const CPUKernelGenConfig& config) {
   const int k = gateMatrix.nqubits();
   const unsigned K = 1 << k;
   const unsigned KK = K * K;
 
-  std::vector<MatData> data;
-  data.resize(KK);
+  utils::PODVector<MatData> data(KK);
 
-  const double zTol = config.zeroSkipThres / K;
+  const double zTol = config.zeroTol / K;
   const double oTol = config.oneTol / K;
   const auto* cMat = gateMatrix.getConstantMatrix();
   assert(cMat && "Parametrized matrices codegen not implemented yet");
@@ -109,7 +109,7 @@ inline std::vector<MatData> getMatrixData(
 
 } // anonymous namespace
 
-Function* saot::genCPUCode(
+std::unique_ptr<KernelInfo> saot::genCPUCode(
     Module& llvmModule, const CPUKernelGenConfig& config,
     const QuantumGate& gate, const std::string& funcName) {
   const unsigned s = config.simd_s;
@@ -464,8 +464,9 @@ Function* saot::genCPUCode(
       reimMergeMask.push_back(S * pairIdx + i + (vecSize >> 1));
   }
   LLVM_DEBUG(
-    utils::printArray(std::cerr << "reimMergeMask: ", llvm::ArrayRef(reimMergeMask)) << "\n";
-    std::cerr << CYAN("- Merged masks init'ed\n");
+    utils::printArray(
+      std::cerr << "reimMergeMask: ",llvm::ArrayRef(reimMergeMask)) << "\n";
+    std::cerr << CYAN("- Merged masks initiated\n");
   );
   }
 
@@ -533,7 +534,6 @@ Function* saot::genCPUCode(
       updatedReAmps[0], updatedImAmps[0], reimMergeMask,
       "amp.merged.hi." + std::to_string(hi));
     B.CreateStore(merged, pSvs[hi]);
-
   }
 
   // loopBodyBB->print(errs());
@@ -546,12 +546,27 @@ Function* saot::genCPUCode(
   B.SetInsertPoint(retBB);
   B.CreateRetVoid();
 
-  return func;
+  auto llvmFuncName = func->getName();
+  int opCount = 0;
+  for (const auto& d : matrixData) {
+    if (d.reKind != SK_Zero)
+      ++opCount;
+    if (d.imKind != SK_Zero)
+      ++opCount;
+  }
+  return std::make_unique<KernelInfo>(
+    KernelInfo::CPU_Gate,
+    config.precision,
+    std::string(llvmFuncName.begin(), llvmFuncName.end()),
+    gate.qubits,
+    config.simd_s,
+    2 * opCount,
+    lk);
 }
 
-Function* saot::genCPUMeasure(
-    Module& llvmModule, const CPUKernelGenConfig &config,
-    int q, const std::string &funcName) {
+std::unique_ptr<KernelInfo> saot::genCPUMeasure(
+    Module& llvmModule, const CPUKernelGenConfig& config,
+    int q, const std::string& funcName) {
   assert(0 && "Not Implemented");
   return nullptr;
 }

@@ -16,10 +16,10 @@ static void internal() {
   CPUKernelGenConfig cpuConfig;
   cpuConfig.simd_s = simd_s;
 
-  genCPUCode(*llvmModule, cpuConfig, {GateMatrix::MatrixH_c, 0}, "gate_h_0");
-  genCPUCode(*llvmModule, cpuConfig, {GateMatrix::MatrixH_c, 1}, "gate_h_1");
-  genCPUCode(*llvmModule, cpuConfig, {GateMatrix::MatrixH_c, 2}, "gate_h_2");
-  genCPUCode(*llvmModule, cpuConfig, {GateMatrix::MatrixH_c, 3}, "gate_h_3");
+  genCPUCode(*llvmModule, cpuConfig, QuantumGate::H(0), "gate_h_0");
+  genCPUCode(*llvmModule, cpuConfig, QuantumGate::H(1), "gate_h_1");
+  genCPUCode(*llvmModule, cpuConfig, QuantumGate::H(2), "gate_h_2");
+  genCPUCode(*llvmModule, cpuConfig, QuantumGate::H(3), "gate_h_3");
 
   auto jit = saot::createJITSession();
   cantFail(jit->addIRModule(llvm::orc::ThreadSafeModule(

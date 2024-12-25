@@ -2,38 +2,46 @@
 #define SAOT_COSTMODEL_H
 
 #include "simulation/KernelGen.h"
+#include "saot/QuantumGate.h"
 #include <cassert>
 #include <string>
 #include <vector>
 
 namespace saot {
 
-class QuantumGate;
+struct CostResult {
+  double benefit;
+  std::unique_ptr<QuantumGate> fusedGate;
+};
 
 class CostModel {
 public:
   virtual ~CostModel() = default;
 
-  virtual int getCost(const QuantumGate& gate) const {
+  virtual CostResult computeBenefit(const QuantumGate& lhsGate,
+                                    const QuantumGate& rhsGate) const {
     assert(false && "Should not call from base class");
-    return -1;
+    return { 0.0, nullptr };
   }
 };
 
 class StandardCostModel : public CostModel {
   int maxNQubits;
   int maxOp;
+  double zeroTol;
 
 public:
-  StandardCostModel(int maxNQubits, int maxOp)
-      : maxNQubits(maxNQubits), maxOp(maxOp) {}
+  StandardCostModel(int maxNQubits, int maxOp, double zeroTol)
+    : maxNQubits(maxNQubits), maxOp(maxOp), zeroTol(zeroTol) {}
 
-  int getCost(const QuantumGate& gate) const override;
+  CostResult computeBenefit(
+      const QuantumGate& lhsGate, const QuantumGate& rhsGate) const override;
 };
 
 class AdaptiveCostModel : public CostModel {
 public:
-  int getCost(const QuantumGate& gate) const override;
+  CostResult computeBenefit(
+      const QuantumGate& lhsGate, const QuantumGate& rhsGate) const override;
 };
 
 class PerformanceCache {
@@ -41,6 +49,9 @@ public:
   struct Item {
     int nqubits;
     int opCount;
+    /// This is approximately how many shuffling operations are needed in each
+    /// amplitude loading process, calculated by 1 << (number of loBits)
+    int irregularity;
     int nThreads;
     double memUpdateSpeed;
   };

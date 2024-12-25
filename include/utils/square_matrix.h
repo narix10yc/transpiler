@@ -1,5 +1,5 @@
-#ifndef Udata_tILS_SQUARE_MAdata_tRIX_H
-#define Udata_tILS_SQUARE_MAdata_tRIX_H
+#ifndef UTILS_SQUARE_MATRIX_H
+#define UTILS_SQUARE_MATRIX_H
 
 #include <cassert>
 #include <complex>
@@ -112,10 +112,13 @@ public:
   const data_t& operator[](size_t idx) const { return _data[idx]; }
 
   data_t* begin() { return _data; }
-  data_t* end() { return _data + _edgeSize; }
-
+  data_t* end() { return _data + size(); }
   const data_t* begin() const { return _data; }
-  const data_t* end() const { return _data + _edgeSize; }
+  const data_t* end() const { return _data + size(); }
+  const data_t* cbegin() const { return _data; }
+  const data_t* cend() const { return _data + size(); }
+
+  size_t size() const { return _edgeSize * _edgeSize; }
 
   size_t edgeSize() const { return _edgeSize; }
 
@@ -184,4 +187,4 @@ inline std::ostream& printComplexMatrixF64(
 
 } // namespace utils
 
-#endif // Udata_tILS_SQUARE_MAdata_tRIX_H
+#endif // UTILS_SQUARE_MATRIX_H

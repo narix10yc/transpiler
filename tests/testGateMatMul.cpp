@@ -45,8 +45,8 @@ static void internal() {
   for (int i = 0; i < 1; ++i) {
     int a = d(gen);
     int b = d(gen);
-    QuantumGate gate0(utils::randomUnitaryMatrix(2), a);
-    QuantumGate gate1(utils::randomUnitaryMatrix(2), b);
+    auto gate0 = QuantumGate::RandomUnitary<1>({a});
+    auto gate1 = QuantumGate::RandomUnitary<1>({b});
     auto gate = gate0.lmatmul(gate1);
 
     utils::StatevectorAlt<double> sv0(nqubits, simd_s), sv1(nqubits, simd_s);

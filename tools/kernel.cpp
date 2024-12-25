@@ -15,12 +15,10 @@ int main(int argc, char** argv) {
   graph.print(std::cerr << "Before Fusion:\n", 2) << "\n";
 
   CPUFusionConfig config = CPUFusionConfig::Default;
-  config.maxNQubits = 3;
+  StandardCostModel costModel(3, 0, 1e-8);
 
-  applyCPUGateFusion(config, graph);
+  applyCPUGateFusion(config, &costModel, graph);
   graph.print(std::cerr << "After Fusion:\n", 2);
-
-
 
   return 0;
 }

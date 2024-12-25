@@ -111,12 +111,12 @@ public:
   GateMatrix(GateKind gateKind, const gate_params_t &params = {})
       : cache(), gateKind(gateKind), gateParameters(params) {}
 
-  GateMatrix(const up_matrix_t& upMat);
-  GateMatrix(const c_matrix_t& upMat);
-  GateMatrix(const p_matrix_t& upMat);
+  explicit GateMatrix(const up_matrix_t& upMat);
+  explicit GateMatrix(const c_matrix_t& upMat);
+  explicit GateMatrix(const p_matrix_t& upMat);
 
-  static GateMatrix FromName(const std::string& name,
-                             const gate_params_t &params = {});
+  static GateMatrix FromName(
+      const std::string& name, const gate_params_t& params = {});
 
   void permuteSelf(const llvm::SmallVector<int>& flags);
 
@@ -241,7 +241,7 @@ private:
 
 public:
   /// The canonical form of qubits is in ascending order
- llvm::SmallVector<int> qubits;
+  llvm::SmallVector<int> qubits;
   GateMatrix gateMatrix;
 
   QuantumGate() : qubits(), gateMatrix() {}
@@ -311,7 +311,7 @@ public:
   /// @brief B.lmatmul(A) will return AB. That is, gate B will be applied first.
   QuantumGate lmatmul(const QuantumGate& other) const;
 
-  int opCount(double zeroSkippingThres = 1e-8) const;
+  int opCount(double zeroTol) const;
 
   bool isConvertibleToUnitaryPermGate(double tolerance) const {
     return gateMatrix.isConvertibleToUnitaryPermMatrix(tolerance);
@@ -322,28 +322,25 @@ public:
   }
 
   static QuantumGate I1(int q) {
-    return QuantumGate(GateMatrix::MatrixI1_c, q);
+    return QuantumGate(GateMatrix(GateMatrix::MatrixI1_c), q);
   }
 
   static QuantumGate I2(int q0, int q1) {
-    return QuantumGate(GateMatrix::MatrixI2_c, {q0, q1});
+    return QuantumGate(GateMatrix(GateMatrix::MatrixI2_c), {q0, q1});
   }
 
   static QuantumGate H(int q) {
-    return QuantumGate(GateMatrix::MatrixH_c, q);
+    return QuantumGate(GateMatrix(GateMatrix::MatrixH_c), q);
   }
 
-  static QuantumGate RandomU1q(int q) {
-    return QuantumGate(GateMatrix(utils::randomUnitaryMatrix(2)), q);
-  }
-
-  static QuantumGate RandomU2q(int q0, int q1) {
-    return QuantumGate(GateMatrix(utils::randomUnitaryMatrix(4)), {q0, q1});
-  }
-
-  static QuantumGate RandomU3q(int q0, int q1, int q2) {
+  template<unsigned nqubits>
+  static QuantumGate RandomUnitary(const std::array<int, nqubits>& qubits) {
+    assert(qubits.size() == nqubits);
+    auto qubitsCopy = qubits;
+    std::ranges::sort(qubitsCopy);
     return QuantumGate(
-      GateMatrix(utils::randomUnitaryMatrix(8)), {q0, q1, q2});
+      GateMatrix(utils::randomUnitaryMatrix(1U << nqubits)),
+      llvm::SmallVector<int>(qubitsCopy.begin(), qubitsCopy.end()));
   }
 };
 

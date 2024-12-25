@@ -1,7 +1,7 @@
 #ifndef UTILS_OBJECTPOOL_H
 #define UTILS_OBJECTPOOL_H
 
-#include "utils/Vector.h"
+#include "utils/PODVector.h"
 #include <iostream>
 
 namespace utils {
@@ -9,8 +9,8 @@ namespace utils {
 /// Simple implementation of object pooling.
 template<typename T, size_t block_size = 128>
 class ObjectPool {
-  Vector<T*> objHolders;
-  Vector<T*> availables;
+  PODVector<T*> objHolders;
+  PODVector<T*> availables;
 
   void extendPool() {
     T* data = static_cast<T*>(::operator new(sizeof(T) * block_size));

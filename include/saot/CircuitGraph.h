@@ -92,8 +92,6 @@ public:
 
   size_t countGates() const { return getOrderedGates().size(); }
 
-  int connect(GateBlock* rhsBlock, int q = -1);
-
   int nqubits() const { return wires.size(); }
 
   WireInfo* findWire(int qubit) {

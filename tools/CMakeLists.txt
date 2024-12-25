@@ -9,7 +9,7 @@ add_executable(qasm_to_saot "qasm_to_saot.cpp")
 target_link_libraries(qasm_to_saot saot qasm simulation)
 
 add_executable(kernel "kernel.cpp")
-target_link_libraries(kernel saot simulation utils)
+target_link_libraries(kernel saot simulation utils timeit)
 
 add_executable(jit_playground "jit_playground.cpp")
 # llvm_map_components_to_libnames(LLVM_LIBS orcjit native)

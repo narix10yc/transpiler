@@ -8,74 +8,62 @@
 using namespace IOColor;
 using namespace saot;
 
-CPUFusionConfig CPUFusionConfig::Disable =
-    CPUFusionConfig{.maxNQubits = 0,
-                    .maxOpCount = 0,
-                    .zeroSkippingThreshold = 0.0,
-                    .allowMultipleTraverse = true,
-                    .incrementScheme = true};
+const CPUFusionConfig CPUFusionConfig::Disable {
+  .zeroTol = 0.0,
+  .multiTraverse = false,
+  .incrementScheme = false,
+  .benefitMargin = 0.0,
+};
 
-CPUFusionConfig CPUFusionConfig::TwoQubitOnly =
-    CPUFusionConfig{.maxNQubits = 2,
-                    .maxOpCount = 64, // 2-qubit dense
-                    .zeroSkippingThreshold = 1e-8,
-                    .allowMultipleTraverse = true,
-                    .incrementScheme = true};
+const CPUFusionConfig CPUFusionConfig::Minor {
+  .zeroTol = 1e-8,
+  .multiTraverse = false,
+  .incrementScheme = true,
+  .benefitMargin = 0.5,
+};
 
-CPUFusionConfig CPUFusionConfig::Default =
-    CPUFusionConfig{.maxNQubits = 5,
-                    .maxOpCount = 256, // 3-qubit dense
-                    .zeroSkippingThreshold = 1e-8,
-                    .allowMultipleTraverse = true,
-                    .incrementScheme = true};
+const CPUFusionConfig CPUFusionConfig::Default {
+  .zeroTol = 1e-8,
+  .multiTraverse = true,
+  .incrementScheme = true,
+  .benefitMargin = 0.2,
+};
 
-CPUFusionConfig CPUFusionConfig::Aggressive =
-    CPUFusionConfig{.maxNQubits = 7,
-                    .maxOpCount = 4096, // 5.5-qubit dense
-                    .zeroSkippingThreshold = 1e-8,
-                    .allowMultipleTraverse = true,
-                    .incrementScheme = true};
-
-std::ostream& CPUFusionConfig::display(std::ostream& os) const {
-  os << CYAN("======== Fusion Config: ========\n");
-  os << "max nqubits:          " << maxNQubits << "\n";
-  os << "max op count:         " << maxOpCount;
-  if (maxOpCount < 0)
-    os << " (infinite)";
-  os << "\n";
-  os << "zero skip thres:      " << std::scientific << zeroSkippingThreshold
-     << "\n";
-  os << "allow multi traverse: " << ((allowMultipleTraverse) ? "true" : "false")
-     << "\n";
-  os << "increment scheme:     " << ((incrementScheme) ? "true" : "false")
-     << "\n";
-  os << CYAN("================================\n");
-  return os;
-}
+const CPUFusionConfig CPUFusionConfig::Aggressive {
+  .zeroTol = 1e-8,
+  .multiTraverse = true,
+  .incrementScheme = true,
+  .benefitMargin = 0.0,
+};
 
 namespace {
 GateBlock* computeCandidate(
-    const CPUFusionConfig& config, CircuitGraph& graph,
+    const CPUFusionConfig& config, const CostModel* costModel,
+    CircuitGraph& graph,
     const GateBlock* lhs, const GateBlock* rhs) {
   if (lhs == nullptr || rhs == nullptr || lhs == rhs)
+    return nullptr;
+  if (costModel == nullptr)
     return nullptr;
 
   assert(lhs->quantumGate != nullptr);
   assert(rhs->quantumGate != nullptr);
 
-  // candidate block
-  auto* cBlock = graph.acquireGateBlock();
-
   std::cerr << "Trying to fuse "
-  << "lhs " << lhs->id << " and rhs " << rhs->id
-  << " => candidate block " << cBlock->id << "\n";
+            << "lhs " << lhs->id << " and rhs " << rhs->id << "\n";
 
+  auto [benefit, cGate] = costModel->computeBenefit(
+    *lhs->quantumGate, *rhs->quantumGate);
+
+  if (benefit <= config.zeroTol)
+    return nullptr;
+  assert(cGate != nullptr);
+
+  // fusion accepted
+  auto* cBlock = graph.acquireGateBlock();
   // set up connections
-  llvm::SmallVector<int> cQubits;
   for (const auto& lWire : lhs->wires) {
     auto qubit = lWire.qubit;
-    cQubits.push_back(qubit);
-
     GateNode* rhsEntry;
     if (auto *rhsWire = rhs->findWire(qubit); rhsWire == nullptr)
       rhsEntry = lWire.rhsEntry;
@@ -87,30 +75,10 @@ GateBlock* computeCandidate(
   for (const auto& rWire : rhs->wires) {
     auto qubit = rWire.qubit;
     if (lhs->findWire(qubit) == nullptr) {
-      cQubits.push_back(qubit);
       cBlock->wires.push_back(rWire);
     }
   }
 
-  // check fusion eligibility: nqubits
-  if (cBlock->nqubits() > config.maxNQubits) {
-    std::cerr << CYAN("Rejected due to maxNQubits\n");
-    graph.releaseGateBlock(cBlock);
-    return nullptr;
-  }
-
-  // check fusion eligibility: opCount
-  auto cGate = std::make_unique<QuantumGate>(
-    rhs->quantumGate->lmatmul(*(lhs->quantumGate)));
-  if (config.maxOpCount >= 0 &&
-      cGate->opCount(config.zeroSkippingThreshold) > config.maxOpCount) {
-    std::cerr << CYAN("Rejected due to OpCount\n");
-    graph.releaseGateBlock(cBlock);
-    return nullptr;
-  }
-
-  // accept candidate
-  std::cerr << GREEN("Fusion accepted!\n");
   cBlock->quantumGate = std::move(cGate);
   return cBlock;
 }
@@ -159,7 +127,8 @@ using tile_iter_t = CircuitGraph::iter_t;
 /// If fusion is accepted, delete old blocks and append fused block into the
 /// graph, and return the fused block.
 int tryCrossWireFuse(
-    const CPUFusionConfig& config, CircuitGraph& graph, tile_iter_t tileIt) {
+    const CPUFusionConfig& config, const CostModel* costModel,
+    CircuitGraph& graph, tile_iter_t tileIt) {
   int nFused = 0;
   auto tileNext = tileIt.next();
   if (tileNext == nullptr)
@@ -168,7 +137,7 @@ int tryCrossWireFuse(
   for (unsigned q = 0; q < graph.nqubits; ++q) {
     auto* lBlock = (*tileIt)[q];
     auto* rBlock = (*tileNext)[q];
-    auto* cBlock = computeCandidate(config, graph, lBlock, rBlock);
+    auto* cBlock = computeCandidate(config, costModel, graph, lBlock, rBlock);
     if (cBlock == nullptr)
       continue;
 
@@ -191,11 +160,13 @@ int tryCrossWireFuse(
 }
 
 /// @return Number of fused blocks in this traversal
-int traverseAndFuse(const CPUFusionConfig& config, CircuitGraph& graph) {
+int traverseAndFuse(
+    const CPUFusionConfig& config, const CostModel* costModel,
+    CircuitGraph& graph) {
   int nFused = 0;
   auto it = graph.tile().begin();
   while (it != nullptr) {
-    nFused += tryCrossWireFuse(config, graph, it);
+    nFused += tryCrossWireFuse(config, costModel, graph, it);
     ++it;
   }
   return nFused;
@@ -204,10 +175,11 @@ int traverseAndFuse(const CPUFusionConfig& config, CircuitGraph& graph) {
 } // anonymous namespace
 
 void saot::applyCPUGateFusion(
-    const CPUFusionConfig& config, CircuitGraph& graph) {
+    const CPUFusionConfig& config, const CostModel* costModel,
+    CircuitGraph& graph) {
   int nFused = 0;
   do {
-    nFused = traverseAndFuse(config, graph);
+    nFused = traverseAndFuse(config, costModel, graph);
     graph.squeeze();
-  } while (config.allowMultipleTraverse && nFused > 0);
+  } while (config.multiTraverse && nFused > 0);
 }

@@ -10,10 +10,16 @@ namespace saot {
 
 class QuantumGate;
 
-struct KernelMetadata {
-  const QuantumGate* quantumGate;
+struct KernelInfo {
+  enum KernelType { CPU_Gate, CPU_Measure, GPU_Gate, GPU_Measure };
+  KernelType type;
+  int precision;
   std::string llvmFuncName;
-  const void* func;
+  llvm::SmallVector<int> qubits;
+  // extra information
+  int simd_s;
+  int opCount;
+  int nLoBits;
 };
 
 struct CPUKernelGenConfig {
@@ -27,14 +33,9 @@ struct CPUKernelGenConfig {
   bool useFMS = true;
   // parallel bits deposit from BMI2
   bool usePDEP = false;
-  bool useImmValues = true;
-  bool loadMatrixInEntry = true;
-  bool loadVectorMatrix = false;
   bool forceDenseKernel = false;
-  double zeroSkipThres = 1e-8;
-  double shareMatrixElemThres = 0.0;
+  double zeroTol = 1e-8;
   double oneTol = 1e-8;
-  bool shareMatrixElemUseImmValue = false;
   MatrixLoadMode matrixLoadMode = UseMatImmValues;
 
   static const CPUKernelGenConfig NativeDefaultF32;
@@ -44,14 +45,14 @@ struct CPUKernelGenConfig {
 /// @return A function that takes in 4 arguments (void*, uint64_t, uint64_t,
 /// void*) and returns void. Arguments are: pointer to statevector array,
 /// taskID begin, taskID end, and pointer to matrix array (could be null).
-llvm::Function* genCPUCode(
+std::unique_ptr<KernelInfo> genCPUCode(
   llvm::Module& llvmModule, const CPUKernelGenConfig& config,
   const QuantumGate& gate, const std::string& funcName);
 
 /// @return A function that takes in 4 arguments (void*, uint64_t, uint64_t,
 /// void*) and returns void. Arguments are: pointer to statevector array,
 /// taskID begin, taskID end, and pointer to measurement probability to write on
-llvm::Function* genCPUMeasure(
+std::unique_ptr<KernelInfo> genCPUMeasure(
   llvm::Module& llvmModule, const CPUKernelGenConfig& config,
   int q, const std::string& funcName);
 

@@ -14,7 +14,7 @@ static void internal_U1q() {
   StatevectorAlt<double> sv(nqubits, simd_s);
   sv.initialize();
   for (int q = 0; q < nqubits; q++)
-    sv.applyGate(QuantumGate(GateMatrix::MatrixH_c, q));
+    sv.applyGate(QuantumGate::H(q));
   for (int q = 0; q < nqubits; q++) {
     suite.assertClose(sv.prob(q), 0.5,
       "Apply round H: Prob at qubit " + std::to_string(q), GET_INFO());

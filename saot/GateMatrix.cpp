@@ -73,96 +73,75 @@ std::ostream& saot::printParametrizedMatrix(
 }
 
 #pragma region Static UP Matrices
-const up_matrix_t GateMatrix::MatrixI1_up{{0, 0.0}, {1, 0.0}};
+const up_matrix_t GateMatrix::MatrixI1_up {
+  {0, 0.0}, {1, 0.0}
+};
 
 const up_matrix_t GateMatrix::MatrixI2_up{
-    {0, 0.0}, {1, 0.0}, {2, 0.0}, {3, 0.0}};
+  {0, 0.0}, {1, 0.0}, {2, 0.0}, {3, 0.0}
+};
 
-const up_matrix_t GateMatrix::MatrixX_up = up_matrix_t({{1, 0.0}, {0, 0.0}});
+const up_matrix_t GateMatrix::MatrixX_up {
+  {1, 0.0}, {0, 0.0}
+};
 
-const up_matrix_t GateMatrix::MatrixY_up =
-    up_matrix_t({{1, -M_PI_2}, {0, M_PI}});
+const up_matrix_t GateMatrix::MatrixY_up {
+  {1, -M_PI_2}, {0, M_PI}
+};
 
-const up_matrix_t GateMatrix::MatrixZ_up = up_matrix_t({{0, 0.0}, {1, M_PI}});
+const up_matrix_t GateMatrix::MatrixZ_up {
+  {0, 0.0}, {1, M_PI}
+};
 
-const up_matrix_t GateMatrix::MatrixCX_up =
-    up_matrix_t({{0, 0.0}, {3, 0.0}, {2, 0.0}, {1, 0.0}});
+const up_matrix_t GateMatrix::MatrixCX_up {
+  {0, 0.0}, {3, 0.0}, {2, 0.0}, {1, 0.0}
+};
 
-const up_matrix_t GateMatrix::MatrixCZ_up =
-    up_matrix_t({{0, 0.0}, {1, 0.0}, {2, 0.0}, {3, M_PI}});
+const up_matrix_t GateMatrix::MatrixCZ_up {
+  {0, 0.0}, {1, 0.0}, {2, 0.0}, {3, M_PI}
+};
 
 #pragma endregion
 
 #pragma region Static Constant Matrices
-const c_matrix_t GateMatrix::MatrixI1_c = {
+const c_matrix_t GateMatrix::MatrixI1_c = c_matrix_t{
     {1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {1.0, 0.0}};
 
-const c_matrix_t GateMatrix::MatrixI2_c = c_matrix_t({{1.0, 0.0},
-                                                      {0.0, 0.0},
-                                                      {0.0, 0.0},
-                                                      {0.0, 0.0},
-                                                      {0.0, 0.0},
-                                                      {1.0, 0.0},
-                                                      {0.0, 0.0},
-                                                      {0.0, 0.0},
-                                                      {0.0, 0.0},
-                                                      {0.0, 0.0},
-                                                      {1.0, 0.0},
-                                                      {0.0, 0.0},
-                                                      {0.0, 0.0},
-                                                      {0.0, 0.0},
-                                                      {0.0, 0.0},
-                                                      {1.0, 0.0}});
+const c_matrix_t GateMatrix::MatrixI2_c {
+  {1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0},
+  {0.0, 0.0}, {1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0},
+  {0.0, 0.0}, {0.0, 0.0}, {1.0, 0.0}, {0.0, 0.0},
+  {0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {1.0, 0.0}
+};
 
-const c_matrix_t GateMatrix::MatrixX_c =
-    c_matrix_t({{0.0, 0.0}, {1.0, 0.0}, {1.0, 0.0}, {0.0, 0.0}});
+const c_matrix_t GateMatrix::MatrixX_c {
+  {0.0, 0.0}, {1.0, 0.0}, {1.0, 0.0}, {0.0, 0.0}
+};
 
-const c_matrix_t
-    GateMatrix::MatrixY_c({{0.0, 0.0}, {0.0, -1.0}, {0.0, 1.0}, {0.0, 0.0}});
+const c_matrix_t GateMatrix::MatrixY_c {
+  {0.0, 0.0}, {0.0, -1.0}, {0.0, 1.0}, {0.0, 0.0}
+};
 
-const c_matrix_t GateMatrix::MatrixZ_c =
-    c_matrix_t({{1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {-1.0, 0.0}});
+const c_matrix_t GateMatrix::MatrixZ_c {
+  {1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {-1.0, 0.0}
+};
 
 const c_matrix_t GateMatrix::MatrixH_c = c_matrix_t(
     {{M_SQRT1_2, 0.0}, {M_SQRT1_2, 0.0}, {M_SQRT1_2, 0.0}, {-M_SQRT1_2, 0.0}});
 
-const c_matrix_t GateMatrix::MatrixCX_c = c_matrix_t({
-    {1.0, 0.0},
-    {0.0, 0.0},
-    {0.0, 0.0},
-    {0.0, 0.0},
-    {0.0, 0.0},
-    {0.0, 0.0},
-    {0.0, 0.0},
-    {1.0, 0.0},
-    {0.0, 0.0},
-    {0.0, 0.0},
-    {1.0, 0.0},
-    {0.0, 0.0},
-    {0.0, 0.0},
-    {1.0, 0.0},
-    {0.0, 0.0},
-    {0.0, 0.0},
-});
+const c_matrix_t GateMatrix::MatrixCX_c {
+  {1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0},
+  {0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {1.0, 0.0},
+  {0.0, 0.0}, {0.0, 0.0}, {1.0, 0.0}, {0.0, 0.0},
+  {0.0, 0.0}, {1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0},
+};
 
-const c_matrix_t GateMatrix::MatrixCZ_c = c_matrix_t({
-    {1.0, 0.0},
-    {0.0, 0.0},
-    {0.0, 0.0},
-    {0.0, 0.0},
-    {0.0, 0.0},
-    {1.0, 0.0},
-    {0.0, 0.0},
-    {0.0, 0.0},
-    {0.0, 0.0},
-    {0.0, 0.0},
-    {1.0, 0.0},
-    {0.0, 0.0},
-    {0.0, 0.0},
-    {0.0, 0.0},
-    {0.0, 0.0},
-    {-1.0, 0.0},
-});
+const c_matrix_t GateMatrix::MatrixCZ_c {
+  {1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0},
+  {0.0, 0.0}, {1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0},
+  {0.0, 0.0}, {0.0, 0.0}, {1.0, 0.0}, {0.0, 0.0},
+  {0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {-1.0, 0.0},
+};
 
 #pragma endregion
 
@@ -250,8 +229,8 @@ GateMatrix::GateMatrix(const p_matrix_t& pMat) : cache(), gateParameters() {
   cache.isConvertibleToPMat = Convertible;
 }
 
-GateMatrix GateMatrix::FromName(const std::string& name,
-                                const gate_params_t &params) {
+GateMatrix GateMatrix::FromName(
+    const std::string& name, const gate_params_t& params) {
   if (name == "x") {
     assert(getNumActiveParams(params) == 0 && "X gate has 0 parameter");
     return GateMatrix(gX);
@@ -307,26 +286,13 @@ GateMatrix GateMatrix::FromName(const std::string& name,
 }
 
 void GateMatrix::permuteSelf(const llvm::SmallVector<int>& flags) {
+  // single qubit gates
+  if (nqubits() == 1) {
+    assert(flags.size() == 1);
+    return;
+  }
   switch (gateKind) {
-  case gX:
-    assert(flags.size() == 1);
-    return;
-  case gY:
-    assert(flags.size() == 1);
-    return;
-  case gZ:
-    assert(flags.size() == 1);
-    return;
-  case gH:
-    assert(flags.size() == 1);
-    return;
-  case gP:
-    assert(flags.size() == 1);
-    return;
-  case gU:
-    assert(flags.size() == 1);
-    return;
-
+  // two-qubit symmetric gates
   case gCX:
     assert(flags.size() == 2);
     return;
@@ -344,6 +310,7 @@ void GateMatrix::permuteSelf(const llvm::SmallVector<int>& flags) {
     break;
   }
 
+  // TODO: This is not efficient -- we may permute multiple matrices
   assert(gateKind >= 1);
   if (cache.isConvertibleToUpMat == Convertible)
     cache.upMat = cache.upMat.permute(flags);
@@ -355,33 +322,20 @@ void GateMatrix::permuteSelf(const llvm::SmallVector<int>& flags) {
 
 int GateMatrix::nqubits() const {
   switch (gateKind) {
-  case gX:
-    return 1;
-  case gY:
-    return 1;
-  case gZ:
-    return 1;
-  case gH:
-    return 1;
-  case gP:
-    return 1;
-  case gRX:
-    return 1;
-  case gRY:
-    return 1;
-  case gRZ:
-    return 1;
-  case gU:
-    return 1;
+  case gX: return 1;
+  case gY: return 1;
+  case gZ: return 1;
+  case gH: return 1;
+  case gP: return 1;
+  case gRX: return 1;
+  case gRY: return 1;
+  case gRZ: return 1;
+  case gU: return 1;
 
-  case gCX:
-    return 2;
-  case gCZ:
-    return 2;
-  case gSWAP:
-    return 2;
-  case gCP:
-    return 2;
+  case gCX: return 2;
+  case gCZ: return 2;
+  case gSWAP: return 2;
+  case gCP: return 2;
 
   default:
     assert(gateKind >= 1);

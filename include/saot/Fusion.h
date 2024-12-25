@@ -1,5 +1,7 @@
-#ifndef SAOT_FUSION_H
-#define SAOT_FUSION_H
+#ifndef SAOT_CPUFUSION_H
+#define SAOT_CPUFUSION_H
+
+#include "saot/CostModel.h"
 
 #include <cassert>
 #include <iostream>
@@ -12,37 +14,39 @@ class CircuitGraph;
 class QuantumGate;
 
 struct CPUFusionConfig {
-  int maxNQubits;
-  int maxOpCount;
-  double zeroSkippingThreshold;
-  bool allowMultipleTraverse;
+  double zeroTol;
+  bool multiTraverse;
   bool incrementScheme;
-
-  static CPUFusionConfig Disable;
-  static CPUFusionConfig TwoQubitOnly;
-  static CPUFusionConfig Default;
-  static CPUFusionConfig Aggressive;
+  /// How much benefit do we recognize as significant. For example, if set to
+  /// 0.1, then we accept fusion whenever costModel predicts >10% improvement
+  double benefitMargin;
 
   static CPUFusionConfig Preset(int level) {
     if (level == 0)
-      return CPUFusionConfig::Disable;
+      return Disable;
     if (level == 1)
-      return CPUFusionConfig::TwoQubitOnly;
+      return Minor;
     if (level == 2)
-      return CPUFusionConfig::Default;
+      return Default;
     if (level == 3)
-      return CPUFusionConfig::Aggressive;
-    assert(false && "Unsupported CPUFusionConfig preset");
-    return CPUFusionConfig::Default;
+      return Aggressive;
+    assert(false && "Unknown CPUFusionConfig Preset");
+    return Disable;
   }
 
-  std::ostream& display(std::ostream& ) const;
+  static const CPUFusionConfig Disable;
+  static const CPUFusionConfig Minor;
+  static const CPUFusionConfig Default;
+  static const CPUFusionConfig Aggressive;
+
+  std::ostream& display(std::ostream&) const;
 };
 
-void applyCPUGateFusion(const CPUFusionConfig&, CircuitGraph&);
+void applyCPUGateFusion(
+    const CPUFusionConfig&, const CostModel*, CircuitGraph&);
 
 // void applyFPGAGateFusion(CircuitGraph&, const FPGAFusionConfig&);
 
 } // namespace saot
 
-#endif // SAOT_FUSION_H
+#endif // SAOT_CPUFUSION_H
