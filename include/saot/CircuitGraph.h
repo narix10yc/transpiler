@@ -77,7 +77,7 @@ public:
 
   GateBlock() : id(idCount++), wires(), quantumGate(nullptr) {}
 
-  GateBlock(GateNode* gateNode)
+  explicit GateBlock(GateNode* gateNode)
       : id(idCount++), quantumGate(std::move(gateNode->quantumGate)) {
     wires.reserve(quantumGate->nqubits());
     for (const auto& data : gateNode->connections)
@@ -213,15 +213,14 @@ public:
   ///   there.
   iter_t insertBlock(iter_t it, GateBlock* block);
 
-  /// @return ordered vector of blocks
-  // std::vector<GateBlock*> getAllBlocks() const;
-
   /// @brief Get the number of blocks with each size.
   /// @return ret[i] is the number of blocks with size i. Therefore, ret[0] is
   /// always 0, and ret.size() == largest_size + 1.
   std::vector<int> getBlockSizes() const;
+
+  /// @return ordered vector of blocks
   std::vector<GateBlock*> getAllBlocks() const;
-  //
+
   // std::vector<std::vector<int>> getBlockOpCountHistogram() const;
   //
   // size_t countBlocks() const { return getAllBlocks().size(); }

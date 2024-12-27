@@ -1,14 +1,12 @@
 #ifndef UTILS_VECTOR_H
 #define UTILS_VECTOR_H
 
+#include "utils/is_pod.h"
 #include <cassert>
 #include <memory>
 #include <iostream>
 
 namespace utils {
-
-template<typename T>
-concept is_pod = std::is_trivial_v<T> && std::is_standard_layout_v<T>;
 
 /// A simple vector wrapper for POD (plain old data) types.
 template<is_pod T>
@@ -19,6 +17,8 @@ class PODVector {
 
 public:
   /// This constructor will NOT initialize array
+  PODVector() : _data(nullptr), _capacity(0), _size(0) {}
+
   explicit PODVector(size_t size)
     : _data(static_cast<T*>(::operator new(sizeof(T) * size)))
     , _capacity(size)
@@ -102,7 +102,11 @@ public:
   T& back() { assert(_size > 0); return _data[_size - 1]; }
   const T& back() const { assert(_size > 0); return _data[_size - 1]; }
 
-  void push_back(const T& value) { _data[_size++] = value; }
+  void push_back(const T& value) {
+    if (_size == _capacity)
+      reserve(_capacity << 1);
+    _data[_size++] = value;
+  }
 
   template<typename... Args>
   void emplace_back(Args&&... args) {
@@ -122,6 +126,8 @@ public:
   }
 
   void reserve(size_t capacity) {
+    if (capacity == 0)
+      capacity = 1;
     if (capacity <= _capacity)
       return;
     T* newData = static_cast<T*>(::operator new(sizeof(T) * capacity));

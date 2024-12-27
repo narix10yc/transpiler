@@ -16,7 +16,7 @@ inline std::unique_ptr<llvm::orc::LLJIT> createJITSession() {
 }
 
 void applyLLVMOptimization(
-    llvm::Module&, const llvm::OptimizationLevel&);
+    llvm::Module& llvmModule, const llvm::OptimizationLevel& optLevel);
 
 } // namespace saot
 

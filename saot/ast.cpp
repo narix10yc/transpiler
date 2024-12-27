@@ -15,22 +15,20 @@ constexpr bool templated_false = false;
 
 std::ostream& printGateMatrix(
     std::ostream& os, const GateMatrix::gate_params_t &params) {
-  const auto visitor = [&os]<typename Arg>(Arg&& arg) {
-    using T = std::decay_t<Arg>;
-    if constexpr (std::is_same_v<T, std::monostate>) {}
-    else if constexpr (std::is_same_v<T, int>)
-      os << static_cast<int>(arg);
-    else if constexpr (std::is_same_v<T, double>)
-      os << static_cast<double>(arg);
+  const auto visitor = [&os](const utils::PODVariant<int, double>& arg) {
+    if (arg.is<int>())
+      os << arg.get<int>();
+    else if (arg.is<double>())
+      os << arg.get<double>();
     else
-      static_assert(templated_false<T>, "Unsupported type");
+      assert(!arg.isValid() && "Expect Monostate");
   };
 
-  std::visit(visitor, params[0]);
+  visitor(params[0]);
   os << ", ";
-  std::visit(visitor, params[1]);
+  visitor(params[1]);
   os << ", ";
-  std::visit(visitor, params[2]);
+  visitor(params[2]);
   return os;
 }
 } // anonymous namespace

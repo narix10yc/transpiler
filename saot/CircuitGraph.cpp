@@ -16,7 +16,7 @@ int GateNode::idCount = 0;
 int GateBlock::idCount = 0;
 
 GateNode::GateNode(
-    std::unique_ptr<QuantumGate> _gate, const CircuitGraph &graph)
+    std::unique_ptr<QuantumGate> _gate, const CircuitGraph& graph)
     : id(idCount++), quantumGate(std::move(_gate)) {
   connections.reserve(quantumGate->nqubits());
   for (const auto q : quantumGate->qubits) {
@@ -148,24 +148,23 @@ void CircuitGraph::appendGate(std::unique_ptr<QuantumGate> quantumGate) {
   repositionBlockUpward(it, block->quantumGate->qubits[0]);
 }
 
-// std::vector<GateBlock*> CircuitGraph::getAllBlocks() const {
-//   std::vector<GateBlock*> allBlocks;
-//   std::vector<GateBlock*> rowBlocks;
-//   for (const auto& row : _tile) {
-//     rowBlocks.clear();
-//     for (const auto& block : row) {
-//       if (block == nullptr)
-//         continue;
-//       if (std::find(rowBlocks.begin(), rowBlocks.end(), block) ==
-//           rowBlocks.end())
-//         rowBlocks.push_back(block);
-//     }
-//     for (const auto& block : rowBlocks)
-//       allBlocks.push_back(block);
-//   }
-//   return allBlocks;
-// }
-//
+std::vector<GateBlock*> CircuitGraph::getAllBlocks() const {
+  std::vector<GateBlock*> allBlocks;
+  std::vector<GateBlock*> rowBlocks;
+  for (const auto& row : _tile) {
+    rowBlocks.clear();
+    for (const auto& block : row) {
+      if (block == nullptr)
+        continue;
+      if (std::ranges::find(rowBlocks, block) == rowBlocks.end())
+        rowBlocks.push_back(block);
+    }
+    for (const auto& block : rowBlocks)
+      allBlocks.push_back(block);
+  }
+  return allBlocks;
+}
+
 CircuitGraph::list_node_t*
 CircuitGraph::repositionBlockUpward(list_node_t* ln, int q) {
   assert(ln != nullptr);
@@ -385,51 +384,51 @@ std::ostream& CircuitGraph::print(std::ostream& os, int verbose) const {
 //   os << CYAN_FG << "=====================================\n" << RESET;
 //   return os;
 // }
-//
-// std::vector<GateNode*> GateBlock::getOrderedGates() const {
-//   std::deque<GateNode*> queue;
-//   // vector should be more efficient as we expect small sizes here
-//   std::vector<GateNode*> gates;
-//   for (const auto& data : wires) {
-//     if (std::ranges::find(queue, data.rhsEntry) == queue.end())
-//       queue.push_back(data.rhsEntry);
-//   }
-//
-//   while (!queue.empty()) {
-//     const auto& gate = queue.back();
-//     if (std::ranges::find(gates, gate) != gates.end()) {
-//       queue.pop_back();
-//       continue;
-//     }
-//     std::vector<GateNode*> higherPriorityGates;
-//     for (const auto& data : this->wires) {
-//       if (gate == data.lhsEntry)
-//         continue;
-//       auto it = gate->findConnection(data.qubit);
-//       if (it == nullptr)
-//         continue;
-//       if (it->lhsGate == nullptr) {
-//         std::cerr << RED_FG << "block " << id << " "
-//                   << "gate " << gate->id << " along qubit " << data.qubit
-//                   << "\n"
-//                   << RESET;
-//       }
-//       assert(it->lhsGate);
-//       if (std::find(gates.begin(), gates.end(), it->lhsGate) == gates.end())
-//         higherPriorityGates.push_back(it->lhsGate);
-//     }
-//
-//     if (higherPriorityGates.empty()) {
-//       queue.pop_back();
-//       gates.push_back(gate);
-//     } else {
-//       for (const auto& g : higherPriorityGates)
-//         queue.push_back(g);
-//     }
-//   }
-//   return gates;
-// }
-//
+
+std::vector<GateNode*> GateBlock::getOrderedGates() const {
+  std::deque<GateNode*> queue;
+  // vector should be more efficient as we expect small sizes here
+  std::vector<GateNode*> gates;
+  for (const auto& data : wires) {
+    if (std::ranges::find(queue, data.rhsEntry) == queue.end())
+      queue.push_back(data.rhsEntry);
+  }
+
+  while (!queue.empty()) {
+    const auto& gate = queue.back();
+    if (std::ranges::find(gates, gate) != gates.end()) {
+      queue.pop_back();
+      continue;
+    }
+    std::vector<GateNode*> higherPriorityGates;
+    for (const auto& data : this->wires) {
+      if (gate == data.lhsEntry)
+        continue;
+      auto it = gate->findConnection(data.qubit);
+      if (it == nullptr)
+        continue;
+      if (it->lhsGate == nullptr) {
+        std::cerr << RED_FG << "block " << id << " "
+                  << "gate " << gate->id << " along qubit " << data.qubit
+                  << "\n"
+                  << RESET;
+      }
+      assert(it->lhsGate);
+      if (std::ranges::find(gates, it->lhsGate) == gates.end())
+        higherPriorityGates.push_back(it->lhsGate);
+    }
+
+    if (higherPriorityGates.empty()) {
+      queue.pop_back();
+      gates.push_back(gate);
+    } else {
+      for (const auto& g : higherPriorityGates)
+        queue.push_back(g);
+    }
+  }
+  return gates;
+}
+
 // void CircuitGraph::relabelBlocks() const {
 //   int count = 0;
 //   auto allBlocks = getAllBlocks();

@@ -2,12 +2,8 @@
 #include "simulation/ir_generator.h"
 
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
-
 #include "llvm/Support/TargetSelect.h"
-
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Target/TargetMachine.h"
-
 #include "llvm/Passes/PassBuilder.h"
 
 using namespace saot;

@@ -20,7 +20,7 @@ class ObjectPool {
   }
 
 public:
-  ObjectPool() : objHolders(1), availables(block_size) {}
+  ObjectPool() : objHolders(), availables() { extendPool(); }
 
   ~ObjectPool() {
     for (T* obj : objHolders) {

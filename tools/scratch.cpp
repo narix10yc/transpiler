@@ -1,10 +1,26 @@
-#include "saot/QuantumGate.h"
+#include "utils/PODVariant.h"
 
-using namespace saot;
+#include <iostream>
+
+int f() { return 1; }
 
 int main() {
-  auto gate = QuantumGate::RandomUnitary<2>({1, 3});
-  std::cerr << gate.opCount(0.0) << "\n";
+  using Variant = utils::PODVariant<int, double>;
 
+  Variant v1(2);
+
+  std::cerr << "v1.get<int>() = " << v1.get<int>() << "\n";
+  std::cerr << "v1.get<double>() = " << v1.get<double>() << "\n";
+
+
+  Variant v2(f());
+  std::cerr << "v2.get<int>() = " << v2.get<int>() << "\n";
+  std::cerr << "v2.get<double>() = " << v2.get<double>() << "\n";
+
+  v2 = 1.1;
+  std::cerr << "v2.get<int>() = " << v2.get<int>() << "\n";
+  std::cerr << "v2.get<double>() = " << v2.get<double>() << "\n";
+
+  v2.is<double>();
   return 0;
 }

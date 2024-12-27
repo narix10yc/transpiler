@@ -7,6 +7,7 @@
 #include "utils/square_matrix.h"
 
 #include <array>
+#include <utils/PODVariant.h>
 #include <variant>
 
 namespace saot {
@@ -59,8 +60,7 @@ std::ostream& printParametrizedMatrix(
 class GateMatrix {
 public:
   // specify gate matrix with (up to three) parameters
-  using gate_params_t =
-      std::array<std::variant<std::monostate, int, double>, 3>;
+  using gate_params_t = std::array<utils::PODVariant<int, double>, 3>;
   // unitary permutation matrix type
   using up_matrix_t = saot::UnitaryPermutationMatrix;
   // constant matrix type
@@ -104,12 +104,12 @@ private:
 
 public:
   GateKind gateKind;
-  gate_params_t gateParameters;
+  gate_params_t gateParams;
 
-  GateMatrix() : cache(), gateKind(gUndef), gateParameters() {}
+  GateMatrix() : cache(), gateKind(gUndef), gateParams() {}
 
   GateMatrix(GateKind gateKind, const gate_params_t &params = {})
-      : cache(), gateKind(gateKind), gateParameters(params) {}
+      : cache(), gateKind(gateKind), gateParams(params) {}
 
   explicit GateMatrix(const up_matrix_t& upMat);
   explicit GateMatrix(const c_matrix_t& upMat);

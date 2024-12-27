@@ -28,7 +28,8 @@ int main(int argc, char* *argv) {
   assert(argc > 1);
 
   CircuitGraph graph;
-  CPUFusionConfig fusionConfig = CPUFusionConfig::Aggressive;
+  CPUFusionConfig fusionConfig = CPUFusionConfig::Default;
+  StandardCostModel costModel(3, 64, 1e-8);
   IRGenerator G;
   IRGeneratorConfig irConfig;
   irConfig.simd_s = 1;
@@ -40,12 +41,12 @@ int main(int argc, char* *argv) {
   // parse
   timedExecute([&]() {
     openqasm::Parser qasmParser(argv[1], -1);
-    graph = qasmParser.parse()->toCircuitGraph();
+    qasmParser.parse()->toCircuitGraph(graph);
   }, "Parsing complete!");
 
   // fusion
   timedExecute([&]() {
-    applyCPUGateFusion(fusionConfig, graph);
+    applyCPUGateFusion(fusionConfig, &costModel, graph);
   }, "Fusion complete!");
 
   // ir generation
