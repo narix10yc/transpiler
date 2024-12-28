@@ -49,11 +49,11 @@ GateBlock* computeCandidate(
   assert(lhs->quantumGate != nullptr);
   assert(rhs->quantumGate != nullptr);
 
-  std::cerr << "Trying to fuse "
-            << "lhs " << lhs->id << " and rhs " << rhs->id << "\n";
+  // std::cerr << "Trying to fuse "
+            // << "lhs " << lhs->id << " and rhs " << rhs->id << "\n";
 
   auto [benefit, cGate] = costModel->computeBenefit(
-    *lhs->quantumGate, *rhs->quantumGate);
+    *lhs->quantumGate, *rhs->quantumGate, graph.getContext());
 
   if (benefit <= config.zeroTol)
     return nullptr;
@@ -79,7 +79,7 @@ GateBlock* computeCandidate(
     }
   }
 
-  cBlock->quantumGate = std::move(cGate);
+  cBlock->quantumGate = cGate;
   return cBlock;
 }
 

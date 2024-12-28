@@ -11,14 +11,17 @@ int main(int argc, char** argv) {
 
   CircuitGraph graph;
   qc.toCircuitGraph(graph);
-
   graph.print(std::cerr << "Before Fusion:\n", 2) << "\n";
 
   CPUFusionConfig config = CPUFusionConfig::Default;
   StandardCostModel costModel(3, 0, 1e-8);
 
   applyCPUGateFusion(config, &costModel, graph);
-  graph.print(std::cerr << "After Fusion:\n", 2);
+  graph.print(std::cerr << "After Fusion:\n", 2) << "\n";
+
+  auto fusedQC = ast::QuantumCircuit::FromCircuitGraph(graph);
+  fusedQC.print(std::cerr << "Fused QuantumCircuit Serialization\n") << "\n";
+
 
   return 0;
 }

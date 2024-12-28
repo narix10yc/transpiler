@@ -15,12 +15,16 @@ class PODVector {
   size_t _capacity;
   size_t _size;
 
+  static inline T* _allocate(size_t s) {
+    return static_cast<T*>(::operator new(sizeof(T) * s, static_cast<std::align_val_t>(alignof(T))));
+  }
+
 public:
   /// This constructor will NOT initialize array
   PODVector() : _data(nullptr), _capacity(0), _size(0) {}
 
   explicit PODVector(size_t size)
-    : _data(static_cast<T*>(::operator new(sizeof(T) * size)))
+    : _data(_allocate(size))
     , _capacity(size)
     , _size(size) {
     // std::cerr << "PODVector<" << typeid(T).name()
@@ -29,7 +33,7 @@ public:
   }
 
   PODVector(size_t size, const T& value)
-    : _data(static_cast<T*>(::operator new(sizeof(T) * size)))
+    : _data(_allocate(size))
     , _capacity(size)
     , _size(size) {
     for (size_t i = 0; i < size; i++)
@@ -41,7 +45,7 @@ public:
   }
 
   PODVector(const PODVector& other)
-    : _data(static_cast<T*>(::operator new(other.capacityInBytes())))
+    : _data(_allocate(other.capacity()))
     , _capacity(other._capacity)
     , _size(other._size) {
     std::memcpy(_data, other._data, other.sizeInBytes());
@@ -130,7 +134,7 @@ public:
       capacity = 1;
     if (capacity <= _capacity)
       return;
-    T* newData = static_cast<T*>(::operator new(sizeof(T) * capacity));
+    T* newData = _allocate(capacity);
     std::memcpy(newData, _data, sizeInBytes());
     ::operator delete(_data);
     _data = newData;

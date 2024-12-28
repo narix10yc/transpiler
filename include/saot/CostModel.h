@@ -3,6 +3,7 @@
 
 #include "simulation/KernelGen.h"
 #include "saot/QuantumGate.h"
+#include "saot/CircuitGraphContext.h"
 #include <cassert>
 #include <string>
 #include <vector>
@@ -11,15 +12,16 @@ namespace saot {
 
 struct CostResult {
   double benefit;
-  std::unique_ptr<QuantumGate> fusedGate;
+  QuantumGate* fusedGate;
 };
 
 class CostModel {
 public:
   virtual ~CostModel() = default;
 
-  virtual CostResult computeBenefit(const QuantumGate& lhsGate,
-                                    const QuantumGate& rhsGate) const {
+  virtual CostResult computeBenefit(
+      const QuantumGate& lhsGate, const QuantumGate& rhsGate,
+      CircuitGraphContext& context) const {
     assert(false && "Should not call from base class");
     return { 0.0, nullptr };
   }
@@ -35,13 +37,15 @@ public:
     : maxNQubits(maxNQubits), maxOp(maxOp), zeroTol(zeroTol) {}
 
   CostResult computeBenefit(
-      const QuantumGate& lhsGate, const QuantumGate& rhsGate) const override;
+      const QuantumGate& lhsGate, const QuantumGate& rhsGate,
+      CircuitGraphContext& context) const override;
 };
 
 class AdaptiveCostModel : public CostModel {
 public:
   CostResult computeBenefit(
-      const QuantumGate& lhsGate, const QuantumGate& rhsGate) const override;
+      const QuantumGate& lhsGate, const QuantumGate& rhsGate,
+      CircuitGraphContext& context) const override;
 };
 
 class PerformanceCache {

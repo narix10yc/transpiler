@@ -11,8 +11,7 @@
 
 namespace utils {
 
-/// @brief square_matrix<data_t>: a simple wrapper of square matrices. Elements are
-/// by default 'not' initialized.
+/// @brief square_matrix<data_t>: a simple wrapper of square matrices.
 template<typename data_t>
 class square_matrix {
 private:

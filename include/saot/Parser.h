@@ -130,6 +130,15 @@ public:
     lineBegin = bufferBegin;
   }
 
+  Lexer(const Lexer&) = delete;
+  Lexer& operator=(const Lexer&) = delete;
+  ~Lexer() {
+    delete[] bufferBegin;
+  }
+
+  Lexer(Lexer&&) = delete;
+  Lexer& operator=(Lexer&&) = delete;
+
   void lex(Token& tok);
 
   void skipLine();

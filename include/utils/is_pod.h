@@ -6,8 +6,10 @@
 namespace utils {
 
 template<typename T>
-concept is_pod = std::is_trivial_v<T> && std::is_standard_layout_v<T>;
-
+concept is_pod = std::is_trivially_copyable_v<T>;
+  // std::is_trivially_copyable_v<T> &&
+  // std::is_trivially_default_constructible_v<T> &&
+  // std::is_standard_layout_v<T>;
 } // namespace utils
 
 #endif // UTILS_IS_POD_H

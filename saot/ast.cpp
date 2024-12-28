@@ -10,9 +10,6 @@ using namespace saot::ast;
 
 namespace {
 
-template<typename>
-constexpr bool templated_false = false;
-
 std::ostream& printGateMatrix(
     std::ostream& os, const GateMatrix::gate_params_t &params) {
   const auto visitor = [&os](const utils::PODVariant<int, double>& arg) {
@@ -21,12 +18,20 @@ std::ostream& printGateMatrix(
     else if (arg.is<double>())
       os << arg.get<double>();
     else
-      assert(!arg.isValid() && "Expect Monostate");
+      assert(!arg.holdingValue() && "Expect Monostate");
   };
 
+  if (!params[0].holdingValue())
+    return os;
   visitor(params[0]);
+
+  if (!params[1].holdingValue())
+    return os;
   os << ", ";
   visitor(params[1]);
+
+  if (!params[2].holdingValue())
+    return os;
   os << ", ";
   visitor(params[2]);
   return os;
@@ -56,16 +61,15 @@ std::ostream& QuantumCircuit::print(std::ostream& os) const {
 
 std::ostream& GateApplyStmt::print(std::ostream& os) const {
   os << name;
+
   // parameter
-  std::visit([&os]<typename Arg_t>(Arg_t&& arg) {
-    using T = std::decay_t<Arg_t>;
-    if constexpr (std::is_same_v<T, int>) {
-      os << "(#" << arg << ")";
-    }
-    if constexpr (std::is_same_v<T, GateMatrix::gate_params_t>) {
-      printGateMatrix(os << "(", arg) << ")";
-    }
-  }, paramRefOrMatrix);
+  if (argument.is<int>())
+    os << "(#" << argument.get<int>() << ")";
+  else if (argument.is<GateMatrix::gate_params_t>()) {
+    os << "(";
+    printGateMatrix(os, argument.get<GateMatrix::gate_params_t>());
+    os << ")";
+  }
 
   // target qubits
   os << " ";
@@ -79,7 +83,7 @@ std::ostream& GateChainStmt::print(std::ostream& os) const {
     return os;
   os << "  ";
   for (size_t i = 0; i < size - 1; i++)
-    gates[i].print(os) << "@ ";
+    gates[i].print(os) << "\n@ ";
   gates[size - 1].print(os) << ";\n";
   return os;
 }
@@ -106,20 +110,23 @@ std::ostream& ParameterDefStmt::print(std::ostream& os) const {
 
 QuantumGate QuantumCircuit::gateApplyToQuantumGate(
     const GateApplyStmt& gaStmt) const {
-  if (const auto* p = std::get_if<int>(&gaStmt.paramRefOrMatrix)) {
-    const auto v = *p;
-    const auto it = std::ranges::find_if(std::as_const(paramDefs),
-      [v](const ParameterDefStmt &stmt) {
-        return stmt.refNumber == v;
-      });
-    if (it != paramDefs.end())
-      return QuantumGate(*it->gateMatrix, gaStmt.qubits);
+  if (gaStmt.argument.is<int>()) {
+    // gaStmt relies on parameter reference
+    const auto refNumber = gaStmt.argument.get<int>();
+    for (const auto& defStmt : paramDefs) {
+      if (defStmt.refNumber == refNumber)
+        return QuantumGate(*defStmt.gateMatrix, gaStmt.qubits);
+    }
     assert(false && "Cannot find parameter def stmt");
     return QuantumGate();
   }
-  if (const auto* p =
-          std::get_if<GateMatrix::gate_params_t>(&gaStmt.paramRefOrMatrix))
-    return QuantumGate(GateMatrix::FromName(gaStmt.name, *p), gaStmt.qubits);
+
+  if (gaStmt.argument.is<GateMatrix::gate_params_t>())
+    return QuantumGate(
+      GateMatrix::FromName(
+          gaStmt.name,
+          gaStmt.argument.get<GateMatrix::gate_params_t>()),
+      gaStmt.qubits);
   return QuantumGate(GateMatrix::FromName(gaStmt.name), gaStmt.qubits);
 }
 
@@ -138,26 +145,28 @@ void QuantumCircuit::toCircuitGraph(CircuitGraph& graph) const {
     auto quGate = gateApplyToQuantumGate(chain->gates[0]);
     for (int i = 1; i < chain->gates.size(); i++)
       quGate = quGate.lmatmul(gateApplyToQuantumGate(chain->gates[i]));
-    graph.appendGate(std::make_unique<QuantumGate>(quGate));
+    // TODO: avoid (potentially expensive) copy here
+    graph.appendGate(graph.acquireQuantumGate(quGate));
   }
 }
 
-// QuantumCircuit QuantumCircuit::FromCircuitGraph(const CircuitGraph& G) {
-//   const auto allBlocks = G.getAllBlocks();
-//
-//   QuantumCircuit qc;
-//   int paramRefNumber = 0;
-//
-//   for (const auto* B : allBlocks) {
-//     const auto qubits = B->getQubits();
-//     std::string gateName = "u" + std::to_string(qubits.size()) + "q";
-//     qc.stmts.push_back(
-//         std::make_unique<GateApplyStmt>(gateName, paramRefNumber, qubits));
-//
-//     qc.paramDefs.emplace_back(
-//       paramRefNumber, std::make_unique<GateMatrix>(B->quantumGate->gateMatrix));
-//     paramRefNumber++;
-//   }
-//
-//   return qc;
-// }
+QuantumCircuit QuantumCircuit::FromCircuitGraph(const CircuitGraph& graph) {
+  const auto allBlocks = graph.getAllBlocks();
+
+  QuantumCircuit qc;
+
+  for (const auto* block : allBlocks) {
+    const auto gateNodes = block->getOrderedGates();
+    auto chainStmt = std::make_unique<GateChainStmt>();
+    for (const auto* gateNode : gateNodes) {
+      auto name = gateNode->quantumGate->getName();
+      chainStmt->gates.emplace_back(
+        name,
+        GateApplyStmt::arg_t(gateNode->quantumGate->gateMatrix.gateParams),
+        gateNode->quantumGate->qubits);
+    }
+    qc.stmts.emplace_back(std::move(chainStmt));
+  }
+
+  return qc;
+}

@@ -7,6 +7,7 @@
 using namespace saot;
 using namespace IOColor;
 
+
 std::ostream& QuantumGate::displayInfo(std::ostream& os) const {
   os << CYAN("QuantumGate Info\n") << "- Target Qubits ";
   utils::printArray(os, llvm::ArrayRef(qubits.begin(), qubits.size())) << "\n";

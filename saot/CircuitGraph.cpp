@@ -12,12 +12,11 @@ using namespace IOColor;
 using namespace saot;
 
 // static member
-int GateNode::idCount = 0;
-int GateBlock::idCount = 0;
+int CircuitGraph::GateNodeCount = 0;
+int CircuitGraph::GateBlockCount = 0;
 
-GateNode::GateNode(
-    std::unique_ptr<QuantumGate> _gate, const CircuitGraph& graph)
-    : id(idCount++), quantumGate(std::move(_gate)) {
+GateNode::GateNode(QuantumGate* gate, const CircuitGraph& graph)
+  : id(CircuitGraph::GateNodeCount++), quantumGate(gate) {
   connections.reserve(quantumGate->nqubits());
   for (const auto q : quantumGate->qubits) {
     connections.emplace_back(q, nullptr, nullptr);
@@ -31,6 +30,17 @@ GateNode::GateNode(
     }
   }
 }
+
+GateBlock::GateBlock()
+  : id(CircuitGraph::GateBlockCount++), quantumGate(nullptr) {}
+
+GateBlock::GateBlock(GateNode* gateNode)
+  : id(CircuitGraph::GateBlockCount++), quantumGate(gateNode->quantumGate) {
+  wires.reserve(quantumGate->nqubits());
+  for (const auto& data : gateNode->connections)
+  wires.emplace_back(data.qubit, gateNode, gateNode);
+}
+
 
 void GateNode::connect(GateNode* rhsGate, int q) {
   assert(rhsGate);
@@ -130,8 +140,9 @@ CircuitGraph::iter_t CircuitGraph::insertBlock(iter_t it, GateBlock* block) {
 // }
 
 
-void CircuitGraph::appendGate(std::unique_ptr<QuantumGate> quantumGate) {
+void CircuitGraph::appendGate(QuantumGate* quantumGate) {
   assert(quantumGate != nullptr);
+  assert(isManaging(quantumGate));
   // update nqubits
   for (const auto& q : quantumGate->qubits) {
     if (q >= nqubits)
@@ -139,11 +150,11 @@ void CircuitGraph::appendGate(std::unique_ptr<QuantumGate> quantumGate) {
   }
 
   // create gate and setup connections
-  auto* gate = gateNodePool.acquire(std::move(quantumGate), *this);
+  auto* gateNode = acquireGateNode(quantumGate, *this);
 
   // create block and insert to the tile
   // TODO: this is slightly inefficient as the block may be assigned twice
-  auto* block = gateBlockPool.acquire(gate);
+  auto* block = acquireGateBlock(gateNode);
   auto it = insertBlock(iter_t(_tile.tail()), block);
   repositionBlockUpward(it, block->quantumGate->qubits[0]);
 }
@@ -258,7 +269,7 @@ void CircuitGraph::squeeze() {
 std::ostream& CircuitGraph::print(std::ostream& os, int verbose) const {
   if (_tile.empty())
     return os << "<empty tile>\n";
-  int width = static_cast<int>(std::log10(GateBlock::getIdCount()) + 1);
+  int width = static_cast<int>(std::log10(GateBlockCount) + 1);
   if ((width & 1) == 0)
     width++;
 

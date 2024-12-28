@@ -25,9 +25,8 @@ void RootNode::toCircuitGraph(saot::CircuitGraph& graph) const {
       params[i++] = ev.value;
     }
     if (gateApply->name == "u3") {
-      auto* p = std::get_if<double>(&params[0]);
-      assert(p);
-     * p *= 0.5;
+      // Our representation of theta is 0.5 times that in OpenQASM
+      params[0].get<double>() *= 0.5;
     }
     auto matrix = saot::GateMatrix::FromName(gateApply->name, params);
     graph.appendGate(std::make_unique<saot::QuantumGate>(matrix, qubits));

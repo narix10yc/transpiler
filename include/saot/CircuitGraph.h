@@ -2,7 +2,7 @@
 #define SAOT_CIRCUITGRAPH_H
 
 #include "saot/QuantumGate.h"
-#include "utils/ObjectPool.h"
+#include "saot/CircuitGraphContext.h"
 #include "utils/List.h"
 
 #include "llvm/ADT/SmallVector.h"
@@ -17,9 +17,6 @@ namespace saot {
 class CircuitGraph;
 
 class GateNode {
-private:
-  static int idCount;
-
 public:
   struct ConnectionInfo {
     int qubit;
@@ -28,14 +25,10 @@ public:
   };
 
   int id;
-  // If this GateNode resides inside a GateBlock, quantumGate here will be null
-  // as its memory is managed by GateBlock.
-  std::unique_ptr<QuantumGate> quantumGate;
+  QuantumGate* quantumGate;
   std::vector<ConnectionInfo> connections;
 
-  GateNode(std::unique_ptr<QuantumGate> quantumGate, const CircuitGraph& graph);
-
-  static int getIdCount() { return idCount; }
+  GateNode(QuantumGate* quantumGate, const CircuitGraph& graph);
 
   ConnectionInfo* findConnection(int qubit) {
     for (auto& item : connections) {
@@ -61,9 +54,6 @@ public:
 /// by the \c wires variable, which is internally a vector of \c WireInfo that
 /// specifies qubit, left entry node, and right entry node.
 class GateBlock {
-private:
-  static int idCount;
-
 public:
   struct WireInfo {
     int qubit;
@@ -73,18 +63,10 @@ public:
 
   int id;
   std::vector<WireInfo> wires;
-  std::unique_ptr<QuantumGate> quantumGate;
+  QuantumGate* quantumGate;
 
-  GateBlock() : id(idCount++), wires(), quantumGate(nullptr) {}
-
-  explicit GateBlock(GateNode* gateNode)
-      : id(idCount++), quantumGate(std::move(gateNode->quantumGate)) {
-    wires.reserve(quantumGate->nqubits());
-    for (const auto& data : gateNode->connections)
-      wires.emplace_back(data.qubit, gateNode, gateNode);
-  }
-
-  static int getIdCount() { return idCount; }
+  GateBlock();
+  explicit GateBlock(GateNode* gateNode);
 
   std::ostream& displayInfo(std::ostream& os) const;
 
@@ -126,10 +108,7 @@ public:
 
 class CircuitGraph {
 private:
-  /// Memory management of CircuitGraph
-  utils::ObjectPool<GateNode> gateNodePool;
-  utils::ObjectPool<GateBlock> gateBlockPool;
-
+  CircuitGraphContext _context;
 public:
   using row_t = std::array<GateBlock*, 36>;
   using tile_t = utils::List<row_t>;
@@ -143,6 +122,9 @@ public:
 private:
   tile_t _tile;
 public:
+  static int GateNodeCount;
+  static int GateBlockCount;
+
   int nqubits;
 
   CircuitGraph() : _tile(), nqubits(0) {
@@ -158,26 +140,50 @@ public:
   tile_t& tile() { return _tile; }
   const tile_t& tile() const { return _tile; }
 
+  CircuitGraphContext& getContext() { return _context; }
+
+  template<typename... Args>
+  QuantumGate* acquireQuantumGate(Args&&... args) {
+    return _context.quantumGatePool.acquire(std::forward<Args>(args)...);
+  }
+
   template<typename... Args>
   GateNode* acquireGateNode(Args&&... args) {
-    return gateNodePool.acquire(std::forward<Args>(args)...);
+    return _context.gateNodePool.acquire(std::forward<Args>(args)...);
   }
 
   template<typename... Args>
   GateBlock* acquireGateBlock(Args&&... args) {
-    return gateBlockPool.acquire(std::forward<Args>(args)...);
+    return _context.gateBlockPool.acquire(std::forward<Args>(args)...);
+  }
+
+  void releaseQuantumGate(QuantumGate* gate) {
+    _context.quantumGatePool.release(gate);
   }
 
   void releaseGateNode(GateNode* gateNode) {
-    gateNodePool.release(gateNode);
+    _context.gateNodePool.release(gateNode);
   }
 
   void releaseGateBlock(GateBlock* gateBlock) {
-    gateBlockPool.release(gateBlock);
+    _context.gateBlockPool.release(gateBlock);
   }
 
-  // add a quantum gate to the tile
-  void appendGate(std::unique_ptr<QuantumGate> quantumGate);
+  bool isManaging(const QuantumGate* gate) const {
+    return _context.quantumGatePool.isInPool(gate);
+  }
+
+  bool isManaging(const GateNode* gateNode) const {
+    return _context.gateNodePool.isInPool(gateNode);
+  }
+
+  bool isManaging(const GateBlock* gateBlock) const {
+    return _context.gateBlockPool.isInPool(gateBlock);
+  }
+
+  /// Append a quantum gate to the tile. Quantum gate must be managed by
+  /// \c *this
+  void appendGate(QuantumGate* quantumGate);
 
   /// @brief Erase empty rows in the tile
   void eraseEmptyRows();

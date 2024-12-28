@@ -79,7 +79,13 @@ public:
   }
 
   /// Check if this object is holding a meaningful type
-  bool isValid() const { return _typeIndex >= 0; }
+  bool holdingValue() const { return _typeIndex >= 0; }
+
+  template <typename T>
+  void set() {
+    static_assert(indexOf<T>() < sizeof...(Types), "Wrong type");
+    _typeIndex = indexOf<T>();
+  }
 
   template <typename T>
   T& get() {

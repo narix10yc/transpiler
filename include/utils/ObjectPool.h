@@ -67,7 +67,7 @@ public:
   }
 
   /// Check if obj is in managed by this pool
-  bool isInPool(const T* obj) {
+  bool isInPool(const T* obj) const {
     for (const T* ptr : objHolders) {
       if (ptr <= obj && obj < ptr + block_size)
         return true;

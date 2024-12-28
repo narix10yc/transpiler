@@ -60,21 +60,21 @@ public:
 };
 
 class GateApplyStmt : public Statement {
-  using arg_t = std::variant<std::monostate, int, GateMatrix::gate_params_t>;
 public:
+  using arg_t = utils::PODVariant<int, GateMatrix::gate_params_t>;
   std::string name;
-  arg_t paramRefOrMatrix;
+  arg_t argument;
   llvm::SmallVector<int> qubits;
 
   GateApplyStmt(const std::string& name, const llvm::SmallVector<int>& qubits)
-    : Statement(SK_GateApply), name(name), paramRefOrMatrix(), qubits(qubits) {}
+    : Statement(SK_GateApply), name(name), argument(), qubits(qubits) {}
 
   GateApplyStmt(
       const std::string& name, const arg_t& paramRefOrMatrix,
       const llvm::SmallVector<int>& qubits)
     : Statement(SK_GateApply)
     , name(name)
-    , paramRefOrMatrix(paramRefOrMatrix)
+    , argument(paramRefOrMatrix)
     , qubits(qubits) {}
 
   std::ostream& print(std::ostream& os) const override;
@@ -100,13 +100,13 @@ public:
   QuantumCircuit(const std::string& name = "qc")
       : name(name), nqubits(0), nparams(0), stmts(), paramDefs() {}
 
-  static QuantumCircuit FromCircuitGraph(const CircuitGraph&);
-
   std::ostream& print(std::ostream& os) const;
 
   QuantumGate gateApplyToQuantumGate(const GateApplyStmt&) const;
 
+  // CircuitGraph forbids copy and moves.
   void toCircuitGraph(CircuitGraph&) const;
+  static QuantumCircuit FromCircuitGraph(const CircuitGraph&);
 };
 
 } // namespace saot::ast

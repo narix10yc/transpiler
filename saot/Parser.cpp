@@ -299,20 +299,21 @@ GateApplyStmt Parser::parseGateApply() {
     if (optionalAdvance(tk_Hash)) {
       // parameter ref #N
       requireCurTokenIs(tk_Numeric);
-      stmt.paramRefOrMatrix = curToken.toInt();
+      stmt.argument = curToken.toInt();
       advance(tk_Numeric);
     } else {
       // up to 3 parameters
-      stmt.paramRefOrMatrix = GateMatrix::gate_params_t();
-      auto& parameters =
-          std::get<GateMatrix::gate_params_t>(stmt.paramRefOrMatrix);
-      for (int i = 0; i < 4; i++) {
+      stmt.argument.set<GateMatrix::gate_params_t>();
+      auto& parameters = stmt.argument.get<GateMatrix::gate_params_t>();
+      for (int i = 0; i < 3; ++i) {
         if (curToken.is(tk_Numeric)) {
           parameters[i] = curToken.toDouble();
         } else if (optionalAdvance(tk_Percent)) {
           requireCurTokenIs(tk_Numeric);
           parameters[i] = curToken.toInt();
         } else {
+          for (int j = i; j < 3; ++j)
+            parameters[j].reset();
           break;
         }
         advance();

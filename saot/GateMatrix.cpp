@@ -173,22 +173,10 @@ const p_matrix_t GateMatrix::MatrixCX_p{
 };
 
 const p_matrix_t GateMatrix::MatrixCZ_p = p_matrix_t({
-    {1.0, 0.0},
-    {0.0, 0.0},
-    {0.0, 0.0},
-    {0.0, 0.0},
-    {0.0, 0.0},
-    {1.0, 0.0},
-    {0.0, 0.0},
-    {0.0, 0.0},
-    {0.0, 0.0},
-    {0.0, 0.0},
-    {1.0, 0.0},
-    {0.0, 0.0},
-    {0.0, 0.0},
-    {0.0, 0.0},
-    {0.0, 0.0},
-    {-1.0, 0.0},
+    {1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0},
+    {0.0, 0.0}, {1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0},
+    {0.0, 0.0}, {0.0, 0.0}, {1.0, 0.0}, {0.0, 0.0},
+    {0.0, 0.0}, {0.0, 0.0}, {0.0, 0.0}, {-1.0, 0.0},
 });
 
 #pragma endregion
@@ -196,7 +184,7 @@ const p_matrix_t GateMatrix::MatrixCZ_p = p_matrix_t({
 int getNumActiveParams(const gate_params_t& params) {
   unsigned s = params.size();
   for (unsigned i = 0; i < s; i++) {
-    if (!params[i].isValid())
+    if (!params[i].holdingValue())
       return i;
   }
   return s;
@@ -356,7 +344,7 @@ inline p_matrix_t matCvt_gp_to_p(GateKind kind, const gate_params_t& params) {
   case gH:
     return GateMatrix::MatrixH_p;
   case gP: {
-    assert(params[0].isValid());
+    assert(params[0].holdingValue());
     if (params[0].is<int>())
       return p_matrix_t {
         {1.0, 0.0}, {0.0, 0.0}, {0.0, 0.0},
@@ -369,9 +357,9 @@ inline p_matrix_t matCvt_gp_to_p(GateKind kind, const gate_params_t& params) {
   }
 
   case gU: {
-    assert(params[0].isValid());
-    assert(params[1].isValid());
-    assert(params[2].isValid());
+    assert(params[0].holdingValue());
+    assert(params[1].holdingValue());
+    assert(params[2].holdingValue());
 
     p_matrix_t pmat{{1.0, 0.0}, {-1.0, 0.0}, {1.0, 0.0}, {1.0, 0.0}};
     // theta
