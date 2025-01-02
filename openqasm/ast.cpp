@@ -29,6 +29,7 @@ void RootNode::toCircuitGraph(saot::CircuitGraph& graph) const {
       params[0].get<double>() *= 0.5;
     }
     auto matrix = saot::GateMatrix::FromName(gateApply->name, params);
-    graph.appendGate(std::make_unique<saot::QuantumGate>(matrix, qubits));
+    auto* quantumGate = graph.acquireQuantumGate(matrix, qubits);
+    graph.appendGate(quantumGate);
   }
 }

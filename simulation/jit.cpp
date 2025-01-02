@@ -19,15 +19,33 @@ void IRGenerator::createJitSession() {
       orc::ThreadSafeModule(std::move(_module), std::move(_context))));
 }
 
+// std::unique_ptr<orc::LLJIT> saot::createJITSession(
+//     std::unique_ptr<Module> llvmModule,
+//     std::unique_ptr<LLVMContext> llvmContext) {
+//   InitializeNativeTarget();
+//   InitializeNativeTargetAsmParser();
+//   InitializeNativeTargetAsmPrinter();
+//   auto jit = std::move(cantFail(orc::LLJITBuilder().create()));
+//   if (llvmModule && llvmContext) {
+//     cantFail(jit->addIRModule(
+//       orc::ThreadSafeModule(std::move(llvmModule), std::move(llvmContext))));
+//   }
+//   return jit;
+// }
+
 std::unique_ptr<orc::LLJIT> saot::createJITSession(
     std::unique_ptr<Module> llvmModule,
     std::unique_ptr<LLVMContext> llvmContext) {
   InitializeNativeTarget();
   InitializeNativeTargetAsmParser();
   InitializeNativeTargetAsmPrinter();
-  auto jit = std::move(cantFail(orc::LLJITBuilder().create()));
+
+  orc::LLLazyJITBuilder jitBuilder;
+  jitBuilder.setNumCompileThreads(std::thread::hardware_concurrency());
+
+  auto jit = cantFail(jitBuilder.create());
   if (llvmModule && llvmContext) {
-    cantFail(jit->addIRModule(
+    cantFail(jit->addLazyIRModule(
       orc::ThreadSafeModule(std::move(llvmModule), std::move(llvmContext))));
   }
   return jit;

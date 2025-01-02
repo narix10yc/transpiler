@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
   graph.print(std::cerr << "Before Fusion:\n", 2) << "\n";
 
   CPUFusionConfig config = CPUFusionConfig::Default;
-  StandardCostModel costModel(3, 0, 1e-8);
+  NaiveCostModel costModel(3, 0, 1e-8);
 
   applyCPUGateFusion(config, &costModel, graph);
   graph.print(std::cerr << "After Fusion:\n", 2) << "\n";

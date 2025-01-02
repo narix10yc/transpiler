@@ -29,7 +29,7 @@ int main(int argc, char* *argv) {
 
   CircuitGraph graph;
   CPUFusionConfig fusionConfig = CPUFusionConfig::Default;
-  StandardCostModel costModel(3, 64, 1e-8);
+  NaiveCostModel costModel(3, 64, 1e-8);
   IRGenerator G;
   IRGeneratorConfig irConfig;
   irConfig.simd_s = 1;

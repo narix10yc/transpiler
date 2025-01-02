@@ -30,7 +30,7 @@ static void internal_U1q() {
 
   // kernels with imm value matrix
   for (int q = 0; q < nqubits; q++)
-    gates.emplace_back(QuantumGate::RandomUnitary<1>({q}));
+    gates.emplace_back(QuantumGate::RandomUnitary(q));
 
   CPUKernelGenConfig cpuConfig;
   cpuConfig.simd_s = simd_s;
@@ -103,7 +103,7 @@ static void internal_U2q() {
     int a, b;
     a = d(gen);
     do { b = d(gen); } while (b == a);
-    gates.emplace_back(QuantumGate::RandomUnitary<2>({a, b}));
+    gates.emplace_back(QuantumGate::RandomUnitary(a, b));
   }
 
   CPUKernelGenConfig cpuConfig;

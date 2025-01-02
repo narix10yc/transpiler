@@ -60,10 +60,17 @@ std::ostream& printParametrizedMatrix(
     std::ostream& os,
     const utils::square_matrix<saot::Polynomial>& cMat);
 
+/// A gate accepts up to 3 parameters that is either
+/// - int: represents variable in parametrized gates
+/// - double: parameter value
+struct GateParameters {
+
+};
+
 class GateMatrix {
 public:
   // specify gate matrix with (up to three) parameters
-  using gate_params_t = utils::PODArray<utils::PODVariant<int, double>, 3>;
+  using gate_params_t = std::array<utils::PODVariant<int, double>, 3>;
   // unitary permutation matrix type
   using up_matrix_t = saot::UnitaryPermutationMatrix;
   // constant matrix type
@@ -338,10 +345,11 @@ public:
     return QuantumGate(GateMatrix(GateMatrix::MatrixH_c), q);
   }
 
-  template<unsigned nqubits>
-  static QuantumGate RandomUnitary(const std::array<int, nqubits>& qubits) {
-    assert(qubits.size() == nqubits);
-    auto qubitsCopy = qubits;
+  template<typename... Ints>
+  static QuantumGate RandomUnitary(Ints... qubits) {
+    static_assert((std::is_integral_v<Ints> && ...));
+    constexpr auto nqubits = sizeof...(Ints);
+    std::vector<int> qubitsCopy{qubits...};
     std::ranges::sort(qubitsCopy);
     return QuantumGate(
       GateMatrix(utils::randomUnitaryMatrix(1U << nqubits)),

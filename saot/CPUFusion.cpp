@@ -142,9 +142,9 @@ int tryCrossWireFuse(
       continue;
 
     // fusion accepted
-    for (const auto q : lBlock->quantumGate->qubits)
+    for (const auto& q : lBlock->quantumGate->qubits)
       (*tileIt)[q] = nullptr;
-    for (const auto q : rBlock->quantumGate->qubits)
+    for (const auto& q : rBlock->quantumGate->qubits)
       (*tileNext)[q] = nullptr;
 
     auto insertedIt = graph.insertBlock(tileIt, cBlock);

@@ -14,7 +14,6 @@ namespace saot {
 class CircuitGraph;
 }
 
-
 namespace saot {
 
 enum TokenKind : int {

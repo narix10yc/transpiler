@@ -44,7 +44,7 @@ public:
   PODVariant() : _typeIndex(-1) {}
 
   template <typename T>
-  explicit PODVariant(const T& value) {
+  PODVariant(const T& value) {
     static_assert(indexOf<T>() < sizeof...(Types), "Wrong type");
     reinterpret_cast<T&>(_storage) = value;
     _typeIndex = indexOf<T>();

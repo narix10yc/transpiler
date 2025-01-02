@@ -355,7 +355,7 @@ std::ostream& CircuitGraph::print(std::ostream& os, int verbose) const {
 //   os << "- Number of Blocks: " << nBlocks << "\n";
 //   auto totalOp = countTotalOps();
 //   os << "- Total Op Count:   " << totalOp << "\n";
-//   os << "- Avergae Op Count: " << std::fixed << std::setprecision(1)
+//   os << "- Average Op Count: " << std::fixed << std::setprecision(1)
 //      << static_cast<double>(totalOp) / nBlocks << "\n";
 //   os << "- Circuit Depth:    " << _tile.size() << "\n";
 //
@@ -400,6 +400,7 @@ std::vector<GateNode*> GateBlock::getOrderedGates() const {
   std::deque<GateNode*> queue;
   // vector should be more efficient as we expect small sizes here
   std::vector<GateNode*> gates;
+  gates.reserve(8);
   for (const auto& data : wires) {
     if (std::ranges::find(queue, data.rhsEntry) == queue.end())
       queue.push_back(data.rhsEntry);
@@ -415,18 +416,12 @@ std::vector<GateNode*> GateBlock::getOrderedGates() const {
     for (const auto& data : this->wires) {
       if (gate == data.lhsEntry)
         continue;
-      auto it = gate->findConnection(data.qubit);
-      if (it == nullptr)
+      const auto* connection = gate->findConnection(data.qubit);
+      if (connection == nullptr)
         continue;
-      if (it->lhsGate == nullptr) {
-        std::cerr << RED_FG << "block " << id << " "
-                  << "gate " << gate->id << " along qubit " << data.qubit
-                  << "\n"
-                  << RESET;
-      }
-      assert(it->lhsGate);
-      if (std::ranges::find(gates, it->lhsGate) == gates.end())
-        higherPriorityGates.push_back(it->lhsGate);
+      assert(connection->lhsGate);
+      if (std::ranges::find(gates, connection->lhsGate) == gates.end())
+        higherPriorityGates.push_back(connection->lhsGate);
     }
 
     if (higherPriorityGates.empty()) {

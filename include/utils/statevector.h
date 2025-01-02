@@ -209,39 +209,36 @@ public:
 /// For example,
 /// memory index: 000 001 010 011 100 101 110 111
 /// amplitudes:   r00 r01 i00 i01 r10 r11 i10 i11
-template<typename real_t>
+template<typename RealType>
 class StatevectorAlt {
 public:
   int simd_s;
   int nqubits;
   uint64_t N;
   size_t memSize;
-  real_t* data;
+  RealType* data;
 
   StatevectorAlt(int nqubits, int simd_s, bool init = true)
-      : simd_s(simd_s), nqubits(nqubits), N(1ULL << nqubits)
-      , memSize((2ULL << nqubits) * sizeof(real_t)) {
-    data = (real_t*)aligned_alloc(64, this->memSize);
-    assert(data && "Allocation Failed");
+    : simd_s(simd_s)
+    , nqubits(nqubits)
+    , N(1ULL << nqubits)
+    , memSize((2ULL << nqubits) * sizeof(RealType))
+    , data(static_cast<RealType*>(
+        ::operator new(memSize, static_cast<std::align_val_t>(64)))) {
     if (init)
       initialize();
   }
 
-  StatevectorAlt(const StatevectorAlt& that)
-      : nqubits(that.nqubits), N(that.N), memSize(that.memSize) {
-    data = (real_t*)aligned_alloc(64, memSize);
-    std::memcpy(data, that.data, memSize);
-  }
+  StatevectorAlt(const StatevectorAlt&) = delete;
 
   StatevectorAlt(StatevectorAlt&&) = delete;
 
-  ~StatevectorAlt() { std::free(data); }
+  ~StatevectorAlt() { ::operator delete(data); }
 
   StatevectorAlt& operator=(const StatevectorAlt& that) {
-    if (this != &that) {
-      for (size_t i = 0; i < 2 * N; i++)
-        data[i] = that.data[i];
-    }
+    if (this == &that)
+      return *this;
+    std::memcpy(data, that.data, memSize);
     return *this;
   }
 
@@ -270,26 +267,26 @@ public:
   void randomize() {
     std::random_device rd;
     std::mt19937 gen{rd()};
-    std::normal_distribution<real_t> d{0, 1};
+    std::normal_distribution<RealType> d{0, 1};
     for (size_t i = 0; i < 2 * N; i++)
       data[i] = d(gen);
     normalize();
   }
 
-  real_t& real(size_t idx) {
+  RealType& real(size_t idx) {
     return data[utils::insertZeroToBit(idx, simd_s)];
   }
-  real_t& imag(size_t idx) {
+  RealType& imag(size_t idx) {
     return data[utils::insertOneToBit(idx, simd_s)];
   }
-  const real_t& real(size_t idx) const {
+  const RealType& real(size_t idx) const {
     return data[utils::insertZeroToBit(idx, simd_s)];
   }
-  const real_t& imag(size_t idx) const {
+  const RealType& imag(size_t idx) const {
     return data[utils::insertOneToBit(idx, simd_s)];
   }
 
-  std::complex<real_t> amp(size_t idx) const {
+  std::complex<RealType> amp(size_t idx) const {
     size_t tmp = utils::insertZeroToBit(idx, simd_s);
     return { data[tmp], data[tmp | (1 << simd_s)] };
   }
@@ -335,7 +332,7 @@ public:
     const unsigned K = 1 << k;
     assert(cMat->edgeSize() == K);
     std::vector<size_t> ampIndices(K);
-    std::vector<std::complex<real_t>> ampUpdated(K);
+    std::vector<std::complex<RealType>> ampUpdated(K);
 
     size_t pdepMaskTask = ~static_cast<size_t>(0);
     size_t pdepMaskAmp = 0;

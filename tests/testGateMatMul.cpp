@@ -42,11 +42,11 @@ static void internal() {
   std::random_device rd;
   std::mt19937 gen(rd());
   std::uniform_int_distribution<> d(0, nqubits - 1);
-  for (int i = 0; i < 1; ++i) {
+  for (int i = 0; i < 3; ++i) {
     int a = d(gen);
     int b = d(gen);
-    auto gate0 = QuantumGate::RandomUnitary<1>({a});
-    auto gate1 = QuantumGate::RandomUnitary<1>({b});
+    auto gate0 = QuantumGate::RandomUnitary(a);
+    auto gate1 = QuantumGate::RandomUnitary(b);
     auto gate = gate0.lmatmul(gate1);
 
     utils::StatevectorAlt<double> sv0(nqubits, simd_s), sv1(nqubits, simd_s);
