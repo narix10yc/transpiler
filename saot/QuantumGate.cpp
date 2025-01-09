@@ -239,25 +239,25 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
 }
 
 namespace { // QuantumGate::opCount helper functions
-inline int opCount_c(const GateMatrix::c_matrix_t& mat, double thres) {
+inline int opCount_c(const GateMatrix::c_matrix_t& mat, double zeroTol) {
   int count = 0;
   for (const auto& data : mat) {
-    if (std::abs(data.real()) >= thres)
+    if (std::abs(data.real()) >= zeroTol)
       ++count;
-    if (std::abs(data.imag()) >= thres)
+    if (std::abs(data.imag()) >= zeroTol)
       ++count;
   }
   return 2 * count;
 }
 
-inline int opCount_p(const GateMatrix::p_matrix_t& mat, double thres) {
+inline int opCount_p(const GateMatrix::p_matrix_t& mat, double zeroTol) {
   int count = 0;
   for (const auto& data : mat) {
     auto ev = data.getValue();
     if (ev.first) {
-      if (std::abs(ev.second.real()) >= thres)
+      if (std::abs(ev.second.real()) >= zeroTol)
         ++count;
-      if (std::abs(ev.second.imag()) >= thres)
+      if (std::abs(ev.second.imag()) >= zeroTol)
         ++count;
     } else
       count += 2;

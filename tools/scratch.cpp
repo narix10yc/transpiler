@@ -1,26 +1,32 @@
 #include "utils/PODVariant.h"
+#include "utils/List.h"
 
 #include <iostream>
 
-int f() { return 1; }
 
 int main() {
-  using Variant = utils::PODVariant<int, double>;
+  utils::List<int> list;
 
-  Variant v1(2);
+  const auto printList = [&list]() {
+    for (const auto i : list)
+      std::cerr << i << " - ";
+    std::cerr << "END\n";
+  };
 
-  std::cerr << "v1.get<int>() = " << v1.get<int>() << "\n";
-  std::cerr << "v1.get<double>() = " << v1.get<double>() << "\n";
+  list.emplace_back(1);
+  printList();
 
+  list.emplace_back(2);
+  printList();
 
-  Variant v2(f());
-  std::cerr << "v2.get<int>() = " << v2.get<int>() << "\n";
-  std::cerr << "v2.get<double>() = " << v2.get<double>() << "\n";
+  list.emplace_back(3);
+  printList();
 
-  v2 = 1.1;
-  std::cerr << "v2.get<int>() = " << v2.get<int>() << "\n";
-  std::cerr << "v2.get<double>() = " << v2.get<double>() << "\n";
+  auto it = list.begin();
+  ++it;
+  list.insert(it, 4);
+  list.erase(it);
+  printList();
 
-  v2.is<double>();
   return 0;
 }

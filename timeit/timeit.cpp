@@ -142,7 +142,7 @@ TimingResult Timer::timeit(std::function<void()> method,
 
 TimingResult Timer::timeitFixedRepeat(std::function<void()> method, int _repeat,
                                       std::function<void()> setup,
-                                      std::function<void()> teardown) {
+                                      std::function<void()> teardown) const {
   using Clock = std::chrono::high_resolution_clock;
   using TimePoint = std::chrono::time_point<Clock>;
   using Duration = std::chrono::duration<double>;
@@ -163,6 +163,5 @@ TimingResult Timer::timeitFixedRepeat(std::function<void()> method, int _repeat,
   }
 
   teardown();
-
   return TimingResult(_repeat, replication, tarr);
 }

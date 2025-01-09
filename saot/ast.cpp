@@ -146,7 +146,7 @@ void QuantumCircuit::toCircuitGraph(CircuitGraph& graph) const {
     for (int i = 1; i < chain->gates.size(); i++)
       quGate = quGate.lmatmul(gateApplyToQuantumGate(chain->gates[i]));
     // TODO: avoid (potentially expensive) copy here
-    graph.appendGate(graph.acquireQuantumGate(quGate));
+    graph.appendGate(graph.acquireQuantumGateForward(quGate));
   }
 }
 

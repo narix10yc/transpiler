@@ -37,11 +37,11 @@ class IteratorBase {
     return tmp;
   }
 
-  bool operator==(const _Iter& other) const {
-    return static_cast<const _Iter*>(this)->equals(other);
-  }
+  // bool operator==(const _Iter& other) const {
+    // return static_cast<const _Iter*>(this)->equals(other);
+  // }
 
-  bool operator!=(const _Iter &other) const { return !(*this == other); }
+  // bool operator!=(const _Iter &other) const { return !(*this == other); }
   //
   // explicit operator T*() const {
   //   return static_cast<const _Iter*>(this)->ptr();

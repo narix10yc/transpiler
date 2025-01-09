@@ -32,15 +32,15 @@ GateNode::GateNode(QuantumGate* gate, const CircuitGraph& graph)
 }
 
 GateBlock::GateBlock()
-  : id(CircuitGraph::GateBlockCount++), quantumGate(nullptr) {}
+  : id(CircuitGraph::GateBlockCount++), quantumGate(nullptr) {
+}
 
 GateBlock::GateBlock(GateNode* gateNode)
   : id(CircuitGraph::GateBlockCount++), quantumGate(gateNode->quantumGate) {
   wires.reserve(quantumGate->nqubits());
   for (const auto& data : gateNode->connections)
-  wires.emplace_back(data.qubit, gateNode, gateNode);
+    wires.emplace_back(data.qubit, gateNode, gateNode);
 }
-
 
 void GateNode::connect(GateNode* rhsGate, int q) {
   assert(rhsGate);
@@ -88,7 +88,35 @@ void GateNode::connect(GateNode* rhsGate, int q) {
 //   return graph;
 // }
 
-CircuitGraph::iter_t CircuitGraph::insertBlock(iter_t it, GateBlock* block) {
+GateBlock* CircuitGraph::acquireGateBlock(
+    GateBlock* lhsBlock, GateBlock* rhsBlock) {
+  auto* quantumGate = _context.quantumGatePool.acquire(
+    rhsBlock->quantumGate->lmatmul(*lhsBlock->quantumGate));
+
+  auto* gateBlock = _context.gateBlockPool.acquire();
+  gateBlock->quantumGate = quantumGate;
+
+  // setup wires
+  for (const auto& q : quantumGate->qubits) {
+    const auto* lWire = lhsBlock->findWire(q);
+    const auto* rWire = rhsBlock->findWire(q);
+    if (lWire && rWire)
+      gateBlock->wires.emplace_back(q, lWire->lhsEntry, rWire->rhsEntry);
+    else if (lWire)
+      gateBlock->wires.emplace_back(q, lWire->lhsEntry, lWire->rhsEntry);
+    else {
+      assert(rWire);
+      gateBlock->wires.emplace_back(q, rWire->lhsEntry, rWire->rhsEntry);
+    }
+  }
+
+  return gateBlock;
+}
+
+CircuitGraph::tile_iter_t CircuitGraph::insertBlock(
+    tile_iter_t it, GateBlock* block) {
+
+  // print(std::cerr << "About to insertBlock " << block->id << "\n", 2) << "\n";
   assert(it != nullptr);
   assert(block != nullptr);
 
@@ -103,8 +131,16 @@ CircuitGraph::iter_t CircuitGraph::insertBlock(iter_t it, GateBlock* block) {
   }
 
   // try insert to next row
-  it = it.next();
-  if (it != nullptr && isRowVacant(*it, block)) {
+  ++it;
+  if (it == nullptr) {
+    _tile.emplace_back();
+    auto itTail = _tile.tail_iter();
+    for (const auto& q : qubits)
+      (*itTail)[q] = block;
+    return itTail;
+  }
+
+  if (isRowVacant(*it, block)) {
     for (const auto& q : qubits)
       (*it)[q] = block;
     return it;
@@ -116,29 +152,6 @@ CircuitGraph::iter_t CircuitGraph::insertBlock(iter_t it, GateBlock* block) {
     (*it)[q] = block;
   return it;
 }
-//
-// void CircuitGraph::updateBlockConnections(iter_t it, int q) {
-//   auto* block = (*it)[q];
-//   assert(block != nullptr && "Trying to update connection of a NULL block?");
-//   auto prevIt = it.prev();
-//   while (prevIt != nullptr && (*prevIt)[q] == nullptr)
-//     --prevIt;
-//   auto nextIt = it.next();
-//   while (nextIt != nullptr && (*nextIt)[q] == nullptr)
-//     ++nextIt;
-//
-//   for (auto& wire : block->wires) {
-//     auto qubit = wire.qubit;
-//     // left connection
-//     if (prevIt) {
-//       wire.lhsEntry = (*prevIt)[q]->findWire(q)->rhsEntry;
-//     } else
-//       wire.lhsEntry = nullptr;
-//   }
-//
-//
-// }
-
 
 void CircuitGraph::appendGate(QuantumGate* quantumGate) {
   assert(quantumGate != nullptr);
@@ -150,12 +163,12 @@ void CircuitGraph::appendGate(QuantumGate* quantumGate) {
   }
 
   // create gate and setup connections
-  auto* gateNode = acquireGateNode(quantumGate, *this);
+  auto* gateNode = acquireGateNodeForward(quantumGate, *this);
 
   // create block and insert to the tile
   // TODO: this is slightly inefficient as the block may be assigned twice
-  auto* block = acquireGateBlock(gateNode);
-  auto it = insertBlock(iter_t(_tile.tail()), block);
+  auto* block = acquireGateBlockForward(gateNode);
+  auto it = insertBlock(_tile.tail_iter(), block);
   repositionBlockUpward(it, block->quantumGate->qubits[0]);
 }
 
@@ -289,6 +302,7 @@ std::ostream& CircuitGraph::print(std::ostream& os, int verbose) const {
   }
   return os;
 }
+
 //
 // std::ostream& GateBlock::displayInfo(std::ostream& os) const {
 //   os << "Block " << id << ": [";
@@ -433,6 +447,17 @@ std::vector<GateNode*> GateBlock::getOrderedGates() const {
     }
   }
   return gates;
+}
+
+bool GateBlock::isSingleton() const {
+  const auto* node = wires[0].lhsEntry;
+  for (const auto& wire : wires) {
+    if (wire.lhsEntry != wire.rhsEntry)
+      return false;
+    if (wire.lhsEntry != node)
+      return false;
+  }
+  return true;
 }
 
 // void CircuitGraph::relabelBlocks() const {

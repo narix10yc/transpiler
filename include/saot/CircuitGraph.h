@@ -12,12 +12,12 @@
 
 namespace saot {
 
-// We forward CircuitGraph declaration here because GateNode constructor needs
-// it to set up connection
 class CircuitGraph;
 
 class GateNode {
 public:
+  friend class CircuitGraph;
+
   struct ConnectionInfo {
     int qubit;
     GateNode* lhsGate;
@@ -29,6 +29,13 @@ public:
   std::vector<ConnectionInfo> connections;
 
   GateNode(QuantumGate* quantumGate, const CircuitGraph& graph);
+
+  GateNode(const GateNode&) = delete;
+  GateNode(GateNode&&) = delete;
+  GateNode& operator=(const GateNode&) = delete;
+  GateNode& operator=(GateNode&&) = delete;
+
+  ~GateNode() = default;
 
   ConnectionInfo* findConnection(int qubit) {
     for (auto& item : connections) {
@@ -49,12 +56,18 @@ public:
   void connect(GateNode* rhsGate, int q);
 };
 
-/// \brief A \c GateBlock is an aggregate of \c GateNode 's
+/// \brief A \c GateBlock is an aggregate of \c GateNode s
 /// It is the primary layer for gate fusion. Aggregation relation is maintained
 /// by the \c wires variable, which is internally a vector of \c WireInfo that
 /// specifies qubit, left entry node, and right entry node.
+///
+/// \c GateBlock can be `singleton`: when it contains exactly one \c GateNode .
+/// In such cases, their respective \c quantumGate member will point to the same
+/// \c QuantumGate object.
 class GateBlock {
 public:
+  friend class CircuitGraph;
+
   struct WireInfo {
     int qubit;
     GateNode* lhsEntry;
@@ -68,9 +81,18 @@ public:
   GateBlock();
   explicit GateBlock(GateNode* gateNode);
 
+  GateBlock(const GateBlock&) = delete;
+  GateBlock(GateBlock&&) = delete;
+  GateBlock& operator=(const GateBlock&) = delete;
+  GateBlock& operator=(GateBlock&&) = delete;
+
+  ~GateBlock() = default;
+
   std::ostream& displayInfo(std::ostream& os) const;
 
   std::vector<GateNode*> getOrderedGates() const;
+
+  bool isSingleton() const;
 
   size_t countGates() const { return getOrderedGates().size(); }
 
@@ -113,8 +135,9 @@ public:
   using row_t = std::array<GateBlock*, 36>;
   using tile_t = utils::List<row_t>;
   using list_node_t = tile_t::Node;
-  // iterator
-  using iter_t = tile_t::iterator;
+
+  // iterators
+  using tile_iter_t = tile_t::iterator;
   // using citer_t = tile_t::const_iterator;
   // using riter_t = tile_t::reverse_iterator;
   // using criter_t = tile_t::const_reverse_iterator;
@@ -140,32 +163,55 @@ public:
   tile_t& tile() { return _tile; }
   const tile_t& tile() const { return _tile; }
 
+  tile_iter_t tile_begin() { return _tile.begin(); }
+  tile_iter_t tile_end() { return _tile.end(); }
+
   CircuitGraphContext& getContext() { return _context; }
 
+  // TODO: Rewrite resource management here. Currently to construct a GateBlock
+  /// one acquires a QuantumGate and then acquires a GateBlock. To destruct a
+  /// GateBlock we only need to call releaseGateBlock. This is weird. Thinking
+  /// about adopting a constructor-destructor based resource management such
+  /// that every GateNode and GateBlock keeps track of the CircuitGraph
+  /// reference.
+  /// In addition, make the arguments explicit
+
   template<typename... Args>
-  QuantumGate* acquireQuantumGate(Args&&... args) {
+  QuantumGate* acquireQuantumGateForward(Args&&... args) {
     return _context.quantumGatePool.acquire(std::forward<Args>(args)...);
   }
 
   template<typename... Args>
-  GateNode* acquireGateNode(Args&&... args) {
+  GateNode* acquireGateNodeForward(Args&&... args) {
     return _context.gateNodePool.acquire(std::forward<Args>(args)...);
   }
 
   template<typename... Args>
-  GateBlock* acquireGateBlock(Args&&... args) {
+  GateBlock* acquireGateBlockForward(Args&&... args) {
     return _context.gateBlockPool.acquire(std::forward<Args>(args)...);
   }
 
+  /// Acquire a \c GateBlock by fusing two blocks together. Notice that
+  /// \c lhsBlock is applied `before` \c rhsBlock.
+  GateBlock* acquireGateBlock(GateBlock* lhsBlock, GateBlock* rhsBlock);
+
   void releaseQuantumGate(QuantumGate* gate) {
+    assert(gate != nullptr && "Releasing null gate");
     _context.quantumGatePool.release(gate);
   }
 
   void releaseGateNode(GateNode* gateNode) {
+    assert(gateNode != nullptr && "Releasing null gateNode");
     _context.gateNodePool.release(gateNode);
   }
 
+  /// Release the memory of the \c GateBlock
+  /// \note If \c gateBlock is a singleton, the associated \c QuantumGate
+  /// object will also be released.
   void releaseGateBlock(GateBlock* gateBlock) {
+    assert(gateBlock != nullptr && "Releasing null gateBlock");
+    if (gateBlock->isSingleton())
+      _context.quantumGatePool.release(gateBlock->quantumGate);
     _context.gateBlockPool.release(gateBlock);
   }
 
@@ -197,16 +243,16 @@ public:
 
   /// Update connections of blocks. By assumption nodes connections are always
   /// preserved. In Debug mode this function will check for node connections.
-  void updateBlockConnections(iter_t it, int q);
+  void updateBlockConnections(tile_iter_t it, int q);
 
   list_node_t* repositionBlockUpward(list_node_t* ln, int q);
-  iter_t repositionBlockUpward(iter_t it, int q) {
-    return iter_t(repositionBlockUpward(it.raw_ptr(), q));
+  tile_iter_t repositionBlockUpward(tile_iter_t it, int q) {
+    return tile_iter_t(repositionBlockUpward(it.raw_ptr(), q));
   }
 
   list_node_t* repositionBlockDownward(list_node_t* ln, int q);
-  iter_t repositionBlockDownward(iter_t it, int q) {
-    return iter_t(repositionBlockDownward(it.raw_ptr(), q));
+  tile_iter_t repositionBlockDownward(tile_iter_t it, int q) {
+    return tile_iter_t(repositionBlockDownward(it.raw_ptr(), q));
   }
 
   // Squeeze graph and make it compact
@@ -217,7 +263,7 @@ public:
   /// - If \p it+1 is vacant, insert \p block there. Otherwise,
   /// - Insert a separate row between \p it and \p it+1 and place \p block
   ///   there.
-  iter_t insertBlock(iter_t it, GateBlock* block);
+  tile_iter_t insertBlock(tile_iter_t it, GateBlock* block);
 
   /// @brief Get the number of blocks with each size.
   /// @return ret[i] is the number of blocks with size i. Therefore, ret[0] is

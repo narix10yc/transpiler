@@ -5,7 +5,6 @@
 #include <cassert>
 #include <memory>
 
-#include <list>
 namespace utils {
 
 /// A double-link list template
@@ -18,94 +17,95 @@ public:
     Node* next;
   }; // Node
 private:
-  class Iterator : public impl::IteratorBase<Iterator, T> {
+  template<typename _Iter, typename _Data>
+  class IteratorBase {
+    const _Iter* asIter() const { return static_cast<const _Iter*>(this); }
+    _Iter* asIter() { return static_cast<_Iter*>(this); }
+  public:
+    _Data& operator*() const {
+      assert(asIter()->current != nullptr);
+      return asIter()->current->data;
+    }
+
+    _Data* operator->() const {
+      assert(asIter()->current != nullptr);
+      return &(asIter()->current->data);
+    }
+
+    bool operator==(nullptr_t) const {
+      return asIter()->current == nullptr;
+    }
+
+    bool operator!=(nullptr_t) const {
+      return asIter()->current != nullptr;
+    }
+
+    bool operator==(const _Iter& other) const {
+      return asIter()->current == other.raw_ptr();
+    }
+
+    bool operator!=(const _Iter& other) const {
+      return asIter()->current != other.raw_ptr();
+    }
+
+    _Iter& operator++() {
+      assert(asIter()->current != nullptr && "Cannot (post-)increment");
+      asIter()->current = asIter()->current->next;
+      return *asIter();
+    }
+
+    _Iter operator++(int) {
+      assert(asIter()->current != nullptr && "Cannot (pre-)increment");
+      _Iter tmp = *asIter();
+      asIter()->current = asIter()->current->next;
+      return tmp;
+    }
+
+    _Iter next() const {
+      assert(asIter()->current != nullptr && "Cannot increment");
+      return _Iter(asIter()->current->next);
+    }
+
+    _Iter& operator--() {
+      assert(asIter()->current != nullptr && "Cannot (post-)decrement");
+      asIter()->current = asIter()->current->prev;
+      return *asIter();
+    }
+
+    _Iter operator--(int) {
+      assert(asIter()->current != nullptr && "Cannot (pre-)decrement");
+      _Iter tmp = *asIter();
+      asIter()->current = asIter()->current->prev;
+      return tmp;
+    }
+
+    _Iter prev() const {
+      assert(asIter()->current != nullptr && "Cannot decrement");
+      return _Iter(asIter()->current->prev);
+    }
+  }; // IteratorBase
+
+  class Iterator : public IteratorBase<Iterator, T> {
     Node* current;
+    friend class IteratorBase<Iterator, T>;
   public:
     explicit Iterator(Node* node) : current(node) {}
 
+    /// Get the raw pointer of the \c Node* object so to access methods such as
+    /// \c prev() and \c next() .
     Node* raw_ptr() const { return current; }
-
-    T& operator*() const {
-      assert(current != nullptr);
-      return current->data;
-    }
-
-    T* operator->() const {
-      assert(current != nullptr);
-      return &(current->data);
-    }
-
-    Iterator& increment() {
-      assert(current != nullptr);
-      current = current->next;
-      return *this;
-    }
-
-    Iterator& decrement() {
-      assert(current != nullptr);
-      current = current->prev;
-      return *this;
-    }
-
-    Iterator next() const { assert(current); return Iterator(current->next); }
-    Iterator prev() const { assert(current); return Iterator(current->prev); }
-
-    bool equals(const Iterator& other) const {
-      return current == other.current;
-    }
-
-    bool operator==(std::nullptr_t) const { return current == nullptr; }
-    explicit operator bool() const { return current != nullptr; }
-    explicit operator Node*() const { return current; }
   }; // Iterator
 
-  class ConstIterator : public impl::IteratorBase<ConstIterator, T> {
+  class ConstIterator : public IteratorBase<ConstIterator, const T> {
     Node* current;
+    friend class IteratorBase<ConstIterator, const T>;
   public:
     explicit ConstIterator(Node* node) : current(node) {}
     ConstIterator(const Iterator& iter) : current(iter.raw_ptr()) {}
 
+    /// Get the raw pointer of the \c Node* object so to access methods such as
+    /// \c prev() and \c next() .
     Node* raw_ptr() const { return current; }
-
-    const T& operator*() const {
-      assert(current != nullptr);
-      return current->data;
-    }
-
-    const T* operator->() const {
-      assert(current != nullptr);
-      return &(current->data);
-    }
-
-    ConstIterator& increment() {
-      assert(current != nullptr);
-      current = current->next;
-      return *this;
-    }
-
-    ConstIterator& decrement() {
-      assert(current != nullptr);
-      current = current->prev;
-      return *this;
-    }
-
-    ConstIterator next() const {
-      assert(current);
-      return ConstIterator(current->next);
-    }
-
-    ConstIterator prev() const {
-      assert(current);
-      return ConstIterator(current->prev);
-    }
-
-    bool equals(const ConstIterator& other) const {
-      return current == other.current;
-    }
-
-    bool operator==(std::nullptr_t) const { return current == nullptr; }
-    explicit operator bool() const { return current != nullptr; }
-    explicit operator Node*() const { return current; }
   }; // ConstIterator
 
   Node* _head;
@@ -244,65 +244,55 @@ public:
   iterator end() { return iterator(nullptr); }
 
   const_iterator begin() const { return const_iterator(_head); }
-  const_iterator end() const { return const_iterator(nullptr); }
+  constexpr const_iterator end() const { return const_iterator(nullptr); }
 
   const_iterator cbegin() const { return const_iterator(_head); }
-  const_iterator cend() const { return const_iterator(nullptr); }
+  constexpr const_iterator cend() const { return const_iterator(nullptr); }
 
+  /// Before:  At - At.next
+  /// After:   At - Node - At.next
   Node* insert(Node* at, const T& value) {
+    assert(at != nullptr && "Cannot insert at NULL");
     ++_size;
     Node* node = static_cast<Node*>(::operator new(sizeof(Node)));
     new (&node->data) T(value); // copy constructor
-    if (at == nullptr) {
-      node->prev = _tail;
-      if (_tail != nullptr)
-        _tail->next = node;
-      node->next = nullptr;
-      _tail = node;
-      return node;
-    }
-    node->prev = at->prev;
-    node->next = at;
-    if (at->prev != nullptr)
-      at->prev->next = node;
-    at->prev = node;
+    node->prev = at;
+    node->next = at->next;
+    if (at->next != nullptr)
+      at->next->prev = node;
+    at->next = node;
     return node;
   }
 
   iterator insert(const_iterator it, const T& value) {
-    return iterator(insert(static_cast<Node*>(it), value));
+    return iterator(insert(it.raw_ptr(), value));
   }
 
+  /// Before:  At - At.next
+  /// After:   At - Node - At.next
   template<typename... Args>
   Node* emplace_insert(Node* at, Args&&... args) {
+    assert(at != nullptr && "Cannot insert at NULL");
     ++_size;
     Node* node = static_cast<Node*>(::operator new(sizeof(Node)));
     new (&node->data) T(std::forward<Args>(args)...); // placement new
-    if (at == nullptr) {
-      node->prev = _tail;
-      if (_tail != nullptr)
-        _tail->next = node;
-      node->next = nullptr;
-      _tail = node;
-      return node;
-    }
-    node->prev = at->prev;
-    node->next = at;
-    if (at->prev != nullptr)
-      at->prev->next = node;
-    at->prev = node;
+    node->prev = at;
+    node->next = at->next;
+    if (at->next != nullptr)
+      at->next->prev = node;
+    at->next = node;
     return node;
   }
 
   template<typename... Args>
   iterator emplace_insert(const_iterator it, Args&&... args) {
-    return iterator(emplace_insert(
-      const_cast<Node*>(static_cast<Node*>(it)),
-      std::forward<Args>(args)...));
+    return iterator(emplace_insert(it.raw_ptr(), std::forward<Args>(args)...));
   }
 
+  /// Before: At.prev - At - At.next
+  /// After:  At.prev - At.next
   Node* erase(Node* at) {
-    assert(at != nullptr);
+    assert(at != nullptr && "Cannot erase at NULL");
     --_size;
     if (at->prev != nullptr)
       at->prev->next = at->next;
@@ -319,7 +309,7 @@ public:
   }
 
   iterator erase(const_iterator it) {
-    return iterator(erase(static_cast<Node*>(it)));
+    return iterator(erase(it.raw_ptr()));
   }
 
 

@@ -50,8 +50,7 @@ std::string saot::GateKind2String(GateKind t) {
     return "cp";
 
   default:
-    assert(false && "Unimplemented GateKind2String");
-    return "undef";
+    return "u" + std::to_string(t) + "q";
   }
 }
 

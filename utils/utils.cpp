@@ -67,7 +67,7 @@ void utils::timedExecute(std::function<void()> f, const char* msg) {
   const auto t_in_sec =
       std::chrono::duration_cast<std::chrono::microseconds>(tok - tic).count();
   std::cerr << "-- ("
-            << time_fmt(static_cast<double>(t_in_sec) * 1e-6)
+            << fmt_time(static_cast<double>(t_in_sec) * 1e-6)
             << ") " << msg << "\n";
 }
 

@@ -29,7 +29,7 @@ void RootNode::toCircuitGraph(saot::CircuitGraph& graph) const {
       params[0].get<double>() *= 0.5;
     }
     auto matrix = saot::GateMatrix::FromName(gateApply->name, params);
-    auto* quantumGate = graph.acquireQuantumGate(matrix, qubits);
+    auto* quantumGate = graph.acquireQuantumGateForward(matrix, qubits);
     graph.appendGate(quantumGate);
   }
 }

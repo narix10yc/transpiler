@@ -71,7 +71,7 @@ public:
   TimingResult timeitFixedRepeat(
       std::function<void()> method, int _repeat,
       std::function<void()> setup = []() {},
-      std::function<void()> teardown = []() {});
+      std::function<void()> teardown = []() {}) const;
 };
 
 } // end namespace timeit

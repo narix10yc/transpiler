@@ -16,7 +16,8 @@ class PODVector {
   size_t _size;
 
   static inline T* _allocate(size_t s) {
-    return static_cast<T*>(::operator new(sizeof(T) * s, static_cast<std::align_val_t>(alignof(T))));
+    return static_cast<T*>(::operator new(
+      sizeof(T) * s, static_cast<std::align_val_t>(alignof(T))));
   }
 
 public:
@@ -112,6 +113,12 @@ public:
     _data[_size++] = value;
   }
 
+  void push_back(T&& value) {
+    if (_size == _capacity)
+      reserve(_capacity << 1);
+    _data[_size++] = std::move(value);
+  }
+
   template<typename... Args>
   void emplace_back(Args&&... args) {
     if (_size == _capacity)
@@ -121,13 +128,6 @@ public:
 
   // Destroy the last element and reduce size by 1.
   void pop_back() { assert(_size > 0); --_size; }
-
-  // Pop the last element and move assign it into \p obj.
-  void pop_back_and_collect(T& obj) {
-    assert(_size > 0);
-    obj = _data[_size - 1];
-    pop_back();
-  }
 
   void reserve(size_t capacity) {
     if (capacity == 0)
@@ -147,8 +147,12 @@ public:
     _size = newSize;
   }
 
+
+
 };
 
 }
+
+
 
 #endif // UTILS_VECTOR_H

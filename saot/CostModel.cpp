@@ -1,15 +1,26 @@
 #include "saot/CostModel.h"
 #include "saot/QuantumGate.h"
 #include "timeit/timeit.h"
+#include "simulation/JIT.h"
 
 #include <fstream>
 #include <iomanip>
+#include <llvm/IR/FPEnv.h>
 #include <thread>
-#include <simulation/JIT.h>
 #include <utils/statevector.h>
 
 using namespace saot;
 using namespace llvm;
+
+double NaiveCostModel::computeSpeed(
+    const QuantumGate& gate, int precision, int nThreads) const {
+  if (gate.nqubits() > maxNQubits)
+    return 0.0;
+  if (gate.opCount(zeroTol) > maxOp)
+    return 0.0;
+
+  return 1.0;
+}
 
 CostResult NaiveCostModel::computeBenefit(
     const QuantumGate& lhsGate, const QuantumGate& rhsGate,
@@ -45,57 +56,140 @@ CostResult AdaptiveCostModel::computeBenefit(
   return {0.0, nullptr};
 }
 
-StandardCostModel::StandardCostModel(PerformanceCache* cache)
-  : cache(cache), updateSpeeds() {
+StandardCostModel::StandardCostModel(PerformanceCache* cache, double zeroTol)
+  : cache(cache), zeroTol(zeroTol), updateSpeeds() {
   updateSpeeds.reserve(32);
 
   for (const auto& item : cache->items) {
     auto it = updateSpeeds.begin();
     auto end = updateSpeeds.end();
     while (it != end) {
-      if (it->precision != item.precision || it->nThreads != item.nThreads)
+      if (it->nQubits == item.nqubits && it->precision == item.precision &&
+          it->nThreads == item.nThreads)
         break;
       ++it;
     }
-    if (it == end)
-      updateSpeeds.emplace_back(item.nThreads, item.precision, 1, item.memUpdateSpeed);
+    if (updateSpeeds.empty() || it == end)
+      updateSpeeds.emplace_back(
+        item.nqubits, item.precision, item.nThreads, 1,
+        1.0 / (item.opCount * item.memUpdateSpeed));
     else {
       it->nData++;
-      it->totalMemSpd += item.memUpdateSpeed;
+      it->totalTimePerOpCount += 1.0 / (item.opCount * item.memUpdateSpeed);
     }
   }
   std::cerr << "StandardCostModel: "
                "A total of " << updateSpeeds.size() << " items found!\n";
 }
 
-double StandardCostModel::computeExpectedMemSpd(const QuantumGate& gate) const {
-  assert(0 && "Not Implemented");
-  return 0.0;
+double StandardCostModel::computeSpeed(
+    const QuantumGate& gate, int precision, int nThreads) const {
+  assert(!updateSpeeds.empty());
+  const auto gateNQubits = gate.nqubits();
+
+  // Try to find an exact match
+  for (const auto& item : updateSpeeds) {
+    if (item.nQubits == gateNQubits && item.precision == precision
+        && item.nThreads == nThreads) {
+      return item.getMemSpd(gate.opCount(zeroTol));
+    }
+  }
+
+  // No exact match. Estimate it
+  auto bestMatchIt = updateSpeeds.begin();
+
+  auto it = updateSpeeds.cbegin();
+  const auto end = updateSpeeds.cend();
+  while (++it != end) {
+    // priority: nThreads > nQubits > precision
+    const int bestDiffNThreads = std::abs(nThreads - bestMatchIt->nThreads);
+    const int thisDiffNThreads = std::abs(nThreads - it->nThreads);
+    if (thisDiffNThreads > bestDiffNThreads)
+      continue;
+    if (thisDiffNThreads < bestDiffNThreads) {
+      bestMatchIt = it;
+      continue;
+    }
+
+    const int bestDiffNQubits = std::abs(gateNQubits - bestMatchIt->nQubits);
+    const int thisDiffNQubits = std::abs(gateNQubits - it->nQubits);
+    if (thisDiffNQubits > bestDiffNQubits)
+      continue;
+    if (thisDiffNQubits < bestDiffNQubits) {
+      bestMatchIt = it;
+      continue;
+    }
+
+    if (precision == bestMatchIt->precision)
+      continue;
+    if (precision == it->precision) {
+      bestMatchIt = it;
+      continue;
+    }
+  }
+
+  int bestMatchOpCount = 1 << (2 * bestMatchIt->nQubits + 2);
+  double memSpd = bestMatchIt->getMemSpd(bestMatchOpCount);
+  double estiMemSpd = memSpd * bestMatchOpCount * nThreads /
+    (gate.opCount(zeroTol) * bestMatchIt->nThreads);
+
+  std::cerr << YELLOW("Warning: ") << "No exact match to "
+               "[nQubits, Precision, nThreads] = ["
+            << gateNQubits << ", " << precision << ", " << nThreads
+            << "] found. We estimate it by ["
+            << bestMatchIt->nQubits << ", " << bestMatchIt->precision
+            << ", " << bestMatchIt->nThreads << "] @ " << memSpd << " GiBps => "
+               "Est. " << estiMemSpd << " GiBps.\n";
+
+  return estiMemSpd;
+}
+
+std::ostream& StandardCostModel::display(std::ostream& os, int nLines) const {
+  const int nLinesToDisplay = nLines > 0 ?
+    std::min<int>(nLines, updateSpeeds.size()) :
+    static_cast<int>(updateSpeeds.size());
+
+  os << "  nQubits | Precision | nThreads | MemSpd | Norm'ed Spd \n";
+  for (int i = 0; i < nLinesToDisplay; ++i) {
+    int opCount = 1ULL << (2 * updateSpeeds[i].nQubits + 2);
+    double memSpd = updateSpeeds[i].getMemSpd(opCount);
+    double normedSpd = memSpd / opCount;
+    os << "    " << std::fixed << std::setw(2) << updateSpeeds[i].nQubits
+       << "    |    f" << updateSpeeds[i].precision
+       << "    |    " << updateSpeeds[i].nThreads
+       << "    |  " << utils::fmt_1_to_1e3(memSpd, 5)
+       << " |  " << utils::fmt_1_to_1e3(normedSpd, 5)
+       << "\n";
+  }
+
+  return os;
 }
 
 CostResult StandardCostModel::computeBenefit(
     const QuantumGate& lhsGate, const QuantumGate& rhsGate,
     CircuitGraphContext& context) const {
-  auto cQubits = lhsGate.qubits;
-  for (const auto q : rhsGate.qubits) {
-    if (std::ranges::find(cQubits, q) == cQubits.end())
-      cQubits.push_back(q);
-  }
-
-  auto* cGate = context.quantumGatePool.acquire(rhsGate.lmatmul(lhsGate));
-  const auto lSpd = computeExpectedMemSpd(lhsGate);
-  const auto rSpd = computeExpectedMemSpd(rhsGate);
-  const auto cSpd = computeExpectedMemSpd(*cGate);
-  double benefit = 2 * cSpd / (lSpd + rSpd) - 1;
-
-  std::cerr << "lSpd = " << lSpd << ", rSpd = " << rSpd
-            << ", cSpd = " << cSpd << "; Benefit = " << benefit << "\n";
-
-  return { benefit, cGate };
+  assert(0 && "Not Implemented");
+  return {0.0, nullptr};
+  // auto cQubits = lhsGate.qubits;
+  // for (const auto q : rhsGate.qubits) {
+  //   if (std::ranges::find(cQubits, q) == cQubits.end())
+  //     cQubits.push_back(q);
+  // }
+  //
+  // auto* cGate = context.quantumGatePool.acquire(rhsGate.lmatmul(lhsGate));
+  // const auto lSpd = computeSpeed(lhsGate, TODO, TODO);
+  // const auto rSpd = computeSpeed(rhsGate, TODO, TODO);
+  // const auto cSpd = computeSpeed(*cGate, TODO, TODO);
+  // double benefit = 2 * cSpd / (lSpd + rSpd) - 1;
+  //
+  // std::cerr << "lSpd = " << lSpd << ", rSpd = " << rSpd
+  //           << ", cSpd = " << cSpd << "; Benefit = " << benefit << "\n";
+  //
+  // return { benefit, cGate };
 }
 
-void PerformanceCache::saveToCSV(const std::string& _fileName) const {
-  std::string fileName = _fileName;
+void PerformanceCache::saveToCSV(const std::string& fileName_) const {
+  std::string fileName = fileName_;
   auto l = fileName.size();
   if (l < 4 || fileName.substr(l - 4, l) != ".csv")
     fileName += ".csv";
@@ -108,17 +202,18 @@ void PerformanceCache::saveToCSV(const std::string& _fileName) const {
       [nqubits, opCount, precision,
        irregularity, nThreads, memUpdateSpeed] : items) {
     file << nqubits << "," << opCount << ","
-         << precision << "," << nThreads << ","
-         << irregularity << ","
+         << precision << "," << irregularity << ","
+         << nThreads << ","
          << std::scientific << std::setw(6) << memUpdateSpeed << "\n";
   }
   file.close();
 }
 
 namespace {
-/// @return Speed in Gigabytes per second (GiBps)
+/// @return Speed in gigabytes per second (GiBps)
 double calculateMemUpdateSpeed(int nqubits, int precision, double t) {
-  assert(nqubits >= 0 && (precision == 32 || precision == 64));
+  assert(nqubits >= 0);
+  assert(precision == 32 || precision == 64);
   assert(t >= 0.0);
 
   return static_cast<double>((precision == 32 ? 8ULL : 16ULL) << nqubits) * 1e-9 / t;
@@ -233,16 +328,13 @@ void PerformanceCache::runExperiments(
   for (unsigned i = 0, s = kernelInfos.size(); i < s; ++i) {
     const auto& kernel = kernelInfos[i];
     auto f = cantFail(jit->lookup(kernel->llvmFuncName)).toPtr<CPU_FUNC_TYPE>();
+    const uint64_t nTasks = 1ULL << (nqubits - kernel->qubits.size() - kernel->simd_s);
     if (nThreads == 1)
       tr = timer.timeit([&]() {
-        const uint64_t nTasks =
-          1ULL << (nqubits - kernel->qubits.size() - kernel->simd_s);
         f(sv.data, 0ULL, nTasks, gates[i].gateMatrix.getConstantMatrix()->data());
       });
     else
       tr = timer.timeit([&]() {
-        const uint64_t nTasks =
-          1ULL << (nqubits - kernel->qubits.size() - kernel->simd_s);
         std::vector<std::thread> threads;
         threads.reserve(nThreads);
         const uint64_t nTasksPerThread = nTasks / nThreads;
@@ -259,7 +351,8 @@ void PerformanceCache::runExperiments(
       });
     auto memSpd = calculateMemUpdateSpeed(nqubits, kernel->precision, tr.min);
     items.emplace_back(
-      kernel->qubits.size(), kernel->opCount, 64, kernel->nLoBits, 1, memSpd);
+      kernel->qubits.size(), kernel->opCount, 64,
+      kernel->nLoBits, nThreads, memSpd);
     std::cerr << "Gate @ ";
     utils::printArray(
       std::cerr, ArrayRef(kernel->qubits.begin(), kernel->qubits.size()));
@@ -320,16 +413,15 @@ PerformanceCache PerformanceCache::LoadFromCSV(const std::string& fileName) {
 
   std::ifstream file(fileName, std::ifstream::binary);
   assert(file.is_open());
-
   file.seekg(0, file.end);
   const auto bufferLength = file.tellg();
   file.seekg(0, file.beg);
-
   auto* bufferBegin = new char[bufferLength];
   auto* bufferEnd = bufferBegin + bufferLength;
   file.read(bufferBegin, bufferLength);
   file.close();
   const auto* curPtr = bufferBegin;
+
   // parse the header
   while (*curPtr != '\n')
     ++curPtr;

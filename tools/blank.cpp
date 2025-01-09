@@ -1,15 +1,18 @@
 #include <iostream>
+#include <vector>
+#include "utils/PODVector.h"
 
-int f() {
-  return 5; // Returns a temporary object
-}
+struct MyStruct {
+  int a;
+  void* p;
+};
+
 
 int main() {
-  int&& a = f(); // Bind rvalue reference to the temporary returned by f()
-  std::cout << "Initial value of a: " << a << std::endl; // Outputs: 5
-
-  a = 10; // Modify the temporary through the rvalue reference
-  std::cout << "Modified value of a: " << a << std::endl; // Outputs: 10
+  std::vector<MyStruct> v;
+  // utils::PODVector<MyStruct> v;
+  v.resize(2);
+  std::cerr << v[0].a << "\n";
 
   return 0;
 }

@@ -148,59 +148,80 @@ public:
   }
 };
 
-class time_fmt {
+class fmt_time {
   double t_in_sec;
 public:
-  explicit time_fmt(double t_in_sec) : t_in_sec(t_in_sec) {
+  explicit fmt_time(double t_in_sec) : t_in_sec(t_in_sec) {
     assert(t_in_sec >= 0.0);
   }
 
-  friend std::ostream& operator<<(std::ostream& os, const time_fmt& tm) {
+  friend std::ostream& operator<<(std::ostream& os, const fmt_time& fmt) {
     // seconds
-    if (tm.t_in_sec >= 1e3)
-      return os << static_cast<unsigned>(tm.t_in_sec) << " s";
-    if (tm.t_in_sec >= 1e2)
+    if (fmt.t_in_sec >= 1e3)
+      return os << static_cast<unsigned>(fmt.t_in_sec) << " s";
+    if (fmt.t_in_sec >= 1e2)
       return os << std::fixed << std::setprecision(1)
-                << tm.t_in_sec << " s";
-    if (tm.t_in_sec >= 1e1)
+                << fmt.t_in_sec << " s";
+    if (fmt.t_in_sec >= 1e1)
       return os << std::fixed << std::setprecision(2)
-                << tm.t_in_sec << " s";
-    if (tm.t_in_sec >= 1.0)
+                << fmt.t_in_sec << " s";
+    if (fmt.t_in_sec >= 1.0)
       return os << std::fixed << std::setprecision(3)
-                << tm.t_in_sec << " s";
+                << fmt.t_in_sec << " s";
     // milliseconds
-    if (tm.t_in_sec >= 1e-1)
+    if (fmt.t_in_sec >= 1e-1)
       return os << std::fixed << std::setprecision(1)
-                << 1e3 * tm.t_in_sec << " ms";
-    if (tm.t_in_sec >= 1e-2)
+                << 1e3 * fmt.t_in_sec << " ms";
+    if (fmt.t_in_sec >= 1e-2)
       return os << std::fixed << std::setprecision(2)
-                << 1e3 * tm.t_in_sec << " ms";
-    if (tm.t_in_sec >= 1e-3)
+                << 1e3 * fmt.t_in_sec << " ms";
+    if (fmt.t_in_sec >= 1e-3)
       return os << std::fixed << std::setprecision(3)
-                << 1e3 * tm.t_in_sec << " ms";
+                << 1e3 * fmt.t_in_sec << " ms";
     // microseconds
-    if (tm.t_in_sec >= 1e-4)
+    if (fmt.t_in_sec >= 1e-4)
       return os << std::fixed << std::setprecision(1)
-                << 1e6 * tm.t_in_sec << " us";
-    if (tm.t_in_sec >= 1e-5)
+                << 1e6 * fmt.t_in_sec << " us";
+    if (fmt.t_in_sec >= 1e-5)
       return os << std::fixed << std::setprecision(2)
-                << 1e6 * tm.t_in_sec << " us";
-    if (tm.t_in_sec >= 1e-6)
+                << 1e6 * fmt.t_in_sec << " us";
+    if (fmt.t_in_sec >= 1e-6)
       return os << std::fixed << std::setprecision(3)
-                << 1e6 * tm.t_in_sec << " us";
+                << 1e6 * fmt.t_in_sec << " us";
     // nanoseconds
-    if (tm.t_in_sec >= 1e-7)
+    if (fmt.t_in_sec >= 1e-7)
       return os << std::fixed << std::setprecision(1)
-                << 1e9 * tm.t_in_sec << " ns";
-    if (tm.t_in_sec >= 1e-8)
+                << 1e9 * fmt.t_in_sec << " ns";
+    if (fmt.t_in_sec >= 1e-8)
       return os << std::fixed << std::setprecision(2)
-                << 1e9 * tm.t_in_sec << " ns";
-    if (tm.t_in_sec >= 1e-9)
+                << 1e9 * fmt.t_in_sec << " ns";
+    if (fmt.t_in_sec >= 1e-9)
       return os << std::fixed << std::setprecision(3)
-                << 1e9 * tm.t_in_sec << " ns";
+                << 1e9 * fmt.t_in_sec << " ns";
     return os << "< 1.0 ns";
   }
 };
+
+class fmt_1_to_1e3 {
+  double number;
+  int width;
+public:
+  explicit fmt_1_to_1e3(double n, int width) : number(n), width(width) {
+    assert(n >= 0.0 &&
+      "fmt_1_to_1e3: Currently only supporting positive numbers");
+    assert(width >= 4);
+    // assert(n >= 1.0 && n <= 1e3);
+  }
+
+  friend std::ostream& operator<<(std::ostream& os, const fmt_1_to_1e3& fmt) {
+    if (fmt.number >= 100.0)
+      return os << std::fixed << std::setprecision(fmt.width - 4) << fmt.number;
+    if (fmt.number >= 10.0)
+      return os << std::fixed << std::setprecision(fmt.width - 3) << fmt.number;
+    return os << std::fixed << std::setprecision(fmt.width - 2) << fmt.number;
+  }
+};
+
 
 void timedExecute(std::function<void()> f, const char* msg);
 
