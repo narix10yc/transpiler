@@ -1,1 +1,2 @@
-add_library(utils STATIC "utils.cpp" "square_matrix.cpp")
+file(GLOB SRC_FILES "*.cpp")
+add_library(utils STATIC ${SRC_FILES})

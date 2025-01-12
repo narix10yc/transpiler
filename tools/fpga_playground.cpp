@@ -243,7 +243,7 @@ void runExperiment(std::function<CircuitGraph()> f) {
   printInstructionStatistics(instructions, costConfig, G.nqubits > 22);
 }
 
-int main(int argc, char* *argv) {
+int main(int argc, const char** argv) {
   assert(argc > 1);
 
   // std::vector<fpga::Instruction> instructions;

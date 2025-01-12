@@ -154,7 +154,7 @@ static CircuitGraph& getCircuitZ4(CircuitGraph& graph, int nqubits) {
   return graph;
 }
 
-int main(int argc, char* *argv) {
+int main(int argc, const char** argv) {
   assert(argc > 1);
 
   // openqasm::Parser parser(argv[1], 0);

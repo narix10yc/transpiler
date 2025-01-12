@@ -8,7 +8,9 @@
 
 namespace utils {
 
-/// A simple vector wrapper for POD (plain old data) types.
+/// According to C++ standards, \c resize always default-initialize elements
+/// even for POD data. This is a simple vector implementation that allows more
+/// efficient POD vector handling.
 template<is_pod T>
 class PODVector {
   T* _data;
@@ -22,16 +24,12 @@ class PODVector {
 
 public:
   /// This constructor will NOT initialize array
-  PODVector() : _data(nullptr), _capacity(0), _size(0) {}
+  PODVector() { reserve(1); }
 
   explicit PODVector(size_t size)
     : _data(_allocate(size))
     , _capacity(size)
-    , _size(size) {
-    // std::cerr << "PODVector<" << typeid(T).name()
-              // << "> initialized with capacity " << capacity
-              // << " @ " << _data << "\n";
-  }
+    , _size(size) {}
 
   PODVector(size_t size, const T& value)
     : _data(_allocate(size))
@@ -49,7 +47,7 @@ public:
     : _data(_allocate(other.capacity()))
     , _capacity(other._capacity)
     , _size(other._size) {
-    std::memcpy(_data, other._data, other.sizeInBytes());
+    ::memcpy(_data, other._data, other.sizeInBytes());
   }
 
   PODVector(PODVector&& other) noexcept
@@ -135,20 +133,17 @@ public:
     if (capacity <= _capacity)
       return;
     T* newData = _allocate(capacity);
-    std::memcpy(newData, _data, sizeInBytes());
+    ::memcpy(newData, _data, sizeInBytes());
     ::operator delete(_data);
     _data = newData;
     _capacity = capacity;
   }
 
-  void resize(size_t newSize) {
-    assert(newSize >= _size);
-    reserve(newSize);
-    _size = newSize;
+  void resize(size_t size) {
+    assert(size >= _size);
+    reserve(size);
+    _size = size;
   }
-
-
-
 };
 
 }

@@ -10,31 +10,32 @@ using namespace saot::ast;
 
 namespace {
 
-std::ostream& printGateMatrix(
+std::ostream& printGateParameters(
     std::ostream& os, const GateMatrix::gate_params_t &params) {
   const auto visitor = [&os](const utils::PODVariant<int, double>& arg) {
     if (arg.is<int>())
       os << arg.get<int>();
     else if (arg.is<double>())
-      os << arg.get<double>();
+      os << std::setprecision(16) << arg.get<double>();
     else
       assert(!arg.holdingValue() && "Expect Monostate");
   };
 
   if (!params[0].holdingValue())
     return os;
+  os << "(";
   visitor(params[0]);
 
   if (!params[1].holdingValue())
-    return os;
+    return os << ")";
   os << ", ";
   visitor(params[1]);
 
   if (!params[2].holdingValue())
-    return os;
+    return os << ")";
   os << ", ";
   visitor(params[2]);
-  return os;
+  return os << ")";
 }
 } // anonymous namespace
 
@@ -66,9 +67,8 @@ std::ostream& GateApplyStmt::print(std::ostream& os) const {
   if (argument.is<int>())
     os << "(#" << argument.get<int>() << ")";
   else if (argument.is<GateMatrix::gate_params_t>()) {
-    os << "(";
-    printGateMatrix(os, argument.get<GateMatrix::gate_params_t>());
-    os << ")";
+    auto& gateParams = argument.get<GateMatrix::gate_params_t>();
+    printGateParameters(os, gateParams);
   }
 
   // target qubits

@@ -24,7 +24,7 @@ struct kernel_t {
   void (*func)(double*, uint64_t, uint64_t, double*);
 };
 
-int main(int argc, char* *argv) {
+int main(int argc, const char** argv) {
   assert(argc > 1);
 
   CircuitGraph graph;
