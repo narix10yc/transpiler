@@ -92,15 +92,19 @@ public:
 class QuantumCircuit {
 public:
   std::string name;
-  int nqubits;
-  int nparams;
-  llvm::SmallVector<std::unique_ptr<Statement>> stmts;
-  llvm::SmallVector<ParameterDefStmt> paramDefs;
+  int nQubits;
+  int nParams;
+  std::vector<std::unique_ptr<GateChainStmt>> chains;
+  std::vector<ParameterDefStmt> paramDefs;
 
   QuantumCircuit(const std::string& name = "qc")
-      : name(name), nqubits(0), nparams(0), stmts(), paramDefs() {}
+      : name(name), nQubits(0), nParams(0), chains(), paramDefs() {
+    chains.reserve(16);
+  }
 
   std::ostream& print(std::ostream& os) const;
+
+  void addChainStmt(std::unique_ptr<GateChainStmt> chain);
 
   QuantumGate gateApplyToQuantumGate(const GateApplyStmt&) const;
 

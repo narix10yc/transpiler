@@ -34,7 +34,7 @@ enum ConversionResult {
     std::cerr << "Could not open input file '" << inName << "'.\n";
     return ResultCannotOpenInput;
   }
-  openqasm::Parser qasmParser(ArgInputFile, 0);
+  openqasm::Parser qasmParser(inName, 0);
   auto qasmRoot = qasmParser.parse();
   saot::CircuitGraph graph;
   qasmRoot->toCircuitGraph(graph);
@@ -68,11 +68,12 @@ int main(int argc, char** argv) {
                 "Use -r for recursive conversion.\n";
       return 1;
     }
+    int nFilesProcessed = 0;
+    int nSuccess = 0;
     for (const auto& f :
         fs::directory_iterator(static_cast<std::string>(ArgInputFile))) {
 
       const auto fName = f.path().filename().string();
-
       if (!f.is_regular_file()) {
         std::cerr << "Omitted " << fName
                   << " because it is not a regular file\n";
@@ -89,12 +90,26 @@ int main(int argc, char** argv) {
       auto ofName =
         fs::path(static_cast<std::string>(ArgOutputFile)) /
           (fName.substr(0, fNameLength - 5) + ".qch");
-      convert(f.path().string(), ofName);
+
+      nFilesProcessed++;
+      auto rst = convert(f.path().string(), ofName);
+      if (rst == ResultSuccess)
+        nSuccess++;
+    }
+    if (nSuccess == nFilesProcessed) {
+      std::cerr << nSuccess << " files processed.\n";
+      return 0;
+    }
+    else {
+      std::cerr << nSuccess << " out of " << nFilesProcessed
+                << " files successfully processed!\n";
+      return 1;
     }
   } else {
     auto rst = convert(ArgInputFile, ArgOutputFile);
     if (rst != ResultSuccess) {
-
+      std::cerr << "Failed. Exiting...\n";
+      return 1;
     }
   }
   utils::cl::unregisterAllArguments();

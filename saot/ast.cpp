@@ -46,9 +46,9 @@ std::ostream& MeasureStmt::print(std::ostream& os) const {
 }
 
 std::ostream& QuantumCircuit::print(std::ostream& os) const {
-  os << "circuit<nqubits=" << nqubits
-     << ", nparams=" << nparams << "> " << name << " {\n";
-  for (const auto& s : stmts)
+  os << "circuit<nqubits=" << nQubits
+     << ", nparams=" << nParams << "> " << name << " {\n";
+  for (const auto& s : chains)
     s->print(os);
 
   if (!paramDefs.empty()) {
@@ -108,6 +108,17 @@ std::ostream& ParameterDefStmt::print(std::ostream& os) const {
   // return os << " }\n";
 }
 
+void QuantumCircuit::addChainStmt(std::unique_ptr<GateChainStmt> chain) {
+  for (const auto& gate : chain->gates) {
+    for (const auto& q : gate.qubits) {
+      if (this->nQubits <= q)
+        this->nQubits = q + 1;
+    }
+  }
+  chains.emplace_back(std::move(chain));
+}
+
+
 QuantumGate QuantumCircuit::gateApplyToQuantumGate(
     const GateApplyStmt& gaStmt) const {
   if (gaStmt.argument.is<int>()) {
@@ -131,7 +142,7 @@ QuantumGate QuantumCircuit::gateApplyToQuantumGate(
 }
 
 void QuantumCircuit::toCircuitGraph(CircuitGraph& graph) const {
-  for (const auto& s : stmts) {
+  for (const auto& s : chains) {
     if (s->isNot(Statement::SK_GateChain)) {
       std::cerr << BOLDYELLOW("Warning: ")
           << "Unable to convert to GateChainStmt when calling "
@@ -165,7 +176,7 @@ QuantumCircuit QuantumCircuit::FromCircuitGraph(const CircuitGraph& graph) {
         GateApplyStmt::arg_t(gateNode->quantumGate->gateMatrix.gateParams),
         gateNode->quantumGate->qubits);
     }
-    qc.stmts.emplace_back(std::move(chainStmt));
+    qc.addChainStmt(std::move(chainStmt));
   }
 
   return qc;

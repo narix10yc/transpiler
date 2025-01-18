@@ -376,7 +376,7 @@ QuantumCircuit Parser::parseQuantumCircuit() {
   while (true) {
     if (optionalAdvance(tk_R_CurlyBracket))
       break;
-    circuit.stmts.push_back(std::make_unique<GateChainStmt>(parseGateChain()));
+    circuit.addChainStmt(std::make_unique<GateChainStmt>(parseGateChain()));
     skipLineBreaks();
   }
 
