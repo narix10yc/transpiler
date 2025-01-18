@@ -150,7 +150,7 @@ public:
 
   int nqubits;
 
-  CircuitGraph() : _tile(), nqubits(0) {
+  CircuitGraph() : _context(), _tile(), nqubits(0) {
     _tile.emplace_back();
   }
 

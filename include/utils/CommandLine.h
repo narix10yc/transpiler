@@ -39,8 +39,6 @@ namespace utils::cl {
       ArgumentBase(StringRef name) : _name(name) {}
       virtual ~ArgumentBase() = default;
 
-      // ArgumentBase(const ArgumentBase&) = delete;
-
       virtual void parseValue(StringRef) = 0;
 
       virtual void printValue(std::ostream&) const = 0;
@@ -99,6 +97,14 @@ namespace utils::cl {
         assert((f == AF_Prefix ^ _name.length() != 1) && "Prefix");
         return static_cast<ClassType&>(*this);
       }
+
+      inline ClassType& setPositional() {
+        return format(AF_Positional);
+      }
+
+      inline ClassType& setPrefix() {
+        return format(AF_Prefix);
+      }
     };
 
   } // namespace internal
@@ -150,7 +156,6 @@ inline void ArgBool::parseValue(StringRef s) {
     std::exit(1);
   }
 }
-
 
 template<typename ArgType>
 Argument<ArgType>& registerArgument(const char* name) {

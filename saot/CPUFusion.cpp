@@ -446,8 +446,8 @@ int applyTwoQubitFusion(CircuitGraph& graph) {
 void saot::applyCPUGateFusion(
     const CPUFusionConfig& config, const CostModel* costModel,
     CircuitGraph& graph) {
-  startFusion(graph, costModel, 3, graph.tile_begin(), 0);
   // applyTwoQubitFusion(graph);
+  startFusion(graph, costModel, 2, graph.tile_begin(), 0);
   // int nFused = 0;
   // do {
     // nFused = traverseAndFuse(config, costModel, graph);

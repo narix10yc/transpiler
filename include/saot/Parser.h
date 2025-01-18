@@ -111,7 +111,7 @@ public:
   int line;
   const char* lineBegin;
 
-  Lexer(const char* fileName) {
+  explicit Lexer(const char* fileName) {
     std::ifstream file(fileName, std::ifstream::binary);
     assert(file.is_open());
 

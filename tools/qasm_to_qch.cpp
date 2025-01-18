@@ -1,20 +1,102 @@
+#include <saot/CircuitGraph.h>
+
 #include "openqasm/parser.h"
 #include "saot/Parser.h"
-
 #include "utils/CommandLine.h"
 
+#include <filesystem>
+namespace fs = std::filesystem;
+
+static const auto& ArgInputFile =
+  utils::cl::registerArgument<std::string>("input-name")
+    .desc("input file/directory name")
+    .setPositional();
+static const auto& ArgOutputFile =
+  utils::cl::registerArgument<std::string>("o")
+    .desc("output file name")
+    .setPrefix();
+
+static const auto& ArgIsDirectory =
+  utils::cl::registerArgument<bool>("r")
+    .desc("recursive").init(false);
 
 
-static auto ArgSomeInteger = utils::cl::registerArgument<int>("some-integer");
+enum ConversionResult {
+  ResultSuccess, ResultCannotOpenInput, ResultCannotOpenOutput
+};
+
+[[nodiscard]] ConversionResult convert(
+    const std::string& inName, const std::string& outName) {
+  std::cerr << "converting " << inName << " to " << outName << std::endl;
+  // read file
+  std::ifstream inFile(inName);
+  if (!inFile.is_open()) {
+    std::cerr << "Could not open input file '" << inName << "'.\n";
+    return ResultCannotOpenInput;
+  }
+  openqasm::Parser qasmParser(ArgInputFile, 0);
+  auto qasmRoot = qasmParser.parse();
+  saot::CircuitGraph graph;
+  qasmRoot->toCircuitGraph(graph);
+  auto qc = saot::ast::QuantumCircuit::FromCircuitGraph(graph);
+  inFile.close();
+
+  // write file
+  std::ofstream outFile(outName);
+  if (!outFile.is_open()) {
+    std::cerr << "Could not open output file '" << outName << "'.\n";
+    return ResultCannotOpenOutput;
+  }
+  qc.print(outFile);
+  outFile.close();
+  return ResultSuccess;
+}
 
 int main(int argc, char** argv) {
-  std::cerr << "Starting the main function\n";
-  utils::cl::DisplayArguments();
-
   utils::cl::ParseCommandLineArguments(argc, argv);
-
   utils::cl::DisplayArguments();
 
+  if (!fs::exists(static_cast<std::string>(ArgInputFile))) {
+    std::cerr << "Input file (directory) '" << ArgInputFile
+              << "' does not exist. Exiting...\n";
+    return 1;
+  }
+
+  if (fs::is_directory(static_cast<std::string>(ArgInputFile))) {
+    if (!ArgIsDirectory) {
+      std::cerr << "'" << ArgInputFile << "' seems to be a directory? "
+                "Use -r for recursive conversion.\n";
+      return 1;
+    }
+    for (const auto& f :
+        fs::directory_iterator(static_cast<std::string>(ArgInputFile))) {
+
+      const auto fName = f.path().filename().string();
+
+      if (!f.is_regular_file()) {
+        std::cerr << "Omitted " << fName
+                  << " because it is not a regular file\n";
+        continue;
+      }
+      const auto fNameLength = fName.length();
+      if (fNameLength <= 5 ||
+          fName.substr(fNameLength - 5, 5) != ".qasm") {
+        std::cerr << "Omitted " << fName
+                  << " because its name does not end with '.qasm'\n";
+        continue;
+      }
+
+      auto ofName =
+        fs::path(static_cast<std::string>(ArgOutputFile)) /
+          (fName.substr(0, fNameLength - 5) + ".qch");
+      convert(f.path().string(), ofName);
+    }
+  } else {
+    auto rst = convert(ArgInputFile, ArgOutputFile);
+    if (rst != ResultSuccess) {
+
+    }
+  }
   utils::cl::unregisterAllArguments();
   return 0;
 }
