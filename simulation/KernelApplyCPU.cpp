@@ -7,12 +7,12 @@ void KernelManager::applyCPUKernel(
   assert(isJITed() && "Must initialize JIT session "
                       "before calling KernelManager::applyCPUKernel");
 
-  auto kernelIt = std::ranges::find_if(kernels,
+  auto kernelIt = std::ranges::find_if(_kernels,
     [&funcName](const KernelInfo& k) {
       return k.llvmFuncName == funcName;
     });
 
-  assert(kernelIt != kernels.end());
+  assert(kernelIt != _kernels.end());
 
   auto f = cantFail(llvmJIT->lookup(funcName)).toPtr<CPU_KERNEL_TYPE>();
 
@@ -31,12 +31,12 @@ void KernelManager::applyCPUKernelMultithread(
   assert(isJITed() && "Must initialize JIT session "
                       "before calling KernelManager::applyCPUKernel");
 
-  auto kernelIt = std::ranges::find_if(kernels,
+  auto kernelIt = std::ranges::find_if(_kernels,
     [&funcName](const KernelInfo& k) {
       return k.llvmFuncName == funcName;
     });
 
-  assert(kernelIt != kernels.end());
+  assert(kernelIt != _kernels.end());
 
   auto f = cantFail(llvmJIT->lookup(funcName)).toPtr<CPU_KERNEL_TYPE>();
 

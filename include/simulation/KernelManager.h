@@ -49,14 +49,15 @@ class KernelManager {
 
   std::unique_ptr<llvm::orc::LLJIT> llvmJIT;
 
-  std::vector<KernelInfo> kernels;
-
+  std::vector<KernelInfo> _kernels;
 public:
   KernelManager()
     : llvmContext(std::make_unique<llvm::LLVMContext>())
     , llvmModule(std::make_unique<llvm::Module>("myModule", *llvmContext))
     , llvmJIT(nullptr)
-    , kernels() {}
+    , _kernels() {}
+
+  const std::vector<KernelInfo>& kernels() const { return _kernels; }
 
   void initJIT(llvm::OptimizationLevel optLevel = llvm::OptimizationLevel::O0);
 

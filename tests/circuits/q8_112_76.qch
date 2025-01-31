@@ -1,0 +1,8 @@
+circuit qc {
+  h 0;
+  h 1;
+  h 2;
+  h 3;
+  h 4;
+  cx 0 2;
+}

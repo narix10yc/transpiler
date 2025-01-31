@@ -553,7 +553,7 @@ KernelManager& KernelManager::genCPUKernel(
     if (d.imKind != SK_Zero)
       ++opCount;
   }
-  kernels.emplace_back(
+  _kernels.emplace_back(
     KernelInfo::CPU_Gate,
     config.precision,
     std::string(llvmFuncName.begin(), llvmFuncName.end()),
