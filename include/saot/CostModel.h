@@ -1,7 +1,7 @@
 #ifndef SAOT_COSTMODEL_H
 #define SAOT_COSTMODEL_H
 
-#include "simulation/KernelGen.h"
+#include "simulation/KernelManager.h"
 #include "saot/QuantumGate.h"
 #include "saot/CircuitGraphContext.h"
 #include <cassert>

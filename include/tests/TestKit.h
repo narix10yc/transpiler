@@ -3,7 +3,6 @@
 
 #include "utils/utils.h"
 #include <vector>
-#include <sstream>
 
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
@@ -73,6 +72,8 @@ void test_gateMatMul();
 void test_cpuH();
 void test_cpuU();
 
+// void test_fusionCPU();
+
 inline void test_all() {
   utils::timedExecute([] {
     test_applyGate();
@@ -83,6 +84,10 @@ inline void test_all() {
     test_cpuH();
     test_cpuU();
   }, "CPU Codegen Test Finished!");
+
+  // utils::timedExecute([] {
+    // test_fusionCPU();
+  // }, "CPU Fusion Test Finished!");
 }
 
 } // namespace saot::test

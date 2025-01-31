@@ -1,3 +1,6 @@
+#define DEBUG_TYPE "fusion-cpu"
+#include "llvm/Support/Debug.h"
+
 #include "saot/CircuitGraph.h"
 #include "saot/Fusion.h"
 
@@ -115,12 +118,6 @@ int getKAfterFusion(const GateBlock* blockA, const GateBlock* blockB) {
     continue;
   }
 
-  std::cerr << "getKAfterFusion " << blockA->id << " ";
-  utils::printArray(std::cerr, blockA->quantumGate->qubits);
-  std::cerr << " and " << blockB->id << " ";
-  utils::printArray(std::cerr, blockB->quantumGate->qubits);
-  std::cerr << " gives " << count << "\n";
-
   return count;
 }
 
@@ -135,10 +132,6 @@ GateBlock* fuseAndInsertSameRow(
     (*iter)[wireA.qubit] = blockFused;
   for (const auto& wireB : blockB->wires)
     (*iter)[wireB.qubit] = blockFused;
-
-  graph.print(
-    std::cerr << "SameRowFused " << blockA->id << " and "
-              << blockB->id << " => " << blockFused->id << "\n", 2);
   return blockFused;
 }
 
@@ -185,8 +178,9 @@ struct TentativeFusedItem {
 
 /// @return Number of fused blocks
 int startFusion(
-    CircuitGraph& graph, const CostModel* costModel, const int maxK,
-    tile_iter_t curIt, const int qubit) {
+    CircuitGraph& graph, const CPUFusionConfig& config,
+    const CostModel* costModel,
+    const int maxK, tile_iter_t curIt, const int qubit) {
   auto* curBlock = (*curIt)[qubit];
   if (curBlock == nullptr)
     return 0;
@@ -218,16 +212,13 @@ int startFusion(
     curBlock = fuseAndInsertSameRow(graph, curIt, curBlock, candidateBlock);
   }
 
-  std::cerr << "Same row done\n";
   bool progress;
   do {
     ++curIt;
     if (curIt == graph.tile_end())
       break;
     progress = false;
-    std::cerr << "Try fusing with row @ " << &(*curIt) << "\n";
     for (const auto& q : curBlock->quantumGate->qubits) {
-      std::cerr << "qubit " << q << "\n";
       auto* candidateBlock = (*curIt)[q];
       if (checkFuseable(candidateBlock) == false)
         continue;
@@ -235,21 +226,56 @@ int startFusion(
       fusedBlocks.emplace_back(candidateBlock, curIt);
       curIt = fuseAndInsertDiffRow(graph, curIt.prev(), q);
       curBlock = (*curIt)[candidateBlock->quantumGate->qubits[0]];
-      std::cerr << "curIt is now " << &(*curIt) << "\n"
-                << "curBlock is now " << curBlock->id << "\n";
       progress = true;
-      graph.print(std::cerr, 2) << "\n";
       break;
     }
   } while (progress == true);
 
-  // Check benefit
-  std::cerr << "[\n";
-  for (const auto& tentative : fusedBlocks)
-    std::cerr << tentative.block->id << " @ row " << &(*tentative.iter) << "\n";
-  std::cerr << "]\n";
 
-  return fusedBlocks.size();
+  assert(fusedBlocks.size() > 0);
+  if (fusedBlocks.size() == 1)
+    return 0;
+
+  // Check benefit
+  LLVM_DEBUG(
+    utils::printArray(std::cerr,
+      llvm::ArrayRef(fusedBlocks.data(), fusedBlocks.size()),
+      [](std::ostream& os, const TentativeFusedItem& item) {
+        os << item.block->id;
+      });
+    std::cerr << " => " << curBlock->id << "; ";
+  );
+
+  double oldTime = 0.0;
+  for (const auto& tentative : fusedBlocks)
+    oldTime += 1.0 / costModel->computeSpeed(
+      *tentative.block->quantumGate, config.precision, config.nThreads);
+  double newTime = 1.0 / costModel->computeSpeed(
+    *curBlock->quantumGate, config.precision, config.nThreads);
+  double benefit = oldTime / newTime - 1.0;
+  LLVM_DEBUG(std::cerr << "Benefit = " << benefit << "; ";);
+
+  if (benefit < config.benefitMargin) {
+    // undo this fusion
+    LLVM_DEBUG(std::cerr << "Rejected\n");
+    for (const auto& q : curBlock->quantumGate->qubits)
+      (*curIt)[q] = nullptr;
+    for (const auto& tentative : fusedBlocks) {
+      for (const auto& q : tentative.block->quantumGate->qubits)
+        (*tentative.iter)[q] = tentative.block;
+    }
+    LLVM_DEBUG(
+      graph.print(std::cerr << "-- After Rejection --\n", 2) << "\n";
+    );
+
+    // graph.releaseGateBlock(curBlock);
+    return 0;
+  }
+  // accept this fusion
+  // for (const auto& tentative : fusedBlocks)
+    // graph.releaseGateBlock(tentative.block);
+  LLVM_DEBUG(std::cerr << "Accepted\n";);
+  return fusedBlocks.size() - 1;
 }
 
 // GateBlock* trySameWireFuse(const CPUFusionConfig& config, CircuitGraph& graph,
@@ -446,11 +472,24 @@ int applyTwoQubitFusion(CircuitGraph& graph) {
 void saot::applyCPUGateFusion(
     const CPUFusionConfig& config, const CostModel* costModel,
     CircuitGraph& graph) {
-  // applyTwoQubitFusion(graph);
-  startFusion(graph, costModel, 2, graph.tile_begin(), 0);
-  // int nFused = 0;
-  // do {
-    // nFused = traverseAndFuse(config, costModel, graph);
-    // graph.squeeze();
-  // } while (config.multiTraverse && nFused > 0);
+  int maxK = 2;
+  int nFused = 0;
+  do {
+    nFused = 0;
+    auto it = graph.tile_begin();
+    int q = 0;
+    while (it != graph.tile_end()) {
+      for (q = 0; q < graph.nqubits; ++q) {
+        int tmp = startFusion(
+          graph, config, costModel, maxK, it, q);
+        LLVM_DEBUG(
+          if (tmp > 0)
+            graph.print(std::cerr, 2) << "\n";
+        );
+        nFused += tmp;
+      }
+      ++it;
+    }
+    graph.squeeze();
+  } while (nFused > 0 && ++maxK < 5);
 }

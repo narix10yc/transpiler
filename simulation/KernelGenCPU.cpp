@@ -2,7 +2,7 @@
 #include "llvm/Support/Debug.h"
 
 #include "saot/QuantumGate.h"
-#include "simulation/KernelGen.h"
+#include "simulation/KernelManager.h"
 #include "simulation/KernelGenInternal.h"
 
 #include "utils/iocolor.h"
@@ -55,14 +55,14 @@ struct MatData {
   ScalarKind imKind;
 };
 
-inline utils::PODVector<MatData> getMatrixData(
+inline std::vector<MatData> getMatrixData(
     IRBuilder<>& B, const GateMatrix& gateMatrix,
     const CPUKernelGenConfig& config) {
   const int k = gateMatrix.nqubits();
   const unsigned K = 1 << k;
   const unsigned KK = K * K;
 
-  utils::PODVector<MatData> data(KK);
+  std::vector<MatData> data(KK);
 
   const double zTol = config.zeroTol / K;
   const double oTol = config.oneTol / K;
@@ -109,8 +109,8 @@ inline utils::PODVector<MatData> getMatrixData(
 
 } // anonymous namespace
 
-std::unique_ptr<KernelInfo> saot::genCPUCode(
-    Module& llvmModule, const CPUKernelGenConfig& config,
+KernelManager& KernelManager::genCPUKernel(
+    const CPUKernelGenConfig& config,
     const QuantumGate& gate, const std::string& funcName) {
   const unsigned s = config.simd_s;
   const unsigned S = 1ULL << s;
@@ -118,24 +118,23 @@ std::unique_ptr<KernelInfo> saot::genCPUCode(
   const unsigned K = 1ULL << k;
   const unsigned KK = K * K;
 
-  auto& llvmContext = llvmModule.getContext();
-
-  IRBuilder<> B(llvmContext);
+  IRBuilder<> B(*llvmContext);
+  assert(config.precision == 32 || config.precision == 64);
   Type* scalarTy = (config.precision == 32) ? B.getFloatTy() : B.getDoubleTy();
   
   // init function
   CPUArgs args;
   Function* func = cpuGetFunctionDeclaration(
-    B, llvmModule, funcName, config, args);
+    B, *llvmModule, funcName, config, args);
 
   // init matrix
   auto matrixData = getMatrixData(B, gate.gateMatrix, config);
 
   // init basic blocks
-  BasicBlock* entryBB = BasicBlock::Create(llvmContext, "entry", func);
-  BasicBlock* loopBB = BasicBlock::Create(llvmContext, "loop", func);
-  BasicBlock* loopBodyBB = BasicBlock::Create(llvmContext, "loop.body", func);
-  BasicBlock* retBB = BasicBlock::Create(llvmContext, "ret", func);
+  BasicBlock* entryBB = BasicBlock::Create(*llvmContext, "entry", func);
+  BasicBlock* loopBB = BasicBlock::Create(*llvmContext, "loop", func);
+  BasicBlock* loopBodyBB = BasicBlock::Create(*llvmContext, "loop.body", func);
+  BasicBlock* retBB = BasicBlock::Create(*llvmContext, "ret", func);
 
   // split qubits
   int sepBit;
@@ -326,7 +325,7 @@ std::unique_ptr<KernelInfo> saot::genCPUCode(
   // TODO: Optimize this double-loop
   for (unsigned li = 0; li < LK; li++) {
     for (unsigned si = 0; si < S; si++) {
-      reSplitMasks[li * S + si] = utils::pdep32(li, pdepMaskL, pdepNbitsL) | 
+      reSplitMasks[li * S + si] = utils::pdep32(li, pdepMaskL, pdepNbitsL) |
                                   utils::pdep32(si, pdepMaskS, pdepNbitsS);
       imSplitMasks[li * S + si] = reSplitMasks[li * S + si] | (1 << s);
     }
@@ -341,7 +340,7 @@ std::unique_ptr<KernelInfo> saot::genCPUCode(
       std::cerr << utils::as0b(e, sepBit + 1) << ",";
     std::cerr << "]\n";
   );
-  }
+  } // end init [re/im]SplitMasks
 
   // load vectors
   SmallVector<Value*> reAmps; // real amplitudes
@@ -554,19 +553,19 @@ std::unique_ptr<KernelInfo> saot::genCPUCode(
     if (d.imKind != SK_Zero)
       ++opCount;
   }
-  return std::make_unique<KernelInfo>(
+  kernels.emplace_back(
     KernelInfo::CPU_Gate,
     config.precision,
     std::string(llvmFuncName.begin(), llvmFuncName.end()),
-    gate.qubits,
+    gate,
     config.simd_s,
     2 * opCount,
     lk);
+  return *this;
 }
 
-std::unique_ptr<KernelInfo> saot::genCPUMeasure(
-    Module& llvmModule, const CPUKernelGenConfig& config,
-    int q, const std::string& funcName) {
+KernelManager& KernelManager::genCPUMeasure(
+    const CPUKernelGenConfig& config, int q, const std::string& funcName) {
   assert(0 && "Not Implemented");
-  return nullptr;
+  return *this;
 }

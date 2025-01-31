@@ -10,7 +10,7 @@ Value* saot::internal::genMulAdd(
   switch (aKind) {
   case SK_General: {
     // a * b + c
-    assert(a && "General kind 'a' operand cannot be null");
+    assert(a != nullptr && "General kind 'a' operand cannot be null");
     if (c)
       return B.CreateIntrinsic(
         a->getType(), Intrinsic::fmuladd, {a, b, c}, nullptr, name);
@@ -78,7 +78,7 @@ Value* saot::internal::genNegMulAdd(
     if (c)
       return B.CreateIntrinsic(
         aNeg->getType(), Intrinsic::fmuladd, {aNeg, b, c}, nullptr, name);
-    return B.CreateMul(aNeg, b, name);
+    return B.CreateFMul(aNeg, b, name);
   }
   case SK_ImmValue: {
     // -(imm value)a * b + c
@@ -86,7 +86,7 @@ Value* saot::internal::genNegMulAdd(
     if (c)
       return B.CreateIntrinsic(
         aNeg->getType(), Intrinsic::fmuladd, {aNeg, b, c}, nullptr, name);
-    return B.CreateMul(aNeg, b, name);
+    return B.CreateFMul(aNeg, b, name);
   }
   default:
     llvm_unreachable("Unknown ScalarKind");

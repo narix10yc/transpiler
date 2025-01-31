@@ -57,7 +57,7 @@ int main(int argc, const char** argv) {
               << " blocks\n";
     kernels.reserve(allBlocks.size());
     for (const auto& b : allBlocks) {
-      kernels.push_back({G.generateKernel(*b->quantumGate), nullptr});
+      kernels.emplace_back(G.generateKernel(*b->quantumGate), nullptr);
     }
   }, "IR generation complete!");
 

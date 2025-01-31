@@ -69,6 +69,23 @@ std::ostream& printArray(
   return os << "]";
 }
 
+template<typename T, typename Printer>
+std::ostream& printArray(
+    std::ostream& os, llvm::ArrayRef<T> arr,
+    Printer pFunc,
+    const char sep = ',') {
+  if (arr.empty())
+    return os << "[]";
+  auto it = arr.begin();
+  os << "[";
+  pFunc(os, *it);
+  while (++it != arr.end()) {
+    os.put(sep);
+    pFunc(os, *it);
+  }
+  return os << "]";
+}
+
 template<typename T, unsigned N>
 std::ostream& printArray(
     std::ostream& os, const llvm::SmallVector<T, N>& arr, const char sep = ',') {

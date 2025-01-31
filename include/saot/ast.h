@@ -89,6 +89,8 @@ public:
   std::ostream& print(std::ostream& os) const override;
 };
 
+/// \c QuantumCircuit is the text representation of a quantum circuit. It starts
+/// with the `circuit` keyword.
 class QuantumCircuit {
 public:
   std::string name;

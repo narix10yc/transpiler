@@ -1,4 +1,4 @@
-#include "simulation/KernelGen.h"
+#include "simulation/KernelManager.h"
 
 using namespace saot;
 

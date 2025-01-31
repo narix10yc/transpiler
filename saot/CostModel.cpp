@@ -1,13 +1,10 @@
 #include "saot/CostModel.h"
 #include "saot/QuantumGate.h"
 #include "timeit/timeit.h"
-#include "simulation/JIT.h"
 
 #include <fstream>
 #include <iomanip>
-#include <llvm/IR/FPEnv.h>
-#include <thread>
-#include <utils/statevector.h>
+#include "utils/statevector.h"
 
 using namespace saot;
 using namespace llvm;
@@ -216,7 +213,8 @@ double calculateMemUpdateSpeed(int nqubits, int precision, double t) {
   assert(precision == 32 || precision == 64);
   assert(t >= 0.0);
 
-  return static_cast<double>((precision == 32 ? 8ULL : 16ULL) << nqubits) * 1e-9 / t;
+  return static_cast<double>((precision == 32 ? 8ULL : 16ULL) << nqubits) *
+    1e-9 / t;
 }
 
 } // anonymous namespace
@@ -227,8 +225,7 @@ void PerformanceCache::runExperiments(
   assert(nqubits >= 8 && nqubits <= 32);
   assert(comprehensiveness >= 1 && comprehensiveness <= 3);
 
-  auto llvmContext = std::make_unique<LLVMContext>();
-  auto llvmModule = std::make_unique<Module>("perfCacheModule", *llvmContext);
+  KernelManager kernelMgr;
 
   std::vector<QuantumGate> gates;
   gates.reserve(3 * nqubits);
@@ -307,15 +304,9 @@ void PerformanceCache::runExperiments(
   utils::timedExecute([&]() {
     int i = 0;
     for (const auto& gate : gates)
-      kernelInfos.emplace_back(genCPUCode(
-        *llvmModule, cpuConfig, gate, "gate_" + std::to_string(i++)));
+      kernelMgr.genCPUKernel(cpuConfig, gate, "gate_" + std::to_string(i++));
   }, "Code Generation");
 
-  utils::timedExecute([&]() {
-    saot::applyLLVMOptimization(*llvmModule, llvm::OptimizationLevel::O1);
-  }, "JIT IR Optimization");
-
-  auto jit = createJITSession(std::move(llvmModule), std::move(llvmContext));
 
   timeit::Timer timer;
   timeit::TimingResult tr;
@@ -327,35 +318,22 @@ void PerformanceCache::runExperiments(
 
   for (unsigned i = 0, s = kernelInfos.size(); i < s; ++i) {
     const auto& kernel = kernelInfos[i];
-    auto f = cantFail(jit->lookup(kernel->llvmFuncName)).toPtr<CPU_FUNC_TYPE>();
-    const uint64_t nTasks = 1ULL << (nqubits - kernel->qubits.size() - kernel->simd_s);
     if (nThreads == 1)
       tr = timer.timeit([&]() {
-        f(sv.data, 0ULL, nTasks, gates[i].gateMatrix.getConstantMatrix()->data());
+        kernelMgr.applyCPUKernel(sv.data, sv.nqubits, kernel->llvmFuncName);
       });
     else
       tr = timer.timeit([&]() {
-        std::vector<std::thread> threads;
-        threads.reserve(nThreads);
-        const uint64_t nTasksPerThread = nTasks / nThreads;
-        const auto* matrixPtr = gates[i].gateMatrix.getConstantMatrix()->data();
-        for (unsigned tIdx = 0; tIdx < nThreads - 1; ++tIdx) {
-          threads.emplace_back(f, sv.data,
-            nTasksPerThread * tIdx, nTasksPerThread * (tIdx + 1), matrixPtr);
-        }
-        threads.emplace_back(f, sv.data,
-          nTasksPerThread * (nThreads - 1), nTasks, matrixPtr);
-
-        for (auto& t : threads)
-          t.join();
+        kernelMgr.applyCPUKernelMultithread(
+          sv.data, sv.nqubits, kernel->llvmFuncName, nThreads);
       });
     auto memSpd = calculateMemUpdateSpeed(nqubits, kernel->precision, tr.min);
     items.emplace_back(
-      kernel->qubits.size(), kernel->opCount, 64,
+      kernel->gate.nqubits(), kernel->opCount, 64,
       kernel->nLoBits, nThreads, memSpd);
     std::cerr << "Gate @ ";
     utils::printArray(
-      std::cerr, ArrayRef(kernel->qubits.begin(), kernel->qubits.size()));
+      std::cerr, ArrayRef(kernel->gate.qubits.begin(), kernel->gate.qubits.size()));
     std::cerr << ": " << memSpd << " GiBps\n";
   }
 }

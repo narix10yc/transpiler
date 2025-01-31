@@ -14,6 +14,9 @@ class CircuitGraph;
 class QuantumGate;
 
 struct CPUFusionConfig {
+  int precision;
+  int nThreads;
+
   double zeroTol;
   bool multiTraverse;
   bool incrementScheme;

@@ -3,15 +3,13 @@
 
 #include <algorithm>
 #include <complex>
-#include <iostream>
-#include <string>
 #include <vector>
 
 namespace saot {
 
 class CasNode {
 public:
-  virtual std::ostream &print(std::ostream &) const = 0;
+  virtual std::ostream& print(std::ostream&) const = 0;
   virtual ~CasNode() = default;
 };
 

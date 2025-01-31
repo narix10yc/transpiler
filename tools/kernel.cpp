@@ -6,7 +6,7 @@
 using namespace saot;
 
 int main(int argc, const char** argv) {
-  openqasm::Parser qasmParser("../examples/rqc/q6_67_52.qasm", 0);
+  openqasm::Parser qasmParser("../examples/rqc/q6_27_17.qasm", 0);
   auto qasmRoot = qasmParser.parse();
   // Parser parser("../examples/rqc/q6_67_52.qasm");
   // auto qc = parser.parseQuantumCircuit();
@@ -19,7 +19,13 @@ int main(int argc, const char** argv) {
 
 
   CPUFusionConfig config = CPUFusionConfig::Default;
-  NaiveCostModel costModel(3, 0, 1e-8);
+  config.precision = 64;
+  config.nThreads = 10;
+  // NaiveCostModel costModel(3, 0, 1e-8);
+
+  auto cache = PerformanceCache::LoadFromCSV("threads10.csv") ;
+  StandardCostModel costModel(&cache);
+  costModel.display(std::cerr);
 
   applyCPUGateFusion(config, &costModel, graph);
   graph.print(std::cerr << "After Fusion:\n", 2) << "\n";
