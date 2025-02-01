@@ -23,9 +23,9 @@ static void internal() {
   kernelGenConfig.simd_s = simd_s;
 
   CPUFusionConfig fusionConfig = CPUFusionConfig::Default;
-  NaiveCostModel costModel(2, -1, 1e-8);
+  NaiveCostModel costModel(4, -1, 0);
 
-  std::cerr << "Test Dir " << TEST_DIR << "\n";
+  std::cerr << "Test Dir: " << TEST_DIR << "\n";
   fs::path circuitDir = fs::path(TEST_DIR) / "circuits";
   if (!fs::exists(circuitDir) || !fs::is_directory(circuitDir)) {
     std::cerr << BOLDRED("Error: ") << "No circuit directory found\n";
@@ -46,7 +46,9 @@ static void internal() {
         "beforeFusion" + std::to_string(block->id));
     }
 
+    graph.print(std::cerr, 2) << "\n";
     applyCPUGateFusion(fusionConfig, &costModel, graph);
+    graph.print(std::cerr, 2);
     allBlocks = graph.getAllBlocks();
     for (const auto& block : allBlocks) {
       kernelMgrAfterFusion.genCPUKernel(
@@ -59,8 +61,7 @@ static void internal() {
 
     utils::StatevectorAlt<double> sv0(graph.nqubits, simd_s);
     utils::StatevectorAlt<double> sv1(graph.nqubits, simd_s);
-    sv0.initialize();
-    // sv0.randomize();
+    sv0.randomize();
     sv1 = sv0;
 
     for (const auto& k : kernelMgrBeforeFusion.kernels())
@@ -69,14 +70,8 @@ static void internal() {
     for (const auto& k : kernelMgrAfterFusion.kernels())
       kernelMgrAfterFusion.applyCPUKernel(sv1.data, sv1.nqubits, k.llvmFuncName);
 
-    sv0.print();
-    std::cerr << "\n";
-    sv1.print();
-
-    kernelMgrAfterFusion.kernels()[0].gate.gateMatrix.printCMat(std::cerr);
-
-    suite.assertAllClose(sv0.data, sv1.data, 2ULL << graph.nqubits,
-      p.path().filename(), GET_INFO());
+    suite.assertClose(utils::fidelity(sv0, sv1), 1.0,
+      p.path().filename(), GET_INFO(), 1e-8);
   }
 
   suite.displayResult();

@@ -1,5 +1,6 @@
 #define DEBUG_TYPE "fusion-cpu"
 #include "llvm/Support/Debug.h"
+// #define LLVM_DEBUG(X) X
 
 #include "saot/CircuitGraph.h"
 #include "saot/Fusion.h"
@@ -166,8 +167,8 @@ tile_iter_t fuseAndInsertDiffRow(
     return iterL;
   }
   auto iterInserted = graph.tile().emplace_insert(iterL);
-  for (const auto& wireL : blockL->wires)
-    (*iterInserted)[wireL.qubit] = blockFused;
+  for (const auto& wireF : blockFused->wires)
+    (*iterInserted)[wireF.qubit] = blockFused;
   return iterInserted;
 }
 
@@ -181,13 +182,14 @@ int startFusion(
     CircuitGraph& graph, const CPUFusionConfig& config,
     const CostModel* costModel,
     const int maxK, tile_iter_t curIt, const int qubit) {
-  auto* curBlock = (*curIt)[qubit];
-  if (curBlock == nullptr)
+  auto* fusedBlock = (*curIt)[qubit];
+  auto fusedIt = curIt;
+  if (fusedBlock == nullptr)
     return 0;
 
   std::vector<TentativeFusedItem> fusedBlocks;
   fusedBlocks.reserve(8);
-  fusedBlocks.emplace_back(curBlock, curIt);
+  fusedBlocks.emplace_back(fusedBlock, fusedIt);
 
   const auto checkFuseable = [&](GateBlock* candidateBlock) {
     if (candidateBlock == nullptr)
@@ -198,34 +200,40 @@ int startFusion(
         }) != fusedBlocks.end()) {
       return false;
     }
-    return getKAfterFusion(curBlock, candidateBlock) <= maxK;
+    return getKAfterFusion(fusedBlock, candidateBlock) <= maxK;
   };
 
   // Start with same-row blocks
   for (int q = qubit+1; q < graph.nqubits; ++q) {
     auto* candidateBlock = (*curIt)[q];
+    if (candidateBlock == fusedBlock)
+      continue;
     if (checkFuseable(candidateBlock) == false)
       continue;
 
     // candidateBlock is accepted
     fusedBlocks.emplace_back(candidateBlock, curIt);
-    curBlock = fuseAndInsertSameRow(graph, curIt, curBlock, candidateBlock);
+    fusedBlock = fuseAndInsertSameRow(graph, curIt, fusedBlock, candidateBlock);
   }
 
+  assert(curIt == fusedIt);
+
+  // TODO: check logic here
   bool progress;
   do {
-    ++curIt;
+    curIt = fusedIt.next();
     if (curIt == graph.tile_end())
       break;
+
     progress = false;
-    for (const auto& q : curBlock->quantumGate->qubits) {
+    for (const auto& q : fusedBlock->quantumGate->qubits) {
       auto* candidateBlock = (*curIt)[q];
       if (checkFuseable(candidateBlock) == false)
         continue;
       // candidateBlock is accepted
       fusedBlocks.emplace_back(candidateBlock, curIt);
-      curIt = fuseAndInsertDiffRow(graph, curIt.prev(), q);
-      curBlock = (*curIt)[candidateBlock->quantumGate->qubits[0]];
+      fusedIt = fuseAndInsertDiffRow(graph, curIt.prev(), q);
+      fusedBlock = (*fusedIt)[candidateBlock->quantumGate->qubits[0]];
       progress = true;
       break;
     }
@@ -236,30 +244,36 @@ int startFusion(
   if (fusedBlocks.size() == 1)
     return 0;
 
+  assert(fusedIt != graph.tile_end());
+
   // Check benefit
+  double oldTime = 0.0;
+  for (const auto& tentative : fusedBlocks)
+    oldTime += 1.0 / costModel->computeSpeed(
+      *tentative.block->quantumGate, config.precision, config.nThreads);
+  double newTime = 1.0 / costModel->computeSpeed(
+    *fusedBlock->quantumGate, config.precision, config.nThreads);
+  double benefit = oldTime / newTime - 1.0;
   LLVM_DEBUG(
     utils::printArray(std::cerr,
       llvm::ArrayRef(fusedBlocks.data(), fusedBlocks.size()),
       [](std::ostream& os, const TentativeFusedItem& item) {
         os << item.block->id;
       });
-    std::cerr << " => " << curBlock->id << "; ";
+    std::cerr << " => " << fusedBlock->id << "; "
+              << "Benefit = " << benefit << "; ";
   );
-
-  double oldTime = 0.0;
-  for (const auto& tentative : fusedBlocks)
-    oldTime += 1.0 / costModel->computeSpeed(
-      *tentative.block->quantumGate, config.precision, config.nThreads);
-  double newTime = 1.0 / costModel->computeSpeed(
-    *curBlock->quantumGate, config.precision, config.nThreads);
-  double benefit = oldTime / newTime - 1.0;
-  LLVM_DEBUG(std::cerr << "Benefit = " << benefit << "; ";);
 
   if (benefit < config.benefitMargin) {
     // undo this fusion
     LLVM_DEBUG(std::cerr << "Rejected\n");
-    for (const auto& q : curBlock->quantumGate->qubits)
-      (*curIt)[q] = nullptr;
+    LLVM_DEBUG(
+      graph.print(std::cerr << "-- Before Rejection --\n", 2) << "\n";
+    );
+    for (const auto& q : fusedBlock->quantumGate->qubits) {
+      assert((*fusedIt)[q] == fusedBlock);
+      (*fusedIt)[q] = nullptr;
+    }
     for (const auto& tentative : fusedBlocks) {
       for (const auto& q : tentative.block->quantumGate->qubits)
         (*tentative.iter)[q] = tentative.block;

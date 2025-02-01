@@ -12,9 +12,9 @@ using namespace llvm;
 double NaiveCostModel::computeSpeed(
     const QuantumGate& gate, int precision, int nThreads) const {
   if (gate.nqubits() > maxNQubits)
-    return 0.0;
+    return 1e-8;
   if (gate.opCount(zeroTol) > maxOp)
-    return 0.0;
+    return 1e-8;
 
   return 1.0;
 }

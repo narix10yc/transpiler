@@ -147,19 +147,20 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
     cQubits.push_back(tQubit.q);
 
   // std::cerr << CYAN_FG << "Debug:\n";
-  // utils::printVector(aQubits, std::cerr << "aQubits: ") << "\n";
-  // utils::printVector(bQubits, std::cerr << "bQubits: ") << "\n";
-  // utils::printVectorWithPrinter(targetQubitsInfo,
-  //   [](const TargetQubitsInfo& q, std::ostream& os) {
+  // utils::printArray(std::cerr << "aQubits: ", aQubits) << "\n";
+  // utils::printArray(std::cerr << "bQubits: ", bQubits) << "\n";
+  // utils::printArray(std::cerr << "target qubits (q, aIdx, bIdx): ",
+  //   llvm::ArrayRef(targetQubitsInfo),
+  //   [](std::ostream& os, const TargetQubitsInfo& q) {
   //     os << "(" << q.q << "," << q.aIdx << "," << q.bIdx << ")";
-  //   }, std::cerr << "target qubits (q, aIdx, bIdx): ") << "\n";
+  //   }) << "\n";
 
   // std::cerr << "aPextMask: " << utils::as0b(aPextMask, 10) << "\n"
   //           << "bPextMask: " << utils::as0b(bPextMask, 10) << "\n"
   //           << "aZeroingMask: " << utils::as0b(aZeroingMask, 10) << "\n"
   //           << "bZeroingMask: " << utils::as0b(bZeroingMask, 10) << "\n";
-  // utils::printVector(aSharedQubitShifts, std::cerr << "a shifts: ") << "\n";
-  // utils::printVector(bSharedQubitShifts, std::cerr << "b shifts: ") << "\n";
+  // utils::printArray(std::cerr << "a shifts: ", aSharedQubitShifts) << "\n";
+  // utils::printArray(std::cerr << "b shifts: ", bSharedQubitShifts) << "\n";
   // std::cerr << "contraction width = " << contractionWidth << "\n";
   // std::cerr << RESET;
 
@@ -205,8 +206,8 @@ QuantumGate QuantumGate::lmatmul(const QuantumGate& other) const {
             bIdx += bSharedQubitShifts[bit];
           }
         }
-        // std::cerr << "  aIdx = " << aIdx << ": " << aCMat->data[aIdx] << ";"
-                  // << "  bIdx = " << bIdx << ": " << bCMat->data[bIdx] << "\n";
+        // std::cerr << "  aIdx = " << aIdx << ": " << aCMat->data()[aIdx] << ";"
+                  // << "  bIdx = " << bIdx << ": " << bCMat->data()[bIdx] << "\n";
         cCMat[i] += aCMat->data()[aIdx] * bCMat->data()[bIdx];
       }
     }

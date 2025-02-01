@@ -91,7 +91,7 @@ void GateNode::connect(GateNode* rhsGate, int q) {
 GateBlock* CircuitGraph::acquireGateBlock(
     GateBlock* lhsBlock, GateBlock* rhsBlock) {
   auto* quantumGate = _context.quantumGatePool.acquire(
-    rhsBlock->quantumGate->lmatmul(*lhsBlock->quantumGate));
+    lhsBlock->quantumGate->lmatmul(*rhsBlock->quantumGate));
 
   auto* gateBlock = _context.gateBlockPool.acquire();
   gateBlock->quantumGate = quantumGate;
