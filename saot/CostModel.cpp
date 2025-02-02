@@ -22,28 +22,31 @@ double NaiveCostModel::computeSpeed(
 CostResult NaiveCostModel::computeBenefit(
     const QuantumGate& lhsGate, const QuantumGate& rhsGate,
     CircuitGraphContext& context) const {
-  auto cQubits = lhsGate.qubits;
-  for (const auto q : rhsGate.qubits) {
-    if (std::ranges::find(cQubits, q) == cQubits.end())
-      cQubits.push_back(q);
-  }
+  assert(false && "Not Implemented");
+  return { 0.0, nullptr };
 
-  // check fusion eligibility: nqubits
-  if (cQubits.size() > this->maxNQubits) {
-    // std::cerr << CYAN("Rejected due to maxNQubits\n");
-    return { 0.0, nullptr };
-  }
-
-  // check fusion eligibility: opCount
-  auto* cGate = context.quantumGatePool.acquire(rhsGate.lmatmul(lhsGate));
-  if (maxOp > 0 && cGate->opCount(zeroTol) > maxOp) {
-    // std::cerr << CYAN("Rejected due to OpCount\n");
-    return { 0.0, nullptr };
-  }
-
-  // accept candidate
-  // std::cerr << GREEN("Fusion accepted!\n");
-  return { 1.0, cGate };
+  // auto cQubits = lhsGate.qubits;
+  // for (const auto q : rhsGate.qubits) {
+  //   if (std::ranges::find(cQubits, q) == cQubits.end())
+  //     cQubits.push_back(q);
+  // }
+  //
+  // // check fusion eligibility: nqubits
+  // if (cQubits.size() > this->maxNQubits) {
+  //   // std::cerr << CYAN("Rejected due to maxNQubits\n");
+  //   return { 0.0, nullptr };
+  // }
+  //
+  // // check fusion eligibility: opCount
+  // auto cGate = lhsGate.lmatmul(rhsGate);
+  // if (maxOp > 0 && cGate.opCount(zeroTol) > maxOp) {
+  //   // std::cerr << CYAN("Rejected due to OpCount\n");
+  //   return { 0.0, nullptr };
+  // }
+  //
+  // // accept candidate
+  // // std::cerr << GREEN("Fusion accepted!\n");
+  // return { 1.0, cGate };
 }
 
 CostResult AdaptiveCostModel::computeBenefit(

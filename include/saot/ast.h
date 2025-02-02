@@ -108,7 +108,8 @@ public:
 
   void addChainStmt(std::unique_ptr<GateChainStmt> chain);
 
-  QuantumGate gateApplyToQuantumGate(const GateApplyStmt&) const;
+  std::shared_ptr<QuantumGate>
+  gateApplyToQuantumGate(const GateApplyStmt&) const;
 
   // CircuitGraph forbids copy and moves.
   void toCircuitGraph(CircuitGraph&) const;

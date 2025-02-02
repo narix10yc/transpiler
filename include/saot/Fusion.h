@@ -48,7 +48,7 @@ struct CPUFusionConfig {
 void applyCPUGateFusion(
     const CPUFusionConfig&, const CostModel*, CircuitGraph&);
 
-// void applyFPGAGateFusion(CircuitGraph&, const FPGAFusionConfig&);
+void applyFPGAGateFusion(CircuitGraph&, const FPGAFusionConfig&);
 
 } // namespace saot
 

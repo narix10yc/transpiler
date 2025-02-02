@@ -89,6 +89,7 @@ private:
     Node* current;
     friend class IteratorBase<Iterator, T>;
   public:
+    Iterator() : current(nullptr) {}
     explicit Iterator(Node* node) : current(node) {}
 
     /// Get the raw pointer of the \c Node* object so to access methods such as

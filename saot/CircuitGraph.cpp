@@ -15,7 +15,8 @@ using namespace saot;
 int CircuitGraph::GateNodeCount = 0;
 int CircuitGraph::GateBlockCount = 0;
 
-GateNode::GateNode(QuantumGate* gate, const CircuitGraph& graph)
+GateNode::GateNode(
+    std::shared_ptr<QuantumGate> gate, const CircuitGraph& graph)
   : id(CircuitGraph::GateNodeCount++), quantumGate(gate) {
   connections.reserve(quantumGate->nqubits());
   for (const auto q : quantumGate->qubits) {
@@ -90,7 +91,7 @@ void GateNode::connect(GateNode* rhsGate, int q) {
 
 GateBlock* CircuitGraph::acquireGateBlock(
     GateBlock* lhsBlock, GateBlock* rhsBlock) {
-  auto* quantumGate = _context.quantumGatePool.acquire(
+  auto quantumGate = std::make_shared<QuantumGate>(
     lhsBlock->quantumGate->lmatmul(*rhsBlock->quantumGate));
 
   auto* gateBlock = _context.gateBlockPool.acquire();
@@ -153,9 +154,8 @@ CircuitGraph::tile_iter_t CircuitGraph::insertBlock(
   return it;
 }
 
-void CircuitGraph::appendGate(QuantumGate* quantumGate) {
+void CircuitGraph::appendGate(std::shared_ptr<QuantumGate> quantumGate) {
   assert(quantumGate != nullptr);
-  assert(isManaging(quantumGate));
   // update nqubits
   for (const auto& q : quantumGate->qubits) {
     if (q >= nqubits)
@@ -466,3 +466,7 @@ bool GateBlock::isSingleton() const {
 //   for (auto* block : allBlocks)
 //     block->id = (count++);
 // }
+
+void CircuitGraph::deepCopy(CircuitGraph& other) const {
+  assert(false && "Not Implemented");
+}

@@ -12,7 +12,7 @@ public:
     // unitary permutation
     fpgaUnitaryPerm = 0b0010,
 
-    // Non-computational is a special sub-class of unitary permutation where all
+    // Non-computational is a special subclass of unitary permutation where all
     // non-zero entries are +1, -1, +i, -i.
     fpgaNonComp = 0b0110,
     fpgaRealOnly = 0b1000,

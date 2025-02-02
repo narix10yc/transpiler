@@ -7,8 +7,6 @@
 
 #include "utils/iocolor.h"
 
-#include <list>
-
 using namespace IOColor;
 using namespace saot;
 
@@ -40,52 +38,8 @@ const CPUFusionConfig CPUFusionConfig::Aggressive {
   .benefitMargin = 0.0,
 };
 
+
 namespace {
-GateBlock* computeCandidate(
-    const CPUFusionConfig& config, const CostModel* costModel,
-    CircuitGraph& graph,
-    const GateBlock* lhs, const GateBlock* rhs) {
-  if (lhs == nullptr || rhs == nullptr || lhs == rhs)
-    return nullptr;
-  if (costModel == nullptr)
-    return nullptr;
-
-  assert(lhs->quantumGate != nullptr);
-  assert(rhs->quantumGate != nullptr);
-
-  // std::cerr << "Trying to fuse "
-            // << "lhs " << lhs->id << " and rhs " << rhs->id << "\n";
-
-  auto [benefit, cGate] = costModel->computeBenefit(
-    *lhs->quantumGate, *rhs->quantumGate, graph.getContext());
-
-  if (benefit <= config.zeroTol)
-    return nullptr;
-  assert(cGate != nullptr);
-
-  // fusion accepted
-  auto* cBlock = graph.acquireGateBlockForward();
-  // set up connections
-  for (const auto& lWire : lhs->wires) {
-    auto qubit = lWire.qubit;
-    GateNode* rhsEntry;
-    if (auto *rhsWire = rhs->findWire(qubit); rhsWire == nullptr)
-      rhsEntry = lWire.rhsEntry;
-    else
-      rhsEntry = rhsWire->rhsEntry;
-    cBlock->wires.emplace_back(qubit, lWire.lhsEntry, rhsEntry);
-  }
-
-  for (const auto& rWire : rhs->wires) {
-    auto qubit = rWire.qubit;
-    if (lhs->findWire(qubit) == nullptr) {
-      cBlock->wires.push_back(rWire);
-    }
-  }
-
-  cBlock->quantumGate = cGate;
-  return cBlock;
-}
 
 using tile_iter_t = CircuitGraph::tile_iter_t;
 
@@ -292,195 +246,6 @@ int startFusion(
   return fusedBlocks.size() - 1;
 }
 
-// GateBlock* trySameWireFuse(const CPUFusionConfig& config, CircuitGraph& graph,
-//                            const tile_iter_t& itLHS, int q_) {
-//   assert(itLHS != graph.tile().end());
-//   const auto itRHS = std::next(itLHS);
-//   if (itRHS == graph.tile().end())
-//     return nullptr;
-//
-//   GateBlock* lhs = (*itLHS)[q_];
-//   GateBlock* rhs = (*itRHS)[q_];
-//
-//   if (!lhs || !rhs)
-//     return nullptr;
-//
-//   GateBlock* block = computeCandidate(lhs, rhs, config);
-//   if (block == nullptr)
-//     return nullptr;
-//
-//   // std::cerr << BLUE_FG;
-//   // lhs->displayInfo(std::cerr);
-//   // rhs->displayInfo(std::cerr);
-//   // block->displayInfo(std::cerr) << RESET;
-//
-//   for (const auto& q : lhs->getQubits())
-//     (*itLHS)[q] = nullptr;
-//   for (const auto& q : rhs->getQubits())
-//     (*itRHS)[q] = nullptr;
-//
-//   delete (lhs);
-//   delete (rhs);
-//
-//   // insert block to tile
-//   graph.insertBlock(itLHS, block);
-//   return block;
-// }
-
-/// Try to fuse block
-/// \code (*tileIt)[q]        \endcode and
-/// \code (*tileIt.next())[q] \endcode.
-/// It will check fusion eligibility using \c config.
-/// If fusion is accepted, delete old blocks and append fused block into the
-/// graph, and return the fused block.
-int tryCrossWireFuse(
-    const CPUFusionConfig& config, const CostModel* costModel,
-    CircuitGraph& graph, tile_iter_t tileIt) {
-  int nFused = 0;
-  auto tileNext = tileIt.next();
-  if (tileNext == nullptr)
-    return 0;
-
-  for (unsigned q = 0; q < graph.nqubits; ++q) {
-    auto* lBlock = (*tileIt)[q];
-    auto* rBlock = (*tileNext)[q];
-    auto* cBlock = computeCandidate(config, costModel, graph, lBlock, rBlock);
-    if (cBlock == nullptr)
-      continue;
-
-    // fusion accepted
-    for (const auto& q : lBlock->quantumGate->qubits)
-      (*tileIt)[q] = nullptr;
-    for (const auto& q : rBlock->quantumGate->qubits)
-      (*tileNext)[q] = nullptr;
-
-    auto insertedIt = graph.insertBlock(tileIt, cBlock);
-    graph.releaseGateBlock(lBlock);
-    graph.releaseGateBlock(rBlock);
-    ++nFused;
-    // terminate if a new row is inserted (such cases should be handled in the
-    // next traversal
-    if (insertedIt != tileIt && insertedIt != tileNext)
-      break;
-  }
-  return nFused;
-}
-
-/// @return Number of fused blocks in this traversal
-int traverseAndFuse(
-    const CPUFusionConfig& config, const CostModel* costModel,
-    CircuitGraph& graph) {
-  int nFused = 0;
-  auto it = graph.tile().begin();
-  while (it != nullptr) {
-    nFused += tryCrossWireFuse(config, costModel, graph, it);
-    ++it;
-  }
-  return nFused;
-}
-
-GateBlock* computeTwoQubitCandidate(
-    CircuitGraph& graph, GateBlock* lBlock, GateBlock* rBlock) {
-  if (lBlock == nullptr || rBlock == nullptr)
-    return nullptr;
-
-  const auto lNQubits = lBlock->nqubits();
-  const auto rNQubits = rBlock->nqubits();
-  assert(lNQubits == 1 || lNQubits == 2);
-  assert(rNQubits == 1 || rNQubits == 2);
-
-  const auto& lWires = lBlock->wires;
-  const auto& rWires = rBlock->wires;
-
-  const auto l0 = lWires[0].qubit;
-  const auto r0 = rWires[0].qubit;
-  const auto l1 = (lNQubits == 2) ? lWires[1].qubit : -1;
-  const auto r1 = (rNQubits == 2) ? rWires[1].qubit : -1;
-
-  if (lNQubits == 2 && rNQubits == 2 && (l0 != r0 || l1 != r1))
-    return nullptr;
-
-  auto* quantumGate = graph.acquireQuantumGateForward(
-    rBlock->quantumGate->lmatmul(*lBlock->quantumGate));
-  auto* cBlock = graph.acquireGateBlockForward();
-  cBlock->quantumGate = quantumGate;
-
-  if (lNQubits == 1 && rNQubits == 1) {
-    assert(l0 == r0);
-    cBlock->wires.emplace_back(l0, lWires[0].lhsEntry, rWires[0].rhsEntry);
-    return cBlock;
-  }
-
-  if (lNQubits == 2 && rNQubits == 2) {
-    if (l0 != r0 || l1 != r1) {
-      graph.releaseGateBlock(cBlock);
-      return nullptr;
-    }
-    cBlock->wires.emplace_back(l0, lWires[0].lhsEntry, rWires[0].rhsEntry);
-    cBlock->wires.emplace_back(l1, lWires[1].lhsEntry, rWires[1].rhsEntry);
-    return cBlock;
-  }
-
-  if (lNQubits == 1 && rNQubits == 2) {
-    if (l0 == r0) {
-      cBlock->wires.emplace_back(l0, lWires[0].lhsEntry, rWires[0].rhsEntry);
-      cBlock->wires.emplace_back(r1, rWires[1].lhsEntry, rWires[1].rhsEntry);
-    } else {
-      assert(l0 == r1);
-      cBlock->wires.emplace_back(r0, rWires[0].lhsEntry, rWires[0].rhsEntry);
-      cBlock->wires.emplace_back(r1, lWires[0].lhsEntry, rWires[1].rhsEntry);
-    }
-    return cBlock;
-  }
-
-  assert(lNQubits == 2 && rNQubits == 1);
-  if (l0 == r0) {
-    cBlock->wires.emplace_back(l0, lWires[0].lhsEntry, rWires[0].rhsEntry);
-    cBlock->wires.emplace_back(r1, lWires[1].lhsEntry, lWires[1].rhsEntry);
-  } else {
-    assert(l1 == r0);
-    cBlock->wires.emplace_back(r0, lWires[0].lhsEntry, lWires[0].rhsEntry);
-    cBlock->wires.emplace_back(r1, lWires[1].lhsEntry, rWires[0].rhsEntry);
-  }
-  return cBlock;
-}
-
-int applyTwoQubitFusion(CircuitGraph& graph) {
-  int nFused = 0;
-  while (true) {
-    int nFusedThisTraversal = 0;
-    auto tileIt = graph.tile().begin();
-    auto tileNext = tileIt.next();
-    auto tileEnd = graph.tile().end();
-    while (tileNext != tileEnd) {
-      for (unsigned q = 0; q < graph.nqubits; ++q) {
-        auto* lBlock = (*tileIt)[q];
-        auto* rBlock = (*tileNext)[q];
-        if (auto* cBlock = computeTwoQubitCandidate(graph, lBlock, rBlock)) {
-          for (const auto& q : lBlock->quantumGate->qubits)
-            (*tileIt)[q] = nullptr;
-          for (const auto& q : rBlock->quantumGate->qubits)
-            (*tileNext)[q] = nullptr;
-          graph.insertBlock(tileIt, cBlock);
-          graph.releaseGateBlock(lBlock);
-          graph.releaseGateBlock(rBlock);
-          ++nFusedThisTraversal;
-        }
-      }
-      ++tileIt;
-      ++tileNext;
-    }
-
-    if (nFusedThisTraversal > 0) {
-      graph.squeeze();
-      nFused += nFusedThisTraversal;
-      continue;
-    }
-    break;
-  }
-  return nFused;
-}
-
 } // anonymous namespace
 
 void saot::applyCPUGateFusion(
@@ -494,13 +259,8 @@ void saot::applyCPUGateFusion(
     int q = 0;
     while (it != graph.tile_end()) {
       for (q = 0; q < graph.nqubits; ++q) {
-        int tmp = startFusion(
-          graph, config, costModel, maxK, it, q);
-        LLVM_DEBUG(
-          if (tmp > 0)
-            graph.print(std::cerr, 2) << "\n";
-        );
-        nFused += tmp;
+        nFused += startFusion(
+          graph, config, costModel, maxK, it, q);;
       }
       ++it;
     }

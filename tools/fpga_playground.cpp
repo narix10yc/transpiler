@@ -14,9 +14,10 @@ using namespace saot::fpga;
 
 using namespace IOColor;
 
-void printInstructionStatistics(const std::vector<fpga::Instruction>& insts,
-                                const FPGACostConfig& costConfig,
-                                bool additionalExtMemOp) {
+void printInstructionStatistics(
+    const std::vector<fpga::Instruction>& insts,
+    const FPGACostConfig& costConfig,
+    bool additionalExtMemOp) {
   int nNonExtMemInst = 0, nExtMemInst = 0, nSqGateInst = 0, nUpGateInst = 0;
   for (const auto& inst : insts) {
     if (inst.gInst->getKind() == GOp_SQ)
@@ -73,10 +74,8 @@ void printInstructionStatistics(const std::vector<fpga::Instruction>& insts,
   int tTotalNoOpt = tTotal + 1 * nOverlappingInst;
 
   std::cerr
-      << CYAN_FG << BOLD << "====== Instruction Statistics: =======\n"
-      << "Num Instructions: " << insts.size() << "\n"
-      << RESET
-      << CYAN_FG
+      << BOLDCYAN("====== Instruction Statistics: =======\n"
+        "Num Instructions: " << insts.size() << "\n")
       //   << "  - num gate instructions:   " << nSqGateInst + nUpGateInst <<
       //   "\n"
       //   << "    - num SQ gate instructions: " << nSqGateInst << "\n"
@@ -86,15 +85,15 @@ void printInstructionStatistics(const std::vector<fpga::Instruction>& insts,
       //   << "    - num EXT mem instructions:     " << nExtMemInst << "\n"
       //   << "    - num non-EXT mem instructions: " << nNonExtMemInst << "\n"
       << " ----------------------------------- \n"
-      << BOLD << "Num Normalized Cycles: " << tTotal << " (" << tTotalNoOpt
-      << ")\n"
-      << RESET << CYAN_FG << "  - nTwiceExtMemTime: " << nTwiceExtMemTime
-      << "\n"
+      << BOLDCYAN(
+        "Num Normalized Cycles: " << tTotal << " (" << tTotalNoOpt << ")\n")
+      << CYAN(
+         "  - nTwiceExtMemTime: " << nTwiceExtMemTime << "\n"
       << "  - nExtMemTime:      " << nExtMemTime << "\n"
       << "  - nNonExtMemTime:   " << nNonExtMemTime << "\n"
       << "  - nGeneralSQGate:   " << nGeneralSQGate << "\n"
       << "  - nRealOnlySQGate:  " << nRealOnlySQGate << "\n"
-      << "  - nUPGate:          " << nUPGate << "\n";
+      << "  - nUPGate:          " << nUPGate << "\n");
 }
 
 int costKindToNumNormalizedCycle(Instruction::CostKind kind) {
@@ -118,21 +117,9 @@ int costKindToNumNormalizedCycle(Instruction::CostKind kind) {
   }
 }
 
-// This will have severe memory leak (as our CircuitGraph does not release
-// memory)
-void runExperiment(std::function<CircuitGraph()> f) {
-  CircuitGraph G;
+void runExperiment(std::function<void(CircuitGraph&)> f) {
+  CircuitGraph graph;
   std::vector<Instruction> instructions;
-
-  using clock = std::chrono::high_resolution_clock;
-  auto tic = clock::now();
-  auto tok = clock::now();
-  auto log = [&]() -> std::ostream&  {
-    const auto t_ms =
-        std::chrono::duration_cast<std::chrono::milliseconds>(tok - tic)
-            .count();
-    return std::cerr << "-- (" << t_ms << " ms) ";
-  };
 
   int nLocalQubits = 14;
   int gridSize = 4;
@@ -194,53 +181,48 @@ void runExperiment(std::function<CircuitGraph()> f) {
   };
 
   // std::cerr << YELLOW_FG << BOLD << "Test -1: Fusion  ON, InstGen ON, MaxUP =
-  // 8\n" << RESET; G = f(); std::cerr << "Number of gates: " << G.countBlocks()
+  // 8\n" << RESET; f(G); std::cerr << "Number of gates: " << G.countBlocks()
   // << "\n"; utils::timedExecute([&]() {
   //     instructions = fpga::genInstruction(G, instGen11ConfigUp8);
   // }, "Inst Gen Complete!");
   // printInstructionStatistics(instructions, costConfig, G.nqubits > 22);
 
-  std::cerr << YELLOW_FG << BOLD << "Test 0: Fusion  ON, InstGen  ON\n"
-            << RESET;
-  G = f();
-  std::cerr << "Number of gates: " << G.countBlocks() << "\n";
+  std::cerr << BOLDYELLOW("Test 0: Fusion  ON, InstGen  ON\n");
+  f(graph);
+  std::cerr << "Number of gates: " << graph.countBlocks() << "\n";
   utils::timedExecute(
-      [&]() { instructions = fpga::genInstruction(G, instGen11Config); },
+      [&]() { instructions = fpga::genInstruction(graph, instGen11Config); },
       "Inst Gen Complete!");
-  printInstructionStatistics(instructions, costConfig, G.nqubits > 22);
+  printInstructionStatistics(instructions, costConfig, graph.nqubits > 22);
 
-  std::cerr << YELLOW_FG << BOLD << "Test 1: Fusion  ON, InstGen OFF\n"
-            << RESET;
-  G = f();
+  std::cerr << BOLDYELLOW("Test 1: Fusion  ON, InstGen OFF\n");
+  f(graph);
   utils::timedExecute(
-      [&]() { instructions = fpga::genInstruction(G, instGen10Config); },
+      [&]() { instructions = fpga::genInstruction(graph, instGen10Config); },
       "Inst Gen Complete!");
-  printInstructionStatistics(instructions, costConfig, G.nqubits > 22);
+  printInstructionStatistics(instructions, costConfig, graph.nqubits > 22);
 
-  std::cerr << YELLOW_FG << BOLD << "Test 2: Fusion OFF, InstGen  ON\n"
-            << RESET;
-  G = f();
+  std::cerr << BOLDYELLOW("Test 2: Fusion OFF, InstGen  ON\n");
+  f(graph);
   utils::timedExecute(
-      [&]() { instructions = fpga::genInstruction(G, instGen01Config); },
+      [&]() { instructions = fpga::genInstruction(graph, instGen01Config); },
       "Inst Gen Complete!");
-  printInstructionStatistics(instructions, costConfig, G.nqubits > 22);
+  printInstructionStatistics(instructions, costConfig, graph.nqubits > 22);
 
-  std::cerr << YELLOW_FG << BOLD << "Test 3: Fusion OFF, InstGen OFF\n"
-            << RESET;
-  G = f();
+  std::cerr << BOLDYELLOW("Test 3: Fusion OFF, InstGen OFF\n");
+  f(graph);
   utils::timedExecute(
-      [&]() { instructions = fpga::genInstruction(G, instGen00Config); },
+      [&]() { instructions = fpga::genInstruction(graph, instGen00Config); },
       "Inst Gen Complete!");
-  printInstructionStatistics(instructions, costConfig, G.nqubits > 22);
+  printInstructionStatistics(instructions, costConfig, graph.nqubits > 22);
 
-  std::cerr << YELLOW_FG << BOLD
-            << "Test 4: Fusion OFF, InstGen OFF, No gate value tolerance\n"
-            << RESET;
-  G = f();
+  std::cerr << BOLDYELLOW(
+    "Test 4: Fusion OFF, InstGen OFF, No gate value tolerance\n");
+  f(graph);
   utils::timedExecute(
-      [&]() { instructions = fpga::genInstruction(G, instGenBadConfig); },
+      [&]() { instructions = fpga::genInstruction(graph, instGenBadConfig); },
       "Inst Gen Complete!");
-  printInstructionStatistics(instructions, costConfig, G.nqubits > 22);
+  printInstructionStatistics(instructions, costConfig, graph.nqubits > 22);
 }
 
 int main(int argc, const char** argv) {
@@ -259,9 +241,9 @@ int main(int argc, const char** argv) {
 
   // G.print(std::cerr);
 
-  runExperiment([arg = argv[1]]() {
+  runExperiment([arg = argv[1]](CircuitGraph& graph) {
     openqasm::Parser qasmParser(arg, -1);
-    return qasmParser.parse()->toCircuitGraph();
+    qasmParser.parse()->toCircuitGraph(graph);
   });
 
   // runExperiment([arg = argv[1]]() {

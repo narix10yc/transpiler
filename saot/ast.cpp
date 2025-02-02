@@ -119,34 +119,35 @@ void QuantumCircuit::addChainStmt(std::unique_ptr<GateChainStmt> chain) {
 }
 
 
-QuantumGate QuantumCircuit::gateApplyToQuantumGate(
+std::shared_ptr<QuantumGate> QuantumCircuit::gateApplyToQuantumGate(
     const GateApplyStmt& gaStmt) const {
   if (gaStmt.argument.is<int>()) {
     // gaStmt relies on parameter reference
     const auto refNumber = gaStmt.argument.get<int>();
     for (const auto& defStmt : paramDefs) {
       if (defStmt.refNumber == refNumber)
-        return QuantumGate(*defStmt.gateMatrix, gaStmt.qubits);
+        return std::make_shared<QuantumGate>(*defStmt.gateMatrix, gaStmt.qubits);
     }
     assert(false && "Cannot find parameter def stmt");
-    return QuantumGate();
+    return nullptr;
   }
 
   if (gaStmt.argument.is<GateMatrix::gate_params_t>())
-    return QuantumGate(
+    return std::make_shared<QuantumGate>(
       GateMatrix::FromName(
-          gaStmt.name,
-          gaStmt.argument.get<GateMatrix::gate_params_t>()),
+        gaStmt.name,
+        gaStmt.argument.get<GateMatrix::gate_params_t>()),
       gaStmt.qubits);
-  return QuantumGate(GateMatrix::FromName(gaStmt.name), gaStmt.qubits);
+  return std::make_shared<QuantumGate>(
+    GateMatrix::FromName(gaStmt.name), gaStmt.qubits);
 }
 
 void QuantumCircuit::toCircuitGraph(CircuitGraph& graph) const {
   for (const auto& s : chains) {
     if (s->isNot(Statement::SK_GateChain)) {
       std::cerr << BOLDYELLOW("Warning: ")
-          << "Unable to convert to GateChainStmt when calling "
-             "RootNode::toCircuitGraph\n";
+                << "Unable to convert to GateChainStmt when calling "
+                   "RootNode::toCircuitGraph\n";
       continue;
     }
     const auto* chain = static_cast<const GateChainStmt*>(s.get());
@@ -154,10 +155,11 @@ void QuantumCircuit::toCircuitGraph(CircuitGraph& graph) const {
       continue;
 
     auto quGate = gateApplyToQuantumGate(chain->gates[0]);
-    for (int i = 1; i < chain->gates.size(); i++)
-      quGate = quGate.lmatmul(gateApplyToQuantumGate(chain->gates[i]));
-    // TODO: avoid (potentially expensive) copy here
-    graph.appendGate(graph.acquireQuantumGateForward(quGate));
+    for (int i = 1; i < chain->gates.size(); i++) {
+      quGate = std::make_shared<QuantumGate>(
+        quGate->lmatmul(*gateApplyToQuantumGate(chain->gates[i])));
+    }
+    graph.appendGate(quGate);
   }
 }
 

@@ -25,10 +25,10 @@ public:
   };
 
   int id;
-  QuantumGate* quantumGate;
+  std::shared_ptr<QuantumGate> quantumGate;
   std::vector<ConnectionInfo> connections;
 
-  GateNode(QuantumGate* quantumGate, const CircuitGraph& graph);
+  GateNode(std::shared_ptr<QuantumGate> quantumGate, const CircuitGraph& graph);
 
   GateNode(const GateNode&) = delete;
   GateNode(GateNode&&) = delete;
@@ -76,7 +76,7 @@ public:
 
   int id;
   std::vector<WireInfo> wires;
-  QuantumGate* quantumGate;
+  std::shared_ptr<QuantumGate> quantumGate;
 
   GateBlock();
   explicit GateBlock(GateNode* gateNode);
@@ -168,19 +168,6 @@ public:
 
   CircuitGraphContext& getContext() { return _context; }
 
-  // TODO: Rewrite resource management here. Currently to construct a GateBlock
-  /// one acquires a QuantumGate and then acquires a GateBlock. To destruct a
-  /// GateBlock we only need to call releaseGateBlock. This is weird. Thinking
-  /// about adopting a constructor-destructor based resource management such
-  /// that every GateNode and GateBlock keeps track of the CircuitGraph
-  /// reference.
-  /// In addition, make the arguments explicit
-
-  template<typename... Args>
-  QuantumGate* acquireQuantumGateForward(Args&&... args) {
-    return _context.quantumGatePool.acquire(std::forward<Args>(args)...);
-  }
-
   template<typename... Args>
   GateNode* acquireGateNodeForward(Args&&... args) {
     return _context.gateNodePool.acquire(std::forward<Args>(args)...);
@@ -195,11 +182,6 @@ public:
   /// \c lhsBlock is applied `before` \c rhsBlock.
   GateBlock* acquireGateBlock(GateBlock* lhsBlock, GateBlock* rhsBlock);
 
-  void releaseQuantumGate(QuantumGate* gate) {
-    assert(gate != nullptr && "Releasing null gate");
-    _context.quantumGatePool.release(gate);
-  }
-
   void releaseGateNode(GateNode* gateNode) {
     assert(gateNode != nullptr && "Releasing null gateNode");
     _context.gateNodePool.release(gateNode);
@@ -210,13 +192,7 @@ public:
   /// object will also be released.
   void releaseGateBlock(GateBlock* gateBlock) {
     assert(gateBlock != nullptr && "Releasing null gateBlock");
-    if (gateBlock->isSingleton())
-      _context.quantumGatePool.release(gateBlock->quantumGate);
     _context.gateBlockPool.release(gateBlock);
-  }
-
-  bool isManaging(const QuantumGate* gate) const {
-    return _context.quantumGatePool.isInPool(gate);
   }
 
   bool isManaging(const GateNode* gateNode) const {
@@ -229,7 +205,7 @@ public:
 
   /// Append a quantum gate to the tile. Quantum gate must be managed by
   /// \c *this
-  void appendGate(QuantumGate* quantumGate);
+  void appendGate(std::shared_ptr<QuantumGate> quantumGate);
 
   /// @brief Erase empty rows in the tile
   void eraseEmptyRows();
@@ -274,9 +250,9 @@ public:
   std::vector<GateBlock*> getAllBlocks() const;
 
   // std::vector<std::vector<int>> getBlockOpCountHistogram() const;
-  //
-  // size_t countBlocks() const { return getAllBlocks().size(); }
-  //
+
+  size_t countBlocks() const { return getAllBlocks().size(); }
+
   // size_t countGates() const {
   //   const auto allBlocks = getAllBlocks();
   //   size_t sum = 0;
@@ -303,6 +279,8 @@ public:
 
   std::ostream& displayInfo(
     std::ostream& os = std::cerr, int verbose = 1) const;
+
+  void deepCopy(CircuitGraph& other) const;
 };
 
 }; // namespace saot

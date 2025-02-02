@@ -12,7 +12,6 @@ class GateBlock;
 class CircuitGraphContext {
 public:
   /// Memory management
-  utils::ObjectPool<QuantumGate> quantumGatePool;
   utils::ObjectPool<GateNode> gateNodePool;
   utils::ObjectPool<GateBlock> gateBlockPool;
 

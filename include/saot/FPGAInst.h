@@ -18,7 +18,7 @@ namespace saot::fpga {
 
 // @param upTol: tolerance of the absolute values of complex entries in the
 // matrix smaller than (or equal to) which can be considered zero;
-// @param reOnlyTol: tolerance of the absolutae value of imaginary value of
+// @param reOnlyTol: tolerance of the absolute value of imaginary value of
 // each entry smaller than (or equal to) which can be considered zero;
 FPGAGateCategory
 getFPGAGateCategory(const QuantumGate& gate,
@@ -202,8 +202,8 @@ public:
   std::unique_ptr<MemoryInst> mInst;
   std::unique_ptr<GateInst> gInst;
 
-  Instruction(std::unique_ptr<MemoryInst> _mInst,
-              std::unique_ptr<GateInst> _gInst) {
+  Instruction(
+      std::unique_ptr<MemoryInst> _mInst, std::unique_ptr<GateInst> _gInst) {
     setMInst(std::move(_mInst));
     setGInst(std::move(_gInst));
   }
@@ -234,8 +234,8 @@ public:
 };
 
 // top-level function to generate FPGA instructions from a CircuitGraph
-std::vector<Instruction> genInstruction(const CircuitGraph& ,
-                                        const FPGAInstGenConfig&);
+std::vector<Instruction> genInstruction(
+    const CircuitGraph&, const FPGAInstGenConfig&);
 
 }; // namespace saot::fpga
 
