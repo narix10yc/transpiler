@@ -4,6 +4,7 @@
 #include "llvm/Passes/PassBuilder.h"
 
 #include "simulation/KernelManager.h"
+#include "utils/iocolor.h"
 
 using namespace saot;
 using namespace llvm;
@@ -46,4 +47,38 @@ void KernelManager::initJIT(OptimizationLevel optLevel) {
   this->llvmContext = nullptr;
   this->llvmModule = nullptr;
   this->llvmJIT = std::move(lazyJIT);
+}
+
+std::ostream& CPUKernelGenConfig::displayInfo(std::ostream& os) const {
+  os << CYAN("=== CPU Kernel Gen Config ===\n")
+     << "simd_s:    " << simd_s << "\n"
+     << "precision:  " << precision << "\n"
+     << "amp format: ";
+  switch (this->ampFormat) {
+    case AltFormat:
+      os << "AltFormat\n"; break;
+    case SepFormat:
+      os << "SepFormat\n"; break;
+    default:
+      assert(0 && "Unreachable");
+  }
+
+  os << "useFMA     : " << useFMA << "\n"
+     << "useFMS     : " << useFMS << "\n"
+     << "usePDEP     : " << usePDEP << "\n"
+     << "forceDenseKernel : " << forceDenseKernel << "\n"
+     << "zeroTolerance : " << zeroTol << "\n"
+     << "oneTolerance : " << oneTol << "\n"
+     << "matrixLoadMode: ";
+  switch (this->matrixLoadMode) {
+    case UseMatImmValues:
+      os << "UseMatImmValues\n"; break;
+    case StackLoadMatElems:
+      os << "StackLoadMatElems\n"; break;
+    case StackLoadMatVecs:
+      os << "StackLoadMatVecs\n"; break;
+  }
+
+  os << CYAN("================================\n");
+  return os;
 }

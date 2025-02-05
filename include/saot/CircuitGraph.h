@@ -56,10 +56,10 @@ public:
   void connect(GateNode* rhsGate, int q);
 };
 
-/// \brief A \c GateBlock is an aggregate of \c GateNode s
+/// \brief A \c GateBlock is an aggregate of \c GateNode 's.
 /// It is the primary layer for gate fusion. Aggregation relation is maintained
-/// by the \c wires variable, which is internally a vector of \c WireInfo that
-/// specifies qubit, left entry node, and right entry node.
+/// by the \c wires variable, which is internally a vector of qubit, left entry
+/// node, and right entry node.
 ///
 /// \c GateBlock can be `singleton`: when it contains exactly one \c GateNode .
 /// In such cases, their respective \c quantumGate member will point to the same

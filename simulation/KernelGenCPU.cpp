@@ -11,6 +11,7 @@
 #include "llvm/IR/IntrinsicsX86.h"
 
 #include <cmath>
+#include <saot/CircuitGraph.h>
 #include <utils/PODVector.h>
 
 using namespace llvm;
@@ -558,6 +559,7 @@ KernelManager& KernelManager::genCPUKernel(
     config.precision,
     std::string(llvmFuncName.begin(), llvmFuncName.end()),
     gate,
+    std::function<CPU_KERNEL_TYPE>(),
     config.simd_s,
     2 * opCount,
     lk);

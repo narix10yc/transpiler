@@ -11,12 +11,18 @@
 
 namespace saot {
 
+class CircuitGraph;
+
+
 struct KernelInfo {
-  enum KernelType { CPU_Gate, CPU_Measure, GPU_Gate, GPU_Measure };
+  enum KernelType {
+    CPU_Gate, CPU_Measure, GPU_Gate, GPU_Measure
+  };
   KernelType type;
   int precision;
   std::string llvmFuncName;
   QuantumGate gate;
+  std::function<CPU_KERNEL_TYPE> executable;
   // extra information
   int simd_s;
   int opCount;
@@ -39,6 +45,9 @@ struct CPUKernelGenConfig {
   double oneTol = 1e-8;
   MatrixLoadMode matrixLoadMode = UseMatImmValues;
 
+  std::ostream& displayInfo(std::ostream& os) const;
+
+  // TODO: set up default configurations
   static const CPUKernelGenConfig NativeDefaultF32;
   static const CPUKernelGenConfig NativeDefaultF64;
 };
@@ -80,12 +89,21 @@ public:
   KernelManager& genCPUMeasure(
       const CPUKernelGenConfig& config, int q, const std::string& funcName);
 
+  KernelManager& genCPUFromGraph(
+      const CPUKernelGenConfig& config,
+      const CircuitGraph& graph, const std::string& graphName);
+
+  std::vector<KernelInfo*> collectCPUGraphKernels(const std::string& graphName);
+
+  void applyCPUKernel(
+      void* sv, int nQubits, const KernelInfo& kernelInfo);
+
   void applyCPUKernel(void* sv, int nQubits, const std::string& funcName);
 
   void applyCPUKernelMultithread(
     void* sv, int nQubits, const std::string& funcName, int nThreads);
-
 };
+
 
 } // namespace saot
 

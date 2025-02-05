@@ -1,3 +1,5 @@
+#include <utils/statevector.h>
+
 #include "saot/Parser.h"
 #include "saot/CircuitGraph.h"
 #include "saot/Fusion.h"
@@ -6,7 +8,7 @@
 using namespace saot;
 
 int main(int argc, const char** argv) {
-  openqasm::Parser qasmParser("../examples/rqc/q6_27_17.qasm", 0);
+  openqasm::Parser qasmParser("../examples/rqc/q8_112_76.qasm", 0);
   auto qasmRoot = qasmParser.parse();
   // Parser parser("../examples/rqc/q6_67_52.qasm");
   // auto qc = parser.parseQuantumCircuit();
@@ -18,21 +20,37 @@ int main(int argc, const char** argv) {
   graph.print(std::cerr << "Before Fusion:\n", 2) << "\n";
 
 
-  CPUFusionConfig config = CPUFusionConfig::Default;
-  config.precision = 64;
-  config.nThreads = 10;
+  CPUFusionConfig fusionConfig = CPUFusionConfig::Default;
+  fusionConfig.precision = 64;
+  fusionConfig.nThreads = 10;
   // NaiveCostModel costModel(3, 0, 1e-8);
 
   auto cache = PerformanceCache::LoadFromCSV("threads10.csv") ;
   StandardCostModel costModel(&cache);
   costModel.display(std::cerr);
 
-  applyCPUGateFusion(config, &costModel, graph);
+  applyCPUGateFusion(fusionConfig, &costModel, graph);
   graph.print(std::cerr << "After Fusion:\n", 2) << "\n";
 
-  auto fusedQC = ast::QuantumCircuit::FromCircuitGraph(graph);
-  fusedQC.print(std::cerr << "Fused QuantumCircuit Serialization\n") << "\n";
+  // auto fusedQC = ast::QuantumCircuit::FromCircuitGraph(graph);
+  // fusedQC.print(std::cerr << "Fused QuantumCircuit Serialization\n") << "\n";
 
+  KernelManager kernelMgr;
+  CPUKernelGenConfig kernelGenConfig;
+  kernelGenConfig.simd_s = 1;
+
+  kernelGenConfig.displayInfo(std::cerr) << "\n";
+
+  kernelMgr.genCPUFromGraph(kernelGenConfig, graph, "myGraph");
+  kernelMgr.initJIT();
+  auto kernels = kernelMgr.collectCPUGraphKernels("myGraph");
+  std::cerr << kernels.size() << " kernel found\n";
+
+  utils::StatevectorAlt<double> sv(graph.nqubits, kernelGenConfig.simd_s);
+  sv.randomize();
+  for (const auto* kernel : kernels) {
+    kernelMgr.applyCPUKernel(sv.data, sv.nqubits, *kernel);
+  }
 
   return 0;
 }

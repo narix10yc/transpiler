@@ -103,8 +103,7 @@ public:
     assert(flags.size() == _edgeSize);
     if (_edgeSize == 0)
       return UnitaryPermutationMatrix();
-    if (std::all_of(flags.begin(), flags.end(),
-                    [&flags](int i) { return flags[i] == i; }))
+    if (std::ranges::all_of(flags, [&flags](int i) { return flags[i] == i; }))
       return UnitaryPermutationMatrix(*this);
 
     const auto permuteIndex = [&flags, k = flags.size()](size_t src) -> size_t {

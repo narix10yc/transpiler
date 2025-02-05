@@ -5,7 +5,6 @@
 
 namespace saot {
 
-class QuantumGate;
 class GateNode;
 class GateBlock;
 
@@ -16,7 +15,6 @@ public:
   utils::ObjectPool<GateBlock> gateBlockPool;
 
   CircuitGraphContext() = default;
-
 };
 
 } // namespace saot

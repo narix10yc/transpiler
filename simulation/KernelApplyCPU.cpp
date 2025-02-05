@@ -1,4 +1,5 @@
 #include "simulation/KernelManager.h"
+#include "saot/CircuitGraph.h"
 
 using namespace saot;
 
@@ -14,17 +15,25 @@ void KernelManager::applyCPUKernel(
 
   assert(kernelIt != _kernels.end());
 
-  auto f = cantFail(llvmJIT->lookup(funcName)).toPtr<CPU_KERNEL_TYPE>();
+  if (!kernelIt->executable) {
+    kernelIt->executable =
+      cantFail(llvmJIT->lookup(funcName)).toPtr<CPU_KERNEL_TYPE>();
+  }
 
-  int tmp = nQubits - kernelIt->gate.nqubits() - kernelIt->simd_s;
+  applyCPUKernel(sv, nQubits, *kernelIt);
+}
+
+void KernelManager::applyCPUKernel(
+    void* sv, int nQubits, const KernelInfo& kernel) {
+  assert(kernel.executable);
+  int tmp = nQubits - kernel.gate.nqubits() - kernel.simd_s;
   assert(tmp > 0);
   uint64_t idxEnd = 1ULL << tmp;
   const void* pMat = nullptr;
-  if (kernelIt->gate.gateMatrix.getConstantMatrix() != nullptr)
-    pMat = kernelIt->gate.gateMatrix.getConstantMatrix()->data();
-  f(sv, 0ULL, idxEnd, pMat);
+  if (kernel.gate.gateMatrix.getConstantMatrix() != nullptr)
+    pMat = kernel.gate.gateMatrix.getConstantMatrix()->data();
+  kernel.executable(sv, 0ULL, idxEnd, pMat);
 }
-
 
 void KernelManager::applyCPUKernelMultithread(
     void* sv, int nQubits, const std::string& funcName, int nThreads) {
@@ -60,3 +69,58 @@ void KernelManager::applyCPUKernelMultithread(
   for (auto& t : threads)
     t.join();
 }
+
+
+namespace {
+  std::string mangleGraphName(const std::string& graphName) {
+    return "G" + std::to_string(graphName.length()) + graphName;
+  }
+
+  std::string demangleGraphBlockName(const std::string& mangledName) {
+    const auto* p = mangledName.data();
+    const auto* e = mangledName.data() + mangledName.size();
+    assert(p != e);
+    assert(*p == 'G' && "Mangled graph name must start with 'G'");
+    ++p;
+    assert(p != e);
+    auto p0 = p;
+    while ('0' <= *p && *p <= '9') {
+      ++p;
+      assert(p != e);
+    }
+    auto l = std::stoi(std::string(p0, p));
+    assert(p + l <= e);
+    return std::string(p, p+l);
+  }
+} // anonymous namespace
+
+
+KernelManager& KernelManager::genCPUFromGraph(
+    const CPUKernelGenConfig& config, const CircuitGraph& graph,
+    const std::string& graphName) {
+  const auto allBlocks = graph.getAllBlocks();
+  const auto mangledName = mangleGraphName(graphName);
+  for (const auto& block : allBlocks) {
+    genCPUKernel(
+      config, *block->quantumGate,mangledName + std::to_string(block->id));
+  }
+
+  return *this;
+}
+
+std::vector<KernelInfo*> KernelManager::collectCPUGraphKernels(
+    const std::string& graphName) {
+  assert(isJITed() && "Must initialize JIT session "
+                      "before calling KernelManager::collectCPUGraphKernels");
+  std::vector<KernelInfo*> kernelInfos;
+  const auto mangledName = mangleGraphName(graphName);
+  for (auto& kernel : _kernels) {
+    if (kernel.llvmFuncName.starts_with(mangledName)) {
+      kernel.executable =
+          cantFail(llvmJIT->lookup(kernel.llvmFuncName)).toPtr<CPU_KERNEL_TYPE>();
+      kernelInfos.push_back(&kernel);
+    }
+  }
+  return kernelInfos;
+}
+
