@@ -23,9 +23,10 @@ public:
   std::vector<int> vars;
   Operator op;
 
-  VariableSumNode(std::initializer_list<int> variables = {},
-                  double constant = 0.0, Operator op = None)
-      : constant(constant), vars(), op(op) {
+  VariableSumNode(
+      std::initializer_list<int> variables = {},
+      double constant = 0.0, Operator op = None)
+    : constant(constant), vars(), op(op) {
     for (const auto& v : variables)
       addVar(v);
   }
@@ -43,8 +44,8 @@ public:
     return VariableSumNode({var}, constant, SinOp);
   }
 
-  static VariableSumNode Sine(std::initializer_list<int> vars,
-                              double constant = 0.0) {
+  static VariableSumNode Sine(
+      std::initializer_list<int> vars, double constant = 0.0) {
     return VariableSumNode(vars, constant, SinOp);
   }
 

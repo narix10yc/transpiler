@@ -79,5 +79,5 @@ static void internal() {
 
 void test::test_fusionCPU() {
   internal<1>();
-  // internal<2>();
+  internal<2>();
 }

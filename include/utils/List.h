@@ -7,7 +7,7 @@
 
 namespace utils {
 
-/// A double-link list template
+/// A double-linked list template
 template<typename T>
 class List {
 public:
@@ -312,7 +312,6 @@ public:
   iterator erase(const_iterator it) {
     return iterator(erase(it.raw_ptr()));
   }
-
 
 };
 

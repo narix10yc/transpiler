@@ -72,23 +72,17 @@ struct QubitStatus {
     os << "(";
     switch (kind) {
     case QK_Local:
-      os << "loc";
-      break;
+      os << "loc"; break;
     case QK_Row:
-      os << "row";
-      break;
+      os << "row"; break;
     case QK_Col:
-      os << "col";
-      break;
+      os << "col"; break;
     case QK_Depth:
-      os << "dep";
-      break;
+      os << "dep"; break;
     case QK_OffChip:
-      os << "ext";
-      break;
+      os << "ext"; break;
     case QK_Unknown:
-      os << "unknown";
-      break;
+      os << "unknown"; break;
     default:
       break;
     }
@@ -167,10 +161,10 @@ private:
         continue;
       auto* cddBlock = tileBlocks[nQubits * row + q];
       assert(cddBlock);
-      if (std::find_if(availables.begin(), availables.end(),
-                       [&cddBlock](const available_blocks_t &avail) {
-                         return avail.block == cddBlock;
-                       }) != availables.end()) {
+      if (std::ranges::find_if(availables,
+        [&cddBlock](const available_blocks_t &avail) {
+          return avail.block == cddBlock;
+        }) != availables.end()) {
         continue;
       }
 

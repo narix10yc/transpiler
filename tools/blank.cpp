@@ -1,18 +1,9 @@
 #include <iostream>
-#include <vector>
-#include "utils/PODVector.h"
-
-struct MyStruct {
-  int a;
-  void* p;
-};
-
+#include <list>
 
 int main() {
-  std::vector<MyStruct> v;
-  // utils::PODVector<MyStruct> v;
-  v.resize(2);
-  std::cerr << v[0].a << "\n";
-
+  std::cout << "Size of std::list<int>::iterator: "
+            << sizeof(std::list<int>::iterator) << " bytes\n";
+  std::cout << "Size of a pointer: " << sizeof(void*) << " bytes\n";
   return 0;
 }

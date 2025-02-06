@@ -193,7 +193,6 @@ int startFusion(
     }
   } while (progress == true);
 
-
   assert(fusedBlocks.size() > 0);
   if (fusedBlocks.size() == 1)
     return 0;
