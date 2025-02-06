@@ -5,17 +5,17 @@
 using namespace saot;
 using namespace utils;
 
-template<unsigned simd_s, unsigned nqubits>
+template<unsigned simd_s, unsigned nQubits>
 static void internal_U1q() {
   std::stringstream ss;
-  ss << "applyGate U1q (s=" << simd_s << ", nqubits=" << nqubits << ")";
+  ss << "applyGate U1q (s=" << simd_s << ", nQubits=" << nQubits << ")";
   test::TestSuite suite(ss.str());
 
-  StatevectorAlt<double> sv(nqubits, simd_s);
+  StatevectorAlt<double> sv(nQubits, simd_s);
   sv.initialize();
-  for (int q = 0; q < nqubits; q++)
+  for (int q = 0; q < nQubits; q++)
     sv.applyGate(QuantumGate::H(q));
-  for (int q = 0; q < nqubits; q++) {
+  for (int q = 0; q < nQubits; q++) {
     suite.assertClose(sv.prob(q), 0.5,
       "Apply round H: Prob at qubit " + std::to_string(q), GET_INFO());
   }
@@ -24,16 +24,16 @@ static void internal_U1q() {
   suite.assertClose(sv.norm(), 1.0, "Rand SV: Norm", GET_INFO());
 
   // phase gates do not change probabilities
-  for (int q = 0; q < sv.nqubits; q++) {
+  for (int q = 0; q < sv.nQubits; q++) {
     double pBefore = sv.prob(q);
     auto gate0 = QuantumGate(GateMatrix::FromName("p", {0.14}), q);
-    auto gate1 = QuantumGate(GateMatrix::FromName("p", {0.41}), (q+1) % sv.nqubits);
+    auto gate1 = QuantumGate(GateMatrix::FromName("p", {0.41}), (q+1) % sv.nQubits);
     auto gate = gate0.lmatmul(gate1);
 
     sv.applyGate(gate);
     std::stringstream ss;
     ss << "Phase gate at qubits "
-       << q << " " << ((q+1) % sv.nqubits);
+       << q << " " << ((q+1) % sv.nQubits);
     suite.assertClose(sv.norm(), 1.0, ss.str() + ": Norm", GET_INFO());
     suite.assertClose(pBefore, sv.prob(q), ss.str() + ": Prob", GET_INFO());
   }

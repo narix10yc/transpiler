@@ -137,7 +137,7 @@ private:
     std::vector<int> priorities(nQubits);
     for (int i = 0; i < nQubits; ++i)
       priorities[i] = i;
-    assignQubitStatuses(priorities);
+    assignQubitstatuses(priorities);
 
     // initialize node state
     int row = 0;
@@ -193,8 +193,8 @@ public:
 
   InstGenState(const CircuitGraph& graph, const FPGAInstGenConfig& config)
       : graph(graph), config(config),
-        nRows(graph.tile().size()), nQubits(graph.nqubits),
-        qubitStatuses(graph.nqubits), tileBlocks(graph.tile().size() * nQubits),
+        nRows(graph.tile().size()), nQubits(graph.nQubits),
+        qubitStatuses(graph.nQubits), tileBlocks(graph.tile().size() * nQubits),
         unlockedRowIndices(nQubits), availables() {
     init(graph);
   }
@@ -251,7 +251,7 @@ public:
     }
   }
 
-  void assignQubitStatuses(const std::vector<int>& priorities) {
+  void assignQubitstatuses(const std::vector<int>& priorities) {
     assert(utils::isPermutation(priorities));
     int nOnChipQubits = config.getNOnChipQubits();
 
@@ -465,7 +465,7 @@ public:
                                });
         if (it == availablesCopy.end())
           break;
-        assert(it->block->nqubits() == 1);
+        assert(it->block->nQubits() == 1);
         int q = it->block->wires[0].qubit;
         utils::pushBackIfNotInVector(priorities, q);
         availablesCopy.erase(it);
@@ -478,12 +478,12 @@ public:
       // to diminish external memory access overhead
       // int numToSort = std::min(static_cast<int>(priorities.size()),
       // config.nLocalQubits); if (numToSort == 0) {
-      //     priorities.push_back(nqubits - 1);
+      //     priorities.push_back(nQubits - 1);
       // }
       // else if (numToSort == 1) {
       //     int tmp = priorities[0];
-      //     if (tmp != nqubits - 1) {
-      //         priorities[0] = nqubits - 1;
+      //     if (tmp != nQubits - 1) {
+      //         priorities[0] = nQubits - 1;
       //         priorities.push_back(tmp);
       //     }
       // }
@@ -498,7 +498,7 @@ public:
         utils::pushBackIfNotInVector(priorities, (q + startQubit) % nQubits);
 
       // update qubitStatuses
-      assignQubitStatuses(priorities);
+      assignQubitstatuses(priorities);
       insertExtMemInst(priorities);
     };
 
@@ -527,7 +527,7 @@ public:
           priorities[0] = q;
           for (int i = 1; i < nQubits; i++)
             priorities[i] = (i <= q) ? (i - 1) : i;
-          assignQubitStatuses(priorities);
+          assignQubitstatuses(priorities);
           insertExtMemInst(priorities);
         }
 

@@ -23,18 +23,18 @@ class StatevectorAlt;
 template<typename real_t>
 class StatevectorSep {
 public:
-  unsigned nqubits;
+  int nQubits;
   uint64_t N;
   real_t* real;
   real_t* imag;
 
-  StatevectorSep(int nqubits, bool initialize = false)
-      : nqubits(static_cast<unsigned>(nqubits)), N(1ULL << nqubits) {
-    assert(nqubits > 0);
+  StatevectorSep(int nQubits, bool initialize = false)
+      : nQubits(nQubits), N(1ULL << nQubits) {
+    assert(nQubits > 0);
     real = (real_t*)std::aligned_alloc(64, N * sizeof(real_t));
     imag = (real_t*)std::aligned_alloc(64, N * sizeof(real_t));
     if (initialize) {
-      for (size_t i = 0; i < (1 << nqubits); i++) {
+      for (size_t i = 0; i < (1 << nQubits); i++) {
         real[i] = 0;
         imag[i] = 0;
       }
@@ -44,7 +44,7 @@ public:
   }
 
   StatevectorSep(const StatevectorSep& that)
-      : nqubits(that.nqubits), N(that.N) {
+      : nQubits(that.nQubits), N(that.N) {
     real = (real_t*)aligned_alloc(64, N * sizeof(real_t));
     imag = (real_t*)aligned_alloc(64, N * sizeof(real_t));
     for (size_t i = 0; i < that.N; i++) {
@@ -55,7 +55,7 @@ public:
   }
 
   StatevectorSep(StatevectorSep&& that) noexcept
-      : nqubits(that.nqubits), N(that.N), real(that.real), imag(that.imag) {
+      : nQubits(that.nQubits), N(that.N), real(that.real), imag(that.imag) {
     that.real = nullptr;
     that.imag = nullptr;
     // std::cerr << "StatevectorSep(StatevectorSep&&)\n";
@@ -82,7 +82,7 @@ public:
     this->~StatevectorSep();
     real = that.real;
     imag = that.imag;
-    nqubits = that.nqubits;
+    nQubits = that.nQubits;
     N = that.N;
 
     that.real = nullptr;
@@ -213,16 +213,16 @@ template<typename RealType>
 class StatevectorAlt {
 public:
   int simd_s;
-  int nqubits;
+  int nQubits;
   uint64_t N;
   size_t memSize;
   RealType* data;
 
-  StatevectorAlt(int nqubits, int simd_s, bool init = true)
+  StatevectorAlt(int nQubits, int simd_s, bool init = true)
     : simd_s(simd_s)
-    , nqubits(nqubits)
-    , N(1ULL << nqubits)
-    , memSize((2ULL << nqubits) * sizeof(RealType))
+    , nQubits(nQubits)
+    , N(1ULL << nQubits)
+    , memSize((2ULL << nQubits) * sizeof(RealType))
     , data(static_cast<RealType*>(
         ::operator new(memSize, static_cast<std::align_val_t>(64)))) {
     if (init)
@@ -318,7 +318,7 @@ public:
   }
 
   std::ostream& printProbabilities(std::ostream& os = std::cerr) const {
-    for (int q = 0; q < nqubits; q++) {
+    for (int q = 0; q < nQubits; q++) {
       os << "qubit " << q << ": " << prob(q) << "\n";
     }
     return os;
@@ -348,10 +348,10 @@ public:
       }
 
       // std::cerr << "taskId = " << taskId
-      //           << " (" << utils::as0b(taskId, nqubits - k) << "):\n";
+      //           << " (" << utils::as0b(taskId, nQubits - k) << "):\n";
       // utils::printVectorWithPrinter(ampIndices,
       //   [&](size_t n, std::ostream& os) {
-      //     os << n << " (" << utils::as0b(n, nqubits) << ")";
+      //     os << n << " (" << utils::as0b(n, nQubits) << ")";
       //   }, std::cerr << " ampIndices: ") << "\n";
 
       for (unsigned r = 0; r < K; r++) {
@@ -373,7 +373,7 @@ public:
 template<typename real_t>
 double fidelity(const StatevectorSep<real_t>& sv1,
                        const StatevectorSep<real_t>& sv2) {
-  assert(sv1.nqubits == sv2.nqubits);
+  assert(sv1.nQubits == sv2.nQubits);
 
   double re = 0.0, im = 0.0;
   for (size_t i = 0; i < sv1.N; i++) {
@@ -386,7 +386,7 @@ double fidelity(const StatevectorSep<real_t>& sv1,
 template<typename real_t>
 double fidelity(const StatevectorAlt<real_t>& sv0,
                 const StatevectorAlt<real_t>& sv1) {
-  assert(sv0.nqubits == sv1.nqubits);
+  assert(sv0.nQubits == sv1.nQubits);
   double re = 0.0, im = 0.0;
   for (size_t i = 0; i < sv0.N; i++) {
     auto amp0 = sv0.amp(i);
@@ -400,7 +400,7 @@ double fidelity(const StatevectorAlt<real_t>& sv0,
 // template<typename real_t>
 // static double fidelity(const StatevectorSep<real_t>& sep, const
 // StatevectorAlt<real_t>& alt) {
-//     assert(sep.nqubits == alt.nqubits);
+//     assert(sep.nQubits == alt.nQubits);
 
 //     double re = 0.0, im = 0.0;
 //     for (size_t i = 0; i < sep.N; i++) {
@@ -419,7 +419,7 @@ double fidelity(const StatevectorAlt<real_t>& sv0,
 // template<typename real_t>
 // void StatevectorSep<real_t>::copyValueFrom(const StatevectorAlt<real_t>& alt)
 // {
-//     assert(nqubits == alt.nqubits);
+//     assert(nQubits == alt.nQubits);
 
 //     for (size_t i = 0; i < N; i++) {
 //         real[i] = alt.data[2*i];
@@ -430,7 +430,7 @@ double fidelity(const StatevectorAlt<real_t>& sv0,
 // template<typename real_t>
 // void StatevectorAlt<real_t>::copyValueFrom(const StatevectorSep<real_t>& sep)
 // {
-//     assert(nqubits == sep.nqubits);
+//     assert(nQubits == sep.nQubits);
 
 //     for (size_t i = 0; i < N; i++) {
 //         data[2*i] = sep.real[i];

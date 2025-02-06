@@ -65,7 +65,7 @@ Function* IRGenerator::generateCUDAKernel(const QuantumGate& gate,
                                           const CUDAGenerationConfig& config,
                                           const std::string& funcName) {
   const auto& qubits = gate.qubits;
-  const int nqubits = qubits.size();
+  const int nQubits = qubits.size();
 
   auto* gateCMat = gate.gateMatrix.getConstantMatrix();
   // printConstantMatrix(std::cerr, *gateCMat);
@@ -177,18 +177,18 @@ Function* IRGenerator::generateCUDAKernel(const QuantumGate& gate,
       // " << (qIdx - 1) << "\n";
       mask = 0ULL;
     }
-    mask = ~((1ULL << (qubits.back() - nqubits + 1)) - 1);
+    mask = ~((1ULL << (qubits.back() - nQubits + 1)) - 1);
     // std::cerr << "  (globalThreadIdx & " << utils::as0b(mask, 32) << ") << "
-    // << (nqubits) << "\n";
+    // << (nQubits) << "\n";
 
     tmpCounterV = builder.CreateAnd(counterV, mask, "tmpCounter");
-    tmpCounterV = builder.CreateShl(tmpCounterV, nqubits, "tmpCounter");
+    tmpCounterV = builder.CreateShl(tmpCounterV, nQubits, "tmpCounter");
     idxStartV = builder.CreateAdd(idxStartV, tmpCounterV, "idxStart");
     idxStartV = builder.CreateShl(idxStartV, 1, "idxStart");
     svPtrV = builder.CreateGEP(scalarTy, pSvArg, idxStartV, "sv.ptr");
   }
 
-  uint64_t N = 1 << nqubits;
+  uint64_t N = 1 << nQubits;
   // std::vector<Value*> reMats(N), imMats(N), reAmpPtrs(N), imAmpPtrs(N),
   // reAmps(N), imAmps(N);
   std::vector<Value*> reAmpPtrs(N), imAmpPtrs(N), reAmps(N), imAmps(N);
@@ -204,11 +204,11 @@ Function* IRGenerator::generateCUDAKernel(const QuantumGate& gate,
   // load amplitude set
   for (uint64_t i = 0; i < N; i++) {
     uint64_t delta = 0ULL;
-    for (int b = 0; b < nqubits; b++) {
+    for (int b = 0; b < nQubits; b++) {
       if (i & (1 << b))
         delta |= (1 << qubits[b]);
     }
-    // std::cerr << "amp idx " << utils::as0b(i, nqubits) << ", delta = " <<
+    // std::cerr << "amp idx " << utils::as0b(i, nQubits) << ", delta = " <<
     // utils::as0b(delta, 32) << "\n";
 
     reAmpPtrs[i] = builder.CreateConstGEP1_64(

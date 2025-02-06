@@ -32,16 +32,16 @@ static void basics() {
   suite.displayResult();
 }
 
-template<unsigned nqubits, unsigned simd_s>
+template<unsigned nQubits, unsigned simd_s>
 static void internal() {
   std::stringstream titleSS;
   titleSS << "MatMul between Gates (s=" << simd_s
-          << ", nqubits=" << nqubits << ")";
+          << ", nQubits=" << nQubits << ")";
   TestSuite suite(titleSS.str());
 
   std::random_device rd;
   std::mt19937 gen(rd());
-  std::uniform_int_distribution<> d(0, nqubits - 1);
+  std::uniform_int_distribution<> d(0, nQubits - 1);
   for (int i = 0; i < 3; ++i) {
     int a = d(gen);
     int b = d(gen);
@@ -49,7 +49,7 @@ static void internal() {
     auto gate1 = QuantumGate::RandomUnitary(b);
     auto gate = gate0.lmatmul(gate1);
 
-    utils::StatevectorAlt<double> sv0(nqubits, simd_s), sv1(nqubits, simd_s);
+    utils::StatevectorAlt<double> sv0(nQubits, simd_s), sv1(nQubits, simd_s);
     sv0.randomize();
     sv1 = sv0;
 

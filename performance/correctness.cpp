@@ -22,7 +22,7 @@ int main(int argc, char* *argv) {
   assert(argc > 1);
   unsigned targetQ = std::stoi(argv[1]);
 
-  const int nqubits = 10;
+  const int nQubits = 10;
 
   auto mat = GateMatrix::FromName("u3", {0.92, 0.46, 0.22});
   // auto mat = GateMatrix::FromName("h");
@@ -30,11 +30,11 @@ int main(int argc, char* *argv) {
   gate = gate.lmatmul({mat, {targetQ + 1}});
   // gate = gate.lmatmul({ mat , {9}});
 
-  StatevectorComp<real_t> sv_ref(nqubits);
+  StatevectorComp<real_t> sv_ref(nQubits);
 #ifdef USING_ALT_KERNEL
-  StatevectorAlt<real_t, SIMD_S> sv_test(nqubits);
+  StatevectorAlt<real_t, SIMD_S> sv_test(nQubits);
 #else
-  StatevectorSep<real_t> sv_test(nqubits);
+  StatevectorSep<real_t> sv_test(nQubits);
 #endif
 
   sv_ref.randomize();
@@ -51,11 +51,11 @@ int main(int argc, char* *argv) {
 #endif
   }
 
-  applyGeneral(sv_ref.data, gate.gateMatrix, gate.qubits, nqubits);
+  applyGeneral(sv_ref.data, gate.gateMatrix, gate.qubits, nQubits);
   // sv_ref.print(std::cerr) << "\n";
 
   uint64_t idxMax =
-      1ULL << (sv_test.nqubits - SIMD_S - _metaData[targetQ].nqubits);
+      1ULL << (sv_test.nQubits - SIMD_S - _metaData[targetQ].nQubits);
 // uint64_t idxMax = 1;
 #ifdef USING_ALT_KERNEL
   _metaData[targetQ].func(sv_test.data, 0, idxMax, _metaData[targetQ].mPtr);

@@ -59,7 +59,7 @@ struct MatData {
 inline std::vector<MatData> getMatrixData(
     IRBuilder<>& B, const GateMatrix& gateMatrix,
     const CPUKernelGenConfig& config) {
-  const int k = gateMatrix.nqubits();
+  const int k = gateMatrix.nQubits();
   const unsigned K = 1 << k;
   const unsigned KK = K * K;
 

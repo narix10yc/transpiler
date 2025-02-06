@@ -274,7 +274,7 @@ GateMatrix GateMatrix::FromName(
 
 void GateMatrix::permuteSelf(const llvm::SmallVector<int>& flags) {
   // single qubit gates
-  if (nqubits() == 1) {
+  if (nQubits() == 1) {
     assert(flags.size() == 1);
     return;
   }
@@ -307,7 +307,7 @@ void GateMatrix::permuteSelf(const llvm::SmallVector<int>& flags) {
     cache.pMat = cache.pMat.permute(flags);
 }
 
-int GateMatrix::nqubits() const {
+int GateMatrix::nQubits() const {
   switch (gateKind) {
   case gX: return 1;
   case gY: return 1;

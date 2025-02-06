@@ -16,13 +16,13 @@ inline size_t insertZeroBit(size_t number, int index) {
 
 template<typename real_t = double>
 static void applyGeneral(std::complex<real_t>* sv, const saot::GateMatrix& gate,
-                         const std::vector<int>& qubits, unsigned nqubits) {
-  assert(gate.nqubits == qubits.size());
+                         const std::vector<int>& qubits, unsigned nQubits) {
+  assert(gate.nQubits == qubits.size());
   assert(gate.isConstantMatrix());
   const auto& constMatrix = gate.matrix.constantMatrix.data;
   const auto& K = gate.N;
 
-  // std::cerr << "applyGeneral (nqubits = " << nqubits << ") on qubits ";
+  // std::cerr << "applyGeneral (nQubits = " << nQubits << ") on qubits ";
   // for (const auto& q : qubits)
   //     std::cerr << q << " ";
   // std::cerr << "\nwith gate\n";
@@ -39,13 +39,13 @@ static void applyGeneral(std::complex<real_t>* sv, const saot::GateMatrix& gate,
   using complex_t = std::complex<real_t>;
   std::vector<complex_t> updatedAmp(K);
 
-  for (size_t t = 0; t < (1 << (nqubits - gate.nqubits)); t++) {
+  for (size_t t = 0; t < (1 << (nQubits - gate.nQubits)); t++) {
     // extract indices
     for (size_t i = 0; i < K; i++) {
       size_t idx = t;
       for (const auto q : qubitsSorted)
         idx = insertZeroBit(idx, q);
-      for (unsigned q = 0; q < gate.nqubits; q++) {
+      for (unsigned q = 0; q < gate.nQubits; q++) {
         if ((i & (1 << q)) > 0)
           idx |= (1 << qubits[q]);
       }

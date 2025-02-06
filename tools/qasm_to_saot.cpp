@@ -61,7 +61,7 @@ FusionLevel("fusion",
     cl::init(2));
 
 static cl::opt<int>
-MaxNQubits("max-k",
+MaxnQubits("max-k",
     cl::cat(GateCPUFusionConfigCategory),
     cl::desc("maximum number of qubits of gates"),
     cl::init(0));
@@ -206,13 +206,13 @@ int main(int argc, const char** argv) {
 
   // parse arguments
   // timedExecute([&]() {
-  if (MaxNQubits > 0 || MaxOpCount > 0) {
-    if (MaxNQubits == 0 || MaxOpCount == 0) {
+  if (MaxnQubits > 0 || MaxOpCount > 0) {
+    if (MaxnQubits == 0 || MaxOpCount == 0) {
       std::cerr << RED_FG << BOLD << "Argument Error: " << RESET
                 << "need to provide both 'max-k' and 'max-op'\n";
       return 1;
     }
-    fusionConfig.maxNQubits = MaxNQubits;
+    fusionConfig.maxnQubits = MaxnQubits;
     fusionConfig.maxOpCount = MaxOpCount;
     fusionConfig.zeroSkippingThreshold = ZeroSkipThreshold;
   } else

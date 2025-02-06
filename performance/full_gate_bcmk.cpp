@@ -30,20 +30,20 @@ int main(int argc, char* *argv) {
 #else
   std::cerr << "\n============ New Run ============\n";
   int count = 0;
-  for (unsigned nqubits : {8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28}) {
-    // for (const int nqubits : { DEFAULT_NQUBITS, DEFAULT_NQUBITS }) {
-    if (nqubits < 20)
+  for (unsigned nQubits : {8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28}) {
+    // for (const int nQubits : { DEFAULT_nQubits, DEFAULT_nQubits }) {
+    if (nQubits < 20)
       timer.setReplication(7);
     else
       timer.setReplication(3);
-    uint64_t idxMax = 1ULL << (nqubits - SIMD_S - _metaData[0].nqubits);
+    uint64_t idxMax = 1ULL << (nQubits - SIMD_S - _metaData[0].nQubits);
 
     real = (real_t*)std::aligned_alloc(64,
-                                        2 * (1ULL << nqubits) * sizeof(real_t));
-    imag = real + (1ULL << nqubits);
+                                        2 * (1ULL << nQubits) * sizeof(real_t));
+    imag = real + (1ULL << nQubits);
 
     rst = timer.timeit([&]() {
-      for (unsigned i = count; i < count + nqubits; ++i) {
+      for (unsigned i = count; i < count + nQubits; ++i) {
 #ifdef USING_ALT_KERNEL
         _metaData[i].func(real, 0, idxMax, _metaData[i].mPtr);
 #else
@@ -51,12 +51,12 @@ int main(int argc, char* *argv) {
 #endif
       }
     });
-    count += nqubits;
+    count += nQubits;
     // rst.display();
     std::free(real);
 
-    std::cerr << "ours-alt," << test_name << "," << nqubits << "," REAL_T ","
-              << std::scientific << std::setprecision(4) << (rst.min / nqubits)
+    std::cerr << "ours-alt," << test_name << "," << nQubits << "," REAL_T ","
+              << std::scientific << std::setprecision(4) << (rst.min / nQubits)
               << "\n";
   }
 #endif

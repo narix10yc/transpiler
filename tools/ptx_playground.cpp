@@ -54,100 +54,100 @@ struct kernel_t {
   CUfunction kernel;
 };
 
-static CircuitGraph& getCircuitH1(CircuitGraph& graph, int nqubits) {
+static CircuitGraph& getCircuitH1(CircuitGraph& graph, int nQubits) {
   auto mat = GateMatrix::FromName("h");
-  for (int q = 0; q < nqubits; q++)
+  for (int q = 0; q < nQubits; q++)
     graph.addGate(mat, {q});
 
   return graph;
 }
 
-static CircuitGraph& getCircuitU1(CircuitGraph& graph, int nqubits) {
+static CircuitGraph& getCircuitU1(CircuitGraph& graph, int nQubits) {
   auto mat = GateMatrix::FromName("u3", {0.92, 0.46, 0.22});
-  for (int q = 0; q < nqubits; q++)
+  for (int q = 0; q < nQubits; q++)
     graph.addGate(mat, {q});
 
   return graph;
 }
 
-static CircuitGraph& getCircuitH2(CircuitGraph& graph, int nqubits) {
+static CircuitGraph& getCircuitH2(CircuitGraph& graph, int nQubits) {
   auto mat = GateMatrix::MatrixH_c;
-  for (int q = 0; q < nqubits; q++) {
+  for (int q = 0; q < nQubits; q++) {
     QuantumGate gate(mat, {q});
-    gate = gate.lmatmul(QuantumGate(mat, {(q + 1) % nqubits}));
+    gate = gate.lmatmul(QuantumGate(mat, {(q + 1) % nQubits}));
     graph.addGate(gate);
   }
 
   return graph;
 }
 
-static CircuitGraph& getCircuitU2(CircuitGraph& graph, int nqubits) {
+static CircuitGraph& getCircuitU2(CircuitGraph& graph, int nQubits) {
   auto mat = GateMatrix::FromName("u3", {0.92, 0.46, 0.22});
-  for (int q = 0; q < nqubits; q++) {
+  for (int q = 0; q < nQubits; q++) {
     QuantumGate gate(mat, {q});
-    gate = gate.lmatmul(QuantumGate(mat, {(q + 1) % nqubits}));
+    gate = gate.lmatmul(QuantumGate(mat, {(q + 1) % nQubits}));
     graph.addGate(gate);
   }
 
   return graph;
 }
 
-static CircuitGraph& getCircuitH3(CircuitGraph& graph, int nqubits) {
+static CircuitGraph& getCircuitH3(CircuitGraph& graph, int nQubits) {
   auto mat = GateMatrix::FromName("h");
-  for (int q = 0; q < nqubits; q++) {
+  for (int q = 0; q < nQubits; q++) {
     QuantumGate gate(mat, {q});
-    gate = gate.lmatmul(QuantumGate(mat, {(q + 1) % nqubits}));
-    gate = gate.lmatmul(QuantumGate(mat, {(q + 2) % nqubits}));
+    gate = gate.lmatmul(QuantumGate(mat, {(q + 1) % nQubits}));
+    gate = gate.lmatmul(QuantumGate(mat, {(q + 2) % nQubits}));
     graph.addGate(gate);
   }
 
   return graph;
 }
 
-static CircuitGraph& getCircuitZ3(CircuitGraph& graph, int nqubits) {
+static CircuitGraph& getCircuitZ3(CircuitGraph& graph, int nQubits) {
   auto mat = GateMatrix::FromName("z");
-  for (int q = 0; q < nqubits; q++) {
+  for (int q = 0; q < nQubits; q++) {
     QuantumGate gate(mat, {q});
-    gate = gate.lmatmul(QuantumGate(mat, {(q + 1) % nqubits}));
-    gate = gate.lmatmul(QuantumGate(mat, {(q + 2) % nqubits}));
+    gate = gate.lmatmul(QuantumGate(mat, {(q + 1) % nQubits}));
+    gate = gate.lmatmul(QuantumGate(mat, {(q + 2) % nQubits}));
     graph.addGate(gate);
   }
 
   return graph;
 }
 
-static CircuitGraph& getCircuitU3(CircuitGraph& graph, int nqubits) {
+static CircuitGraph& getCircuitU3(CircuitGraph& graph, int nQubits) {
   auto mat = GateMatrix::FromName("u3", {0.92, 0.46, 0.22});
-  for (int q = 0; q < nqubits; q++) {
+  for (int q = 0; q < nQubits; q++) {
     QuantumGate gate(mat, {q});
-    gate = gate.lmatmul(QuantumGate(mat, {(q + 1) % nqubits}));
-    gate = gate.lmatmul(QuantumGate(mat, {(q + 2) % nqubits}));
+    gate = gate.lmatmul(QuantumGate(mat, {(q + 1) % nQubits}));
+    gate = gate.lmatmul(QuantumGate(mat, {(q + 2) % nQubits}));
     graph.addGate(gate);
   }
 
   return graph;
 }
 
-static CircuitGraph& getCircuitH4(CircuitGraph& graph, int nqubits) {
+static CircuitGraph& getCircuitH4(CircuitGraph& graph, int nQubits) {
   auto mat = GateMatrix::FromName("h");
-  for (int q = 0; q < nqubits; q++) {
+  for (int q = 0; q < nQubits; q++) {
     QuantumGate gate(mat, {q});
-    gate = gate.lmatmul(QuantumGate(mat, {(q + 1) % nqubits}));
-    gate = gate.lmatmul(QuantumGate(mat, {(q + 2) % nqubits}));
-    gate = gate.lmatmul(QuantumGate(mat, {(q + 3) % nqubits}));
+    gate = gate.lmatmul(QuantumGate(mat, {(q + 1) % nQubits}));
+    gate = gate.lmatmul(QuantumGate(mat, {(q + 2) % nQubits}));
+    gate = gate.lmatmul(QuantumGate(mat, {(q + 3) % nQubits}));
     graph.addGate(gate);
   }
 
   return graph;
 }
 
-static CircuitGraph& getCircuitZ4(CircuitGraph& graph, int nqubits) {
+static CircuitGraph& getCircuitZ4(CircuitGraph& graph, int nQubits) {
   auto mat = GateMatrix::FromName("z");
-  for (int q = 0; q < nqubits; q++) {
+  for (int q = 0; q < nQubits; q++) {
     QuantumGate gate(mat, {q});
-    gate = gate.lmatmul(QuantumGate(mat, {(q + 1) % nqubits}));
-    gate = gate.lmatmul(QuantumGate(mat, {(q + 2) % nqubits}));
-    gate = gate.lmatmul(QuantumGate(mat, {(q + 3) % nqubits}));
+    gate = gate.lmatmul(QuantumGate(mat, {(q + 1) % nQubits}));
+    gate = gate.lmatmul(QuantumGate(mat, {(q + 2) % nQubits}));
+    gate = gate.lmatmul(QuantumGate(mat, {(q + 3) % nQubits}));
     graph.addGate(gate);
   }
 
@@ -171,7 +171,7 @@ int main(int argc, const char** argv) {
 
   auto fusionConfig = CPUFusionConfig::Default;
   // CPUFusionConfig fusionConfig = CPUFusionConfig {
-  //     .maxNQubits = 3,
+  //     .maxnQubits = 3,
   //     .maxOpCount = 9999,
   //     .zeroSkippingThreshold = 1e-8,
   //     .allowMultipleTraverse = true,
@@ -296,10 +296,10 @@ int main(int argc, const char** argv) {
   // calculate the length of matrix array needed
   unsigned lengthMatVec = 0;
   for (const auto& b : allBlocks) {
-    lengthMatVec += (1 << (2 * b->nqubits() + 1));
+    lengthMatVec += (1 << (2 * b->nQubits() + 1));
   }
 
-  size_t lengthSV = 2ULL * (1ULL << graph.nqubits);
+  size_t lengthSV = 2ULL * (1ULL << graph.nQubits);
   scalar_t* d_sv;
   scalar_t* d_mat;
 
@@ -321,7 +321,7 @@ int main(int argc, const char** argv) {
   void* kernel_params[] = {&d_sv, &d_mat};
   // void* kernel_params[] = { &d_sv };
 
-  unsigned nBlocksBits = graph.nqubits - 8;
+  unsigned nBlocksBits = graph.nQubits - 8;
   unsigned nThreads = 1 << 8; // 256
 
   // timedExecute([&]() {
@@ -344,7 +344,7 @@ int main(int argc, const char** argv) {
           // std::cerr << "Launching kernel " << i << "\n";
           CHECK_CUDA_ERR(
               cuLaunchKernel(kernels[i].kernel,
-                             (1 << (nBlocksBits - kernels[i].block->nqubits())),
+                             (1 << (nBlocksBits - kernels[i].block->nQubits())),
                              1, 1,           // grid dim
                              nThreads, 1, 1, // block dim
                              0,              // shared mem sizecd
@@ -364,7 +364,7 @@ int main(int argc, const char** argv) {
           // std::cerr << "Launching kernel " << i << "\n";
           CHECK_CUDA_ERR(
               cuLaunchKernel(kernels[i].kernel,
-                             (1 << (nBlocksBits - kernels[i].block->nqubits())),
+                             (1 << (nBlocksBits - kernels[i].block->nQubits())),
                              1, 1,           // grid dim
                              nThreads, 1, 1, // block dim
                              0,              // shared mem sizecd

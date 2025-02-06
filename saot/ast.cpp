@@ -46,7 +46,7 @@ std::ostream& MeasureStmt::print(std::ostream& os) const {
 }
 
 std::ostream& QuantumCircuit::print(std::ostream& os) const {
-  os << "circuit<nqubits=" << nQubits
+  os << "circuit<nQubits=" << nQubits
      << ", nparams=" << nParams << "> " << name << " {\n";
   for (const auto& s : chains)
     s->print(os);

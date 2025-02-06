@@ -159,7 +159,7 @@ void runExperiment(std::function<CircuitGraph()> f) {
           instructions = fpga::genInstruction(G, getConfig(nLocalQubits));
         },
         "Inst Gen Complete!");
-    printInstructionStatistics(instructions, costConfig, G.nqubits > 22);
+    printInstructionStatistics(instructions, costConfig, G.nQubits > 22);
   }
 }
 

@@ -33,13 +33,13 @@ public:
 };
 
 class NaiveCostModel : public CostModel {
-  int maxNQubits;
+  int maxnQubits;
   int maxOp;
   double zeroTol;
 
 public:
-  NaiveCostModel(int maxNQubits, int maxOp, double zeroTol)
-    : maxNQubits(maxNQubits), maxOp(maxOp), zeroTol(zeroTol) {}
+  NaiveCostModel(int maxnQubits, int maxOp, double zeroTol)
+    : maxnQubits(maxnQubits), maxOp(maxOp), zeroTol(zeroTol) {}
 
   double computeSpeed(
       const QuantumGate& gate, int precision, int nThreads) const override;
@@ -99,7 +99,7 @@ public:
 class PerformanceCache {
 public:
   struct Item {
-    int nqubits;
+    int nQubits;
     int opCount;
     int precision;
     /// This is approximately how many shuffling operations are needed in each
@@ -115,7 +115,7 @@ public:
 
   void runExperiments(
     const CPUKernelGenConfig& cpuConfig,
-    int nqubits, int nThreads, int comprehensiveness);
+    int nQubits, int nThreads, int comprehensiveness);
 
   void saveToCSV(const std::string& fileName) const;
   

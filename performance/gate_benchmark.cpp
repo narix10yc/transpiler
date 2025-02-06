@@ -21,23 +21,23 @@ int main(int argc, char* *argv) {
   timer.setRunTime(0.5);
   // timer.setReplication(3);
   TimingResult rst;
-  real = (real_t*)std::aligned_alloc(64, 2 * (1ULL << DEFAULT_NQUBITS)* 
+  real = (real_t*)std::aligned_alloc(64, 2 * (1ULL << DEFAULT_nQubits)*
                                               sizeof(real_t));
-  imag = real + (1ULL << DEFAULT_NQUBITS);
+  imag = real + (1ULL << DEFAULT_nQubits);
 
 #ifdef MULTI_THREAD_SIMULATION_KERNEL
 #else
   std::cerr << "\n============ New Run ============\n";
-  // for (unsigned nqubits : {8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28}) {
-  for (const int nqubits : {DEFAULT_NQUBITS, DEFAULT_NQUBITS}) {
-    if (nqubits < 20)
+  // for (unsigned nQubits : {8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28}) {
+  for (const int nQubits : {DEFAULT_nQubits, DEFAULT_nQubits}) {
+    if (nQubits < 20)
       timer.setReplication(7);
     else
       timer.setReplication(3);
-    uint64_t idxMax = 1ULL << (nqubits - SIMD_S - _metaData[0].nqubits);
+    uint64_t idxMax = 1ULL << (nQubits - SIMD_S - _metaData[0].nQubits);
 
     rst = timer.timeit([&]() {
-      for (unsigned i = 0; i < nqubits; ++i) {
+      for (unsigned i = 0; i < nQubits; ++i) {
 #ifdef USING_ALT_KERNEL
         _metaData[i].func(real, 0, idxMax, _metaData[i].mPtr);
 #else
@@ -47,8 +47,8 @@ int main(int argc, char* *argv) {
     });
     // rst.display();
 
-    std::cerr << "ours,u2," << nqubits << "," REAL_T "," << std::scientific
-              << std::setprecision(4) << (rst.min / nqubits) << "\n";
+    std::cerr << "ours,u2," << nQubits << "," REAL_T "," << std::scientific
+              << std::setprecision(4) << (rst.min / nQubits) << "\n";
   }
 #endif
 

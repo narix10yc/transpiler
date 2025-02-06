@@ -185,7 +185,7 @@ void runExperiment(std::function<void(CircuitGraph&)> f) {
   // << "\n"; utils::timedExecute([&]() {
   //     instructions = fpga::genInstruction(G, instGen11ConfigUp8);
   // }, "Inst Gen Complete!");
-  // printInstructionStatistics(instructions, costConfig, G.nqubits > 22);
+  // printInstructionStatistics(instructions, costConfig, G.nQubits > 22);
 
   std::cerr << BOLDYELLOW("Test 0: Fusion  ON, InstGen  ON\n");
   f(graph);
@@ -193,28 +193,28 @@ void runExperiment(std::function<void(CircuitGraph&)> f) {
   utils::timedExecute(
       [&]() { instructions = fpga::genInstruction(graph, instGen11Config); },
       "Inst Gen Complete!");
-  printInstructionStatistics(instructions, costConfig, graph.nqubits > 22);
+  printInstructionStatistics(instructions, costConfig, graph.nQubits > 22);
 
   std::cerr << BOLDYELLOW("Test 1: Fusion  ON, InstGen OFF\n");
   f(graph);
   utils::timedExecute(
       [&]() { instructions = fpga::genInstruction(graph, instGen10Config); },
       "Inst Gen Complete!");
-  printInstructionStatistics(instructions, costConfig, graph.nqubits > 22);
+  printInstructionStatistics(instructions, costConfig, graph.nQubits > 22);
 
   std::cerr << BOLDYELLOW("Test 2: Fusion OFF, InstGen  ON\n");
   f(graph);
   utils::timedExecute(
       [&]() { instructions = fpga::genInstruction(graph, instGen01Config); },
       "Inst Gen Complete!");
-  printInstructionStatistics(instructions, costConfig, graph.nqubits > 22);
+  printInstructionStatistics(instructions, costConfig, graph.nQubits > 22);
 
   std::cerr << BOLDYELLOW("Test 3: Fusion OFF, InstGen OFF\n");
   f(graph);
   utils::timedExecute(
       [&]() { instructions = fpga::genInstruction(graph, instGen00Config); },
       "Inst Gen Complete!");
-  printInstructionStatistics(instructions, costConfig, graph.nqubits > 22);
+  printInstructionStatistics(instructions, costConfig, graph.nQubits > 22);
 
   std::cerr << BOLDYELLOW(
     "Test 4: Fusion OFF, InstGen OFF, No gate value tolerance\n");
@@ -222,7 +222,7 @@ void runExperiment(std::function<void(CircuitGraph&)> f) {
   utils::timedExecute(
       [&]() { instructions = fpga::genInstruction(graph, instGenBadConfig); },
       "Inst Gen Complete!");
-  printInstructionStatistics(instructions, costConfig, graph.nqubits > 22);
+  printInstructionStatistics(instructions, costConfig, graph.nQubits > 22);
 }
 
 int main(int argc, const char** argv) {

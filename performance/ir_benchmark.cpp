@@ -23,24 +23,24 @@ int main(int argc, char* *argv) {
   timer.setReplication(15);
   TimingResult rst;
 
-  const std::vector<int> nqubitsVec{6,  8,  10, 12, 14, 16, 18,
+  const std::vector<int> nQubitsVec{6,  8,  10, 12, 14, 16, 18,
                                     20, 22, 24, 26, 28, 30};
   // {24};
 
-  Statevector sv(nqubitsVec.back());
-  std::vector<double> tVec(nqubitsVec.size());
+  Statevector sv(nQubitsVec.back());
+  std::vector<double> tVec(nQubitsVec.size());
 
   std::cerr << YELLOW_FG << "Please check: q0 = " << Q0_VALUE
             << ", s = " << S_VALUE << "\n"
             << RESET;
 
   std::cerr << "=== IR ===\n";
-  for (unsigned i = 0; i < nqubitsVec.size(); i++) {
-    const int nqubits = nqubitsVec[i];
-    // std::cerr << "nqubits = " << nqubits << "\n";
-    timer.setReplication((nqubits >= 28) ? 5 : 15);
+  for (unsigned i = 0; i < nQubitsVec.size(); i++) {
+    const int nQubits = nQubitsVec[i];
+    // std::cerr << "nQubits = " << nQubits << "\n";
+    timer.setReplication((nQubits >= 28) ? 5 : 15);
 
-    const uint64_t idxMax = 1ULL << (nqubits - S_VALUE - 1);
+    const uint64_t idxMax = 1ULL << (nQubits - S_VALUE - 1);
     rst = timer.timeit([&]() {
       _metaData[0].func(sv.real, sv.imag, 0, idxMax, _metaData[0].mPtr);
     });
@@ -53,15 +53,15 @@ int main(int argc, char* *argv) {
   std::cerr << "\n";
 
   std::cerr << "=== QuEST ===\n";
-  for (unsigned i = 0; i < nqubitsVec.size(); i++) {
-    const int nqubits = nqubitsVec[i];
-    // std::cerr << "nqubits = " << nqubits << "\n";
-    timer.setReplication((nqubits >= 28) ? 5 : 15);
+  for (unsigned i = 0; i < nQubitsVec.size(); i++) {
+    const int nQubits = nQubitsVec[i];
+    // std::cerr << "nQubits = " << nQubits << "\n";
+    timer.setReplication((nQubits >= 28) ? 5 : 15);
 
-    const uint64_t idxMax = 1ULL << (nqubits - 4);
+    const uint64_t idxMax = 1ULL << (nQubits - 4);
     rst = timer.timeit([&]() {
       applySingleQubitQuEST<real_t>(sv.real, sv.imag, _metaData[0].mPtr,
-                                    nqubits, Q0_VALUE);
+                                    nQubits, Q0_VALUE);
     });
     // rst.display();
     tVec[i] = rst.min;
@@ -73,14 +73,14 @@ int main(int argc, char* *argv) {
 
   int q0_value = Q0_VALUE;
   std::cerr << "=== Double-loop ===\n";
-  for (unsigned i = 0; i < nqubitsVec.size(); i++) {
-    const int nqubits = nqubitsVec[i];
-    // std::cerr << "nqubits = " << nqubits << "\n";
-    timer.setReplication((nqubits >= 28) ? 5 : 15);
+  for (unsigned i = 0; i < nQubitsVec.size(); i++) {
+    const int nQubits = nQubitsVec[i];
+    // std::cerr << "nQubits = " << nQubits << "\n";
+    timer.setReplication((nQubits >= 28) ? 5 : 15);
 
-    const uint64_t idxMax = 1ULL << (nqubits - 4);
+    const uint64_t idxMax = 1ULL << (nQubits - 4);
     rst = timer.timeit([&]() {
-      applySingleQubit<real_t>(sv.real, sv.imag, _metaData[0].mPtr, nqubits,
+      applySingleQubit<real_t>(sv.real, sv.imag, _metaData[0].mPtr, nQubits,
                                q0_value);
     });
     // rst.display();
@@ -92,15 +92,15 @@ int main(int argc, char* *argv) {
   std::cerr << "\n";
 
   std::cerr << "=== Template ===\n";
-  for (unsigned i = 0; i < nqubitsVec.size(); i++) {
-    const int nqubits = nqubitsVec[i];
-    // std::cerr << "nqubits = " << nqubits << "\n";
-    timer.setReplication((nqubits >= 28) ? 5 : 15);
+  for (unsigned i = 0; i < nQubitsVec.size(); i++) {
+    const int nQubits = nQubitsVec[i];
+    // std::cerr << "nQubits = " << nQubits << "\n";
+    timer.setReplication((nQubits >= 28) ? 5 : 15);
 
-    const uint64_t idxMax = 1ULL << (nqubits - 4);
+    const uint64_t idxMax = 1ULL << (nQubits - 4);
     rst = timer.timeit([&]() {
       applySingleQubitTemplate<real_t, Q0_VALUE>(sv.real, sv.imag,
-                                                 _metaData[0].mPtr, nqubits);
+                                                 _metaData[0].mPtr, nQubits);
     });
     // rst.display();
     tVec[i] = rst.min;

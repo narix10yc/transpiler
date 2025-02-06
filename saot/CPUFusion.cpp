@@ -158,7 +158,7 @@ int startFusion(
   };
 
   // Start with same-row blocks
-  for (int q = qubit+1; q < graph.nqubits; ++q) {
+  for (int q = qubit+1; q < graph.nQubits; ++q) {
     auto* candidateBlock = (*curIt)[q];
     if (candidateBlock == fusedBlock)
       continue;
@@ -257,7 +257,7 @@ void saot::applyCPUGateFusion(
     auto it = graph.tile_begin();
     int q = 0;
     while (it != graph.tile_end()) {
-      for (q = 0; q < graph.nqubits; ++q) {
+      for (q = 0; q < graph.nQubits; ++q) {
         nFused += startFusion(
           graph, config, costModel, maxK, it, q);;
       }

@@ -96,7 +96,7 @@ public:
 
   size_t countGates() const { return getOrderedGates().size(); }
 
-  int nqubits() const { return wires.size(); }
+  int nQubits() const { return wires.size(); }
 
   WireInfo* findWire(int qubit) {
     for (auto& wire : wires) {
@@ -115,7 +115,7 @@ public:
   }
 
   bool hasSameTargets(const GateBlock& other) const {
-    if (nqubits() != other.nqubits())
+    if (nQubits() != other.nQubits())
       return false;
     for (const auto& data : other.wires) {
       if (findWire(data.qubit) == nullptr)
@@ -127,10 +127,10 @@ public:
   void internalFuse() { assert(false && "Not Implemented"); }
 };
 
-
+/// TODO: Refactor to use std::list
 class CircuitGraph {
 private:
-  CircuitGraphContext _context;
+  std::shared_ptr<CircuitGraphContext> _context;
 public:
   using row_t = std::array<GateBlock*, 36>;
   using tile_t = utils::List<row_t>;
@@ -145,17 +145,23 @@ public:
 private:
   tile_t _tile;
 public:
-  int nqubits;
+  int nQubits;
 
-  CircuitGraph() : _context(), _tile(), nqubits(0) {
+  CircuitGraph()
+  : _context(std::make_shared<CircuitGraphContext>()), _tile(), nQubits(0) {
     _tile.emplace_back();
   }
 
-  static CircuitGraph QFTCircuit(int nqubits);
-  static CircuitGraph ALACircuit(int nqubits, int nrounds);
+  CircuitGraph(const CircuitGraph&) = delete;
+  CircuitGraph(CircuitGraph&&) = delete;
+  CircuitGraph& operator=(const CircuitGraph&) = delete;
+  CircuitGraph& operator=(CircuitGraph&&) = delete;
+
+  static CircuitGraph QFTCircuit(int nQubits);
+  static CircuitGraph ALACircuit(int nQubits, int nrounds);
 
   static CircuitGraph GetTestCircuit(
-    const GateMatrix& gateMatrix, int nqubits, int nrounds);
+    const GateMatrix& gateMatrix, int nQubits, int nrounds);
 
   tile_t& tile() { return _tile; }
   const tile_t& tile() const { return _tile; }
@@ -163,16 +169,16 @@ public:
   tile_iter_t tile_begin() { return _tile.begin(); }
   tile_iter_t tile_end() { return _tile.end(); }
 
-  CircuitGraphContext& getContext() { return _context; }
+  // CircuitGraphContext& getContext() { return _context; }
 
   template<typename... Args>
   GateNode* acquireGateNodeForward(Args&&... args) {
-    return _context.gateNodePool.acquire(std::forward<Args>(args)...);
+    return _context->gateNodePool.acquire(std::forward<Args>(args)...);
   }
 
   template<typename... Args>
   GateBlock* acquireGateBlockForward(Args&&... args) {
-    return _context.gateBlockPool.acquire(std::forward<Args>(args)...);
+    return _context->gateBlockPool.acquire(std::forward<Args>(args)...);
   }
 
   /// Acquire a \c GateBlock by fusing two blocks together. Notice that
@@ -181,7 +187,7 @@ public:
 
   void releaseGateNode(GateNode* gateNode) {
     assert(gateNode != nullptr && "Releasing null gateNode");
-    _context.gateNodePool.release(gateNode);
+    _context->gateNodePool.release(gateNode);
   }
 
   /// Release the memory of the \c GateBlock
@@ -189,15 +195,15 @@ public:
   /// object will also be released.
   void releaseGateBlock(GateBlock* gateBlock) {
     assert(gateBlock != nullptr && "Releasing null gateBlock");
-    _context.gateBlockPool.release(gateBlock);
+    _context->gateBlockPool.release(gateBlock);
   }
 
   bool isManaging(const GateNode* gateNode) const {
-    return _context.gateNodePool.isInPool(gateNode);
+    return _context->gateNodePool.isInPool(gateNode);
   }
 
   bool isManaging(const GateBlock* gateBlock) const {
-    return _context.gateBlockPool.isInPool(gateBlock);
+    return _context->gateBlockPool.isInPool(gateBlock);
   }
 
   /// Append a quantum gate to the tile. Quantum gate must be managed by

@@ -44,7 +44,7 @@ enum GateKind : int {
   gU5q = 5,
   gU6q = 6,
   gU7q = 7,
-  // to be defined by nqubits directly
+  // to be defined by nQubits directly
 };
 
 GateKind String2GateKind(const std::string& s);
@@ -197,7 +197,7 @@ public:
   }
 
   // @brief Get number of qubits
-  int nqubits() const;
+  int nQubits() const;
 
   std::ostream& printCMat(std::ostream& os) const {
     const auto* cMat = getConstantMatrix();
@@ -258,39 +258,39 @@ public:
 
   QuantumGate(const GateMatrix& gateMatrix, int q)
       : qubits({q}), gateMatrix(gateMatrix) {
-    assert(gateMatrix.nqubits() == 1);
+    assert(gateMatrix.nQubits() == 1);
   }
 
   QuantumGate(GateMatrix&& gateMatrix, int q)
     : qubits({q}), gateMatrix(gateMatrix) {
-    assert(gateMatrix.nqubits() == 1);
+    assert(gateMatrix.nQubits() == 1);
   }
 
   QuantumGate(const GateMatrix& gateMatrix, std::initializer_list<int> qubits)
       : qubits(qubits), gateMatrix(gateMatrix) {
-    assert(gateMatrix.nqubits() == qubits.size());
+    assert(gateMatrix.nQubits() == qubits.size());
     sortQubits();
   }
 
   QuantumGate(GateMatrix&& gateMatrix, std::initializer_list<int> qubits)
     : qubits(qubits), gateMatrix(gateMatrix) {
-    assert(gateMatrix.nqubits() == qubits.size());
+    assert(gateMatrix.nQubits() == qubits.size());
     sortQubits();
   }
 
   QuantumGate(const GateMatrix& gateMatrix, const llvm::SmallVector<int>& qubits)
     : qubits(qubits), gateMatrix(gateMatrix) {
-    assert(gateMatrix.nqubits() == qubits.size());
+    assert(gateMatrix.nQubits() == qubits.size());
     sortQubits();
   }
 
   QuantumGate(GateMatrix&& gateMatrix, const llvm::SmallVector<int>& qubits)
     : qubits(qubits), gateMatrix(gateMatrix) {
-    assert(gateMatrix.nqubits() == qubits.size());
+    assert(gateMatrix.nQubits() == qubits.size());
     sortQubits();
   }
 
-  int nqubits() const { return qubits.size(); }
+  int nQubits() const { return qubits.size(); }
 
   std::string getName() const { return GateKind2String(gateMatrix.gateKind); }
 
@@ -305,7 +305,7 @@ public:
   }
 
   bool checkConsistency() const {
-    return (gateMatrix.nqubits() == qubits.size());
+    return (gateMatrix.nQubits() == qubits.size());
   }
 
   std::ostream& displayInfo(std::ostream& os) const;
@@ -348,11 +348,11 @@ public:
   template<typename... Ints>
   static QuantumGate RandomUnitary(Ints... qubits) {
     static_assert((std::is_integral_v<Ints> && ...));
-    constexpr auto nqubits = sizeof...(Ints);
+    constexpr auto nQubits = sizeof...(Ints);
     std::vector<int> qubitsCopy{qubits...};
     std::ranges::sort(qubitsCopy);
     return QuantumGate(
-      GateMatrix(utils::randomUnitaryMatrix(1U << nqubits)),
+      GateMatrix(utils::randomUnitaryMatrix(1U << nQubits)),
       llvm::SmallVector<int>(qubitsCopy.begin(), qubitsCopy.end()));
   }
 };

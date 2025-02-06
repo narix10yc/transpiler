@@ -55,7 +55,7 @@
 //   else
 //     kernelSS << realTy << "* sv, ";
 //
-//   kernelSS << "const int nqubits";
+//   kernelSS << "const int nQubits";
 //   if (config.multiThreaded)
 //     kernelSS << ", const int nthreads";
 //   kernelSS << ") {\n";
@@ -73,7 +73,7 @@
 //
 //   // apply each gate kernel
 //   kernelSS << "  for (const auto& data : _metaData) {\n"
-//            << "    idxMax = 1ULL << (nqubits - data.nqubits - SIMD_S);\n";
+//            << "    idxMax = 1ULL << (nQubits - data.nQubits - SIMD_S);\n";
 //
 //   std::string sv_arg = (isSepKernel) ? "re, im" : "sv";
 //   if (config.multiThreaded)
@@ -101,7 +101,7 @@
 //     metaDataSS << realTy << "*, ";
 //   metaDataSS << "uint64_t, uint64_t, const void*);\n"
 //              << "  unsigned opCount;\n"
-//              << "  unsigned nqubits;\n";
+//              << "  unsigned nQubits;\n";
 //   if (config.installTimer)
 //     metaDataSS << "  const char* info;\n";
 //   metaDataSS << "  const " << realTy << "* mPtr;\n"
@@ -147,7 +147,7 @@
 //     // metaData
 //     metaDataSS << " { "
 //                << "&" << kernelName << ", " << block->quantumGate->opCount()
-//                << ", " << block->nqubits() << ", ";
+//                << ", " << block->nQubits() << ", ";
 //
 //     if (config.installTimer) {
 //       std::stringstream infoSS;
@@ -187,7 +187,7 @@
 //              "#define MULTI_THREAD_SIMULATION_KERNEL\n\n";
 //
 //   hFile << "#include <cstdint>\n"
-//         << "#define DEFAULT_NQUBITS " << graph.nqubits << "\n"
+//         << "#define DEFAULT_nQubits " << graph.nQubits << "\n"
 //         << "#define SIMD_S " << config.irConfig.simd_s << "\n"
 //         << externSS.str() << "\n"
 //         << metaDataSS.str() << "\n"
@@ -217,7 +217,7 @@
 //
 // // write metadata to a C header file
 // void writeMetadataHeaderFile(const std::vector<GateBlock*>& allBlocks,
-//                              int nqubits, const std::string& fileName,
+//                              int nQubits, const std::string& fileName,
 //                              const CodeGeneratorCPUConfig& config) {
 //   bool isSepKernel =
 //       (config.irConfig.ampFormat == IRGeneratorConfig::SepFormat);
@@ -236,7 +236,7 @@
 //   else
 //     kernelSS << realTy << "* sv, ";
 //
-//   kernelSS << "const int nqubits";
+//   kernelSS << "const int nQubits";
 //   if (config.multiThreaded)
 //     kernelSS << ", const int nthreads";
 //   kernelSS << ") {\n";
@@ -254,7 +254,7 @@
 //
 //   // apply each gate kernel
 //   kernelSS << "  for (const auto& data : _metaData) {\n"
-//            << "    idxMax = 1ULL << (nqubits - data.nqubits - SIMD_S);\n";
+//            << "    idxMax = 1ULL << (nQubits - data.nQubits - SIMD_S);\n";
 //
 //   std::string sv_arg = (isSepKernel) ? "re, im" : "sv";
 //   if (config.multiThreaded)
@@ -282,7 +282,7 @@
 //     metaDataSS << realTy << "*, ";
 //   metaDataSS << "uint64_t, uint64_t, const void*);\n"
 //              << "  unsigned opCount;\n"
-//              << "  unsigned nqubits;\n";
+//              << "  unsigned nQubits;\n";
 //   if (config.installTimer)
 //     metaDataSS << "  const char* info;\n";
 //   metaDataSS << "  const " << realTy << "* mPtr;\n"
@@ -301,7 +301,7 @@
 //     // metaData
 //     metaDataSS << " { "
 //                << "&" << kernelName << ", " << block->quantumGate->opCount()
-//                << ", " << block->nqubits() << ", ";
+//                << ", " << block->nQubits() << ", ";
 //
 //     if (config.installTimer) {
 //       std::stringstream infoSS;
@@ -341,7 +341,7 @@
 //              "#define MULTI_THREAD_SIMULATION_KERNEL\n\n";
 //
 //   hFile << "#include <cstdint>\n"
-//         << "#define DEFAULT_NQUBITS " << nqubits << "\n"
+//         << "#define DEFAULT_nQubits " << nQubits << "\n"
 //         << "#define SIMD_S " << config.irConfig.simd_s << "\n"
 //         << externSS.str() << "\n"
 //         << metaDataSS.str() << "\n"
@@ -469,7 +469,7 @@
 //
 //   if (nthreads == 1) {
 //     // no multi-threading
-//     writeMetadataHeaderFile(allBlocks, graph.nqubits,
+//     writeMetadataHeaderFile(allBlocks, graph.nQubits,
 //                             dir + "/kernel_metadata.h", config);
 //     double irGenTime;
 //     if (config.dumpIRToMultipleFiles)
@@ -506,7 +506,7 @@
 //   }
 //
 //   // main thread writes metadata
-//   writeMetadataHeaderFile(allBlocks, graph.nqubits, dir + "/kernel_metadata.h",
+//   writeMetadataHeaderFile(allBlocks, graph.nQubits, dir + "/kernel_metadata.h",
 //                           config);
 //
 //   for (auto& t : threads)

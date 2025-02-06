@@ -23,7 +23,7 @@ int main(int argc, char* *argv) {
   if (argc > 1)
     nthreads = std::stoi(argv[1]);
 
-  Statevector sv(DEFAULT_NQUBITS);
+  Statevector sv(DEFAULT_nQubits);
 
   // sv.real[0] = 1.0;
   sv.randomize(nthreads);
@@ -33,7 +33,7 @@ int main(int argc, char* *argv) {
 #ifdef MULTI_THREAD_SIMULATION_KERNEL
   std::cerr << "Multi-threading enabled.\n";
 
-  simulation_kernel(sv.real, sv.imag, DEFAULT_NQUBITS, nthreads);
+  simulation_kernel(sv.real, sv.imag, DEFAULT_nQubits, nthreads);
 
   std::cerr << "Norm after: " << sv.normSquared(nthreads) << "\n";
 

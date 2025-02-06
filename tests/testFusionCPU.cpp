@@ -59,16 +59,16 @@ static void internal() {
     kernelMgrBeforeFusion.initJIT();
     kernelMgrAfterFusion.initJIT();
 
-    utils::StatevectorAlt<double> sv0(graph.nqubits, simd_s);
-    utils::StatevectorAlt<double> sv1(graph.nqubits, simd_s);
+    utils::StatevectorAlt<double> sv0(graph.nQubits, simd_s);
+    utils::StatevectorAlt<double> sv1(graph.nQubits, simd_s);
     sv0.randomize();
     sv1 = sv0;
 
     for (const auto& k : kernelMgrBeforeFusion.kernels())
-      kernelMgrBeforeFusion.applyCPUKernel(sv0.data, sv0.nqubits, k.llvmFuncName);
+      kernelMgrBeforeFusion.applyCPUKernel(sv0.data, sv0.nQubits, k.llvmFuncName);
 
     for (const auto& k : kernelMgrAfterFusion.kernels())
-      kernelMgrAfterFusion.applyCPUKernel(sv1.data, sv1.nqubits, k.llvmFuncName);
+      kernelMgrAfterFusion.applyCPUKernel(sv1.data, sv1.nQubits, k.llvmFuncName);
 
     suite.assertClose(utils::fidelity(sv0, sv1), 1.0,
       p.path().filename(), GET_INFO(), 1e-8);

@@ -18,7 +18,7 @@ int CircuitGraphContext::GateBlockCount = 0;
 GateNode::GateNode(
     std::shared_ptr<QuantumGate> gate, const CircuitGraph& graph)
   : id(CircuitGraphContext::GateNodeCount++), quantumGate(gate) {
-  connections.reserve(quantumGate->nqubits());
+  connections.reserve(quantumGate->nQubits());
   for (const auto q : quantumGate->qubits) {
     connections.emplace_back(q, nullptr, nullptr);
     auto it = graph.tile().tail_iter();
@@ -38,7 +38,7 @@ GateBlock::GateBlock()
 
 GateBlock::GateBlock(GateNode* gateNode)
   : id(CircuitGraphContext::GateBlockCount++), quantumGate(gateNode->quantumGate) {
-  wires.reserve(quantumGate->nqubits());
+  wires.reserve(quantumGate->nQubits());
   for (const auto& data : gateNode->connections)
     wires.emplace_back(data.qubit, gateNode, gateNode);
 }
@@ -55,11 +55,11 @@ void GateNode::connect(GateNode* rhsGate, int q) {
 }
 
 //
-// CircuitGraph CircuitGraph::QFTCircuit(int nqubits) {
+// CircuitGraph CircuitGraph::QFTCircuit(int nQubits) {
 //   CircuitGraph graph;
-//   for (int q = 0; q < nqubits; ++q) {
+//   for (int q = 0; q < nQubits; ++q) {
 //     graph.addGate(std::make_unique<QuantumGate>(GateMatrix::MatrixH_c, q));
-//     for (int l = q + 1; l < nqubits; ++l) {
+//     for (int l = q + 1; l < nQubits; ++l) {
 //       double angle = M_PI_2 * std::pow(2.0, q - l);
 //       graph.addGate(std::make_unique<QuantumGate>(
 //         GateMatrix::FromName("cp", {angle}), std::initializer_list<int>{q, l}));
@@ -68,22 +68,22 @@ void GateNode::connect(GateNode* rhsGate, int q) {
 //   return graph;
 // }
 //
-// CircuitGraph CircuitGraph::ALACircuit(int nqubits, int nrounds) {
+// CircuitGraph CircuitGraph::ALACircuit(int nQubits, int nrounds) {
 //   assert(0 && "Not Implemented");
 //   CircuitGraph graph;
 //   return graph;
 // }
 
 // CircuitGraph CircuitGraph::GetTestCircuit(
-//     const GateMatrix& gateMatrix, int nqubits, int nrounds) {
+//     const GateMatrix& gateMatrix, int nQubits, int nrounds) {
 //   CircuitGraph graph;
-//   auto nqubitsGate = gateMatrix.nqubits();
+//   auto nQubitsGate = gateMatrix.nQubits();
 //
 //   for (int r = 0; r < nrounds; r++) {
-//     for (int q = 0; q < nqubits; q++) {
+//     for (int q = 0; q < nQubits; q++) {
 //       graph.addGate(std::make_unique<QuantumGate>(
 //         gateMatrix,
-//         std::initializer_list<int>{q, (q + 1) % nqubits, (q + 2) % nqubits});
+//         std::initializer_list<int>{q, (q + 1) % nQubits, (q + 2) % nQubits});
 //     }
 //   }
 //   return graph;
@@ -94,7 +94,7 @@ GateBlock* CircuitGraph::acquireGateBlock(
   auto quantumGate = std::make_shared<QuantumGate>(
     lhsBlock->quantumGate->lmatmul(*rhsBlock->quantumGate));
 
-  auto* gateBlock = _context.gateBlockPool.acquire();
+  auto* gateBlock = _context->gateBlockPool.acquire();
   gateBlock->quantumGate = quantumGate;
 
   // setup wires
@@ -156,10 +156,10 @@ CircuitGraph::tile_iter_t CircuitGraph::insertBlock(
 
 void CircuitGraph::appendGate(std::shared_ptr<QuantumGate> quantumGate) {
   assert(quantumGate != nullptr);
-  // update nqubits
+  // update nQubits
   for (const auto& q : quantumGate->qubits) {
-    if (q >= nqubits)
-      nqubits = q + 1;
+    if (q >= nQubits)
+      nQubits = q + 1;
   }
 
   // create gate and setup connections
@@ -253,7 +253,7 @@ void CircuitGraph::eraseEmptyRows() {
   auto it = _tile.cbegin();
   while (it != nullptr) {
     bool empty = true;
-    for (unsigned q = 0; q < nqubits; q++) {
+    for (unsigned q = 0; q < nQubits; q++) {
       if ((*it)[q] != nullptr) {
         empty = false;
         break;
@@ -270,7 +270,7 @@ void CircuitGraph::squeeze() {
   eraseEmptyRows();
   auto it = _tile.begin();
   while (it != nullptr) {
-    for (unsigned q = 0; q < nqubits; q++) {
+    for (unsigned q = 0; q < nQubits; q++) {
       if ((*it)[q])
         repositionBlockUpward(it, q);
     }
@@ -282,7 +282,7 @@ void CircuitGraph::squeeze() {
 std::ostream& CircuitGraph::print(std::ostream& os, int verbose) const {
   if (_tile.empty())
     return os << "<empty tile>\n";
-  int width = static_cast<int>(std::log10(_context.GateBlockCount) + 1);
+  int width = static_cast<int>(std::log10(_context->GateBlockCount) + 1);
   if ((width & 1) == 0)
     width++;
 
@@ -292,7 +292,7 @@ std::ostream& CircuitGraph::print(std::ostream& os, int verbose) const {
   for (const auto& row : _tile) {
     if (verbose > 1)
       os << &row << ": ";
-    for (unsigned q = 0; q < nqubits; q++) {
+    for (unsigned q = 0; q < nQubits; q++) {
       if (const auto* block = row[q]; block != nullptr)
         os << std::setw(width) << std::setfill('0') << block->id << " ";
       else
@@ -322,14 +322,14 @@ std::ostream& CircuitGraph::print(std::ostream& os, int verbose) const {
 // }
 //
 // std::vector<int> CircuitGraph::getBlockSizes() const {
-//   std::vector<int> sizes(nqubits + 1, 0);
+//   std::vector<int> sizes(nQubits + 1, 0);
 //   const auto allBlocks = getAllBlocks();
 //   int largestSize = 0;
 //   for (const auto* b : allBlocks) {
-//     auto blockNQubits = b->nqubits();
-//     sizes[blockNQubits]++;
-//     if (blockNQubits > largestSize)
-//       largestSize = blockNQubits;
+//     auto blocknQubits = b->nQubits();
+//     sizes[blocknQubits]++;
+//     if (blocknQubits > largestSize)
+//       largestSize = blocknQubits;
 //   }
 //   sizes.resize(largestSize + 1);
 //   return sizes;
@@ -339,16 +339,16 @@ std::ostream& CircuitGraph::print(std::ostream& os, int verbose) const {
 //   const auto allBlocks = getAllBlocks();
 //   int largestSize = 0;
 //   for (const auto* b : allBlocks) {
-//     auto blockNQubits = b->nqubits();
-//     if (blockNQubits > largestSize)
-//       largestSize = blockNQubits;
+//     auto blocknQubits = b->nQubits();
+//     if (blocknQubits > largestSize)
+//       largestSize = blocknQubits;
 //   }
 //   std::vector<std::vector<int>> hist(largestSize + 1);
 //   for (unsigned q = 1; q < largestSize + 1; q++)
 //     hist[q].resize(q, 0);
 //
 //   for (const auto* b : allBlocks) {
-//     const int q = b->nqubits();
+//     const int q = b->nQubits();
 //     int catagory = 0;
 //     int opCount = b->quantumGate->opCount();
 //     while ((1 << (2 * catagory + 3)) < opCount)
@@ -375,10 +375,10 @@ std::ostream& CircuitGraph::print(std::ostream& os, int verbose) const {
 //
 //   if (verbose > 3) {
 //     os << "- Block Sizes Count:\n";
-//     std::vector<std::vector<int>> vec(nqubits + 1);
+//     std::vector<std::vector<int>> vec(nQubits + 1);
 //     const auto allBlocks = getAllBlocks();
 //     for (const auto* block : allBlocks)
-//       vec[block->nqubits()].push_back(block->id);
+//       vec[block->nQubits()].push_back(block->id);
 //
 //     for (unsigned q = 1; q < vec.size(); q++) {
 //       if (vec[q].empty())

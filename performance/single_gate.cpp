@@ -23,7 +23,7 @@ int main(int argc, char* *argv) {
   assert(argc > 1);
   unsigned targetQ = std::stoi(argv[1]);
 
-  Statevector sv(DEFAULT_NQUBITS);
+  Statevector sv(DEFAULT_nQubits);
   Timer timer;
   // timer.setRunTime(0.5);
   timer.setReplication(7);
@@ -43,7 +43,7 @@ int main(int argc, char* *argv) {
   int warmUpNThread = nthreads[nthreads.size() - 1];
   std::cerr << "Warm up run (" << warmUpNThread << "-thread):\n";
   rst = timer.timeit([&]() {
-    simulation_kernel(sv.real, sv.imag, sv.nqubits, warmUpNThread);
+    simulation_kernel(sv.real, sv.imag, sv.nQubits, warmUpNThread);
   });
   rst.display();
 
@@ -51,7 +51,7 @@ int main(int argc, char* *argv) {
     int nthread = nthreads[i];
     std::cerr << nthread << "-thread:\n";
     rst = timer.timeit(
-        [&]() { simulation_kernel(sv.real, sv.imag, sv.nqubits, nthread); });
+        [&]() { simulation_kernel(sv.real, sv.imag, sv.nQubits, nthread); });
     rst.display();
     tarr[i] = rst.min;
   }
@@ -62,7 +62,7 @@ int main(int argc, char* *argv) {
 
 #else
   const uint64_t idxMax =
-      1ULL << (DEFAULT_NQUBITS - S_VALUE - _metaData[targetQ].nqubits);
+      1ULL << (DEFAULT_nQubits - S_VALUE - _metaData[targetQ].nQubits);
 
   rst = timer.timeit([&]() {
 #ifdef USING_ALT_KERNEL

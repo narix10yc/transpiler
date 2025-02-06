@@ -7,9 +7,9 @@ namespace simulation::tplt {
 
 template<typename real_t>
 void applySingleQubit(real_t* real, real_t* imag, const real_t* mat,
-                      size_t nqubits, size_t k) {
+                      size_t nQubits, size_t k) {
   size_t K = 1ULL << k;
-  size_t N = 1ULL << nqubits;
+  size_t N = 1ULL << nQubits;
   real_t x_real, x_imag, y_real, y_imag;
 
   for (size_t t = 0; t < N; t += (2 * K)) {
@@ -32,10 +32,10 @@ void applySingleQubit(real_t* real, real_t* imag, const real_t* mat,
 
 template<typename real_t>
 void applySingleQubitQuEST(real_t* real, real_t* imag, const real_t* mat,
-                           size_t nqubits, size_t k) {
+                           size_t nQubits, size_t k) {
   size_t K = 1ULL << k;
   size_t sizeBlock = 2 * K;
-  size_t N = 1ULL << nqubits;
+  size_t N = 1ULL << nQubits;
   real_t x_real, x_imag, y_real, y_imag;
   size_t thisBlock, alpha, beta;
 
@@ -57,9 +57,9 @@ void applySingleQubitQuEST(real_t* real, real_t* imag, const real_t* mat,
 
 template<typename real_t, size_t k>
 void applySingleQubitTemplate(real_t* real, real_t* imag, const real_t* mat,
-                              size_t nqubits) {
+                              size_t nQubits) {
   size_t K = 1ULL << k;
-  size_t N = 1ULL << nqubits;
+  size_t N = 1ULL << nQubits;
   real_t x_real, x_imag, y_real, y_imag;
 
   for (size_t t = 0; t < N; t += (2 * K)) {
@@ -104,9 +104,9 @@ void applySingleQubitTemplate(real_t* real, real_t* imag, const real_t* mat,
 // void applyTwoQubitQuEST(real_t* real,
 //                         real_t* imag,
 //                         const ComplexMatrix4<real_t>& mat,
-//                         size_t nqubits,
+//                         size_t nQubits,
 //                         size_t k, size_t l) {
-//     size_t nTasks = 1ULL << (nqubits - 2);
+//     size_t nTasks = 1ULL << (nQubits - 2);
 //     size_t idx00, idx01, idx10, idx11;
 
 //     real_t re00, re01, re10, re11, im00, im01, im10, im11;

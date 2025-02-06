@@ -46,10 +46,10 @@ int main(int argc, const char** argv) {
   auto kernels = kernelMgr.collectCPUGraphKernels("myGraph");
   std::cerr << kernels.size() << " kernel found\n";
 
-  utils::StatevectorAlt<double> sv(graph.nqubits, kernelGenConfig.simd_s);
+  utils::StatevectorAlt<double> sv(graph.nQubits, kernelGenConfig.simd_s);
   sv.randomize();
   for (const auto* kernel : kernels) {
-    kernelMgr.applyCPUKernel(sv.data, sv.nqubits, *kernel);
+    kernelMgr.applyCPUKernel(sv.data, sv.nQubits, *kernel);
   }
 
   return 0;

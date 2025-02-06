@@ -154,7 +154,7 @@ GateBlock* tryCrossWireFuse(CircuitGraph& graph, const tile_iter_t& tileIt,
   if (block0 == nullptr)
     return nullptr;
 
-  for (unsigned q1 = 0; q1 < graph.nqubits; q1++) {
+  for (unsigned q1 = 0; q1 < graph.nQubits; q1++) {
     auto* block1 = (*tileIt)[q1];
     auto* fusedBlock = computeCandidate(config, block0, block1);
     if (fusedBlock == nullptr)
@@ -189,7 +189,7 @@ void saot::applyFPGAGateFusion(
     while (tileIt.next() != tile.end()) {
       // same wire (connected consecutive) fuse
       q = 0;
-      while (q < graph.nqubits) {
+      while (q < graph.nQubits) {
         if ((*tileIt)[q] == nullptr) {
           q++;
           continue;
@@ -206,7 +206,7 @@ void saot::applyFPGAGateFusion(
       }
       // cross wire (same row) fuse
       q = 0;
-      while (q < graph.nqubits) {
+      while (q < graph.nQubits) {
         auto* fusedBlock = tryCrossWireFuse(graph, tileIt, q, config);
         if (fusedBlock == nullptr)
           q++;

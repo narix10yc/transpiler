@@ -22,7 +22,7 @@ using Statevector = utils::statevector::StatevectorSep<real_t>;
 // #include <immintrin.h>
 
 int main(int argc, char* *argv) {
-  Statevector sv(DEFAULT_NQUBITS);
+  Statevector sv(DEFAULT_nQubits);
   Timer timer;
   // timer.setRunTime(0.5);
   TimingResult rst;
@@ -40,9 +40,9 @@ int main(int argc, char* *argv) {
   std::cerr << "Warm up run (" << warmUpNThread << "-thread):\n";
   rst = timer.timeit([&]() {
 #ifdef USING_ALT_KERNEL
-    simulation_kernel(sv.data, sv.nqubits, warmUpNThread);
+    simulation_kernel(sv.data, sv.nQubits, warmUpNThread);
 #else
-    simulation_kernel(sv.real, sv.imag, sv.nqubits, warmUpNThread);
+    simulation_kernel(sv.real, sv.imag, sv.nQubits, warmUpNThread);
 #endif
   });
   rst.display();
@@ -52,9 +52,9 @@ int main(int argc, char* *argv) {
     std::cerr << nthread << "-thread:\n";
     rst = timer.timeit([&]() {
 #ifdef USING_ALT_KERNEL
-      simulation_kernel(sv.data, sv.nqubits, nthread);
+      simulation_kernel(sv.data, sv.nQubits, nthread);
 #else
-      simulation_kernel(sv.real, sv.imag, sv.nqubits, nthread);
+      simulation_kernel(sv.real, sv.imag, sv.nQubits, nthread);
 #endif
     });
     rst.display();
@@ -69,9 +69,9 @@ int main(int argc, char* *argv) {
   timer.setReplication(15);
   rst = timer.timeit([&]() {
 #ifdef USING_ALT_KERNEL
-    simulation_kernel(sv.data, sv.nqubits);
+    simulation_kernel(sv.data, sv.nQubits);
 #else
-    simulation_kernel(sv.real, sv.imag, sv.nqubits);
+    simulation_kernel(sv.real, sv.imag, sv.nQubits);
 #endif
   });
   rst.display();

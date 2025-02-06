@@ -26,7 +26,7 @@ void KernelManager::applyCPUKernel(
 void KernelManager::applyCPUKernel(
     void* sv, int nQubits, const KernelInfo& kernel) {
   assert(kernel.executable);
-  int tmp = nQubits - kernel.gate.nqubits() - kernel.simd_s;
+  int tmp = nQubits - kernel.gate.nQubits() - kernel.simd_s;
   assert(tmp > 0);
   uint64_t idxEnd = 1ULL << tmp;
   const void* pMat = nullptr;
@@ -49,7 +49,7 @@ void KernelManager::applyCPUKernelMultithread(
 
   auto f = cantFail(llvmJIT->lookup(funcName)).toPtr<CPU_KERNEL_TYPE>();
 
-  int tmp = nQubits - kernelIt->gate.nqubits() - kernelIt->simd_s;
+  int tmp = nQubits - kernelIt->gate.nQubits() - kernelIt->simd_s;
   assert(tmp > 0);
   uint64_t nTasks = 1ULL << tmp;
   const void* pMat = nullptr;
