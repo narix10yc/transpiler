@@ -12,12 +12,12 @@ using namespace IOColor;
 using namespace saot;
 
 // static member
-int CircuitGraph::GateNodeCount = 0;
-int CircuitGraph::GateBlockCount = 0;
+int CircuitGraphContext::GateNodeCount = 0;
+int CircuitGraphContext::GateBlockCount = 0;
 
 GateNode::GateNode(
     std::shared_ptr<QuantumGate> gate, const CircuitGraph& graph)
-  : id(CircuitGraph::GateNodeCount++), quantumGate(gate) {
+  : id(CircuitGraphContext::GateNodeCount++), quantumGate(gate) {
   connections.reserve(quantumGate->nqubits());
   for (const auto q : quantumGate->qubits) {
     connections.emplace_back(q, nullptr, nullptr);
@@ -33,11 +33,11 @@ GateNode::GateNode(
 }
 
 GateBlock::GateBlock()
-  : id(CircuitGraph::GateBlockCount++), quantumGate(nullptr) {
+  : id(CircuitGraphContext::GateBlockCount++), quantumGate(nullptr) {
 }
 
 GateBlock::GateBlock(GateNode* gateNode)
-  : id(CircuitGraph::GateBlockCount++), quantumGate(gateNode->quantumGate) {
+  : id(CircuitGraphContext::GateBlockCount++), quantumGate(gateNode->quantumGate) {
   wires.reserve(quantumGate->nqubits());
   for (const auto& data : gateNode->connections)
     wires.emplace_back(data.qubit, gateNode, gateNode);
@@ -282,7 +282,7 @@ void CircuitGraph::squeeze() {
 std::ostream& CircuitGraph::print(std::ostream& os, int verbose) const {
   if (_tile.empty())
     return os << "<empty tile>\n";
-  int width = static_cast<int>(std::log10(GateBlockCount) + 1);
+  int width = static_cast<int>(std::log10(_context.GateBlockCount) + 1);
   if ((width & 1) == 0)
     width++;
 

@@ -7,6 +7,7 @@
 namespace utils {
 
 /// Simple implementation of object pooling.
+/// TODO: it should be more efficient if availables is a list of T
 template<typename T, size_t block_size = 128>
 class ObjectPool {
   PODVector<T*> objHolders;

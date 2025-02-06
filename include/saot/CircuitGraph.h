@@ -145,9 +145,6 @@ public:
 private:
   tile_t _tile;
 public:
-  static int GateNodeCount;
-  static int GateBlockCount;
-
   int nqubits;
 
   CircuitGraph() : _context(), _tile(), nqubits(0) {

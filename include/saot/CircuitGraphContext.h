@@ -10,6 +10,9 @@ class GateBlock;
 
 class CircuitGraphContext {
 public:
+  static int GateNodeCount;
+  static int GateBlockCount;
+
   /// Memory management
   utils::ObjectPool<GateNode> gateNodePool;
   utils::ObjectPool<GateBlock> gateBlockPool;
