@@ -185,15 +185,13 @@ public:
   /// \c lhsBlock is applied `before` \c rhsBlock.
   GateBlock* acquireGateBlock(GateBlock* lhsBlock, GateBlock* rhsBlock);
 
-  void releaseGateNode(GateNode* gateNode) {
+  void releaseGateNode(GateNode* gateNode) const {
     assert(gateNode != nullptr && "Releasing null gateNode");
     _context->gateNodePool.release(gateNode);
   }
 
   /// Release the memory of the \c GateBlock
-  /// \note If \c gateBlock is a singleton, the associated \c QuantumGate
-  /// object will also be released.
-  void releaseGateBlock(GateBlock* gateBlock) {
+  void releaseGateBlock(GateBlock* gateBlock) const {
     assert(gateBlock != nullptr && "Releasing null gateBlock");
     _context->gateBlockPool.release(gateBlock);
   }

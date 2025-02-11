@@ -201,9 +201,10 @@ int startFusion(
 
   // Check benefit
   double oldTime = 0.0;
-  for (const auto& tentative : fusedBlocks)
+  for (const auto& [block, iter] : fusedBlocks) {
     oldTime += 1.0 / costModel->computeSpeed(
-      *tentative.block->quantumGate, config.precision, config.nThreads);
+      *block->quantumGate, config.precision, config.nThreads);
+  }
   double newTime = 1.0 / costModel->computeSpeed(
     *fusedBlock->quantumGate, config.precision, config.nThreads);
   double benefit = oldTime / newTime - 1.0;
@@ -227,20 +228,20 @@ int startFusion(
       assert((*fusedIt)[q] == fusedBlock);
       (*fusedIt)[q] = nullptr;
     }
-    for (const auto& tentative : fusedBlocks) {
-      for (const auto& q : tentative.block->quantumGate->qubits)
-        (*tentative.iter)[q] = tentative.block;
+    for (const auto& [block, iter] : fusedBlocks) {
+      for (const auto& q : block->quantumGate->qubits)
+        (*iter)[q] = block;
     }
     LLVM_DEBUG(
       graph.print(std::cerr << "-- After Rejection --\n", 2) << "\n";
     );
 
-    // graph.releaseGateBlock(curBlock);
+    graph.releaseGateBlock(fusedBlock);
     return 0;
   }
   // accept this fusion
-  // for (const auto& tentative : fusedBlocks)
-    // graph.releaseGateBlock(tentative.block);
+  for (const auto& [block, iter] : fusedBlocks)
+    graph.releaseGateBlock(block);
   LLVM_DEBUG(std::cerr << "Accepted\n";);
   return fusedBlocks.size() - 1;
 }

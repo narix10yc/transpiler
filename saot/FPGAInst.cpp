@@ -17,8 +17,8 @@ inline bool isRealOnlyGate(const QuantumGate& gate, double reTol) {
 } // namespace
 
 FPGAGateCategory
-saot::fpga::getFPGAGateCategory(const QuantumGate& gate,
-                                const FPGAGateCategoryTolerance &tolerances) {
+saot::fpga::getFPGAGateCategory(
+    const QuantumGate& gate, const FPGAGateCategoryTolerance &tolerances) {
   switch (gate.gateMatrix.gateKind) {
   case gX:
     return FPGAGateCategory::SingleQubit | FPGAGateCategory::NonComp |

@@ -13,7 +13,6 @@ namespace saot {
 
 class CircuitGraph;
 
-
 struct KernelInfo {
   enum KernelType {
     CPU_Gate, CPU_Measure, GPU_Gate, GPU_Measure
@@ -68,7 +67,9 @@ public:
 
   const std::vector<KernelInfo>& kernels() const { return _kernels; }
 
-  void initJIT(llvm::OptimizationLevel optLevel = llvm::OptimizationLevel::O0);
+  void initJIT(
+      llvm::OptimizationLevel optLevel = llvm::OptimizationLevel::O0,
+      bool useLazyJIT = false);
 
   bool isJITed() const {
     assert(llvmContext == nullptr ^ llvmModule != nullptr);
@@ -101,7 +102,10 @@ public:
   void applyCPUKernel(void* sv, int nQubits, const std::string& funcName);
 
   void applyCPUKernelMultithread(
-    void* sv, int nQubits, const std::string& funcName, int nThreads);
+      void* sv, int nQubits, const KernelInfo& kernelInfo, int nThreads);
+
+  void applyCPUKernelMultithread(
+      void* sv, int nQubits, const std::string& funcName, int nThreads);
 };
 
 

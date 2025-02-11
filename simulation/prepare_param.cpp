@@ -7,7 +7,7 @@ using namespace simulation;
 using namespace saot;
 
 std::pair<Value*, Value*>
-IRGenerator::generatePolynomial(const Polynomial& P, ParamValueFeeder &feeder) {
+IRGenerator::generatePolynomial(const Polynomial& P, ParamValueFeeder& feeder) {
   P.print(std::cerr << "generating polynomial: ") << "\n";
   const auto generateMonomial = [&](const Monomial& M) {
     std::pair<Value*, Value*> resultV{

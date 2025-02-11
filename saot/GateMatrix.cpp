@@ -1,6 +1,5 @@
 #include "saot/QuantumGate.h"
 #include "utils/iocolor.h"
-#include "utils/utils.h"
 #include <cmath>
 #include <iomanip>
 

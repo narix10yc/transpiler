@@ -29,8 +29,9 @@ struct CPUArgs {
 inline Function* cpuGetFunctionDeclaration(
     IRBuilder<>& B, Module& M, const std::string& funcName,
     const CPUKernelGenConfig& config, CPUArgs& args) {
-  auto argType = SmallVector<Type*>{
-    B.getPtrTy(), B.getInt64Ty(), B.getInt64Ty(), B.getPtrTy()};
+  SmallVector<Type*> argType {
+    B.getPtrTy(), B.getInt64Ty(), B.getInt64Ty(), B.getPtrTy()
+  };
 
   auto* funcTy = FunctionType::get(B.getVoidTy(), argType, false);
   auto* func = Function::Create(funcTy, Function::ExternalLinkage, funcName, M);

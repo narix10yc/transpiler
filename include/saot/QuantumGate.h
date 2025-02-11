@@ -5,13 +5,10 @@
 #include "saot/Polynomial.h"
 #include "saot/ScalarKind.h"
 #include "utils/square_matrix.h"
+#include "utils/PODVariant.h"
 
 #include <array>
 #include <vector>
-#include "utils/PODArray.h"
-#include "utils/PODVariant.h"
-
-#include <variant>
 
 namespace saot {
 

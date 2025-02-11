@@ -9,7 +9,7 @@
 using namespace saot;
 using namespace llvm;
 
-void KernelManager::initJIT(OptimizationLevel optLevel) {
+void KernelManager::initJIT(OptimizationLevel optLevel, bool useLazyJIT) {
   assert(!isJITed() && "Already initialized");
 
   if (optLevel != OptimizationLevel::O0) {
@@ -37,19 +37,28 @@ void KernelManager::initJIT(OptimizationLevel optLevel) {
   InitializeNativeTargetAsmParser();
   InitializeNativeTargetAsmPrinter();
 
-  orc::LLLazyJITBuilder jitBuilder;
-  jitBuilder.setNumCompileThreads(std::thread::hardware_concurrency());
-
-  auto lazyJIT = cantFail(jitBuilder.create());
-  cantFail(lazyJIT->addLazyIRModule(
-    orc::ThreadSafeModule(std::move(llvmModule), std::move(llvmContext))));
+  if (useLazyJIT) {
+  	orc::LLLazyJITBuilder jitBuilder;
+  	jitBuilder.setNumCompileThreads(std::thread::hardware_concurrency());
+  	auto lazyJIT = cantFail(jitBuilder.create());
+  	cantFail(lazyJIT->addIRModule(
+      orc::ThreadSafeModule(std::move(llvmModule), std::move(llvmContext))));
+    this->llvmJIT = std::move(lazyJIT);
+  } else {
+    orc::LLJITBuilder eagerJitBuilder;
+  	eagerJitBuilder.setNumCompileThreads(std::thread::hardware_concurrency());
+  	auto eagerJIT = cantFail(eagerJitBuilder.create());
+    cantFail(eagerJIT->addIRModule(
+      orc::ThreadSafeModule(std::move(llvmModule), std::move(llvmContext))));
+	this->llvmJIT = std::move(eagerJIT);
+  }
 
   this->llvmContext = nullptr;
   this->llvmModule = nullptr;
-  this->llvmJIT = std::move(lazyJIT);
 }
 
 std::ostream& CPUKernelGenConfig::displayInfo(std::ostream& os) const {
+  os << std::scientific;
   os << CYAN("=== CPU Kernel Gen Config ===\n")
      << "simd_s:    " << simd_s << "\n"
      << "precision:  " << precision << "\n"

@@ -14,12 +14,10 @@ void KernelManager::applyCPUKernel(
     });
 
   assert(kernelIt != _kernels.end());
-
   if (!kernelIt->executable) {
     kernelIt->executable =
       cantFail(llvmJIT->lookup(funcName)).toPtr<CPU_KERNEL_TYPE>();
   }
-
   applyCPUKernel(sv, nQubits, *kernelIt);
 }
 
@@ -36,6 +34,32 @@ void KernelManager::applyCPUKernel(
 }
 
 void KernelManager::applyCPUKernelMultithread(
+    void* sv, int nQubits, const KernelInfo& kernel, int nThreads) {
+  assert(isJITed() && "Must initialize JIT session "
+                      "before calling KernelManager::applyCPUKernel");
+
+  int tmp = nQubits - kernel.gate.nQubits() - kernel.simd_s;
+  assert(tmp > 0);
+  uint64_t nTasks = 1ULL << tmp;
+  const void* pMat = nullptr;
+  if (kernel.gate.gateMatrix.getConstantMatrix() != nullptr)
+    pMat = kernel.gate.gateMatrix.getConstantMatrix()->data();
+
+  std::vector<std::thread> threads;
+  threads.reserve(nThreads);
+  const uint64_t nTasksPerThread = nTasks / nThreads;
+  for (unsigned tIdx = 0; tIdx < nThreads - 1; ++tIdx) {
+    threads.emplace_back(kernel.executable, sv,
+      nTasksPerThread * tIdx, nTasksPerThread * (tIdx + 1), pMat);
+  }
+  threads.emplace_back(kernel.executable, sv,
+    nTasksPerThread * (nThreads - 1), nTasks, pMat);
+
+  for (auto& t : threads)
+    t.join();
+}
+
+void KernelManager::applyCPUKernelMultithread(
     void* sv, int nQubits, const std::string& funcName, int nThreads) {
   assert(isJITed() && "Must initialize JIT session "
                       "before calling KernelManager::applyCPUKernel");
@@ -46,36 +70,22 @@ void KernelManager::applyCPUKernelMultithread(
     });
 
   assert(kernelIt != _kernels.end());
-
-  auto f = cantFail(llvmJIT->lookup(funcName)).toPtr<CPU_KERNEL_TYPE>();
-
-  int tmp = nQubits - kernelIt->gate.nQubits() - kernelIt->simd_s;
-  assert(tmp > 0);
-  uint64_t nTasks = 1ULL << tmp;
-  const void* pMat = nullptr;
-  if (kernelIt->gate.gateMatrix.getConstantMatrix() != nullptr)
-    pMat = kernelIt->gate.gateMatrix.getConstantMatrix()->data();
-
-  std::vector<std::thread> threads;
-  threads.reserve(nThreads);
-  const uint64_t nTasksPerThread = nTasks / nThreads;
-  for (unsigned tIdx = 0; tIdx < nThreads - 1; ++tIdx) {
-    threads.emplace_back(f, sv,
-      nTasksPerThread * tIdx, nTasksPerThread * (tIdx + 1), pMat);
+  if (!kernelIt->executable) {
+    kernelIt->executable =
+      cantFail(llvmJIT->lookup(funcName)).toPtr<CPU_KERNEL_TYPE>();
   }
-  threads.emplace_back(f, sv,
-    nTasksPerThread * (nThreads - 1), nTasks, pMat);
-
-  for (auto& t : threads)
-    t.join();
+  applyCPUKernelMultithread(sv, nQubits, *kernelIt, nThreads);
 }
 
 
 namespace {
+  /// mangled name is formed by 'G' + <length of graphName> + graphName
+  /// @return mangled name
   std::string mangleGraphName(const std::string& graphName) {
     return "G" + std::to_string(graphName.length()) + graphName;
   }
 
+  /// @return demangled name
   std::string demangleGraphBlockName(const std::string& mangledName) {
     const auto* p = mangledName.data();
     const auto* e = mangledName.data() + mangledName.size();
