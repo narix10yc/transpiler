@@ -1,9 +1,12 @@
 #include <iostream>
 #include <list>
 
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+
+#define PRINT_SIZE_OF(X) std::cout << "sizeof(" TOSTRING(X) ") = " << sizeof(X) << std::endl;
+
 int main() {
-  std::cout << "Size of std::list<int>::iterator: "
-            << sizeof(std::list<int>::iterator) << " bytes\n";
-  std::cout << "Size of a pointer: " << sizeof(void*) << " bytes\n";
+  PRINT_SIZE_OF(std::function<void()>);
   return 0;
 }

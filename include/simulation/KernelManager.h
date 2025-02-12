@@ -17,11 +17,12 @@ struct KernelInfo {
   enum KernelType {
     CPU_Gate, CPU_Measure, GPU_Gate, GPU_Measure
   };
+  std::function<CPU_KERNEL_TYPE> executable;
+
   KernelType type;
   int precision;
   std::string llvmFuncName;
   QuantumGate gate;
-  std::function<CPU_KERNEL_TYPE> executable;
   // extra information
   int simd_s;
   int opCount;
@@ -66,7 +67,16 @@ public:
     , _kernels() {}
 
   const std::vector<KernelInfo>& kernels() const { return _kernels; }
+  std::vector<KernelInfo>& kernels() { return _kernels; }
 
+  /// Initialize JIT session. When succeeds, \c llvmContext and \c llvmContext
+  /// will be null, and \c llvmJIT will be non-null. This function can only be
+  /// called once and cannot be undone.
+  /// \param optLevel Apply LLVM optimization passes.
+  /// \param useLazyJIT If true, use lazy compilation. This means all functions
+  /// defined inside \c llvmModule only gets compiled just before being called.
+  /// If set to false, all functions inside \c llvmModule are compiled
+  /// immediately.
   void initJIT(
       llvm::OptimizationLevel optLevel = llvm::OptimizationLevel::O0,
       bool useLazyJIT = false);
@@ -96,13 +106,20 @@ public:
 
   std::vector<KernelInfo*> collectCPUGraphKernels(const std::string& graphName);
 
+  void ensureExecutable(KernelInfo& kernel) const {
+    if (!kernel.executable) {
+      kernel.executable =
+        cantFail(llvmJIT->lookup(kernel.llvmFuncName)).toPtr<CPU_KERNEL_TYPE>();
+    }
+  }
+
   void applyCPUKernel(
-      void* sv, int nQubits, const KernelInfo& kernelInfo);
+      void* sv, int nQubits, KernelInfo& kernelInfo);
 
   void applyCPUKernel(void* sv, int nQubits, const std::string& funcName);
 
   void applyCPUKernelMultithread(
-      void* sv, int nQubits, const KernelInfo& kernelInfo, int nThreads);
+      void* sv, int nQubits, KernelInfo& kernelInfo, int nThreads);
 
   void applyCPUKernelMultithread(
       void* sv, int nQubits, const std::string& funcName, int nThreads);

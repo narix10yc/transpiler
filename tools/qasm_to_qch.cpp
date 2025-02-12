@@ -22,7 +22,7 @@ static const auto& ArgIsDirectory =
 
 
 enum ConversionResult {
-  ResultSuccess, ResultCannotOpenInput, ResultCannotOpenOutput
+  ResultSuccess, ErrCannotOpenInput, ErrCannotOpenOutput
 };
 
 [[nodiscard]] ConversionResult convert(
@@ -32,7 +32,7 @@ enum ConversionResult {
   std::ifstream inFile(inName);
   if (!inFile.is_open()) {
     std::cerr << "Could not open input file '" << inName << "'.\n";
-    return ResultCannotOpenInput;
+    return ErrCannotOpenInput;
   }
   openqasm::Parser qasmParser(inName, 0);
   auto qasmRoot = qasmParser.parse();
@@ -45,7 +45,7 @@ enum ConversionResult {
   std::ofstream outFile(outName);
   if (!outFile.is_open()) {
     std::cerr << "Could not open output file '" << outName << "'.\n";
-    return ResultCannotOpenOutput;
+    return ErrCannotOpenOutput;
   }
   qc.print(outFile);
   outFile.close();

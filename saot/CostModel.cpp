@@ -232,8 +232,6 @@ void PerformanceCache::runExperiments(
 
   std::vector<QuantumGate> gates;
   gates.reserve(3 * nQubits);
-  std::vector<std::unique_ptr<KernelInfo>> kernelInfos;
-  kernelInfos.reserve(3 * nQubits);
 
   utils::timedExecute([&]() {
     std::random_device _rd;
@@ -301,8 +299,10 @@ void PerformanceCache::runExperiments(
       do { c = distri(gen); } while (c == b || c == a);
       do { d = distri(gen); } while (d == c || d == b || d == a);
       gates.emplace_back(QuantumGate::RandomUnitary(a, b, c, d));
-}
+    }
   }, "Generate gates for experiments");
+
+  std::cerr << gates.size() << " gates generated.\n";
 
   utils::timedExecute([&]() {
     int i = 0;
@@ -310,8 +310,12 @@ void PerformanceCache::runExperiments(
       kernelMgr.genCPUKernel(cpuConfig, gate, "gate_" + std::to_string(i++));
   }, "Code Generation");
 
+  utils::timedExecute([&]() {
+    kernelMgr.initJIT(llvm::OptimizationLevel::O1, /* useLazyJIT */ false);
+  }, "Initialize JIT Engine");
 
-  timeit::Timer timer;
+
+  timeit::Timer timer(3, 2);
   timeit::TimingResult tr;
 
   utils::StatevectorAlt<double> sv(nQubits, cpuConfig.simd_s);
@@ -319,24 +323,23 @@ void PerformanceCache::runExperiments(
     sv.randomize();
   }, "Initialize statevector");
 
-  for (unsigned i = 0, s = kernelInfos.size(); i < s; ++i) {
-    const auto& kernel = kernelInfos[i];
+  for (auto& kernel : kernelMgr.kernels()) {
     if (nThreads == 1)
       tr = timer.timeit([&]() {
-        kernelMgr.applyCPUKernel(sv.data, sv.nQubits, kernel->llvmFuncName);
+        kernelMgr.applyCPUKernel(sv.data, sv.nQubits, kernel);
       });
     else
       tr = timer.timeit([&]() {
         kernelMgr.applyCPUKernelMultithread(
-          sv.data, sv.nQubits, kernel->llvmFuncName, nThreads);
+          sv.data, sv.nQubits, kernel, nThreads);
       });
-    auto memSpd = calculateMemUpdateSpeed(nQubits, kernel->precision, tr.min);
+    auto memSpd = calculateMemUpdateSpeed(nQubits, kernel.precision, tr.min);
     items.emplace_back(
-      kernel->gate.nQubits(), kernel->opCount, 64,
-      kernel->nLoBits, nThreads, memSpd);
+      kernel.gate.nQubits(), kernel.opCount, 64,
+      kernel.nLoBits, nThreads, memSpd);
     std::cerr << "Gate @ ";
     utils::printArray(
-      std::cerr, ArrayRef(kernel->gate.qubits.begin(), kernel->gate.qubits.size()));
+      std::cerr, ArrayRef(kernel.gate.qubits.begin(), kernel.gate.qubits.size()));
     std::cerr << ": " << memSpd << " GiBps\n";
   }
 }
@@ -398,7 +401,7 @@ PerformanceCache PerformanceCache::LoadFromCSV(const std::string& fileName) {
   const auto bufferLength = file.tellg();
   file.seekg(0, file.beg);
   auto* bufferBegin = new char[bufferLength];
-  auto* bufferEnd = bufferBegin + bufferLength;
+  const auto* bufferEnd = bufferBegin + bufferLength;
   file.read(bufferBegin, bufferLength);
   file.close();
   const auto* curPtr = bufferBegin;

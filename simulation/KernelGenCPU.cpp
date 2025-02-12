@@ -556,11 +556,11 @@ KernelManager& KernelManager::genCPUKernel(
       ++opCount;
   }
   _kernels.emplace_back(
+    std::function<CPU_KERNEL_TYPE>(),
     KernelInfo::CPU_Gate,
     config.precision,
     std::string(llvmFuncName.begin(), llvmFuncName.end()),
     gate,
-    std::function<CPU_KERNEL_TYPE>(),
     config.simd_s,
     2 * opCount,
     lk);

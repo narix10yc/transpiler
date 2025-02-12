@@ -30,7 +30,7 @@ void TimingResult::calcStats() {
     med = tArr[0];
     return;
   }
-  std::sort(tArr.begin(), tArr.end());
+  std::ranges::sort(tArr);
   min = tArr[0] / repeat;
   med = getMedian(tArr, 0, tArr.size()) / repeat;
   q1 = getMedian(tArr, 0, tArr.size() / 2) / repeat;
@@ -59,10 +59,11 @@ std::string TimingResult::timeToString(double t, int n_sig_dig) {
   int precision =
       n_sig_dig - 1 - static_cast<int>(std::floor(std::log10(timeValue)));
 
-  std::ostringstream stream;
-  stream << std::fixed << std::setprecision(precision) << timeValue << " "
-         << unit;
-  return stream.str();
+  std::ostringstream ss;
+
+  ss << std::fixed << std::setprecision(precision) << timeValue << " "
+     << unit;
+  return ss.str();
 }
 
 std::ostream& TimingResult::display(int n_sig_dig, std::ostream& os) const {
@@ -85,69 +86,87 @@ std::string TimingResult::raw_string() const {
   return ss.str();
 }
 
-TimingResult Timer::timeit(std::function<void()> method,
-                           std::function<void()> setup,
-                           std::function<void()> teardown) {
+TimingResult Timer::timeit(
+    const std::function<void()>& method,
+    const std::function<void()>& setup,
+    const std::function<void()>& teardown) const {
   using Clock = std::chrono::high_resolution_clock;
   using TimePoint = std::chrono::time_point<Clock>;
   using Duration = std::chrono::duration<double>;
 
-  unsigned repeat = 1;
-  std::vector<double> tarr(replication);
+  int repeat = 1;
+  std::vector<double> tArr(replication);
   TimePoint tic, toc;
+  TimePoint totalT0, totalT1;
   double dur;
 
   if (verbose > 0) {
-    std::cerr << "Warm-up time: " << warmupTime << " s;\n";
-    std::cerr << "Running time: " << runTime << " s;\n";
+    std::cerr << "Desired warm-up/run time: "
+              << warmupTime << "/" << runTime << " s;\n";
+    std::cerr << "Number of Replication(s): " << replication << "\n";
   }
 
   setup();
 
+  if (verbose > 0)
+    totalT0 = Clock::now();
   // warmup
   tic = Clock::now();
   method();
   toc = Clock::now();
   dur = Duration(toc - tic).count();
 
-  unsigned r0 = 0;
-  if (dur > warmupTime) {
-    tarr[0] = dur;
+  // if running method() once takes longer than runTime, we will skip warmup
+  // and record this experiment run as one of the final results
+  int r0 = 0;
+  if (dur > runTime) {
     r0 = 1;
-  } else {
-    repeat = static_cast<double>(repeat) * warmupTime / dur + 1;
+    tArr[0] = dur;
+  }
+
+  // warm-up loop
+  while (dur < warmupTime) {
+    repeat *= 2;
     tic = Clock::now();
-    for (unsigned i = 0; i < repeat; ++i)
+    for (unsigned r = 0; r < repeat; ++r)
       method();
     toc = Clock::now();
     dur = Duration(toc - tic).count();
   }
 
   // main loop
-  repeat = static_cast<double>(repeat) * runTime / dur + 1;
-  tarr[0] *= repeat;
+  if (r0 == 0)
+    repeat = static_cast<double>(repeat) * runTime / dur + 1;
+  else
+    tArr[0] *= repeat;
   for (unsigned r = r0; r < replication; ++r) {
     tic = Clock::now();
     for (unsigned i = 0; i < repeat; ++i)
       method();
     toc = Clock::now();
     dur = Duration(toc - tic).count();
-    tarr[r] = dur;
+    tArr[r] = dur;
+  }
+  if (verbose > 0) {
+    totalT1 = Clock::now();
+    std::cerr << "Actual running time: "
+              << Duration(totalT1 - totalT0).count() << " s;\n";
   }
 
   teardown();
 
-  return TimingResult(repeat, replication, tarr);
+  return TimingResult(repeat, replication, tArr);
 }
 
-TimingResult Timer::timeitFixedRepeat(std::function<void()> method, int _repeat,
-                                      std::function<void()> setup,
-                                      std::function<void()> teardown) const {
+TimingResult Timer::timeitFixedRepeat(
+    const std::function<void()>& method, int _repeat,
+    const std::function<void()>& setup,
+    const std::function<void()>& teardown) const {
   using Clock = std::chrono::high_resolution_clock;
   using TimePoint = std::chrono::time_point<Clock>;
   using Duration = std::chrono::duration<double>;
 
-  std::vector<double> tarr(replication);
+  std::vector<double> tArr(replication);
   TimePoint tic, toc;
   double dur;
 
@@ -159,9 +178,9 @@ TimingResult Timer::timeitFixedRepeat(std::function<void()> method, int _repeat,
       method();
     toc = Clock::now();
     dur = Duration(toc - tic).count();
-    tarr[r] = dur;
+    tArr[r] = dur;
   }
 
   teardown();
-  return TimingResult(_repeat, replication, tarr);
+  return TimingResult(_repeat, replication, tArr);
 }

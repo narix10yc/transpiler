@@ -276,7 +276,7 @@ int QuantumGate::opCount(double zeroTol) const {
     return opCount_c(*cMat, zeroTol);
   return opCount_p(gateMatrix.getParametrizedMatrix(), zeroTol);
 
-  assert(false && "opCount Not Implemented");
+  assert(false && "opCount only implemented for c and p matrices");
 
   return -1;
 }

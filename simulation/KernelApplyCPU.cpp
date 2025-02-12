@@ -7,23 +7,20 @@ void KernelManager::applyCPUKernel(
     void* sv, int nQubits, const std::string& funcName) {
   assert(isJITed() && "Must initialize JIT session "
                       "before calling KernelManager::applyCPUKernel");
-
-  auto kernelIt = std::ranges::find_if(_kernels,
-    [&funcName](const KernelInfo& k) {
-      return k.llvmFuncName == funcName;
-    });
-
-  assert(kernelIt != _kernels.end());
-  if (!kernelIt->executable) {
-    kernelIt->executable =
-      cantFail(llvmJIT->lookup(funcName)).toPtr<CPU_KERNEL_TYPE>();
+  for (auto& kernel : _kernels) {
+    if (kernel.llvmFuncName == funcName) {
+      applyCPUKernel(sv, nQubits, kernel);
+      return;
+    }
   }
-  applyCPUKernel(sv, nQubits, *kernelIt);
+  llvm_unreachable("KernelManager::applyCPUKernel: kernel not found by name");
 }
 
 void KernelManager::applyCPUKernel(
-    void* sv, int nQubits, const KernelInfo& kernel) {
-  assert(kernel.executable);
+    void* sv, int nQubits, KernelInfo& kernel) {
+  assert(isJITed() && "Must initialize JIT session "
+                    "before calling KernelManager::applyCPUKernel");
+  ensureExecutable(kernel);
   int tmp = nQubits - kernel.gate.nQubits() - kernel.simd_s;
   assert(tmp > 0);
   uint64_t idxEnd = 1ULL << tmp;
@@ -34,10 +31,10 @@ void KernelManager::applyCPUKernel(
 }
 
 void KernelManager::applyCPUKernelMultithread(
-    void* sv, int nQubits, const KernelInfo& kernel, int nThreads) {
+    void* sv, int nQubits, KernelInfo& kernel, int nThreads) {
   assert(isJITed() && "Must initialize JIT session "
                       "before calling KernelManager::applyCPUKernel");
-
+  ensureExecutable(kernel);
   int tmp = nQubits - kernel.gate.nQubits() - kernel.simd_s;
   assert(tmp > 0);
   uint64_t nTasks = 1ULL << tmp;
@@ -48,13 +45,13 @@ void KernelManager::applyCPUKernelMultithread(
   std::vector<std::thread> threads;
   threads.reserve(nThreads);
   const uint64_t nTasksPerThread = nTasks / nThreads;
+
   for (unsigned tIdx = 0; tIdx < nThreads - 1; ++tIdx) {
     threads.emplace_back(kernel.executable, sv,
       nTasksPerThread * tIdx, nTasksPerThread * (tIdx + 1), pMat);
   }
   threads.emplace_back(kernel.executable, sv,
     nTasksPerThread * (nThreads - 1), nTasks, pMat);
-
   for (auto& t : threads)
     t.join();
 }
@@ -63,18 +60,14 @@ void KernelManager::applyCPUKernelMultithread(
     void* sv, int nQubits, const std::string& funcName, int nThreads) {
   assert(isJITed() && "Must initialize JIT session "
                       "before calling KernelManager::applyCPUKernel");
-
-  auto kernelIt = std::ranges::find_if(_kernels,
-    [&funcName](const KernelInfo& k) {
-      return k.llvmFuncName == funcName;
-    });
-
-  assert(kernelIt != _kernels.end());
-  if (!kernelIt->executable) {
-    kernelIt->executable =
-      cantFail(llvmJIT->lookup(funcName)).toPtr<CPU_KERNEL_TYPE>();
+  for (auto& kernel : _kernels) {
+    if (kernel.llvmFuncName == funcName) {
+      applyCPUKernelMultithread(sv, nQubits, kernel, nThreads);
+      return;
+    }
   }
-  applyCPUKernelMultithread(sv, nQubits, *kernelIt, nThreads);
+  llvm_unreachable("KernelManager::applyCPUKernelMultithread: "
+                   "kernel not found by name");
 }
 
 

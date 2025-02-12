@@ -60,18 +60,18 @@ public:
   }
 
   TimingResult timeit(
-      std::function<void()> method,
-      std::function<void()> setup,
-      std::function<void()> teardown);
+      const std::function<void()>& method,
+      const std::function<void()>& setup,
+      const std::function<void()>& teardown) const;
 
-  TimingResult timeit(const std::function<void()> &method) {
+  TimingResult timeit(const std::function<void()>& method) const {
     return timeit(method, []() {}, []() {});
   }
 
   TimingResult timeitFixedRepeat(
-      std::function<void()> method, int _repeat,
-      std::function<void()> setup = []() {},
-      std::function<void()> teardown = []() {}) const;
+      const std::function<void()>& method, int _repeat,
+      const std::function<void()>& setup = []() {},
+      const std::function<void()>& teardown = []() {}) const;
 };
 
 } // end namespace timeit

@@ -12,6 +12,10 @@ using namespace llvm;
 void KernelManager::initJIT(OptimizationLevel optLevel, bool useLazyJIT) {
   assert(!isJITed() && "Already initialized");
 
+  InitializeNativeTarget();
+  InitializeNativeTargetAsmParser();
+  InitializeNativeTargetAsmPrinter();
+
   if (optLevel != OptimizationLevel::O0) {
     // ChatGPT:
     // These must be declared in this order so that they are destroyed in the
@@ -33,24 +37,28 @@ void KernelManager::initJIT(OptimizationLevel optLevel, bool useLazyJIT) {
     MPM.run(*llvmModule, MAM);
   }
 
-  InitializeNativeTarget();
-  InitializeNativeTargetAsmParser();
-  InitializeNativeTargetAsmPrinter();
 
   if (useLazyJIT) {
+    // lazy JIT engine
   	orc::LLLazyJITBuilder jitBuilder;
   	jitBuilder.setNumCompileThreads(std::thread::hardware_concurrency());
   	auto lazyJIT = cantFail(jitBuilder.create());
   	cantFail(lazyJIT->addIRModule(
       orc::ThreadSafeModule(std::move(llvmModule), std::move(llvmContext))));
     this->llvmJIT = std::move(lazyJIT);
+//    for (auto& kernel : _kernels)
+//      ensureExecutable(kernel);
   } else {
+    // eager JIT engine
     orc::LLJITBuilder eagerJitBuilder;
   	eagerJitBuilder.setNumCompileThreads(std::thread::hardware_concurrency());
   	auto eagerJIT = cantFail(eagerJitBuilder.create());
     cantFail(eagerJIT->addIRModule(
       orc::ThreadSafeModule(std::move(llvmModule), std::move(llvmContext))));
-	this->llvmJIT = std::move(eagerJIT);
+	  this->llvmJIT = std::move(eagerJIT);
+    // eager compile all kernels
+    for (auto& kernel : _kernels)
+      ensureExecutable(kernel);
   }
 
   this->llvmContext = nullptr;

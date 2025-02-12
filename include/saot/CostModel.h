@@ -107,6 +107,7 @@ public:
     /// TODO: Not in use yet
     int irregularity;
     int nThreads;
+    /// memory update speed in Gigabytes per second (GiBps)
     double memUpdateSpeed;
   };
 
