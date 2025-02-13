@@ -19,7 +19,7 @@ void KernelManager::applyCPUKernel(
 void KernelManager::applyCPUKernel(
     void* sv, int nQubits, KernelInfo& kernel) {
   assert(isJITed() && "Must initialize JIT session "
-                    "before calling KernelManager::applyCPUKernel");
+                      "before calling KernelManager::applyCPUKernel");
   ensureExecutable(kernel);
   int tmp = nQubits - kernel.gate.nQubits() - kernel.simd_s;
   assert(tmp > 0);
@@ -107,7 +107,6 @@ KernelManager& KernelManager::genCPUFromGraph(
     genCPUKernel(
       config, *block->quantumGate,mangledName + std::to_string(block->id));
   }
-
   return *this;
 }
 

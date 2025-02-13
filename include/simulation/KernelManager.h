@@ -84,15 +84,15 @@ public:
   const std::vector<KernelInfo>& kernels() const { return _kernels; }
   std::vector<KernelInfo>& kernels() { return _kernels; }
 
-  /// Initialize JIT session. When succeeds, \c llvmContext and \c llvmContext
-  /// will be null, and \c llvmJIT will be non-null. This function can only be
+  /// Initialize JIT session. When succeeds, \c llvmContextModulePairs
+  /// will be cleared and \c llvmJIT will be non-null. This function can only be
   /// called once and cannot be undone.
   /// \param nThreads number of threads to use.
   /// \param optLevel Apply LLVM optimization passes.
-  /// \param useLazyJIT If true, use lazy compilation. This means all functions
-  /// defined inside \c llvmModule only gets compiled just before being called.
-  /// If set to false, all functions inside \c llvmModule are compiled
-  /// immediately.
+  /// \param useLazyJIT If true, use lazy compilation features provided by LLVM
+  /// ORC JIT engine. This means all kernels only get compiled just before being
+  /// called. If set to false, all kernels are ready to be executed when this
+  /// function returns (good for benchmarks).
   void initJIT(
       int nThreads = 1,
       llvm::OptimizationLevel optLevel = llvm::OptimizationLevel::O0,
@@ -127,6 +127,8 @@ public:
     // Note: We do not actually need the lock here
     // as it is expected (at least now) each KernelInfo is accesses by a unique
     // thread
+    // TODO: we could inline this function into \c initJIT. Maybe introduce a
+    // lock inside \c initJIT
     {
       std::lock_guard<std::mutex> lock(mtx);
       if (kernel.executable)

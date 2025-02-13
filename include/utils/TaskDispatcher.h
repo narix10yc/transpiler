@@ -3,11 +3,12 @@
 
 #include <queue>
 #include <thread>
-#include <cassert>
 
 namespace utils {
 
-// Thread-safe task dispatcher
+/// Thread-safe task dispatcher
+/// TODO: We should separate syncing and joining the threads.
+/// Could introduce another status called "Synced"
 class TaskDispatcher {
   std::queue<std::function<void()>> tasks;
   std::vector<std::thread> workers;

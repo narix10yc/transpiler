@@ -30,6 +30,9 @@ void KernelManager::initJIT(
     utils::TaskDispatcher dispatcher(nThreads);
     for (auto& [ctx, mod] :
         std::ranges::views::reverse(llvmContextModulePairs)) {
+
+      // TODO: For some reason, MPM cannot be reused. For now we construct it
+      // afresh for every module. Overhead is okay though.
       dispatcher.enqueue([&]() {
         // ChatGPT:
         // These must be declared in this order so that they are destroyed in
