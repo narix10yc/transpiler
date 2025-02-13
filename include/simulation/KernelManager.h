@@ -53,16 +53,31 @@ struct CPUKernelGenConfig {
 };
 
 class KernelManager {
-  std::unique_ptr<llvm::LLVMContext> llvmContext;
-  std::unique_ptr<llvm::Module> llvmModule;
+  struct ContextModulePair {
+    std::unique_ptr<llvm::LLVMContext> llvmContext;
+    std::unique_ptr<llvm::Module> llvmModule;
+  };
+
+  std::vector<ContextModulePair> llvmContextModulePairs;
 
   std::unique_ptr<llvm::orc::LLJIT> llvmJIT;
 
   std::vector<KernelInfo> _kernels;
+
+  std::mutex mtx;
+
+  /// A thread-safe version that creates a new llvm Module
+  ContextModulePair& createNewLLVMModule(const std::string& name) {
+    assert(!isJITed());
+    std::lock_guard<std::mutex> lock(mtx);
+    auto ctx = std::make_unique<llvm::LLVMContext>();
+    llvmContextModulePairs.emplace_back(
+      std::move(ctx), std::make_unique<llvm::Module>(name, *ctx));
+    return llvmContextModulePairs.back();
+  }
 public:
   KernelManager()
-    : llvmContext(std::make_unique<llvm::LLVMContext>())
-    , llvmModule(std::make_unique<llvm::Module>("myModule", *llvmContext))
+    : llvmContextModulePairs()
     , llvmJIT(nullptr)
     , _kernels() {}
 
@@ -72,18 +87,20 @@ public:
   /// Initialize JIT session. When succeeds, \c llvmContext and \c llvmContext
   /// will be null, and \c llvmJIT will be non-null. This function can only be
   /// called once and cannot be undone.
+  /// \param nThreads number of threads to use.
   /// \param optLevel Apply LLVM optimization passes.
   /// \param useLazyJIT If true, use lazy compilation. This means all functions
   /// defined inside \c llvmModule only gets compiled just before being called.
   /// If set to false, all functions inside \c llvmModule are compiled
   /// immediately.
   void initJIT(
+      int nThreads = 1,
       llvm::OptimizationLevel optLevel = llvm::OptimizationLevel::O0,
       bool useLazyJIT = false);
 
   bool isJITed() const {
-    assert(llvmContext == nullptr ^ llvmModule != nullptr);
-    assert(llvmContext == nullptr ^ llvmJIT == nullptr);
+    assert(llvmJIT == nullptr ||
+           (llvmContextModulePairs.empty() && llvmJIT != nullptr));
     return llvmJIT != nullptr;
   }
 
@@ -106,12 +123,24 @@ public:
 
   std::vector<KernelInfo*> collectCPUGraphKernels(const std::string& graphName);
 
-  void ensureExecutable(KernelInfo& kernel) const {
-    if (!kernel.executable) {
-      kernel.executable =
-        cantFail(llvmJIT->lookup(kernel.llvmFuncName)).toPtr<CPU_KERNEL_TYPE>();
+  void ensureExecutable(KernelInfo& kernel) {
+    // Note: We do not actually need the lock here
+    // as it is expected (at least now) each KernelInfo is accesses by a unique
+    // thread
+    {
+      std::lock_guard<std::mutex> lock(mtx);
+      if (kernel.executable)
+        return;
+    }
+    auto addr = cantFail(llvmJIT->lookup(kernel.llvmFuncName)).toPtr<CPU_KERNEL_TYPE>();
+    std::cerr << "Kernel " << kernel.llvmFuncName << " addr " << (void*)addr << "\n";
+    {
+      std::lock_guard<std::mutex> lock(mtx);
+      kernel.executable = addr;
     }
   }
+
+  void ensureAllExecutable(int nThreads = 1);
 
   void applyCPUKernel(
       void* sv, int nQubits, KernelInfo& kernelInfo);

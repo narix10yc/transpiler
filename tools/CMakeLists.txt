@@ -36,6 +36,6 @@ add_executable(fpga_vary_buffer "fpga_vary_buffer.cpp")
 target_link_libraries(fpga_vary_buffer qasm saot simulation)
 
 add_executable(cost_model "cost_model.cpp")
-target_link_libraries(cost_model qasm saot simulation timeit)
+target_link_libraries(cost_model qasm saot simulation timeit utils)
 
 add_executable(blank "blank.cpp")

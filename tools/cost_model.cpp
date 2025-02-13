@@ -21,3 +21,4 @@ int main() {
   // costModel.computeSpeed(gate, 32, 10);
   return 0;
 }
+

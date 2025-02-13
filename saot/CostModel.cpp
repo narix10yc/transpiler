@@ -311,7 +311,7 @@ void PerformanceCache::runExperiments(
   }, "Code Generation");
 
   utils::timedExecute([&]() {
-    kernelMgr.initJIT(llvm::OptimizationLevel::O1, /* useLazyJIT */ false);
+    kernelMgr.initJIT(10, OptimizationLevel::O1, /* useLazyJIT */ false);
   }, "Initialize JIT Engine");
 
 

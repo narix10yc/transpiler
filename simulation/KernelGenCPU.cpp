@@ -120,23 +120,25 @@ KernelManager& KernelManager::genCPUKernel(
   const unsigned K = 1ULL << k;
   const unsigned KK = K * K;
 
-  IRBuilder<> B(*llvmContext);
+  auto& llvmContextModulePair = createNewLLVMModule(funcName + "Module");
+
+  IRBuilder<> B(*llvmContextModulePair.llvmContext);
   assert(config.precision == 32 || config.precision == 64);
   Type* scalarTy = (config.precision == 32) ? B.getFloatTy() : B.getDoubleTy();
   
   // init function
   CPUArgs args;
   Function* func = cpuGetFunctionDeclaration(
-    B, *llvmModule, funcName, config, args);
+    B, *llvmContextModulePair.llvmModule, funcName, config, args);
 
   // init matrix
   auto matrixData = getMatrixData(B, gate.gateMatrix, config);
 
   // init basic blocks
-  BasicBlock* entryBB = BasicBlock::Create(*llvmContext, "entry", func);
-  BasicBlock* loopBB = BasicBlock::Create(*llvmContext, "loop", func);
-  BasicBlock* loopBodyBB = BasicBlock::Create(*llvmContext, "loop.body", func);
-  BasicBlock* retBB = BasicBlock::Create(*llvmContext, "ret", func);
+  BasicBlock* entryBB = BasicBlock::Create(B.getContext(), "entry", func);
+  BasicBlock* loopBB = BasicBlock::Create(B.getContext(), "loop", func);
+  BasicBlock* loopBodyBB = BasicBlock::Create(B.getContext(), "loop.body", func);
+  BasicBlock* retBB = BasicBlock::Create(B.getContext(), "ret", func);
 
   // split qubits
   int sepBit;

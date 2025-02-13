@@ -1,15 +1,24 @@
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
+
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
 
 #include "simulation/KernelManager.h"
+
+#include <saot/Fusion.h>
+
+#include "utils/TaskDispatcher.h"
 #include "utils/iocolor.h"
+
+#include <ranges>
 
 using namespace saot;
 using namespace llvm;
 
-void KernelManager::initJIT(OptimizationLevel optLevel, bool useLazyJIT) {
+void KernelManager::initJIT(
+    int nThreads, OptimizationLevel optLevel, bool useLazyJIT) {
+  assert(nThreads > 0);
   assert(!isJITed() && "Already initialized");
 
   InitializeNativeTarget();
@@ -17,53 +26,83 @@ void KernelManager::initJIT(OptimizationLevel optLevel, bool useLazyJIT) {
   InitializeNativeTargetAsmPrinter();
 
   if (optLevel != OptimizationLevel::O0) {
-    // ChatGPT:
-    // These must be declared in this order so that they are destroyed in the
-    // correct order due to inter-analysis-manager references.
-    LoopAnalysisManager LAM;
-    FunctionAnalysisManager FAM;
-    CGSCCAnalysisManager CGAM;
-    ModuleAnalysisManager MAM;
 
-    PassBuilder PB;
+    utils::TaskDispatcher dispatcher(nThreads);
+    for (auto& [ctx, mod] :
+        std::ranges::views::reverse(llvmContextModulePairs)) {
+      dispatcher.enqueue([&]() {
+        // ChatGPT:
+        // These must be declared in this order so that they are destroyed in
+        // the correct order due to inter-analysis-manager references.
+        LoopAnalysisManager LAM;
+        FunctionAnalysisManager FAM;
+        CGSCCAnalysisManager CGAM;
+        ModuleAnalysisManager MAM;
 
-    PB.registerLoopAnalyses(LAM);
-    PB.registerFunctionAnalyses(FAM);
-    PB.registerCGSCCAnalyses(CGAM);
-    PB.registerModuleAnalyses(MAM);
-    PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+        PassBuilder PB;
 
-    ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(optLevel);
-    MPM.run(*llvmModule, MAM);
+        PB.registerLoopAnalyses(LAM);
+        PB.registerFunctionAnalyses(FAM);
+        PB.registerCGSCCAnalyses(CGAM);
+        PB.registerModuleAnalyses(MAM);
+        PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+        ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(optLevel);
+
+        MPM.run(*mod, MAM);
+      });
+    }
+    dispatcher.sync();
   }
-
 
   if (useLazyJIT) {
     // lazy JIT engine
   	orc::LLLazyJITBuilder jitBuilder;
   	jitBuilder.setNumCompileThreads(std::thread::hardware_concurrency());
   	auto lazyJIT = cantFail(jitBuilder.create());
-  	cantFail(lazyJIT->addIRModule(
-      orc::ThreadSafeModule(std::move(llvmModule), std::move(llvmContext))));
+    for (auto& [ctx, mod] : llvmContextModulePairs) {
+      cantFail(lazyJIT->addLazyIRModule(
+        orc::ThreadSafeModule(std::move(mod), std::move(ctx))));
+    }
     this->llvmJIT = std::move(lazyJIT);
-//    for (auto& kernel : _kernels)
-//      ensureExecutable(kernel);
+    // eager compile all kernels
+    ensureAllExecutable(nThreads);
   } else {
     // eager JIT engine
     orc::LLJITBuilder eagerJitBuilder;
-  	eagerJitBuilder.setNumCompileThreads(std::thread::hardware_concurrency());
+
+    /// It seems not matter how many concurrency we set here.
+    /// As long as we set it, we can invoke multiple lookup
+  	eagerJitBuilder.setNumCompileThreads(1);
   	auto eagerJIT = cantFail(eagerJitBuilder.create());
-    cantFail(eagerJIT->addIRModule(
-      orc::ThreadSafeModule(std::move(llvmModule), std::move(llvmContext))));
+    for (auto& [ctx, mod] : llvmContextModulePairs) {
+      cantFail(eagerJIT->addIRModule(
+        orc::ThreadSafeModule(std::move(mod), std::move(ctx))));
+    }
 	  this->llvmJIT = std::move(eagerJIT);
     // eager compile all kernels
+	  ensureAllExecutable(nThreads);
+  }
+  this->llvmContextModulePairs.clear();
+}
+
+void KernelManager::ensureAllExecutable(int nThreads) {
+  assert(nThreads > 0);
+  if (nThreads == 1) {
     for (auto& kernel : _kernels)
       ensureExecutable(kernel);
+    return;
   }
 
-  this->llvmContext = nullptr;
-  this->llvmModule = nullptr;
+  // multi-thread compile
+  utils::TaskDispatcher dispatcher(nThreads);
+  for (auto& kernel : std::ranges::views::reverse(_kernels)) {
+	  dispatcher.enqueue([this, &kernel]() {
+      ensureExecutable(kernel);
+	  });
+  }
+  dispatcher.sync();
 }
+
 
 std::ostream& CPUKernelGenConfig::displayInfo(std::ostream& os) const {
   os << std::scientific;
