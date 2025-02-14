@@ -28,13 +28,10 @@ void TaskDispatcher::workerThread() {
 
       task = std::move(tasks.front());
       tasks.pop();
-      ++nActiveWorkers;
     }
+    ++nActiveWorkers;
     task();
-    {
-      std::lock_guard lock(mtx);
-      --nActiveWorkers;
-    }
+    --nActiveWorkers;
     syncCV.notify_all();
   }
 }
