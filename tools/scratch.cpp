@@ -1,32 +1,14 @@
-#include "utils/PODVariant.h"
-#include "utils/List.h"
-
 #include <iostream>
+#include "utils/TaskDispatcher.h"
 
+int main(int argc, char** argv) {
+  utils::TaskDispatcher dispatcher(2);
 
-int main() {
-  utils::List<int> list;
+  for (int i = 0; i < 5; i++) {
+    dispatcher.enqueue([i]() {
+      std::cerr << i << "\n";
+    });
+  }
 
-  const auto printList = [&list]() {
-    for (const auto i : list)
-      std::cerr << i << " - ";
-    std::cerr << "END\n";
-  };
-
-  list.emplace_back(1);
-  printList();
-
-  list.emplace_back(2);
-  printList();
-
-  list.emplace_back(3);
-  printList();
-
-  auto it = list.begin();
-  ++it;
-  list.insert(it, 4);
-  list.erase(it);
-  printList();
-
-  return 0;
+  dispatcher.sync();
 }

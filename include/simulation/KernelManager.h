@@ -135,7 +135,7 @@ public:
         return;
     }
     auto addr = cantFail(llvmJIT->lookup(kernel.llvmFuncName)).toPtr<CPU_KERNEL_TYPE>();
-    std::cerr << "Kernel " << kernel.llvmFuncName << " addr " << (void*)addr << "\n";
+    // std::cerr << "Kernel " << kernel.llvmFuncName << " addr " << (void*)addr << "\n";
     {
       std::lock_guard<std::mutex> lock(mtx);
       kernel.executable = addr;

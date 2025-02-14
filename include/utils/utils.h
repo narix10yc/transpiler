@@ -222,10 +222,10 @@ public:
 class fmt_1_to_1e3 {
   double number;
   int width;
+
 public:
   explicit fmt_1_to_1e3(double n, int width) : number(n), width(width) {
-    assert(n >= 0.0 &&
-      "fmt_1_to_1e3: Currently only supporting positive numbers");
+    assert(n >= 0.0 && "fmt_1_to_1e3: Currently only supporting positive numbers");
     assert(width >= 4);
     // assert(n >= 1.0 && n <= 1e3);
   }
@@ -238,6 +238,32 @@ public:
     return os << std::fixed << std::setprecision(fmt.width - 2) << fmt.number;
   }
 };
+
+inline void displayProgressBar(float progress, int barWidth = 50) {
+  // Clamp progress between 0 and 1
+  assert(barWidth > 0);
+  if (progress < 0.0f) progress = 0.0f;
+  if (progress > 1.0f) progress = 1.0f;
+
+  // Print the progress bar
+  std::cout.put('[');
+  int i = 0;
+  while (i < barWidth * progress) {
+    std::cout.put('=');
+    ++i;
+  }
+  while (i < barWidth) {
+    std::cout.put(' ');
+    ++i;
+  }
+
+  std::cout << "] " << static_cast<int>(progress * 100.0f) << " %\r";
+  std::cout.flush();
+}
+
+inline void displayProgressBar(int nFinished, int nTotal, int barWidth = 50) {
+  return displayProgressBar(static_cast<float>(nFinished) / nTotal, barWidth);
+}
 
 
 void timedExecute(std::function<void()> f, const char* msg);

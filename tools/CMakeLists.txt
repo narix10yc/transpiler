@@ -27,7 +27,7 @@ else()
 endif()
 
 add_executable(scratch "scratch.cpp")
-target_link_libraries(scratch utils)
+target_link_libraries(scratch utils saot simulation)
 
 add_executable(fpga_playground "fpga_playground.cpp")
 target_link_libraries(fpga_playground qasm saot simulation)

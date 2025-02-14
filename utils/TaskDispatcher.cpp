@@ -1,52 +1,51 @@
 #include "utils/TaskDispatcher.h"
 
 #include <iostream>
+#include <utils/utils.h>
 
 using namespace utils;
 
-void TaskDispatcher::enqueue(std::function<void()> task) {
-  std::lock_guard<std::mutex> lock(mtx);
-  tasks.push(std::move(task));
+void TaskDispatcher::enqueue(const std::function<void()>& task) {
+  {
+    std::lock_guard lock(mtx);
+    ++nTotalTasks;
+    tasks.push(std::move(task));
+  }
   cv.notify_one();
 }
 
-bool TaskDispatcher::dequeue(std::function<void()>& task) {
-  std::unique_lock<std::mutex> lock(mtx);
-  cv.wait(lock, [this]() {
-    return isStopped || !tasks.empty();
-  });
+void TaskDispatcher::workerThread() {
+  while (true) {
+    std::function<void()> task;
+    {
+      std::unique_lock lock(mtx);
+      cv.wait(lock, [this]() {
+        return status != Running || !tasks.empty();
+      });
 
-  if (isStopped) {
-    assert(tasks.empty());
-    return false;
+      if (status != Running && tasks.empty())
+        return;
+
+      task = std::move(tasks.front());
+      tasks.pop();
+      ++nActiveWorkers;
+    }
+    task();
+    {
+      std::lock_guard lock(mtx);
+      --nActiveWorkers;
+    }
+    syncCV.notify_all();
   }
-
-  task = std::move(tasks.front());
-  tasks.pop();
-  return true;
 }
 
 TaskDispatcher::TaskDispatcher(int nWorkers)
-  : tasks(), workers(), nActiveTasks(0)
-  , mtx(), cv(), syncCV(), isStopped(false) {
+  : tasks(), workers(), nTotalTasks(0), nActiveWorkers(0)
+  , mtx(), cv(), syncCV(), status(Running) {
   workers.reserve(nWorkers);
   for (int i = 0; i < nWorkers; ++i) {
     workers.emplace_back([this]() {
-      while (true) {
-        std::function<void()> task;
-        if (!dequeue(task))
-          break;
-        {
-          std::lock_guard<std::mutex> lock(mtx);
-          ++nActiveTasks;
-        }
-        task();
-        {
-          std::lock_guard<std::mutex> lock(mtx);
-          if (--nActiveTasks == 0)
-            syncCV.notify_all();
-        }
-      }
+      workerThread();
     });
   }
 }
@@ -60,24 +59,28 @@ int TaskDispatcher::getWorkerID(std::thread::id threadID) const {
   return -1;
 }
 
-void TaskDispatcher::sync() {
-  // std::cerr << "Syncing...\n";
+void TaskDispatcher::sync(bool progressBar) {
   {
-    std::unique_lock<std::mutex> lock(mtx);
-    syncCV.wait(lock, [this]() {
-      // std::cerr << "nTasks/nActiveTasks/nWorkers: "
-                // << tasks.size() << "/" << nActiveTasks << "/" << workers.size()
+    std::unique_lock lock(mtx);
+    syncCV.wait(lock, [this, progressBar]() {
+      // std::cerr << "nTasks/nActiveWorkers/nWorkers: "
+                // << tasks.size() << "/" << nActiveWorkers << "/" << workers.size()
                 // << "\n";
-      return tasks.empty() && nActiveTasks == 0;
+      if (progressBar)
+        utils::displayProgressBar(nTotalTasks - tasks.size(), nTotalTasks, 50);
+      return tasks.empty() && nActiveWorkers == 0;
     });
-    isStopped = true;
-    /// Notify all waiting threads that no more tasks will be added
-    /// Safe to exit
-    cv.notify_all();
+    if (progressBar)
+      std::cout << std::endl;
+    status = Synced;
   }
-  // std::cerr << "Synced!\n";
-  for (auto& t : workers) {
-    if (t.joinable())
-      t.join();
+  cv.notify_all();
+}
+
+void TaskDispatcher::join() {
+  for (auto& thread : workers) {
+    if (thread.joinable())
+      thread.join();
   }
+  status = Stopped;
 }

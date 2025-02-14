@@ -26,7 +26,7 @@ void KernelManager::initJIT(
   InitializeNativeTargetAsmPrinter();
 
   if (optLevel != OptimizationLevel::O0) {
-
+    std::cerr << "Applying LLVM Optimization....\n";
     utils::TaskDispatcher dispatcher(nThreads);
     for (auto& [ctx, mod] :
         std::ranges::views::reverse(llvmContextModulePairs)) {
@@ -54,7 +54,7 @@ void KernelManager::initJIT(
         MPM.run(*mod, MAM);
       });
     }
-    dispatcher.sync();
+    dispatcher.sync(true);
   }
 
   if (useLazyJIT) {
@@ -75,7 +75,7 @@ void KernelManager::initJIT(
 
     /// It seems not matter how many concurrency we set here.
     /// As long as we set it, we can invoke multiple lookup
-  	eagerJitBuilder.setNumCompileThreads(1);
+  	eagerJitBuilder.setNumCompileThreads(10);
   	auto eagerJIT = cantFail(eagerJitBuilder.create());
     for (auto& [ctx, mod] : llvmContextModulePairs) {
       cantFail(eagerJIT->addIRModule(
@@ -97,13 +97,14 @@ void KernelManager::ensureAllExecutable(int nThreads) {
   }
 
   // multi-thread compile
+  std::cout << "Ensure All Executables...\n";
   utils::TaskDispatcher dispatcher(nThreads);
   for (auto& kernel : std::ranges::views::reverse(_kernels)) {
 	  dispatcher.enqueue([this, &kernel]() {
       ensureExecutable(kernel);
 	  });
   }
-  dispatcher.sync();
+  dispatcher.sync(true);
 }
 
 
