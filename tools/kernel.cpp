@@ -26,7 +26,7 @@ int main(int argc, const char** argv) {
 
   CPUFusionConfig fusionConfig = CPUFusionConfig::Default;
   fusionConfig.precision = 64;
-  fusionConfig.nThreads = 10;
+  fusionConfig.nThreads = N_THREADS;
   // NaiveCostModel costModel(3, 0, 1e-8);
 
   auto cache = PerformanceCache::LoadFromCSV("threads10.csv") ;

@@ -250,7 +250,7 @@ static inline void randomRemove(QuantumGate& gate, float p) {
 
 }
 
-void PerformanceCache::runExperimentsNew(
+void PerformanceCache::runExperiments(
     const CPUKernelGenConfig& cpuConfig,
     int nQubits, int nThreads, int nRuns) {
   std::vector<std::shared_ptr<QuantumGate>> gates;
