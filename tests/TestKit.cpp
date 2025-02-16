@@ -2,7 +2,7 @@
 #include "utils/iocolor.h"
 #include <iostream>
 
-using namespace saot::test;
+using namespace cast::test;
 
 bool TestSuite::displayResult() const {
   std::cerr << BOLDCYAN("Test Result of '" << name << "': ");

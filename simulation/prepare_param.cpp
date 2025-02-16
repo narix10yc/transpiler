@@ -4,7 +4,7 @@
 
 using namespace llvm;
 using namespace simulation;
-using namespace saot;
+using namespace cast;
 
 std::pair<Value*, Value*>
 IRGenerator::generatePolynomial(const Polynomial& P, ParamValueFeeder& feeder) {

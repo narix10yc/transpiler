@@ -1,13 +1,13 @@
 #include <utils/statevector.h>
 
-#include "saot/Parser.h"
-#include "saot/CircuitGraph.h"
-#include "saot/Fusion.h"
+#include "cast/Parser.h"
+#include "cast/CircuitGraph.h"
+#include "cast/Fusion.h"
 #include "openqasm/parser.h"
 
 #define N_THREADS 10
 
-using namespace saot;
+using namespace cast;
 
 int main(int argc, const char** argv) {
   assert(argc > 1);

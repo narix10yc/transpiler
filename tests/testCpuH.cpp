@@ -2,7 +2,7 @@
 #include "tests/TestKit.h"
 #include "utils/statevector.h"
 
-using namespace saot;
+using namespace cast;
 using namespace utils;
 
 template<unsigned simd_s>

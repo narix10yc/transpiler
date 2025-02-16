@@ -11,7 +11,7 @@
 using namespace IOColor;
 using namespace llvm;
 using namespace simulation;
-using namespace saot;
+using namespace cast;
 
 namespace {
 

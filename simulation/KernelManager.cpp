@@ -6,18 +6,18 @@
 
 #include "simulation/KernelManager.h"
 
-#include <saot/Fusion.h>
+#include <cast/Fusion.h>
 
 #include "utils/TaskDispatcher.h"
 #include "utils/iocolor.h"
 
 #include <ranges>
 
-using namespace saot;
+using namespace cast;
 using namespace llvm;
 
 void KernelManager::initJIT(
-    int nThreads, OptimizationLevel optLevel, bool useLazyJIT) {
+    int nThreads, OptimizationLevel optLevel, bool useLazyJIT, int verbose) {
   assert(nThreads > 0);
   assert(!isJITed() && "Already initialized");
 
@@ -26,7 +26,6 @@ void KernelManager::initJIT(
   InitializeNativeTargetAsmPrinter();
 
   if (optLevel != OptimizationLevel::O0) {
-    std::cerr << "Applying LLVM Optimization....\n";
     utils::TaskDispatcher dispatcher(nThreads);
     for (auto& [ctx, mod] :
         std::ranges::views::reverse(llvmContextModulePairs)) {
@@ -54,7 +53,12 @@ void KernelManager::initJIT(
         MPM.run(*mod, MAM);
       });
     }
-    dispatcher.sync(true);
+    if (verbose > 0) {
+      std::cerr << "Applying LLVM Optimization....\n";
+      dispatcher.sync(/* progressBar */ true);
+    }
+    else
+      dispatcher.sync(false);
   }
 
   if (useLazyJIT) {
@@ -97,13 +101,13 @@ void KernelManager::ensureAllExecutable(int nThreads) {
   }
 
   // multi-thread compile
-  std::cout << "Ensure All Executables...\n";
   utils::TaskDispatcher dispatcher(nThreads);
   for (auto& kernel : std::ranges::views::reverse(_kernels)) {
 	  dispatcher.enqueue([this, &kernel]() {
       ensureExecutable(kernel);
 	  });
   }
+  std::cout << "Ensure All Executables...\n";
   dispatcher.sync(true);
 }
 

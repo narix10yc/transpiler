@@ -4,7 +4,7 @@
 #include "utils/statevector.h"
 #include <iomanip>
 #include <iostream>
-#include <saot/simulate.h>
+#include <cast/simulate.h>
 
 #ifdef USING_F32
 using real_t = float;
@@ -14,9 +14,9 @@ using real_t = double;
 
 using namespace timeit;
 using namespace IOColor;
-using namespace saot::simulate;
+using namespace cast::simulate;
 using namespace utils::statevector;
-using namespace saot;
+using namespace cast;
 
 int main(int argc, char* *argv) {
   assert(argc > 1);

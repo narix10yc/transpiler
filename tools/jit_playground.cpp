@@ -1,18 +1,18 @@
 #include "openqasm/parser.h"
-#include "saot/CircuitGraph.h"
-#include "saot/Fusion.h"
-#include "saot/Parser.h"
-#include "saot/QuantumGate.h"
-#include "saot/ast.h"
+#include "cast/CircuitGraph.h"
+#include "cast/Fusion.h"
+#include "cast/Parser.h"
+#include "cast/QuantumGate.h"
+#include "cast/ast.h"
 
-#include "saot/Polynomial.h"
+#include "cast/Polynomial.h"
 #include "simulation/ir_generator.h"
 
 #include <chrono>
 
-using namespace saot;
+using namespace cast;
 
-using namespace saot::ast;
+using namespace cast::ast;
 using namespace simulation;
 
 using namespace llvm;

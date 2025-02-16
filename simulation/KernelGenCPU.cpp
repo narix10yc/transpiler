@@ -1,7 +1,7 @@
 #define DEBUG_TYPE "codegen-cpu"
 #include "llvm/Support/Debug.h"
 
-#include "saot/QuantumGate.h"
+#include "cast/QuantumGate.h"
 #include "simulation/KernelManager.h"
 #include "simulation/KernelGenInternal.h"
 
@@ -11,11 +11,11 @@
 #include "llvm/IR/IntrinsicsX86.h"
 
 #include <cmath>
-#include <saot/CircuitGraph.h>
+#include <cast/CircuitGraph.h>
 #include <utils/PODVector.h>
 
 using namespace llvm;
-using namespace saot;
+using namespace cast;
 
 namespace {
 

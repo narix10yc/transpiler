@@ -1,9 +1,9 @@
 #include "simulation/KernelGenInternal.h"
 
-using namespace saot;
+using namespace cast;
 using namespace llvm;
 
-Value* saot::internal::genMulAdd(
+Value* cast::internal::genMulAdd(
     IRBuilder<>& B, Value* a, Value* b, Value* c,
     ScalarKind aKind, const Twine& name) {
   assert(b && "operand b cannot be null when calling genMulAdd");
@@ -45,7 +45,7 @@ Value* saot::internal::genMulAdd(
   }
 }
 
-Value* saot::internal::genNegMulAdd(
+Value* cast::internal::genNegMulAdd(
     IRBuilder<>& B, Value* a, Value* b, Value* c,
     ScalarKind aKind, const Twine& name) {
   assert(b && "operand b cannot be null when calling genNegMulAdd");
@@ -95,10 +95,10 @@ Value* saot::internal::genNegMulAdd(
 }
 
 
-std::pair<Value*, Value*> saot::internal::genComplexInnerProduct(
+std::pair<Value*, Value*> cast::internal::genComplexInnerProduct(
     IRBuilder<>& B,
     const std::vector<Value*>& aVec, const std::vector<Value*>& bVec,
-    const Twine& name, saot::internal::FusedOpKind foKind) {
+    const Twine& name, cast::internal::FusedOpKind foKind) {
   assert(aVec.size() == bVec.size());
   unsigned size = aVec.size();
   Value* re;

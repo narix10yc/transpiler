@@ -1,16 +1,16 @@
-#include "saot/CircuitGraph.h"
-#include "saot/FPGAInst.h"
-#include "saot/Fusion.h"
-#include "saot/Parser.h"
-#include "saot/ast.h"
+#include "cast/CircuitGraph.h"
+#include "cast/FPGAInst.h"
+#include "cast/Fusion.h"
+#include "cast/Parser.h"
+#include "cast/ast.h"
 
 #include "openqasm/parser.h"
 
 #include <chrono>
 #include <cmath>
 
-using namespace saot;
-using namespace saot::fpga;
+using namespace cast;
+using namespace cast::fpga;
 
 using namespace IOColor;
 
@@ -233,8 +233,8 @@ int main(int argc, const char** argv) {
   // openqasm::Parser qasmParser(argv[1], -1);
   // auto G = qasmParser.parse()->toCircuitGraph();
 
-  // parse::Parser saotParser(argv[1]);
-  // auto G = saotParser.parseQuantumCircuit().toCircuitGraph();
+  // parse::Parser castParser(argv[1]);
+  // auto G = castParser.parseQuantumCircuit().toCircuitGraph();
 
   // auto G = CircuitGraph::QFTCircuit(std::stoi(argv[1]));
   // auto G = CircuitGraph::ALACircuit(std::stoi(argv[1]));

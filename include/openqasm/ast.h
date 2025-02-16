@@ -7,7 +7,7 @@
 #include <fstream>
 #include <memory>
 
-namespace saot {
+namespace cast {
 class CircuitGraph;
 }
 namespace openqasm::ast {
@@ -285,7 +285,7 @@ public:
   size_t countStmts() { return stmts.size(); }
   Statement getStmt(size_t index) { return *(stmts[index]); }
 
-  void toCircuitGraph(saot::CircuitGraph&) const;
+  void toCircuitGraph(cast::CircuitGraph&) const;
 };
 
 } // namespace openqasm::ast

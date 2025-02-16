@@ -1,7 +1,7 @@
 #include "simulation/KernelManager.h"
-#include "saot/CircuitGraph.h"
+#include "cast/CircuitGraph.h"
 
-using namespace saot;
+using namespace cast;
 
 void KernelManager::applyCPUKernel(
     void* sv, int nQubits, const std::string& funcName) {

@@ -2,14 +2,14 @@
 #include "tests/TestKit.h"
 #include "utils/statevector.h"
 
-#include "saot/CircuitGraph.h"
-#include "saot/Parser.h"
+#include "cast/CircuitGraph.h"
+#include "cast/Parser.h"
 
 #include <filesystem>
-#include <saot/Fusion.h>
+#include <cast/Fusion.h>
 namespace fs = std::filesystem;
 
-using namespace saot;
+using namespace cast;
 using namespace utils;
 
 template<unsigned simd_s>

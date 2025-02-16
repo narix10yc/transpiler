@@ -3,7 +3,7 @@
 #include "utils/statevector.h"
 #include <random>
 
-using namespace saot;
+using namespace cast;
 
 template<unsigned simd_s, unsigned nQubits>
 static void internal_U1q() {

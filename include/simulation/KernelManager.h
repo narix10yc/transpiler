@@ -7,9 +7,9 @@
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
 #include <llvm/Passes/OptimizationLevel.h>
 
-#include "saot/QuantumGate.h"
+#include "cast/QuantumGate.h"
 
-namespace saot {
+namespace cast {
 
 class CircuitGraph;
 
@@ -96,7 +96,8 @@ public:
   void initJIT(
       int nThreads = 1,
       llvm::OptimizationLevel optLevel = llvm::OptimizationLevel::O0,
-      bool useLazyJIT = false);
+      bool useLazyJIT = false,
+      int verbose = 0);
 
   bool isJITed() const {
     assert(llvmJIT == nullptr ||
@@ -157,6 +158,6 @@ public:
 };
 
 
-} // namespace saot
+} // namespace cast
 
 #endif // SIMULATION_KERNELMANAGER_H

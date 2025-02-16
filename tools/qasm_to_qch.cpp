@@ -1,7 +1,7 @@
-#include <saot/CircuitGraph.h>
+#include <cast/CircuitGraph.h>
 
 #include "openqasm/parser.h"
-#include "saot/Parser.h"
+#include "cast/Parser.h"
 #include "utils/CommandLine.h"
 
 #include <filesystem>
@@ -36,9 +36,9 @@ enum ConversionResult {
   }
   openqasm::Parser qasmParser(inName, 0);
   auto qasmRoot = qasmParser.parse();
-  saot::CircuitGraph graph;
+  cast::CircuitGraph graph;
   qasmRoot->toCircuitGraph(graph);
-  auto qc = saot::ast::QuantumCircuit::FromCircuitGraph(graph);
+  auto qc = cast::ast::QuantumCircuit::FromCircuitGraph(graph);
   inFile.close();
 
   // write file

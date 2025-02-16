@@ -11,8 +11,8 @@
 #include <array>
 #include <vector>
 
-#include "saot/CircuitGraph.h"
-#include "saot/QuantumGate.h"
+#include "cast/CircuitGraph.h"
+#include "cast/QuantumGate.h"
 
 namespace simulation {
 
@@ -165,26 +165,26 @@ public:
                        const std::vector<llvm::Value*>& bRe,
                        const std::vector<llvm::Value*>& bIm);
 
-  llvm::Function* generateKernel(const saot::QuantumGate& gate,
+  llvm::Function* generateKernel(const cast::QuantumGate& gate,
                                  const std::string& funcName = "") {
     return generateKernelDebug(gate, 0, funcName);
   }
 
-  llvm::Function* generateKernelDebug(const saot::QuantumGate& gate,
+  llvm::Function* generateKernelDebug(const cast::QuantumGate& gate,
                                       int debugLevel,
                                       const std::string& funcName = "");
 
-  llvm::Function* generateCUDAKernel(const saot::QuantumGate& gate,
+  llvm::Function* generateCUDAKernel(const cast::QuantumGate& gate,
                                      const CUDAGenerationConfig& config,
                                      const std::string& funcName = "");
 
   std::pair<llvm::Value*, llvm::Value*>
-  generatePolynomial(const saot::Polynomial& polynomial,
+  generatePolynomial(const cast::Polynomial& polynomial,
                      ParamValueFeeder &feeder);
 
   // Generate a function that prepares matrices in simulation.
   // @return A function void(void* param, void* matrix).
-  llvm::Function* generatePrepareParameter(const saot::CircuitGraph& graph);
+  llvm::Function* generatePrepareParameter(const cast::CircuitGraph& graph);
 };
 
 } // namespace simulation

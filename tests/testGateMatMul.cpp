@@ -1,9 +1,9 @@
-#include "saot/QuantumGate.h"
+#include "cast/QuantumGate.h"
 #include "tests/TestKit.h"
 #include "utils/statevector.h"
 
-using namespace saot;
-using namespace saot::test;
+using namespace cast;
+using namespace cast::test;
 using namespace utils;
 
 static void basics() {
@@ -66,7 +66,7 @@ static void internal() {
   suite.displayResult();
 }
 
-void saot::test::test_gateMatMul() {
+void cast::test::test_gateMatMul() {
   basics();
   internal<4, 1>();
   internal<8, 2>();

@@ -1,12 +1,12 @@
 #ifndef SIMULATION_KERNEL_GEN_INTERNAL_H
 #define SIMULATION_KERNEL_GEN_INTERNAL_H
 
-#include "saot/ScalarKind.h"
+#include "cast/ScalarKind.h"
 #include <llvm/IR/IRBuilder.h>
 
 #include <vector>
 
-namespace saot::internal {
+namespace cast::internal {
 
 enum FusedOpKind {
   FO_None,      // do not use fused operations
@@ -33,6 +33,6 @@ std::pair<llvm::Value*, llvm::Value*> genComplexInnerProduct(
     const std::vector<llvm::Value*>& bVec, const llvm::Twine& name = "",
     FusedOpKind foKind = FO_FMA_FMS);
 
-}; // namespace saot::internal
+}; // namespace cast::internal
 
 #endif // SIMULATION_KERNEL_GEN_INTERNAL_H

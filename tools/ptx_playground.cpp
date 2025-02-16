@@ -1,8 +1,8 @@
-#include "saot/CircuitGraph.h"
-#include "saot/Fusion.h"
-#include "saot/Parser.h"
-#include "saot/QuantumGate.h"
-#include "saot/ast.h"
+#include "cast/CircuitGraph.h"
+#include "cast/Fusion.h"
+#include "cast/Parser.h"
+#include "cast/QuantumGate.h"
+#include "cast/ast.h"
 #include "utils/statevector.h"
 #include "utils/utils.h"
 
@@ -41,9 +41,9 @@ using scalar_t = float;
               << IOColor::RESET;                                               \
   }
 
-using namespace saot;
+using namespace cast;
 
-using namespace saot::ast;
+using namespace cast::ast;
 using namespace simulation;
 
 using namespace llvm;
@@ -166,7 +166,7 @@ int main(int argc, const char** argv) {
   // for (int i = 0; i < 20; i++)
   // getCircuitH2(graph, 28);
 
-  // saot::parse::Parser parser(argv[1]);
+  // cast::parse::Parser parser(argv[1]);
   // auto graph = parser.parseQuantumCircuit().toCircuitGraph();
 
   auto fusionConfig = CPUFusionConfig::Default;

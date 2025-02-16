@@ -1,13 +1,13 @@
 #ifndef SIMULATION_SIMULATOR_H
 #define SIMULATION_SIMULATOR_H
 
-namespace saot {
+namespace cast {
 
 class Simulator {
 
 
 }; // class Simulator
 
-} // namespace saot
+} // namespace cast
 
 #endif // SIMULATION_SIMULATOR_H

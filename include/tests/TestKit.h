@@ -1,5 +1,5 @@
-#ifndef SAOT_TESTS_TESTKIT_H
-#define SAOT_TESTS_TESTKIT_H
+#ifndef CAST_TESTS_TESTKIT_H
+#define CAST_TESTS_TESTKIT_H
 
 #include "utils/utils.h"
 #include <vector>
@@ -8,7 +8,7 @@
 #define TOSTRING(x) STRINGIFY(x)
 #define GET_INFO() __FILE__ ":" TOSTRING(__LINE__)
 
-namespace saot::test {
+namespace cast::test {
 
 class TestSuite {
   struct FailedInstance {
@@ -90,6 +90,6 @@ inline void test_all() {
   }, "CPU Fusion Test Finished!");
 }
 
-} // namespace saot::test
+} // namespace cast::test
 
-#endif // SAOT_TESTS_TESTKIT_H
+#endif // CAST_TESTS_TESTKIT_H

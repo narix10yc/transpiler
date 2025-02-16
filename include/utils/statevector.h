@@ -8,7 +8,7 @@
 #include <thread>
 #include <cstdlib>
 
-#include "saot/QuantumGate.h"
+#include "cast/QuantumGate.h"
 #include "utils/iocolor.h"
 #include "utils/utils.h"
 
@@ -324,7 +324,7 @@ public:
     return os;
   }
 
-  StatevectorAlt& applyGate(const saot::QuantumGate& gate) {
+  StatevectorAlt& applyGate(const cast::QuantumGate& gate) {
     const auto* cMat = gate.gateMatrix.getConstantMatrix();
     assert(cMat && "Can only apply constant gateMatrix");
 
