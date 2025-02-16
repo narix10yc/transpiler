@@ -143,7 +143,7 @@ public:
     }
   }
 
-  void ensureAllExecutable(int nThreads = 1);
+  void ensureAllExecutable(int nThreads = 1, bool progressBar = false);
 
   void applyCPUKernel(
       void* sv, int nQubits, KernelInfo& kernelInfo);

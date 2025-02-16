@@ -29,7 +29,6 @@ void KernelManager::initJIT(
     utils::TaskDispatcher dispatcher(nThreads);
     for (auto& [ctx, mod] :
         std::ranges::views::reverse(llvmContextModulePairs)) {
-
       // TODO: For some reason, MPM cannot be reused. For now we construct it
       // afresh for every module. Overhead is okay though.
       dispatcher.enqueue([&]() {
@@ -53,12 +52,9 @@ void KernelManager::initJIT(
         MPM.run(*mod, MAM);
       });
     }
-    if (verbose > 0) {
-      std::cerr << "Applying LLVM Optimization....\n";
-      dispatcher.sync(/* progressBar */ true);
-    }
-    else
-      dispatcher.sync(false);
+    if (verbose > 0)
+      std::cout << "Applying LLVM Optimization....\n";
+    dispatcher.sync(/* progressBar */ verbose > 0);
   }
 
   if (useLazyJIT) {
@@ -92,7 +88,7 @@ void KernelManager::initJIT(
   this->llvmContextModulePairs.clear();
 }
 
-void KernelManager::ensureAllExecutable(int nThreads) {
+void KernelManager::ensureAllExecutable(int nThreads, bool progressBar) {
   assert(nThreads > 0);
   if (nThreads == 1) {
     for (auto& kernel : _kernels)
@@ -107,8 +103,9 @@ void KernelManager::ensureAllExecutable(int nThreads) {
       ensureExecutable(kernel);
 	  });
   }
-  std::cout << "Ensure All Executables...\n";
-  dispatcher.sync(true);
+  if (progressBar)
+    std::cout << "Ensure All Executables...\n";
+  dispatcher.sync(progressBar);
 }
 
 

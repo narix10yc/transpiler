@@ -75,8 +75,6 @@ public:
   }
 };
 
-
-
 class PerformanceCache {
 public:
   struct Item {
@@ -96,10 +94,6 @@ public:
   PerformanceCache() : items() {}
 
   void runExperiments(
-    const CPUKernelGenConfig& cpuConfig,
-    int nQubits, int nThreads, int comprehensiveness);
-
-  void runExperimentsNew(
       const CPUKernelGenConfig& cpuConfig,
       int nQubits, int nThreads, int nRuns);
 

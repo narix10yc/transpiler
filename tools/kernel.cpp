@@ -42,12 +42,19 @@ int main(int argc, const char** argv) {
 
   kernelGenConfig.displayInfo(std::cerr) << "\n";
 
-  kernelMgr.genCPUFromGraph(kernelGenConfig, graphNoFuse, "graphNoFuse");
-  kernelMgr.genCPUFromGraph(kernelGenConfig, graphNaiveFuse, "graphNaiveFuse");
-  kernelMgr.genCPUFromGraph(kernelGenConfig, graphAdaptiveFuse, "graphAdaptiveFuse");
+  utils::timedExecute([&]() {
+    kernelMgr.genCPUFromGraph(kernelGenConfig, graphNoFuse, "graphNoFuse");
+  }, "Generate No-fuse Kernels");
+  utils::timedExecute([&]() {
+    kernelMgr.genCPUFromGraph(kernelGenConfig, graphNaiveFuse, "graphNaiveFuse");
+  }, "Generate Naive-fused Kernels");
+  utils::timedExecute([&]() {
+    kernelMgr.genCPUFromGraph(kernelGenConfig, graphAdaptiveFuse, "graphAdaptiveFuse");
+  }, "Generate Adaptive-fused Kernels");
+
   std::vector<KernelInfo*> kernelsNoFuse, kernelsNaiveFuse, kernelAdaptiveFuse;
   utils::timedExecute([&]() {
-    kernelMgr.initJIT(N_THREADS, llvm::OptimizationLevel::O1);
+    kernelMgr.initJIT(N_THREADS, llvm::OptimizationLevel::O1, /* verbose */ 1);
     kernelsNoFuse = kernelMgr.collectCPUGraphKernels("graphNoFuse");
     kernelsNaiveFuse = kernelMgr.collectCPUGraphKernels("graphNaiveFuse");
     kernelAdaptiveFuse = kernelMgr.collectCPUGraphKernels("graphAdaptiveFuse");

@@ -118,8 +118,7 @@ std::vector<KernelInfo*> KernelManager::collectCPUGraphKernels(
   const auto mangledName = mangleGraphName(graphName);
   for (auto& kernel : _kernels) {
     if (kernel.llvmFuncName.starts_with(mangledName)) {
-      kernel.executable =
-          cantFail(llvmJIT->lookup(kernel.llvmFuncName)).toPtr<CPU_KERNEL_TYPE>();
+      ensureExecutable(kernel);
       kernelInfos.push_back(&kernel);
     }
   }

@@ -164,131 +164,9 @@ double calculateMemUpdateSpeed(int nQubits, int precision, double t) {
 
 } // anonymous namespace
 
-void PerformanceCache::runExperiments(
-    const CPUKernelGenConfig& cpuConfig,
-    int nQubits, int nThreads, int comprehensiveness) {
-  assert(nQubits >= 8 && nQubits <= 32);
-  assert(comprehensiveness >= 1 && comprehensiveness <= 3);
-
-  KernelManager kernelMgr;
-
-  std::vector<QuantumGate> gates;
-  gates.reserve(3 * nQubits);
-
-  utils::timedExecute([&]() {
-    std::random_device _rd;
-    std::mt19937 gen(_rd());
-    std::uniform_int_distribution<> distri(0, nQubits - 1);
-
-    // single-qubit gates
-    gates.emplace_back(QuantumGate::RandomUnitary(0));
-    gates.emplace_back(QuantumGate::RandomUnitary(nQubits - 1));
-    if (comprehensiveness > 2) {
-      for (int q = 1; q < nQubits - 1; ++q)
-        gates.emplace_back(QuantumGate::RandomUnitary(q));
-    }
-
-    // two-qubit gates
-    gates.emplace_back(QuantumGate::RandomUnitary(0, 1));
-    gates.emplace_back(QuantumGate::RandomUnitary(1, 2));
-    gates.emplace_back(QuantumGate::RandomUnitary(nQubits - 3, nQubits - 2));
-    gates.emplace_back(QuantumGate::RandomUnitary(nQubits - 2, nQubits - 1));
-    if (comprehensiveness > 2) {
-      for (int i = 0; i < nQubits; ++i) {
-        int a, b;
-        a = distri(gen);
-        do { b = distri(gen); } while (b == a);
-        gates.emplace_back(QuantumGate::RandomUnitary(a, b));
-      }
-    }
-
-    // three-qubit gates: (6 + 5 * comprehensiveness) gates
-    gates.emplace_back(QuantumGate::RandomUnitary(0, 1, 2));
-    gates.emplace_back(QuantumGate::RandomUnitary(1, 2, 3));
-    gates.emplace_back(QuantumGate::RandomUnitary(0, 1, 3));
-    gates.emplace_back(QuantumGate::RandomUnitary(
-      nQubits - 3, nQubits - 2, nQubits - 1));
-    gates.emplace_back(QuantumGate::RandomUnitary(
-      nQubits - 4, nQubits - 3, nQubits - 2));
-    gates.emplace_back(QuantumGate::RandomUnitary(
-      nQubits - 4, nQubits - 3, nQubits - 1));
-    for (int i = 0; i < 5 * comprehensiveness; ++i) {
-      int a, b, c;
-      a = distri(gen);
-      do { b = distri(gen); } while (b == a);
-      do { c = distri(gen); } while (c == b || c == a);
-      gates.emplace_back(QuantumGate::RandomUnitary(a, b, c));
-    }
-
-    // four-qubit gates: (8 + 5 * comprehensiveness) gates
-    gates.emplace_back(QuantumGate::RandomUnitary(0, 1, 2, 3));
-    gates.emplace_back(QuantumGate::RandomUnitary(1, 2, 3, 4));
-    gates.emplace_back(QuantumGate::RandomUnitary(0, 1, 3, 4));
-    gates.emplace_back(QuantumGate::RandomUnitary(1, 2, 3, 4));
-
-    gates.emplace_back(QuantumGate::RandomUnitary(
-      nQubits - 4, nQubits - 3, nQubits - 2, nQubits - 1));
-    gates.emplace_back(QuantumGate::RandomUnitary(
-      nQubits - 5, nQubits - 4, nQubits - 3, nQubits - 2));
-    gates.emplace_back(QuantumGate::RandomUnitary(
-      nQubits - 5, nQubits - 4, nQubits - 2, nQubits - 1));
-    gates.emplace_back(QuantumGate::RandomUnitary(
-      nQubits - 5, nQubits - 3, nQubits - 2, nQubits - 1));
-    for (int i = 0; i < 5 * comprehensiveness; ++i) {
-      int a, b, c, d;
-      a = distri(gen);
-      do { b = distri(gen); } while (b == a);
-      do { c = distri(gen); } while (c == b || c == a);
-      do { d = distri(gen); } while (d == c || d == b || d == a);
-      gates.emplace_back(QuantumGate::RandomUnitary(a, b, c, d));
-    }
-  }, "Generate gates for experiments");
-
-  std::cerr << gates.size() << " gates generated.\n";
-
-  utils::timedExecute([&]() {
-    int i = 0;
-    for (const auto& gate : gates)
-      kernelMgr.genCPUKernel(cpuConfig, gate, "gate_" + std::to_string(i++));
-  }, "Code Generation");
-
-  utils::timedExecute([&]() {
-    kernelMgr.initJIT(10, OptimizationLevel::O1, /* useLazyJIT */ false);
-  }, "Initialize JIT Engine");
-
-
-  timeit::Timer timer(3, 2);
-  timeit::TimingResult tr;
-
-  utils::StatevectorAlt<double> sv(nQubits, cpuConfig.simd_s);
-  utils::timedExecute([&]() {
-    sv.randomize();
-  }, "Initialize statevector");
-
-  for (auto& kernel : kernelMgr.kernels()) {
-    if (nThreads == 1)
-      tr = timer.timeit([&]() {
-        kernelMgr.applyCPUKernel(sv.data, sv.nQubits, kernel);
-      });
-    else
-      tr = timer.timeit([&]() {
-        kernelMgr.applyCPUKernelMultithread(
-          sv.data, sv.nQubits, kernel, nThreads);
-      });
-    auto memSpd = calculateMemUpdateSpeed(nQubits, kernel.precision, tr.min);
-    items.emplace_back(
-      kernel.gate.nQubits(), kernel.opCount, 64,
-      kernel.nLoBits, nThreads, memSpd);
-    std::cerr << "Gate @ ";
-    utils::printArray(
-      std::cerr, ArrayRef(kernel.gate.qubits.begin(), kernel.gate.qubits.size()));
-    std::cerr << ": " << memSpd << " GiBps\n";
-  }
-}
 
 // PerformanceCache::LoadFromCSV helper functions
 namespace {
-
 int parseInt(const char*& curPtr, const char* bufferEnd) {
   const auto* beginPtr = curPtr;
   while (curPtr < bufferEnd && *curPtr >= '0' && *curPtr <= '9')
@@ -484,12 +362,14 @@ void PerformanceCache::runExperimentsNew(
     addRandU(n);
   }
 
-  prob = 0.8f;
-  nQubitsWeights = {0, 1, 2, 3, 5, 5, 0, 0};
-  std::cerr << "nRuns = " << nRuns << std::endl;
-  for (int run = gates.size(); run < nRuns; ++run)
-    randAdd();
 
+  nQubitsWeights = {0, 1, 2, 3, 5, 5, 0, 0};
+  int initialRuns = gates.size();
+  for (int run = 0; run < nRuns - initialRuns; ++run) {
+    float ratio = static_cast<float>(run) / (nRuns - initialRuns);
+    prob = ratio * 1.0f + (1.0f - ratio) * 0.25f;
+    randAdd();
+}
   std::cerr << "nGates = " << gates.size() << std::endl;
 
 
@@ -501,9 +381,9 @@ void PerformanceCache::runExperimentsNew(
   }, "Code Generation");
 
   utils::timedExecute([&]() {
-    kernelMgr.initJIT(10, OptimizationLevel::O1, /* useLazyJIT */ false);
+    kernelMgr.initJIT(10, OptimizationLevel::O1,
+      /* useLazyJIT */ false, /* verbose */ 1);
   }, "Initialize JIT Engine");
-
 
   timeit::Timer timer(3, /* verbose */ 0);
   timeit::TimingResult tr;

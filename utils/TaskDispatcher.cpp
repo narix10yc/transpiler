@@ -60,17 +60,17 @@ void TaskDispatcher::sync(bool progressBar) {
   {
     std::unique_lock lock(mtx);
     syncCV.wait(lock, [this, progressBar]() {
-      // std::cerr << "nTasks/nActiveWorkers/nWorkers: "
+      // std::cerr << "nRemainingTasks/nActiveWorkers/nWorkers: "
                 // << tasks.size() << "/" << nActiveWorkers << "/" << workers.size()
                 // << "\n";
       if (progressBar)
         utils::displayProgressBar(nTotalTasks - tasks.size(), nTotalTasks, 50);
       return tasks.empty() && nActiveWorkers == 0;
     });
-    if (progressBar)
-      std::cout << std::endl;
-    status = Synced;
   }
+  if (progressBar)
+    std::cout << std::endl;
+  status = Synced;
   cv.notify_all();
 }
 
