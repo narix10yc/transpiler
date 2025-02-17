@@ -97,29 +97,6 @@ public:
   }
 };
 
-inline void displayProgressBar(float progress, int barWidth = 50) {
-  // Clamp progress between 0 and 1
-  assert(barWidth > 0);
-  if (progress < 0.0f) progress = 0.0f;
-  if (progress > 1.0f) progress = 1.0f;
-
-  // Print the progress bar
-  std::cout.put('[');
-  int i = 0;
-  while (i < barWidth * progress) {
-    std::cout.put('=');
-    ++i;
-  }
-  while (i < barWidth) {
-    std::cout.put(' ');
-    ++i;
-  }
-
-  std::cout << "] " << static_cast<int>(progress * 100.0f) << " %\r";
-  std::cout.flush();
-}
-
-
 
 } // namespace utils
 

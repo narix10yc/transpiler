@@ -68,7 +68,7 @@ void KernelManager::initJIT(
     }
     this->llvmJIT = std::move(lazyJIT);
     // eager compile all kernels
-    ensureAllExecutable(nThreads);
+    ensureAllExecutable(nThreads, /* progressBar */ verbose > 0);
   } else {
     // eager JIT engine
     orc::LLJITBuilder eagerJitBuilder;
@@ -83,7 +83,7 @@ void KernelManager::initJIT(
     }
 	  this->llvmJIT = std::move(eagerJIT);
     // eager compile all kernels
-	  ensureAllExecutable(nThreads);
+    ensureAllExecutable(nThreads, /* progressBar */ verbose > 0);
   }
   this->llvmContextModulePairs.clear();
 }

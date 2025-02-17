@@ -55,7 +55,9 @@ int main(int argc, const char** argv) {
 
   std::vector<KernelInfo*> kernelsNoFuse, kernelsNaiveFuse, kernelAdaptiveFuse;
   utils::timedExecute([&]() {
-    kernelMgr.initJIT(N_THREADS, llvm::OptimizationLevel::O1, /* verbose */ 1);
+    kernelMgr.initJIT(
+      N_THREADS, llvm::OptimizationLevel::O1,
+      /* useLazyJIT */ false, /* verbose */ 1);
     kernelsNoFuse = kernelMgr.collectCPUGraphKernels("graphNoFuse");
     kernelsNaiveFuse = kernelMgr.collectCPUGraphKernels("graphNaiveFuse");
     kernelAdaptiveFuse = kernelMgr.collectCPUGraphKernels("graphAdaptiveFuse");
@@ -64,7 +66,7 @@ int main(int argc, const char** argv) {
   utils::StatevectorAlt<double> sv(graphNoFuse.nQubits, kernelGenConfig.simd_s);
   // sv.randomize();
 
-  timeit::Timer timer(/* replication */ 5);
+  timeit::Timer timer(/* replication */ 1);
   timeit::TimingResult tr;
 
   tr = timer.timeit([&]() {

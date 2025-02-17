@@ -147,6 +147,29 @@ uint64_t pext64(uint64_t src, uint64_t mask, int nbits = 64);
 uint32_t pext32(uint32_t src, uint32_t mask, int nbits = 32);
 
 
+inline void displayProgressBar(float progress, int barWidth = 50) {
+  // Clamp progress between 0 and 1
+  assert(barWidth > 0);
+  if (progress < 0.0f) progress = 0.0f;
+  if (progress > 1.0f) progress = 1.0f;
+
+  // Print the progress bar
+  std::cout.put('[');
+  int i = 0;
+  while (i < barWidth * progress) {
+    std::cout.put('=');
+    ++i;
+  }
+  while (i < barWidth) {
+    std::cout.put(' ');
+    ++i;
+  }
+
+  std::cout << "] " << static_cast<int>(progress * 100.0f) << " %\r";
+  std::cout.flush();
+}
+
+
 inline void displayProgressBar(int nFinished, int nTotal, int barWidth = 50) {
   return displayProgressBar(static_cast<float>(nFinished) / nTotal, barWidth);
 }
