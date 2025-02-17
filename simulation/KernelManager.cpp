@@ -108,7 +108,6 @@ void KernelManager::ensureAllExecutable(int nThreads, bool progressBar) {
   dispatcher.sync(progressBar);
 }
 
-
 std::ostream& CPUKernelGenConfig::displayInfo(std::ostream& os) const {
   os << std::scientific;
   os << CYAN("=== CPU Kernel Gen Config ===\n")
