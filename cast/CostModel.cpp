@@ -7,6 +7,7 @@
 #include <llvm/IR/InlineAsm.h>
 
 #include "utils/statevector.h"
+#include "utils/Formats.h"
 
 using namespace cast;
 using namespace llvm;

@@ -2,17 +2,18 @@
 #include "llvm/Support/Debug.h"
 
 #include "cast/QuantumGate.h"
+#include "cast/CircuitGraph.h"
 #include "simulation/KernelManager.h"
 #include "simulation/KernelGenInternal.h"
 
 #include "utils/iocolor.h"
 #include "utils/utils.h"
+#include "utils/Formats.h"
+#include "utils/PODVector.h"
 
 #include "llvm/IR/IntrinsicsX86.h"
 
 #include <cmath>
-#include <cast/CircuitGraph.h>
-#include <utils/PODVector.h>
 
 using namespace llvm;
 using namespace cast;

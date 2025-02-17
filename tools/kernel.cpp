@@ -1,4 +1,5 @@
-#include <utils/statevector.h>
+#include "utils/statevector.h"
+#include "timeit/timeit.h"
 
 #include "cast/Parser.h"
 #include "cast/CircuitGraph.h"
@@ -62,20 +63,27 @@ int main(int argc, const char** argv) {
 
   utils::StatevectorAlt<double> sv(graphNoFuse.nQubits, kernelGenConfig.simd_s);
   // sv.randomize();
-  utils::timedExecute([&]() {
+
+  timeit::Timer timer(/* replication */ 5);
+  timeit::TimingResult tr;
+
+  tr = timer.timeit([&]() {
     for (auto* kernel : kernelsNoFuse)
       kernelMgr.applyCPUKernelMultithread(sv.data, sv.nQubits, *kernel, N_THREADS);
-  }, "Simulation on the no-fuse circuit");
+  });
+  tr.display(3, std::cerr << "No-fuse Circuit:\n");
 
-  utils::timedExecute([&]() {
-  for (auto* kernel : kernelsNaiveFuse)
-    kernelMgr.applyCPUKernelMultithread(sv.data, sv.nQubits, *kernel, N_THREADS);
-  }, "Simulation on the naive-fused circuit");
+  tr = timer.timeit([&]() {
+    for (auto* kernel : kernelsNaiveFuse)
+      kernelMgr.applyCPUKernelMultithread(sv.data, sv.nQubits, *kernel, N_THREADS);
+  });
+  tr.display(3, std::cerr << "Naive-fused Circuit:\n");
 
-  utils::timedExecute([&]() {
-  for (auto* kernel : kernelAdaptiveFuse)
-    kernelMgr.applyCPUKernelMultithread(sv.data, sv.nQubits, *kernel, N_THREADS);
-  }, "Simulation on the adaptive-fused circuit");
+  tr = timer.timeit([&]() {
+    for (auto* kernel : kernelAdaptiveFuse)
+      kernelMgr.applyCPUKernelMultithread(sv.data, sv.nQubits, *kernel, N_THREADS);
+  });
+  tr.display(3, std::cerr << "Adaptive-fused Circuit:\n");
 
   return 0;
 }

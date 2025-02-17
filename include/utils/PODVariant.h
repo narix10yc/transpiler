@@ -37,7 +37,8 @@ class PODVariant {
   }
 
   alignas(StorageAlign) std::byte _storage[StorageSize];
-  int _typeIndex = -1;
+
+  int _typeIndex;
 
 public:
   /// Default constructor leaves the object storage in POD state
