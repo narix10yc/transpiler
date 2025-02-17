@@ -43,6 +43,7 @@ public:
 class StandardCostModel : public CostModel {
   PerformanceCache* cache;
   double zeroTol;
+  double maxMemUpdateSpd;
 
   /// Collect memory update speeds for quick loading and lookup
   struct UpdateSpeedCollection {
@@ -54,6 +55,11 @@ class StandardCostModel : public CostModel {
 
     double getMemSpd(int opCount) const {
       return static_cast<double>(nData) / (totalTimePerOpCount * opCount);
+    }
+
+    double getMemSpd(int opCount, double cap) const {
+      double spd = static_cast<double>(nData) / (totalTimePerOpCount * opCount);
+      return std::min(spd, cap);
     }
   };
   std::vector<UpdateSpeedCollection> updateSpeeds;

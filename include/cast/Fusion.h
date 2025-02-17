@@ -2,11 +2,8 @@
 #define CAST_CPUFUSION_H
 
 #include "cast/CostModel.h"
-
-#include <cassert>
-#include <iostream>
-
 #include "cast/FPGAConfig.h"
+#include <cassert>
 
 namespace cast {
 
@@ -46,7 +43,7 @@ struct CPUFusionConfig {
 };
 
 void applyCPUGateFusion(
-    const CPUFusionConfig&, const CostModel*, CircuitGraph&);
+    const CPUFusionConfig&, const CostModel*, CircuitGraph&, int maxK=7);
 
 void applyFPGAGateFusion(CircuitGraph&, const FPGAFusionConfig&);
 

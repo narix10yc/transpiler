@@ -25,17 +25,17 @@ int main(int argc, const char** argv) {
   qasmRoot->toCircuitGraph(graphNaiveFuse);
   qasmRoot->toCircuitGraph(graphAdaptiveFuse);
 
-  CPUFusionConfig fusionConfig = CPUFusionConfig::Default;
+  CPUFusionConfig fusionConfig = CPUFusionConfig::Aggressive;
   fusionConfig.precision = 64;
   fusionConfig.nThreads = N_THREADS;
   // NaiveCostModel costModel(3, 0, 1e-8);
 
+  NaiveCostModel naiveCostModel(5, -1, 1e-8);
+  applyCPUGateFusion(fusionConfig, &naiveCostModel, graphNaiveFuse);
+
   auto cache = PerformanceCache::LoadFromCSV("threads10.csv") ;
   StandardCostModel standardCostModel(&cache);
   applyCPUGateFusion(fusionConfig, &standardCostModel, graphAdaptiveFuse);
-
-  NaiveCostModel naiveCostModel(5, -1, 1e-8);
-  applyCPUGateFusion(fusionConfig, &naiveCostModel, graphNaiveFuse);
 
   KernelManager kernelMgr;
   CPUKernelGenConfig kernelGenConfig;
@@ -43,12 +43,12 @@ int main(int argc, const char** argv) {
 
   kernelGenConfig.displayInfo(std::cerr) << "\n";
 
-  utils::timedExecute([&]() {
-    kernelMgr.genCPUFromGraph(kernelGenConfig, graphNoFuse, "graphNoFuse");
-  }, "Generate No-fuse Kernels");
-  utils::timedExecute([&]() {
-    kernelMgr.genCPUFromGraph(kernelGenConfig, graphNaiveFuse, "graphNaiveFuse");
-  }, "Generate Naive-fused Kernels");
+  // utils::timedExecute([&]() {
+    // kernelMgr.genCPUFromGraph(kernelGenConfig, graphNoFuse, "graphNoFuse");
+  // }, "Generate No-fuse Kernels");
+  // utils::timedExecute([&]() {
+    // kernelMgr.genCPUFromGraph(kernelGenConfig, graphNaiveFuse, "graphNaiveFuse");
+  // }, "Generate Naive-fused Kernels");
   utils::timedExecute([&]() {
     kernelMgr.genCPUFromGraph(kernelGenConfig, graphAdaptiveFuse, "graphAdaptiveFuse");
   }, "Generate Adaptive-fused Kernels");
@@ -58,8 +58,8 @@ int main(int argc, const char** argv) {
     kernelMgr.initJIT(
       N_THREADS, llvm::OptimizationLevel::O1,
       /* useLazyJIT */ false, /* verbose */ 1);
-    kernelsNoFuse = kernelMgr.collectCPUGraphKernels("graphNoFuse");
-    kernelsNaiveFuse = kernelMgr.collectCPUGraphKernels("graphNaiveFuse");
+    // kernelsNoFuse = kernelMgr.collectCPUGraphKernels("graphNoFuse");
+    // kernelsNaiveFuse = kernelMgr.collectCPUGraphKernels("graphNaiveFuse");
     kernelAdaptiveFuse = kernelMgr.collectCPUGraphKernels("graphAdaptiveFuse");
   }, "JIT compile kernels");
 
@@ -69,17 +69,17 @@ int main(int argc, const char** argv) {
   timeit::Timer timer(/* replication */ 1);
   timeit::TimingResult tr;
 
-  tr = timer.timeit([&]() {
-    for (auto* kernel : kernelsNoFuse)
-      kernelMgr.applyCPUKernelMultithread(sv.data, sv.nQubits, *kernel, N_THREADS);
-  });
-  tr.display(3, std::cerr << "No-fuse Circuit:\n");
+  // tr = timer.timeit([&]() {
+    // for (auto* kernel : kernelsNoFuse)
+      // kernelMgr.applyCPUKernelMultithread(sv.data, sv.nQubits, *kernel, N_THREADS);
+  // });
+  // tr.display(3, std::cerr << "No-fuse Circuit:\n");
 
-  tr = timer.timeit([&]() {
-    for (auto* kernel : kernelsNaiveFuse)
-      kernelMgr.applyCPUKernelMultithread(sv.data, sv.nQubits, *kernel, N_THREADS);
-  });
-  tr.display(3, std::cerr << "Naive-fused Circuit:\n");
+  // tr = timer.timeit([&]() {
+    // for (auto* kernel : kernelsNaiveFuse)
+      // kernelMgr.applyCPUKernelMultithread(sv.data, sv.nQubits, *kernel, N_THREADS);
+  // });
+  // tr.display(3, std::cerr << "Naive-fused Circuit:\n");
 
   tr = timer.timeit([&]() {
     for (auto* kernel : kernelAdaptiveFuse)

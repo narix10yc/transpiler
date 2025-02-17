@@ -32,13 +32,13 @@ void TaskDispatcher::workerThread() {
     ++nActiveWorkers;
     task();
     --nActiveWorkers;
-    syncCV.notify_all();
+    syncCV.notify_one();
   }
 }
 
 TaskDispatcher::TaskDispatcher(int nWorkers)
-  : tasks(), workers(), nTotalTasks(0), nActiveWorkers(0)
-  , mtx(), cv(), syncCV(), status(Running) {
+  : tasks(), workers(), mtx(), cv()
+  , syncCV(), nTotalTasks(0), nActiveWorkers(0), status(Running) {
   workers.reserve(nWorkers);
   for (int i = 0; i < nWorkers; ++i) {
     workers.emplace_back([this]() {
@@ -64,7 +64,7 @@ void TaskDispatcher::sync(bool progressBar) {
                 // << tasks.size() << "/" << nActiveWorkers << "/" << workers.size()
                 // << "\n";
       if (progressBar)
-        utils::displayProgressBar(nTotalTasks - tasks.size(), nTotalTasks, 50);
+        utils::displayProgressBar(nTotalTasks - tasks.size(), nTotalTasks, 20);
       return tasks.empty() && nActiveWorkers == 0;
     });
   }

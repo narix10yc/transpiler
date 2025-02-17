@@ -169,7 +169,6 @@ inline void displayProgressBar(float progress, int barWidth = 50) {
   std::cout.flush();
 }
 
-
 inline void displayProgressBar(int nFinished, int nTotal, int barWidth = 50) {
   return displayProgressBar(static_cast<float>(nFinished) / nTotal, barWidth);
 }

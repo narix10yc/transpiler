@@ -250,8 +250,8 @@ int startFusion(
 
 void cast::applyCPUGateFusion(
     const CPUFusionConfig& config, const CostModel* costModel,
-    CircuitGraph& graph) {
-  int maxK = 2;
+    CircuitGraph& graph, int maxK) {
+  int curMaxK = 2;
   int nFused = 0;
   do {
     nFused = 0;
@@ -260,10 +260,10 @@ void cast::applyCPUGateFusion(
     while (it != graph.tile_end()) {
       for (q = 0; q < graph.nQubits; ++q) {
         nFused += startFusion(
-          graph, config, costModel, maxK, it, q);;
+          graph, config, costModel, curMaxK, it, q);;
       }
       ++it;
     }
     graph.squeeze();
-  } while (nFused > 0 && ++maxK < 5);
+  } while (nFused > 0 && ++curMaxK < maxK);
 }

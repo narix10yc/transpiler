@@ -44,6 +44,17 @@ StandardCostModel::StandardCostModel(PerformanceCache* cache, double zeroTol)
       it->totalTimePerOpCount += 1.0 / (item.opCount * item.memUpdateSpeed);
     }
   }
+
+  // initialize maxMemUpdateSpd
+  assert(!updateSpeeds.empty());
+  auto it = updateSpeeds.begin();
+  this->maxMemUpdateSpd = it->getMemSpd(4ULL << (2 * it->nQubits));
+  while (++it != updateSpeeds.end()) {
+    double itSpd = it->getMemSpd(4ULL << (2 * it->nQubits));
+    if (itSpd > maxMemUpdateSpd)
+      maxMemUpdateSpd = itSpd;
+  }
+
   std::cerr << "StandardCostModel: "
                "A total of " << updateSpeeds.size() << " items found!\n";
 }
@@ -53,11 +64,13 @@ double StandardCostModel::computeSpeed(
   assert(!updateSpeeds.empty());
   const auto gatenQubits = gate.nQubits();
 
+  auto gateOpCount = gate.opCount(zeroTol);
+
   // Try to find an exact match
   for (const auto& item : updateSpeeds) {
     if (item.nQubits == gatenQubits && item.precision == precision
         && item.nThreads == nThreads) {
-      return item.getMemSpd(gate.opCount(zeroTol));
+      return item.getMemSpd(gateOpCount, maxMemUpdateSpd);
     }
   }
 
@@ -94,20 +107,22 @@ double StandardCostModel::computeSpeed(
     }
   }
 
-  int bestMatchOpCount = 1 << (2 * bestMatchIt->nQubits + 2);
+  int bestMatchOpCount = 4 << (2 * bestMatchIt->nQubits);
   double memSpd = bestMatchIt->getMemSpd(bestMatchOpCount);
   double estiMemSpd = memSpd * bestMatchOpCount * nThreads /
-    (gate.opCount(zeroTol) * bestMatchIt->nThreads);
+    (gateOpCount * bestMatchIt->nThreads);
 
   std::cerr << YELLOW("Warning: ") << "No exact match to "
-               "[nQubits, Precision, nThreads] = ["
-            << gatenQubits << ", " << precision << ", " << nThreads
+               "[nQubits, opCount, Precision, nThreads] = ["
+            << gatenQubits << ", " << gateOpCount << ", "
+            << precision << ", " << nThreads
             << "] found. We estimate it by ["
-            << bestMatchIt->nQubits << ", " << bestMatchIt->precision
-            << ", " << bestMatchIt->nThreads << "] @ " << memSpd << " GiBps => "
+            << bestMatchIt->nQubits << ", " << bestMatchOpCount << ", "
+            << bestMatchIt->precision << ", " << bestMatchIt->nThreads
+            << "] @ " << memSpd << " GiBps => "
                "Est. " << estiMemSpd << " GiBps.\n";
 
-  return estiMemSpd;
+  return std::min(estiMemSpd, maxMemUpdateSpd);
 }
 
 std::ostream& StandardCostModel::display(std::ostream& os, int nLines) const {
@@ -115,6 +130,7 @@ std::ostream& StandardCostModel::display(std::ostream& os, int nLines) const {
     std::min<int>(nLines, updateSpeeds.size()) :
     static_cast<int>(updateSpeeds.size());
 
+  os << "Fastest Mem Spd: " << this->maxMemUpdateSpd << "\n";
   os << "  nQubits | Precision | nThreads | MemSpd | Norm'ed Spd \n";
   for (int i = 0; i < nLinesToDisplay; ++i) {
     int opCount = 1ULL << (2 * updateSpeeds[i].nQubits + 2);

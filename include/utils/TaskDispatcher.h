@@ -24,11 +24,11 @@ class TaskDispatcher {
   };
   std::queue<std::function<void()>> tasks;
   std::vector<std::thread> workers;
-  int nTotalTasks;
   std::mutex mtx;
   std::condition_variable cv;
   std::condition_variable syncCV;
 
+  int nTotalTasks;
   std::atomic<int> nActiveWorkers;
   std::atomic<Status> status;
 
