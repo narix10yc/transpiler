@@ -98,7 +98,7 @@ void KernelManager::ensureAllExecutable(int nThreads, bool progressBar) {
 
   // multi-thread compile
   utils::TaskDispatcher dispatcher(nThreads);
-  for (auto& kernel : std::ranges::views::reverse(_kernels)) {
+  for (auto& kernel : _kernels) {
 	  dispatcher.enqueue([this, &kernel]() {
       ensureExecutable(kernel);
 	  });

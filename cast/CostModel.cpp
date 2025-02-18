@@ -264,7 +264,26 @@ PerformanceCache PerformanceCache::LoadFromCSV(const std::string& fileName) {
 static inline void randomRemove(QuantumGate& gate, float p) {
   auto* cMat = gate.gateMatrix.getConstantMatrix();
   assert(cMat != nullptr);
+}
 
+template<std::size_t K>
+static inline void sampleNoReplacement(int n, std::vector<int>& holder) {
+  assert(n > 0);
+  assert(K <= n);
+  std::vector<int> indices(n);
+  for (int i = 0; i < n; ++i)
+    indices[i] = i;
+
+  std::random_device rd;
+  std::mt19937 gen(rd());
+
+  for (int i = 0; i < K; ++i) {
+    std::uniform_int_distribution<int> dist(i, n - 1);
+    int j = dist(gen);
+    std::swap(indices[i], indices[j]);
+  }
+  for (int i = 0; i < K; ++i)
+    holder[i] = indices[i];
 }
 
 void PerformanceCache::runExperiments(
@@ -272,6 +291,8 @@ void PerformanceCache::runExperiments(
     int nQubits, int nThreads, int nRuns) {
   std::vector<std::shared_ptr<QuantumGate>> gates;
   gates.reserve(nRuns);
+//  constexpr int maxAllowedK = 7;
+//  std::vector<int> holder(maxAllowedK);
 
   std::random_device rd;
   std::mt19937 gen(rd());
@@ -347,13 +368,48 @@ void PerformanceCache::runExperiments(
     randRemove(*gates.back());
   };
 
+  const auto addRandU6q = [&]() {
+    int a,b,c,d,e,f;
+    a = disInt(gen);
+    do { b = disInt(gen); } while (b == a);
+    do { c = disInt(gen); } while (c == a || c == b);
+    do { d = disInt(gen); } while (d == a || d == b || d == c);
+    do { e = disInt(gen); } while (e == a || e == b || e == c || e == d);
+    do { f = disInt(gen); }
+    while (f == a || f == b || f == c || f == d || f == e);
+
+    gates.emplace_back(std::make_shared<QuantumGate>(
+      QuantumGate::RandomUnitary(a, b, c, d, e, f)));
+    randRemove(*gates.back());
+  };
+
+  const auto addRandU7q = [&]() {
+    int a,b,c,d,e,f,g;
+    a = disInt(gen);
+    do { b = disInt(gen); } while (b == a);
+    do { c = disInt(gen); } while (c == a || c == b);
+    do { d = disInt(gen); } while (d == a || d == b || d == c);
+    do { e = disInt(gen); } while (e == a || e == b || e == c || e == d);
+    do { f = disInt(gen); }
+    while (f == a || f == b || f == c || f == d || f == e);
+    do { g = disInt(gen); }
+    while (g == a || g == b || g == c || g == d || g == e || g == f);
+
+    gates.emplace_back(std::make_shared<QuantumGate>(
+      QuantumGate::RandomUnitary(a, b, c, d, e, f, g)));
+    randRemove(*gates.back());
+  };
+
   const auto addRandU = [&](int _nQubits) {
+    assert(_nQubits != 0);
     switch (_nQubits) {
       case 1: addRandU1q(); break;
       case 2: addRandU2q(); break;
       case 3: addRandU3q(); break;
       case 4: addRandU4q(); break;
       case 5: addRandU5q(); break;
+      case 6: addRandU6q(); break;
+      case 7: addRandU7q(); break;
       default: assert(false && "Unknown nQubits");
     }
   };
@@ -379,16 +435,14 @@ void PerformanceCache::runExperiments(
     addRandU(n);
   }
 
-
-  nQubitsWeights = {0, 1, 2, 3, 5, 5, 0, 0};
+  nQubitsWeights = {0, 1, 2, 3, 5, 5, 3, 0};
   int initialRuns = gates.size();
   for (int run = 0; run < nRuns - initialRuns; ++run) {
     float ratio = static_cast<float>(run) / (nRuns - initialRuns);
     prob = ratio * 1.0f + (1.0f - ratio) * 0.25f;
     randAdd();
-}
+  }
   std::cerr << "nGates = " << gates.size() << std::endl;
-
 
   KernelManager kernelMgr;
   utils::timedExecute([&]() {

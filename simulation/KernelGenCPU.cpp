@@ -1,5 +1,6 @@
 #define DEBUG_TYPE "codegen-cpu"
 #include "llvm/Support/Debug.h"
+// #define LLVM_DEBUG(X) X
 
 #include "cast/QuantumGate.h"
 #include "cast/CircuitGraph.h"
@@ -121,6 +122,12 @@ KernelManager& KernelManager::genCPUKernel(
   const unsigned K = 1ULL << k;
   const unsigned KK = K * K;
 
+  LLVM_DEBUG(
+    std::cerr << CYAN("=== DEBUG genCPUKernel funcName " << funcName << " ===\n");
+    std::cerr << "Matrix:\n";
+    gate.gateMatrix.printCMat(std::cerr) << "\n";
+  );
+
   auto& llvmContextModulePair = createNewLLVMModule(funcName + "Module");
 
   IRBuilder<> B(*llvmContextModulePair.llvmContext);
@@ -191,12 +198,12 @@ KernelManager& KernelManager::genCPUKernel(
   // debug print qubit splits
   LLVM_DEBUG(
     dbgs() << CYAN("-- qubit split done\n");
-    utils::printArray(std::cerr << "- lower bits: ", loBits) << "\n";
-    utils::printArray(std::cerr << "- simd bits: ", simdBits) << "\n";
+    utils::printArray(std::cerr << "- lower bits:  ", loBits) << "\n";
     utils::printArray(std::cerr << "- higher bits: ", hiBits) << "\n";
-    dbgs() << "- reImBit: " << s << "\n";
-    dbgs() << "sepBit:  " << sepBit << "\n";
-    dbgs() << "vecSize: " << vecSize << "\n";
+    utils::printArray(std::cerr << "- simd bits:   ", simdBits) << "\n";
+    dbgs() << "- reImBit (simd_s): " << s << "\n";
+    dbgs() << "- sepBit:           " << sepBit << "\n";
+    dbgs() << "- vecSize:          " << vecSize << "\n";
   );
   
   B.SetInsertPoint(entryBB);
@@ -357,9 +364,9 @@ KernelManager& KernelManager::genCPUKernel(
   pSvs.resize_for_overwrite(HK);
   for (unsigned hi = 0; hi < HK; hi++) {
     uint64_t idxShift = 0ULL;
-    for (unsigned hbit = 0; hbit < hk; hbit++) {
-      if (hi & (1 << hbit))
-        idxShift += 1ULL << hiBits[hbit];
+    for (unsigned hBit = 0; hBit < hk; hBit++) {
+      if (hi & (1 << hBit))
+        idxShift += 1ULL << hiBits[hBit];
     }
     idxShift >>= sepBit;
     LLVM_DEBUG(
@@ -474,14 +481,14 @@ KernelManager& KernelManager::genCPUKernel(
   );
   }
 
-  SmallVector<Value*> updatedReAmps;
-  SmallVector<Value*> updatedImAmps;
-  updatedReAmps.resize_for_overwrite(LK);
-  updatedImAmps.resize_for_overwrite(LK);
+  std::vector<Value*> updatedReAmps(LK);
+  std::vector<Value*> updatedImAmps(LK);
   for (unsigned hi = 0; hi < HK; hi++) {
     // mat-vec mul
-    std::memset(updatedReAmps.data(), 0, updatedReAmps.size_in_bytes());
-    std::memset(updatedImAmps.data(), 0, updatedImAmps.size_in_bytes());
+    for (auto& v : updatedReAmps)
+      v = nullptr;
+    for (auto& v : updatedImAmps)
+      v = nullptr;
     for (unsigned li = 0; li < LK; li++) {
       unsigned r = hi * LK + li; // row
       for (unsigned c = 0; c < K; c++) { // column
@@ -508,12 +515,38 @@ KernelManager& KernelManager::genCPUKernel(
       }
     }
 
+    /* Safety check: sometimes in testing, we use matrices such that some rows
+     * are full of zeros. These matrices do not represent valid quantum gates,
+     * and will cause normal IR generation to fail.
+     */
+    {
+      bool valid = true;
+      for (auto& v : updatedReAmps) {
+        if (v == nullptr) {
+          v = ConstantAggregateZero::get(VectorType::get(scalarTy, S, false));
+          valid = false;
+        }
+      }
+      for (auto& v : updatedImAmps) {
+        if (v == nullptr) {
+          v = ConstantAggregateZero::get(VectorType::get(scalarTy, S, false));
+          valid = false;
+        }
+      }
+      if (!valid) {
+        std::cerr << BOLDYELLOW("Warning: ")
+                  << "Updated amplitudes are left in invalid states after "
+        "matrix-vector multiplication. This could mean the input matrix is "
+        "invalid (some rows are full of zeros).\n";
+      }
+    }
+
     /* Merge
-    Merge example
-    Round 0: (xxx0, xxx1) => xxx0
-    Round 1: (xx00, xx10) => xx00
-    Round 2: (x000, x100) => x000
-    */
+     * Merge example
+     * Round 0: (xxx0, xxx1) => xxx0
+     * Round 1: (xx00, xx10) => xx00
+     * Round 2: (x000, x100) => x000
+     */
     assert((1 << mergeMasks.size()) == updatedReAmps.size());
     for (unsigned mergeIdx = 0; mergeIdx < lk; mergeIdx++) {
       for (unsigned pairIdx = 0; pairIdx < (LK >> mergeIdx >> 1); pairIdx++) {

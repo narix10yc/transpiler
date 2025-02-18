@@ -5,8 +5,10 @@ using namespace cast;
 int main() {
   PerformanceCache cache;
   CPUKernelGenConfig cpuConfig;
-  // cache.runExperiments(cpuConfig, 24, 10, 50);
+  cpuConfig.simd_s = 1;
+  // cache.runExperiments(cpuConfig, 28, 10, 100);
   // cache.saveToCSV("threads10");
+
 
   cache = PerformanceCache::LoadFromCSV("threads10.csv");
   std::cerr << cache.items.size() << " items found!\n";

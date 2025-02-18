@@ -346,12 +346,21 @@ public:
   static QuantumGate RandomUnitary(Ints... qubits) {
     static_assert((std::is_integral_v<Ints> && ...));
     constexpr auto nQubits = sizeof...(Ints);
-    std::vector<int> qubitsCopy{qubits...};
+    std::array<int, nQubits> qubitsCopy{qubits...};
     std::ranges::sort(qubitsCopy);
     return QuantumGate(
       GateMatrix(utils::randomUnitaryMatrix(1U << nQubits)),
       llvm::SmallVector<int>(qubitsCopy.begin(), qubitsCopy.end()));
   }
+
+  template<std::size_t NQubits>
+  static QuantumGate RandomUnitary(std::array<int, NQubits> qubits) {
+    std::ranges::sort(qubits);
+    return QuantumGate(
+      GateMatrix(utils::randomUnitaryMatrix(1U << NQubits)),
+      llvm::SmallVector<int>(qubits.begin(), qubits.end()));
+  }
+
 };
 
 } // namespace cast
