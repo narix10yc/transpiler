@@ -26,6 +26,8 @@ cmake -S llvm-project-19.1.0.src/llvm -G Ninja \
 -DLLVM_ENABLE_PROJECTS="clang;lld;lldb" \
 -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind"
 
+cmake --build build
+
 cmake --install build --prefix "release-install"
 
 cmake -S llvm-project-19.1.0.src/llvm -G Ninja \
@@ -36,5 +38,7 @@ cmake -S llvm-project-19.1.0.src/llvm -G Ninja \
 -DCMAKE_C_COMPILER="$llvm_root/bin/clang" \
 -DCMAKE_CXX_COMPILER="$llvm_root/bin/clang++" \
 -DLLVM_USE_LINKER="$llvm_root/bin/ld64.lld"
+
+cmake --build build
 
 cmake --install build --prefix "debug-install"

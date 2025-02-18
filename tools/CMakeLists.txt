@@ -27,7 +27,7 @@ else()
 endif()
 
 add_executable(scratch "scratch.cpp")
-target_link_libraries(scratch utils cast simulation)
+target_link_libraries(scratch utils cast simulation timeit)
 
 add_executable(fpga_playground "fpga_playground.cpp")
 target_link_libraries(fpga_playground qasm cast simulation)
