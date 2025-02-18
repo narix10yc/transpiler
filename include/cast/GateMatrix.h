@@ -179,6 +179,8 @@ public:
   // @brief Get number of qubits
   int nQubits() const;
 
+  // int opCount() const;
+
   std::ostream& printCMat(std::ostream& os) const;
 
   std::ostream& printPMat(std::ostream& os) const;
