@@ -2,6 +2,7 @@
 #include "cast/QuantumGate.h"
 
 using namespace cast;
+using namespace cast::impl;
 using namespace cast::fpga;
 
 namespace {

@@ -1,12 +1,13 @@
-#include "cast/QuantumGate.h"
+#include "cast/GateMatrix.h"
 #include "utils/iocolor.h"
 #include <cmath>
 #include <iomanip>
 
 using namespace IOColor;
 using namespace cast;
+using namespace cast::impl;
 
-GateKind cast::String2GateKind(const std::string& s) {
+impl::GateKind cast::impl::String2GateKind(const std::string& s) {
   if (s == "x")
     return gX;
   if (s == "y")
@@ -24,11 +25,11 @@ GateKind cast::String2GateKind(const std::string& s) {
   if (s == "cp")
     return gCP;
 
-  assert(false && "Unimplemented String2GateKind");
+  assert(false && "Unimplemented cast::impl::String2GateKind");
   return gUndef;
 }
 
-std::string cast::GateKind2String(GateKind t) {
+std::string cast::impl::GateKind2String(GateKind t) {
   switch (t) {
   case gX:
     return "x";
@@ -57,18 +58,6 @@ using p_matrix_t = GateMatrix::p_matrix_t;
 using up_matrix_t = GateMatrix::up_matrix_t;
 using c_matrix_t = GateMatrix::c_matrix_t;
 using gate_params_t = GateMatrix::gate_params_t;
-
-std::ostream& cast::printParametrizedMatrix(
-    std::ostream& os, const p_matrix_t& pMat) {
-  auto edgeSize = pMat.edgeSize();
-  for (size_t r = 0; r < edgeSize; r++) {
-    for (size_t c = 0; c < edgeSize; c++) {
-      os << "[" << r << "," << c << "]: ";
-      pMat(r, c).print(os) << "\n";
-    }
-  }
-  return os;
-}
 
 #pragma region Static UP Matrices
 const up_matrix_t GateMatrix::MatrixI1_up {
@@ -269,6 +258,24 @@ GateMatrix GateMatrix::FromName(
 
   assert(false && "Unsupported gate");
   return GateMatrix(gUndef);
+}
+
+std::ostream& GateMatrix::printCMat(std::ostream& os) const {
+  const auto* cMat = getConstantMatrix();
+  assert(cMat != nullptr && "GateMatrix is not convertible to cmatrix_t");
+  return utils::printComplexMatrixF64(os, *cMat);
+}
+
+std::ostream& GateMatrix::printPMat(std::ostream& os) const {
+  const auto& pMat = getParametrizedMatrix();
+  auto edgeSize = pMat.edgeSize();
+  for (size_t r = 0; r < edgeSize; r++) {
+    for (size_t c = 0; c < edgeSize; c++) {
+      os << "[" << r << "," << c << "]: ";
+      pMat(r, c).print(os) << "\n";
+    }
+  }
+  return os;
 }
 
 void GateMatrix::permuteSelf(const llvm::SmallVector<int>& flags) {
@@ -615,9 +622,10 @@ void GateMatrix::computeAndCachePMat() const {
 
 namespace {
 
-inline void computeSigMatAfresh(const GateMatrix::c_matrix_t& cMat,
-                                double zeroTol, double oneTol,
-                                GateMatrix::sig_matrix_t& sigMat) {
+inline void computeSigMatAfresh(
+    const GateMatrix::c_matrix_t& cMat,
+    double zeroTol, double oneTol,
+    GateMatrix::sig_matrix_t& sigMat) {
   assert(sigMat.edgeSize() == 0);
   const auto edgeSize = cMat.edgeSize();
   sigMat = GateMatrix::sig_matrix_t(edgeSize);
