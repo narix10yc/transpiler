@@ -1,6 +1,5 @@
-#include <cast/CircuitGraph.h>
-
 #include "openqasm/parser.h"
+#include "cast/CircuitGraph.h"
 #include "cast/Parser.h"
 #include "utils/CommandLine.h"
 

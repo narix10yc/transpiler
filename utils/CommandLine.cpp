@@ -1,4 +1,5 @@
 #include "utils/CommandLine.h"
+#include <algorithm>
 
 using namespace utils;
 using namespace utils::cl::internal;
@@ -38,6 +39,13 @@ static void warnTooManyHyphens(int nHyphens, StringRef name) {
 static void warnEqualSignInPrefixArg(char prefix) {
   std::cerr << BOLDYELLOW("[Warning] ") << "Prefix argument '" << prefix << "' "
             "should not be followed by '='.\n";
+}
+
+[[noreturn]] static void terminateFailToParseArgument(
+    StringRef name, StringRef clValue) {
+  std::cerr << BOLDRED("[ERROR] ") << "Argument " << name
+            << " does not accept value '" << clValue << "'\n";
+  std::exit(1);
 }
 
 [[noreturn]] static void terminateLeadingEqualSign() {
@@ -103,7 +111,7 @@ namespace {
   };
 }
 
-void utils::cl::ParseCommandLineArguments(int argc, char** argv) {
+void cl::ParseCommandLineArguments(int argc, char** argv) {
   std::vector<ArgContainer> prefixArgs;
   std::vector<ArgContainer> nonPrefixArgs;
 
@@ -151,26 +159,26 @@ void utils::cl::ParseCommandLineArguments(int argc, char** argv) {
   // };
 
   while (i < argc) {
-    StringRef name(argv[i++]);
-    assert(!name.empty());
-    if (*name.begin() == '=') {
+    StringRef clValue(argv[i++]);
+    assert(!clValue.empty());
+    if (*clValue.begin() == '=') {
       terminateLeadingEqualSign();
       // terminated
     }
     int nHyphens = 0;
-    while (*name.begin() == '-') {
-      name.increment();
+    while (*clValue.begin() == '-') {
+      clValue.increment();
       nHyphens++;
     }
-    if (name.empty()) {
+    if (clValue.empty()) {
       terminateEmptyArgument();
       // terminated
     }
 
     if (nHyphens > 2)
-      warnTooManyHyphens(nHyphens, name);
+      warnTooManyHyphens(nHyphens, clValue);
 
-    if (name.compare("help") == 0) {
+    if (clValue.compare("help") == 0) {
       terminateDisplayHelp();
       // terminated
     }
@@ -178,62 +186,68 @@ void utils::cl::ParseCommandLineArguments(int argc, char** argv) {
     // positional arguments
     if (nHyphens == 0) {
       if (positionalArg == nullptr) {
-        terminateNoPositionalArgument(name);
+        terminateNoPositionalArgument(clValue);
         // terminated
       }
-      positionalArg->parseValue(name);
+      if (positionalArg->parseValue(clValue))
+        terminateFailToParseArgument(positionalArg->getName(), clValue);
       continue;
     }
 
     // split argument name by '='. value is empty <=> there is no '=' sign
-    StringRef value(name);
+    StringRef value(clValue);
     while (!value.empty() && *value.begin() != '=')
       value.increment();
-    name = StringRef(name.begin(), value.begin() - name.begin());
+    clValue = StringRef(clValue.begin(), value.begin() - clValue.begin());
     if (!value.empty()) {
       assert(*value.begin() == '=');
       value.increment();
       if (value.empty()) {
-        terminateSpaceAfterEqualSign(name, (i < argc) ? argv[i+1] : "");
+        terminateSpaceAfterEqualSign(clValue, (i < argc) ? argv[i+1] : "");
         // terminated
       }
     }
 
     ArgumentBase* pendingArg = nullptr;
     // prefix arguments
-    if ((pendingArg = matchPrefixArg(*name.begin()))) {
+    if ((pendingArg = matchPrefixArg(*clValue.begin()))) {
       if (!value.empty()) {
-        warnEqualSignInPrefixArg(*name.begin());
-        pendingArg->parseValue(value);
+        warnEqualSignInPrefixArg(*clValue.begin());
+        if (pendingArg->parseValue(value))
+          terminateFailToParseArgument(pendingArg->getName(), value);
         continue;
       }
-      if (name.length() == 1) {
+      if (clValue.length() == 1) {
         if (i == argc) {
-          terminateNoProvidingRequiredValue(name);
+          terminateNoProvidingRequiredValue(clValue);
           // terminated
         }
-        pendingArg->parseValue(argv[i++]);
+        StringRef clValue = argv[i++];
+        if (pendingArg->parseValue(clValue))
+          terminateFailToParseArgument(pendingArg->getName(), clValue);
         continue;
       }
       // name.length() > 1
-      name.increment();
-      pendingArg->parseValue(name);
+      clValue.increment();
+      if (pendingArg->parseValue(clValue))
+        terminateFailToParseArgument(pendingArg->getName(), clValue);
       continue;
     }
 
-    pendingArg = matchNonPrefixArg(name);
+    pendingArg = matchNonPrefixArg(clValue);
     if (pendingArg == nullptr)
-      terminateUnknownArgument(name);
+      terminateUnknownArgument(clValue);
     if (value.empty() && pendingArg->getValueFormat() == VF_Required) {
       if (i == argc)
-        terminateNoProvidingRequiredValue(name);
+        terminateNoProvidingRequiredValue(clValue);
       value = StringRef(argv[i++]);
     }
-    pendingArg->parseValue(value);
+    if (pendingArg->parseValue(value))
+      terminateFailToParseArgument(pendingArg->getName(), value);
   }
 }
 
-void utils::cl::DisplayArguments() {
+void cl::DisplayArguments() {
   std::cerr << "----------------- " << ArgumentRegistry::arguments().size()
             << " Arguments -----------------\n";
   for (const auto* a: ArgumentRegistry::arguments()) {
@@ -248,7 +262,7 @@ void utils::cl::DisplayArguments() {
 }
 
 
-void utils::cl::DisplayHelp() {
+void cl::DisplayHelp() {
   std::cerr << "<-help>\n";
 }
 
@@ -257,3 +271,42 @@ void cl::unregisterAllArguments() {
     delete a;
   ArgumentRegistry::arguments().clear();
 }
+
+
+template<>
+bool cl::ArgumentParser<std::string>::operator()(
+    StringRef clValue, std::string& valueToWriteOn) {
+      valueToWriteOn = static_cast<std::string>(clValue);
+  return false;
+}
+
+template<>
+bool cl::ArgumentParser<int>::operator()(
+    StringRef clValue, int& valueToWriteOn) {
+  valueToWriteOn = std::stoi(static_cast<std::string>(clValue));
+  return false;
+}
+
+template<>
+bool cl::ArgumentParser<double>::operator()(
+    StringRef clValue, double& valueToWriteOn) {
+  valueToWriteOn = std::stod(static_cast<std::string>(clValue));
+  return false;
+}
+
+template<>
+bool cl::ArgumentParser<bool>::operator()(
+    StringRef clValue, bool& valueToWriteOn) {
+  if (clValue.empty() || clValue.compare("0") == 0 ||
+      clValue.compare_ci("false") == 0 || clValue.compare_ci("off") == 0) {
+    valueToWriteOn = false;
+    return false;
+  }
+  if (clValue.compare("1") == 0 || clValue.compare_ci("true") == 0 ||
+      clValue.compare_ci("on") == 0) {
+    valueToWriteOn = true;
+    return false;
+  }
+  return true;
+}
+

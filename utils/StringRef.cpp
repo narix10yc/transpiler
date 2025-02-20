@@ -11,11 +11,13 @@ int StringRef::compare(StringRef other) const {
 }
 
 int StringRef::compare_ci(StringRef other) const {
-  if (_length != other._length)
-    return false;
+  if (_length > other._length)
+    return 1;
+  if (_length < other._length)
+    return -1;
   auto* p0 = _bufferBegin;
   auto* p1 = other._bufferBegin;
-  while (p0 < p0 + _length) {
+  while (p0 < this->end()) {
     auto c0 = *p0;
     auto c1 = *p1;
     if (c0 >= 'a' && c0 <= 'z')
