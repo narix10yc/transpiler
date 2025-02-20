@@ -25,14 +25,16 @@ public:
       const QuantumGate& gate, int precision, int nThreads) const = 0;
 };
 
+/// @brief \c NaiveCostModel is based on the size and operation count of fused
+/// gates.
 class NaiveCostModel : public CostModel {
-  int maxnQubits;
+  int maxNQubits;
   int maxOp;
   double zeroTol;
 
 public:
-  NaiveCostModel(int maxnQubits, int maxOp, double zeroTol)
-    : maxnQubits(maxnQubits), maxOp(maxOp), zeroTol(zeroTol) {}
+  NaiveCostModel(int maxNQubits, int maxOp, double zeroTol)
+    : maxNQubits(maxNQubits), maxOp(maxOp), zeroTol(zeroTol) {}
 
   double computeSpeed(
       const QuantumGate& gate, int precision, int nThreads) const override;

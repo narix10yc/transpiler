@@ -14,7 +14,7 @@ namespace utils::cl {
   void DisplayHelp();
 
   enum ArgumentFormat {
-    AF_Normal,     // either '-' or '--' allowed. value must follow '=' or space
+    AF_Normal,     // Either '-' or '--' allowed. Value must follow '=' or space
     AF_Positional,
     AF_Prefix,     // value can follow directly
     AF_DoubleDash, // must use '--'
@@ -25,10 +25,11 @@ namespace utils::cl {
     VF_Optional,
   };
 
+  /// @brief The base class for all parsers
+  template<typename ValueType>
+  class ArgumentParser;
 
   namespace internal {
-    class ArgumentParser;
-
     class ArgumentBase {
     protected:
       StringRef _name;
@@ -39,9 +40,20 @@ namespace utils::cl {
       ArgumentBase(StringRef name) : _name(name) {}
       virtual ~ArgumentBase() = default;
 
-      virtual void parseValue(StringRef) = 0;
+      ArgumentBase(const ArgumentBase&) = delete;
+      ArgumentBase(ArgumentBase&&) = delete;
+      ArgumentBase& operator=(const ArgumentBase&) = delete;
+      ArgumentBase& operator=(ArgumentBase&&) = delete;
 
-      virtual void printValue(std::ostream&) const = 0;
+      [[nodiscard]]
+      virtual bool parseValue(StringRef clValue) = 0;
+
+      virtual void printValue(std::ostream& os) const = 0;
+
+      std::ostream& error(std::ostream& os = std::cerr) const {
+        return os << BOLDRED("Error: ")
+                  << "command line argument '" << _name << "': ";
+      }
 
       StringRef getName() const { return _name; }
       StringRef getDesc() const { return _desc; }
@@ -58,31 +70,44 @@ namespace utils::cl {
       }
     };
 
-    template<typename ClassType, typename ArgType>
+    template<typename ClassType, typename ValueType>
     class ArgumentCRTP : public ArgumentBase {
     protected:
-      ArgType _value;
+      using ParserType = std::function<bool(StringRef, ValueType&)>;
+      ValueType _value;
+      ParserType _parseFunc;
+
+      [[nodiscard]]
+      bool parseValue(StringRef clValue) override {
+        return _parseFunc(clValue, _value);
+      }
     public:
-      ArgumentCRTP(StringRef name) : ArgumentBase(name), _value() {
+      ArgumentCRTP(StringRef name)
+      : ArgumentBase(name), _value(), _parseFunc(ArgumentParser<ValueType>()) {
         _name = name;
         while (!name.empty() && *name.begin() == '-')
           _name.increment();
       }
 
-      operator ArgType() const {
+      operator ValueType() const {
         return _value;
       }
 
       friend std::ostream& operator<<(
-          std::ostream& os, const ArgumentCRTP<ClassType, ArgType>& arg) {
-        return os << static_cast<const ArgType&>(arg);
+          std::ostream& os, const ArgumentCRTP<ClassType, ValueType>& arg) {
+        return os << static_cast<const ValueType&>(arg);
       }
 
       void printValue(std::ostream& os) const override {
         os << _value;
       }
 
-      ClassType& init(ArgType v) {
+      ClassType& setParser(const ParserType& parser) {
+        _parseFunc = parser;
+        return static_cast<ClassType&>(*this);
+      }
+
+      ClassType& init(ValueType v) {
         _value = v;
         return static_cast<ClassType&>(*this);
       }
@@ -92,79 +117,75 @@ namespace utils::cl {
         return static_cast<ClassType&>(*this);
       }
 
-      ClassType& format(ArgumentFormat f) {
-        _argFormat = f;
-        assert((f == AF_Prefix ^ _name.length() != 1) && "Prefix");
+      ClassType& setArgumentFrmat(ArgumentFormat af) {
+        _argFormat = af;
+        assert((af == AF_Prefix ^ _name.length() != 1) &&
+               "Prefix argument must have length 1");
         return static_cast<ClassType&>(*this);
       }
 
-      inline ClassType& setPositional() {
-        return format(AF_Positional);
+      ClassType& setValueFormat(ValueFormat vf) {
+        _valueFormat = vf;
+        return static_cast<ClassType&>(*this);
       }
 
-      inline ClassType& setPrefix() {
-        return format(AF_Prefix);
+      ClassType& setArgumentPositional() {
+        return setArgumentFrmat(AF_Positional);
+      }
+
+      ClassType& setArgumentPrefix() {
+        return setArgumentFrmat(AF_Prefix);
+      }
+
+      ClassType& setValueRequired() {
+        return setValueFormat(VF_Required);
       }
     };
 
   } // namespace internal
 
-template<typename ArgType>
-class Argument : public internal::ArgumentCRTP<Argument<ArgType>, ArgType> {
-  using CRTPBase = internal::ArgumentCRTP<Argument<ArgType>, ArgType>;
-public:
-  Argument(StringRef name) : CRTPBase(name) {}
 
-  void parseValue(StringRef s) override;
-};
+    
+  template<typename ValueType>
+  class ArgumentParser {
+  public:
+    ArgumentParser() = default;
 
-using ArgString = Argument<std::string>;
-using ArgBool = Argument<bool>;
-using ArgInt = Argument<int>;
-using ArgDouble = Argument<double>;
+    /// @param clValue commandline value
+    /// @return false on error
+    bool operator()(StringRef clValue, ValueType& valueToWriteOn);
+  };
 
-template<>
-inline void ArgString::parseValue(StringRef s) {
-  _value = static_cast<std::string>(s);
-}
+  template<typename ValueType>
+  class Argument : public internal::ArgumentCRTP<Argument<ValueType>, ValueType> {
+    using CRTPBase = internal::ArgumentCRTP<Argument<ValueType>, ValueType>;
+  public:
+    Argument(StringRef name) : CRTPBase(name) {
+      // internal::ArgumentRegistry::arguments().push_back(this);
+    }
+  };
 
-template<>
-inline void ArgInt::parseValue(StringRef s) {
-  _value = std::stoi(static_cast<std::string>(s));
-}
+  using ArgString = Argument<std::string>;
+  using ArgBool = Argument<bool>;
+  using ArgInt = Argument<int>;
+  using ArgDouble = Argument<double>;
 
-template<>
-inline void ArgDouble::parseValue(StringRef s) {
-  _value = std::stod(static_cast<std::string>(s));
-}
+  // template<>
+  // void ArgBool::printValue(std::ostream& os) const override;
 
-template<>
-inline void ArgBool::parseValue(StringRef s) {
-  if (s.empty())
-    _value = true;
-  else if (s.compare_ci("false") || s.compare_ci("off"))
-    _value = false;
-  else if (s.compare_ci("true") || s.compare_ci("on"))
-    _value = true;
-  else if (s.compare("0"))
-    _value = false;
-  else if (s.compare("1"))
-    _value = true;
-  else {
-    std::cerr << BOLDRED("Error: ") << "Illegal value '" << s << "' "
-              " for boolean argument " << _name << "\n";
-    std::exit(1);
+  // template <>
+  // void ArgBool::printValue(std::ostream& os) const {
+  //   os << (_value ? "True" : "False");
+  // }
+
+  template<typename ValueType>
+  Argument<ValueType>& registerArgument(StringRef name) {
+    auto* arg = new Argument<ValueType>(name);
+    internal::ArgumentRegistry::arguments().push_back(arg);
+    return *arg;
   }
-}
 
-template<typename ArgType>
-Argument<ArgType>& registerArgument(const char* name) {
-  auto* arg = new Argument<ArgType>(name);
-  internal::ArgumentRegistry::arguments().push_back(arg);
-  return *arg;
-}
-
-void unregisterAllArguments();
+  void unregisterAllArguments();
 
 } // namespace utils::cl
 #else
