@@ -1,6 +1,8 @@
 #ifndef COMMANDLINE_COMMANDLINE_H
 #define COMMANDLINE_COMMANDLINE_H
 
+#define DISALLOW_LOWERCASE_PREFIX_ARGUMENT_NAMES
+
 #include "utils/StringRef.h"
 #include "utils/PODVector.h"
 #include "utils/iocolor.h"
@@ -14,15 +16,29 @@ namespace utils::cl {
   void DisplayHelp();
 
   enum ArgumentFormat {
-    AF_Normal,     // Either '-' or '--' allowed. Value must follow '=' or space
-    AF_Positional,
-    AF_Prefix,     // value can follow directly
-    AF_DoubleDash, // must use '--'
+    // Either '-' or '--' allowed. Value must follow '=' or space
+    AF_Normal,
+
+    // argname is not required
+    AF_Positional, 
+
+    // value can follow argname directly; argname must be a single character
+    AF_Prefix,
+
+    // must use '--'
+    AF_DoubleDash,
   };
 
   enum ValueFormat {
     VF_Required,
     VF_Optional,
+  };
+
+  enum OccurrenceFormat {
+    OccurAny,
+    OccurExactlyOnce,
+    OccurAtLeastOnce,
+    OccurAtMostOnce,
   };
 
   /// @brief The base class for all parsers
@@ -34,8 +50,10 @@ namespace utils::cl {
     protected:
       StringRef _name;
       StringRef _desc = "";
+      // TODO: Only Prefix format has effect now
       ArgumentFormat _argFormat = AF_Normal;
       ValueFormat _valueFormat = VF_Required;
+      OccurrenceFormat _occurFormat = OccurAny;
     public:
       ArgumentBase(StringRef name) : _name(name) {}
       virtual ~ArgumentBase() = default;
@@ -59,6 +77,7 @@ namespace utils::cl {
       StringRef getDesc() const { return _desc; }
       ArgumentFormat getArgFormat() const { return _argFormat; }
       ValueFormat getValueFormat() const { return _valueFormat; }
+      OccurrenceFormat getOccurrenceFormat() const { return _occurFormat; }
     };
 
     class ArgumentRegistry {
@@ -129,6 +148,12 @@ namespace utils::cl {
         return static_cast<ClassType&>(*this);
       }
 
+      ClassType& setOccurrenceFormat(OccurrenceFormat of) {
+        _occurFormat = of;
+        return static_cast<ClassType&>(*this);
+      }
+
+      /* Convenient methods */
       ClassType& setArgumentPositional() {
         return setArgumentFrmat(AF_Positional);
       }
@@ -140,12 +165,22 @@ namespace utils::cl {
       ClassType& setValueRequired() {
         return setValueFormat(VF_Required);
       }
+
+      ClassType& setOccurExactlyOnce() {
+        return setOccurrenceFormat(OccurExactlyOnce);
+      }
+
+      ClassType& setOccurAtLeastOnce() {
+        return setOccurrenceFormat(OccurAtLeastOnce);
+      }
+
+      ClassType& setOccurAtMostOnce() {
+        return setOccurrenceFormat(OccurAtMostOnce);
+      }
     };
 
   } // namespace internal
 
-
-    
   template<typename ValueType>
   class ArgumentParser {
   public:
@@ -161,7 +196,9 @@ namespace utils::cl {
     using CRTPBase = internal::ArgumentCRTP<Argument<ValueType>, ValueType>;
   public:
     Argument(StringRef name) : CRTPBase(name) {
-      // internal::ArgumentRegistry::arguments().push_back(this);
+      if constexpr (std::is_same_v<ValueType, bool>) {
+        this->setValueFormat(VF_Optional);
+      }
     }
   };
 
@@ -169,14 +206,6 @@ namespace utils::cl {
   using ArgBool = Argument<bool>;
   using ArgInt = Argument<int>;
   using ArgDouble = Argument<double>;
-
-  // template<>
-  // void ArgBool::printValue(std::ostream& os) const override;
-
-  // template <>
-  // void ArgBool::printValue(std::ostream& os) const {
-  //   os << (_value ? "True" : "False");
-  // }
 
   template<typename ValueType>
   Argument<ValueType>& registerArgument(StringRef name) {
