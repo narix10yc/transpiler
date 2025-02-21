@@ -105,10 +105,14 @@ public:
       const CPUKernelGenConfig& cpuConfig,
       int nQubits, int nThreads, int nRuns);
 
-  void saveToCSV(const std::string& fileName) const;
+  void writeResults(std::ostream& os) const;
   
   static PerformanceCache LoadFromCSV(const std::string& fileName);
+  
+  constexpr static const char*
+  CSV_Title = "nQubits,opCount,precision,irregularity,nThreads,memSpd\n";
 };
+
 
 } // namespace cast
 
