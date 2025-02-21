@@ -147,25 +147,15 @@ std::ostream& StandardCostModel::display(std::ostream& os, int nLines) const {
   return os;
 }
 
-void PerformanceCache::saveToCSV(const std::string& fileName_) const {
-  std::string fileName = fileName_;
-  auto l = fileName.size();
-  if (l < 4 || fileName.substr(l - 4, l) != ".csv")
-    fileName += ".csv";
-
-  std::ofstream file(fileName);
-  assert(file.is_open());
-
-  file << "nQubits,opCount,precision,irregularity,nThreads,memSpd\n";
+void PerformanceCache::writeResults(std::ostream& os) const {
   for (const auto&
       [nQubits, opCount, precision,
        irregularity, nThreads, memUpdateSpeed] : items) {
-    file << nQubits << "," << opCount << ","
-         << precision << "," << irregularity << ","
-         << nThreads << ","
-         << std::scientific << std::setw(6) << memUpdateSpeed << "\n";
+    os << nQubits << "," << opCount << ","
+       << precision << "," << irregularity << ","
+       << nThreads << ","
+       << std::scientific << std::setw(6) << memUpdateSpeed << "\n";
   }
-  file.close();
 }
 
 namespace {
