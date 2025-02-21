@@ -26,7 +26,8 @@ static int levenshteinDistance(StringRef s1, StringRef s2) {
   return dp[len1][len2];
 }
 
-[[noreturn]] static void terminateDisplayHelp() {
+[[noreturn]]
+static void terminateDisplayHelp() {
   cl::DisplayHelp();
   std::exit(0);
 }
@@ -41,44 +42,44 @@ static void warnEqualSignInPrefixArg(char prefix) {
             "should not be followed by '='.\n";
 }
 
-[[noreturn]] static void terminateFailToParseArgument(
-    StringRef name, StringRef clValue) {
-  std::cerr << BOLDRED("[ERROR] ") << "Argument " << name
-            << " does not accept value '" << clValue << "'\n";
+[[noreturn]]
+static void terminateFailToParseArgument(StringRef clName, StringRef clValue) {
+  std::cerr << BOLDRED("[Error] ") << "Argument '" << clName
+            << "' does not accept value '" << clValue << "'\n";
   std::exit(1);
 }
 
-[[noreturn]] static void terminateLeadingEqualSign() {
-  std::cerr << BOLDRED("[ERROR] ") << "Leading equal sign. "
-            "Did you add a redundant space before it?\n";
+[[noreturn]]
+static void terminateLeadingEqualSign(StringRef clValue) {
+  std::cerr << BOLDRED("[Error] ") << "Leading equal sign in '" << clValue
+            << "'; Did you add a redundant space before it?\n";
   std::exit(1);
 }
 
-[[noreturn]] static void terminateNoProvidingRequiredValue(StringRef name) {
-  std::cerr << BOLDRED("[ERROR] ") << "Argument '" << name << "' "
+[[noreturn]]
+static void terminateNoProvidingRequiredValue(StringRef name) {
+  std::cerr << BOLDRED("[Error] ") << "Argument '" << name << "' "
             "requires a value, but is not provided.\n";
   std::exit(1);
 }
 
-[[noreturn]] static void terminateNoPositionalArgument(StringRef value) {
-  std::cerr << BOLDRED("[ERROR] ") << "Argument value '" << value << "' "
-              "does not match any positional argument.\n";
+[[noreturn]]
+static void terminateNoPositionalArgument(StringRef clInput) {
+  std::cerr << BOLDRED("[Error] ")
+            << "There is no positional argument defined for input '" << clInput
+            << "'\n";
   std::exit(1);
 }
 
-[[noreturn]] static void terminateEmptyArgument() {
-  std::cerr << BOLDRED("[ERROR] ") << "Empty argument\n";
+[[noreturn]]
+static void terminateEmptyArgument() {
+  std::cerr << BOLDRED("[Error] ") << "Empty argument\n";
   std::exit(1);
 }
 
-[[noreturn]] static void terminateEmptyValue(StringRef name) {
-  std::cerr << BOLDRED("[ERROR] ") << "Argument '" << name << "' "
-            "has no value.\n";
-  std::exit(1);
-}
-
-[[noreturn]] static void terminateUnknownArgument(StringRef arg) {
-  std::cerr << BOLDRED("[ERROR] ") << "Unknown argument '" << arg << "'. ";
+[[noreturn]]
+static void terminateUnknownArgument(StringRef arg) {
+  std::cerr << BOLDRED("[Error] ") << "Unknown argument '" << arg << "'. ";
   int minDist = 100;
   StringRef bestMatchArg;
   for (const auto* a: ArgumentRegistry::arguments()) {
@@ -96,37 +97,90 @@ static void warnEqualSignInPrefixArg(char prefix) {
   std::exit(1);
 }
 
-[[noreturn]] static void terminateSpaceAfterEqualSign(
-    StringRef name, StringRef value) {
-  std::cerr << BOLDRED("[ERROR] ") << "Argument-value pair '" << name << "= "
-            << value << "' should not have space after the '=' sign.\n";
+[[noreturn]]
+static void terminateSpaceAfterEqualSign(
+    StringRef clName, StringRef clValue) {
+  std::cerr << BOLDRED("[Error] ") << "Argument-value pair '" << clName << "= "
+            << clValue << "' should not have space after the '=' sign.\n";
   std::exit(1);
 }
 
 namespace {
   struct ArgContainer {
     ArgumentBase* arg;
-    StringRef name;
-    explicit ArgContainer(ArgumentBase* a) : arg(a), name(a->getName()) {}
+    int nOccurrence;
+
+    explicit ArgContainer(ArgumentBase* a) : arg(a), nOccurrence(0) {}
   };
+}
+
+static void maybeTerminateNonMatchOccurrence(const ArgContainer& argContainer) {
+  if (argContainer.arg == nullptr)
+    return;
+  assert(argContainer.nOccurrence >= 0);
+  switch (argContainer.arg->getOccurrenceFormat()) {
+  case cl::OccurExactlyOnce: {
+    if (argContainer.nOccurrence != 1) {
+      std::cerr << BOLDRED("[Error] ")
+                << "Argument '" << argContainer.arg->getName()
+                << "' needs to be specified exactly once, but it was ";
+      if (argContainer.nOccurrence == 0)
+        std::cerr << "not specified.\n";
+      else
+        std::cerr << "specified " << argContainer.nOccurrence << " times.\n";
+      std::exit(1);
+    }
+    break;
+  }
+  case cl::OccurAtLeastOnce: {
+    if (argContainer.nOccurrence == 0) {
+      std::cerr << BOLDRED("[Error] ")
+                << "Argument '" << argContainer.arg->getName()
+                << "' should be specified at least once.\n";
+      std::exit(1);
+    }
+    break;
+  }
+  case cl::OccurAtMostOnce: {
+    if (argContainer.nOccurrence > 1) {
+      std::cerr << BOLDRED("[Error] ")
+                << "Argument '" << argContainer.arg->getName()
+                << "' should be specified at most once, but was specified "
+                << argContainer.nOccurrence << " times.\n";
+      std::exit(1);
+    }
+    break;
+  }
+  default:
+    break;
+  }
 }
 
 void cl::ParseCommandLineArguments(int argc, char** argv) {
   std::vector<ArgContainer> prefixArgs;
   std::vector<ArgContainer> nonPrefixArgs;
 
-  ArgumentBase* positionalArg = nullptr;
+  ArgContainer positionalArgContainer(nullptr);
   for (auto* a : ArgumentRegistry::arguments()) {
     switch (a->getArgFormat()) {
       case AF_Positional: {
-        assert(positionalArg == nullptr);
-        positionalArg = a;
+        assert(positionalArgContainer.arg == nullptr &&
+          "At most one positional arg is allowed");
+        positionalArgContainer.arg = a;
         break;
       }
       case AF_Prefix: {
         prefixArgs.emplace_back(a);
         assert(a->getName().length() == 1 &&
           "Prefix arguments must have name with length 1");
+        #ifdef DISALLOW_LOWERCASE_PREFIX_ARGUMENT_NAMES
+          assert(*a->getName().begin() >= 'A' && *a->getName().begin() <= 'Z' &&
+           "Prefix argument names must be a single upper-case letter. "
+           "To disable this, undef DISALLOW_LOWERCASE_PREFIX_ARGUMENT_NAMES "
+           "immediately after including Commandline.h and re-compile. "
+           "(Unexpected parsing results may happen if this lower-case letter "
+           "collides with other argument names.)");
+        #endif
         break;
       }
       default:
@@ -134,117 +188,151 @@ void cl::ParseCommandLineArguments(int argc, char** argv) {
     }
   }
 
-  const auto matchPrefixArg = [&](char prefix) -> ArgumentBase* {
-    for (const auto& c : prefixArgs) {
-      if (*c.name.begin() == prefix)
-        return c.arg;
+  const auto matchPrefixArg = [&](char prefix) -> ArgContainer* {
+    for (auto& c : prefixArgs) {
+    if (*c.arg->getName().begin() == prefix)
+        return &c;
     }
     return nullptr;
   };
 
-  const auto matchNonPrefixArg = [&](StringRef name) -> ArgumentBase* {
-    for (const auto& c : nonPrefixArgs) {
-      if (c.name.compare(name) == 0)
-        return c.arg;
+  const auto matchNonPrefixArg = [&](StringRef name) -> ArgContainer* {
+    for (auto& c : nonPrefixArgs) {
+      if (c.arg->getName().compare(name) == 0)
+        return &c;
     }
     return nullptr;
+  };
+
+  const auto parseAndRecordOccurrence =
+    [&](ArgContainer& arg, StringRef clValue) {
+      if (arg.arg->parseValue(clValue))
+        terminateFailToParseArgument(arg.arg->getName(), clValue);
+      arg.nOccurrence++;
   };
 
   int i = 1;
-
-  // const auto grabNext = [&]() -> StringRef {
-    // if (i == argc) {
-      // terminate
-    // }
-  // };
-
+  /* main loop
+   * In every iteration, we will match a name-value pair.
+   */
   while (i < argc) {
-    StringRef clValue(argv[i++]);
-    assert(!clValue.empty());
-    if (*clValue.begin() == '=') {
-      terminateLeadingEqualSign();
+    StringRef clInput(argv[i++]);
+    assert(!clInput.empty());
+
+    if (*clInput.begin() == '=') {
+      terminateLeadingEqualSign(clInput);
       // terminated
     }
+
+    // skip hyphens to grab the true argument name
     int nHyphens = 0;
-    while (*clValue.begin() == '-') {
-      clValue.increment();
+    while (*clInput.begin() == '-') {
+      clInput.increment();
       nHyphens++;
     }
-    if (clValue.empty()) {
+    if (clInput.empty()) {
       terminateEmptyArgument();
       // terminated
     }
 
     if (nHyphens > 2)
-      warnTooManyHyphens(nHyphens, clValue);
+      warnTooManyHyphens(nHyphens, clInput);
 
-    if (clValue.compare("help") == 0) {
+    if (clInput.compare("help") == 0) {
       terminateDisplayHelp();
       // terminated
     }
 
-    // positional arguments
+    // positional arguments, the whole clInput is clValue
     if (nHyphens == 0) {
-      if (positionalArg == nullptr) {
-        terminateNoPositionalArgument(clValue);
+      if (positionalArgContainer.arg == nullptr) {
+        terminateNoPositionalArgument(clInput);
         // terminated
       }
-      if (positionalArg->parseValue(clValue))
-        terminateFailToParseArgument(positionalArg->getName(), clValue);
+      parseAndRecordOccurrence(positionalArgContainer, clInput);
       continue;
     }
 
-    // split argument name by '='. value is empty <=> there is no '=' sign
-    StringRef value(clValue);
-    while (!value.empty() && *value.begin() != '=')
-      value.increment();
-    clValue = StringRef(clValue.begin(), value.begin() - clValue.begin());
-    if (!value.empty()) {
-      assert(*value.begin() == '=');
-      value.increment();
-      if (value.empty()) {
-        terminateSpaceAfterEqualSign(clValue, (i < argc) ? argv[i+1] : "");
-        // terminated
-      }
-    }
-
-    ArgumentBase* pendingArg = nullptr;
-    // prefix arguments
-    if ((pendingArg = matchPrefixArg(*clValue.begin()))) {
-      if (!value.empty()) {
-        warnEqualSignInPrefixArg(*clValue.begin());
-        if (pendingArg->parseValue(value))
-          terminateFailToParseArgument(pendingArg->getName(), value);
-        continue;
-      }
-      if (clValue.length() == 1) {
-        if (i == argc) {
-          terminateNoProvidingRequiredValue(clValue);
-          // terminated
-        }
-        StringRef clValue = argv[i++];
-        if (pendingArg->parseValue(clValue))
-          terminateFailToParseArgument(pendingArg->getName(), clValue);
-        continue;
-      }
-      // name.length() > 1
+    // split name-value pair by '='. value is empty iff there is no '=' sign
+    StringRef clName;
+    StringRef clValue(clInput);
+    while (!clValue.empty() && *clValue.begin() != '=')
       clValue.increment();
-      if (pendingArg->parseValue(clValue))
-        terminateFailToParseArgument(pendingArg->getName(), clValue);
+    clName = StringRef(clInput.begin(), clValue.begin() - clInput.begin());
+    assert(!clName.empty() &&
+      "Name should not be empty. "
+      "It should be checked by 'terminateLeadingEqualSign'");
+    if (!clValue.empty()) {
+      assert(*clValue.begin() == '=');
+      clValue.increment(); // go past the '=' sign
+      if (clValue.empty()) {
+        terminateSpaceAfterEqualSign(clName, (i < argc) ? argv[i+1] : "");
+        // terminated
+      }
+    }
+
+    /* If the user defines an arg 'output-dir' and a prefix arg 'o', then 
+     * '-output-dir=my/dir' should be parsed as (output-dir, my/dir) instead of
+     * (o, utput-dir=my/dir).
+     * So the above name-value split will handle this case correctly.
+     * On the other hand, if 'output-dir' is not defined, we should use 
+     * (o, utput-dir=my/dir) instead. We handle it in the following.
+     */
+    ArgContainer* argContainer = nullptr;
+    if ((argContainer = matchNonPrefixArg(clName)) != nullptr) {
+      // Successfully matched a non-prefix arg. Parse and finish.
+      auto vf = argContainer->arg->getValueFormat();
+      if (vf == VF_Required) {
+        if (clValue.empty()) {
+          if (i == argc)
+            terminateNoProvidingRequiredValue(clName);
+          clValue = argv[i++];
+          if (*clValue.begin() == '-')
+            terminateNoProvidingRequiredValue(clName);
+        }
+        parseAndRecordOccurrence(*argContainer, clValue);
+        continue;
+      }
+      assert(vf == VF_Optional);
+      if (clValue.empty() && i != argc) {
+        clValue = argv[i];
+        // invalid value
+        if (*clValue.begin() == '-')
+          clValue = "";
+      }
+      parseAndRecordOccurrence(*argContainer, clValue);
+      if (!clValue.empty())
+        ++i;
       continue;
     }
 
-    pendingArg = matchNonPrefixArg(clValue);
-    if (pendingArg == nullptr)
-      terminateUnknownArgument(clValue);
-    if (value.empty() && pendingArg->getValueFormat() == VF_Required) {
-      if (i == argc)
-        terminateNoProvidingRequiredValue(clValue);
-      value = StringRef(argv[i++]);
+    // prefix arguments
+    argContainer = matchPrefixArg(*clInput.begin());
+    if (argContainer == nullptr) {
+      terminateUnknownArgument(clName);
+      // terminated
     }
-    if (pendingArg->parseValue(value))
-      terminateFailToParseArgument(pendingArg->getName(), value);
-  }
+    // re-split the name-value pair
+    clName = StringRef(clInput.begin(), 1);
+    clValue = StringRef(clInput.begin() + 1, clInput.length() - 1);
+    if (!clValue.empty() && *clValue.begin() == '=') {
+      warnEqualSignInPrefixArg(*clName.begin());
+      clValue.increment();
+    }
+    if (clValue.empty()) {
+      if (i == argc)
+        terminateNoProvidingRequiredValue(clName);
+      clValue = argv[i++];
+    }
+    parseAndRecordOccurrence(*argContainer, clValue);
+  } // main while loop for parsing
+
+  // occurrence check
+  maybeTerminateNonMatchOccurrence(positionalArgContainer);
+  for (const auto& argContainer : prefixArgs)
+    maybeTerminateNonMatchOccurrence(argContainer);
+  for (const auto& argContainer : nonPrefixArgs)
+    maybeTerminateNonMatchOccurrence(argContainer);
 }
 
 void cl::DisplayArguments() {
@@ -297,13 +385,13 @@ bool cl::ArgumentParser<double>::operator()(
 template<>
 bool cl::ArgumentParser<bool>::operator()(
     StringRef clValue, bool& valueToWriteOn) {
-  if (clValue.empty() || clValue.compare("0") == 0 ||
-      clValue.compare_ci("false") == 0 || clValue.compare_ci("off") == 0) {
+  if (clValue.compare("0") == 0 || clValue.compare_ci("false") == 0 ||
+      clValue.compare_ci("off") == 0) {
     valueToWriteOn = false;
     return false;
   }
-  if (clValue.compare("1") == 0 || clValue.compare_ci("true") == 0 ||
-      clValue.compare_ci("on") == 0) {
+  if (clValue.empty() || clValue.compare("1") == 0 || 
+      clValue.compare_ci("true") == 0 || clValue.compare_ci("on") == 0) {
     valueToWriteOn = true;
     return false;
   }

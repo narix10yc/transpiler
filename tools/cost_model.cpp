@@ -17,21 +17,75 @@ static bool parsePrecision(utils::StringRef clValue, int& valueToWriteOn) {
   return true;
 }
 
-// static auto&
-// ArgOutputFilename = cl::registerArgument<std::string>("o");
+static auto&
+ArgOutputFilename = cl::registerArgument<std::string>("o")
+  .desc("Output file name")
+  .setOccurExactlyOnce();
 
 static auto&
 ArgPrecision = cl::registerArgument<int>("precision")
-  .setParser(parsePrecision).setValueFormat(cl::VF_Required);
+  .desc("Specify precision (f32 or f64)")
+  .setParser(parsePrecision).setOccurAtMostOnce().init(-1);
 
 static auto&
-ArgF32 = cl::registerArgument<bool>("f32");
+ArgF32 = cl::registerArgument<bool>("f32")
+  .desc("Use single-precision")
+  .init(false);
+
+static auto&
+ArgF64 = cl::registerArgument<bool>("f64")
+  .desc("Use double-precision")
+  .init(false);
+
+// return true on error
+static bool checkPrecisionArgsCollision() {
+  if (ArgF32 && ArgF64)
+    return true;
+  if (ArgF32) {
+    if (ArgPrecision == 64)
+      return true;
+    ArgPrecision.init(32);
+    return false;
+  }
+  if (ArgF64) {
+    if (ArgPrecision == 32)
+      return true;
+    ArgPrecision.init(64);
+    return false;
+  }
+  if (ArgPrecision != 32 && ArgPrecision != 64)
+    return true;
+  return false;
+}
+
+static auto&
+ArgNQubits = cl::registerArgument<int>("nqubits")
+  .desc("Specify number of qubits")
+  .init(26).setOccurAtMostOnce();
+
+static auto&
+ArgNThreads = cl::registerArgument<int>("T")
+  .desc("Specify number of threads")
+  .setArgumentPrefix().setOccurExactlyOnce();
+
+static auto&
+ArgOverwriteMode = cl::registerArgument<bool>("overwrite")
+  .desc("Overwrite the output file with new results")
+  .init(false);
 
 using namespace cast;
 
 int main(int argc, char** argv) {
   cl::ParseCommandLineArguments(argc, argv);
+
+  if (checkPrecisionArgsCollision()) {
+    std::cerr << BOLDRED("[Error]: ")
+              << "Precision arguments contradict with each other.\n";
+    return 1;
+  }
+
   cl::DisplayArguments();
+
 
   // PerformanceCache cache;
   // CPUKernelGenConfig cpuConfig;
