@@ -32,11 +32,11 @@ private:
       return &(asIter()->current->data);
     }
 
-    bool operator==(nullptr_t) const {
+    bool operator==(std::nullptr_t) const {
       return asIter()->current == nullptr;
     }
 
-    bool operator!=(nullptr_t) const {
+    bool operator!=(std::nullptr_t) const {
       return asIter()->current != nullptr;
     }
 

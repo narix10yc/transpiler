@@ -1,11 +1,11 @@
 #ifndef UTILS_STATEVECTOR_H
 #define UTILS_STATEVECTOR_H
 
-#include <memory>
 #include <complex>
 #include <iostream>
 #include <random>
 #include <thread>
+#include <algorithm>
 #include <cstdlib>
 
 #include "cast/QuantumGate.h"
@@ -78,7 +78,7 @@ public:
     return *this;
   }
 
-  StatevectorSep& operator=(StatevectorSep&&that) noexcept {
+  StatevectorSep& operator=(StatevectorSep&& that) noexcept {
     this->~StatevectorSep();
     real = that.real;
     imag = that.imag;
@@ -297,7 +297,7 @@ public:
          << "statevector has more than 5 qubits, "
             "only the first 32 entries are shown.\n";
     }
-    for (size_t i = 0; i < std::min(32ULL, N); i++) {
+    for (size_t i = 0; i < std::min<uint64_t>(32ULL, N); i++) {
       os << i << ": ";
       utils::print_complex(os, {real(i), imag(i)}, 8);
       os << "\n";

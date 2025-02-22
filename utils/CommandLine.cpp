@@ -1,5 +1,6 @@
 #include "utils/CommandLine.h"
 #include <algorithm>
+#include <vector>
 
 using namespace utils;
 using namespace utils::cl::internal;

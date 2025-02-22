@@ -2,15 +2,13 @@
 #define UTILS_TASKDISPATCHER_H
 
 #include <cassert>
-#include <iostream>
 #include <queue>
-#include <thread>
+#include <functional>
+#include <condition_variable>
 
 namespace utils {
 
 /// Thread-safe task dispatcher
-/// TODO: We should separate syncing and joining the threads.
-/// Could introduce another status called "Synced"
 class TaskDispatcher {
   enum Status {
     /// Not in use yet

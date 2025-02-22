@@ -7,6 +7,7 @@
 #include <map>
 #include <numeric>
 #include <thread>
+#include <deque>
 
 using namespace IOColor;
 using namespace cast;

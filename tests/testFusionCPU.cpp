@@ -1,12 +1,12 @@
+#include "cast/CircuitGraph.h"
+#include "cast/Parser.h"
+#include "cast/Fusion.h"
 #include "simulation/KernelManager.h"
 #include "tests/TestKit.h"
 #include "utils/statevector.h"
 
-#include "cast/CircuitGraph.h"
-#include "cast/Parser.h"
-
 #include <filesystem>
-#include <cast/Fusion.h>
+
 namespace fs = std::filesystem;
 
 using namespace cast;
