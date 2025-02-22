@@ -132,43 +132,30 @@ int main(int argc, char** argv) {
   if (checkFileName())
     return ERR_FILENAME;
 
-  std::fstream file;
+  std::ifstream inFile;
+  std::ofstream outFile;
   if (ArgOverwriteMode)
-    file.open(ArgOutputFilename, std::ios::in | std::ios::out | std::ios::trunc);
-  else 
-    file.open(ArgOutputFilename, std::ios::in | std::ios::app);
+    outFile.open(ArgOutputFilename, std::ios::out | std::ios::trunc);
+  else
+    outFile.open(ArgOutputFilename, std::ios::app);
 
-  if (!file) {
+  inFile.open(ArgOutputFilename, std::ios::in);
+  if (!outFile || !inFile) {
     std::cerr << "Unable to open file '" << ArgOutputFilename << "'.\n";
     return ERR_FILE_IO;
   }
 
-  if (file.peek() == std::ifstream::traits_type::eof()) {
-    std::cerr << "File is empty\n";
-    file << "nQubits,opCount,precision,irregularity,nThreads,memSpd\n";
-    file << "Hello worlkd!\n";
-  }
-  
+  if (inFile.peek() == std::ifstream::traits_type::eof())
+    outFile << "nQubits,opCount,precision,irregularity,nThreads,memSpd\n";
+  inFile.close();
 
-  // PerformanceCache cache;
+  PerformanceCache cache;
   CPUKernelGenConfig cpuConfig;
-  // cpuConfig.simd_s = ArgSimdS;
-  // cache.runExperiments(cpuConfig, ArgNQubits, ArgNThreads, ArgNTests);
-  // cache.writeResults(ArgOutputFilename);
+  cpuConfig.simd_s = ArgSimdS;
+  cache.runExperiments(cpuConfig, ArgNQubits, ArgNThreads, ArgNTests);
+  cache.writeResults(outFile);
 
-  // cache = PerformanceCache::LoadFromCSV("threads10.csv");
-  // std::cerr << cache.items.size() << " items found!\n";
-
-  // StandardCostModel costModel(&cache);
-  // costModel.display(std::cerr);
-
-  // auto gate = QuantumGate::RandomUnitary(2, 3, 4, 5, 6);
-
-  // std::cerr << "OpCount = " << gate.opCount(1e-8) << "\n";
-
-  // costModel.computeSpeed(gate, 32, 10);
-
-  file.close();
+  outFile.close();
   return 0;
 }
 
