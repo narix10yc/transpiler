@@ -5,11 +5,17 @@
 examples/simple.qasm
 examples/complex.qasm
 *.rec
+
+# build folders
 build/*
 build-debug/*
 build-release/*
+debug-build/*
+release-build/*
+
 tmp/*
 */gen_file*
 performance/obj
 python_perf_tests/*
 analysis/python-venv
+*.csv

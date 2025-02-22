@@ -5,6 +5,7 @@
 #include <cassert>
 #include <memory>
 #include <iostream>
+#include <cstring>
 
 namespace utils {
 

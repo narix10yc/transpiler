@@ -7,6 +7,8 @@
 #include "utils/PODVector.h"
 #include "utils/iocolor.h"
 
+#include <functional>
+
 namespace utils::cl {
 
   void ParseCommandLineArguments(int argc, char** argv);
