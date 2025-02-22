@@ -4,6 +4,7 @@
 #include <cassert>
 #include <queue>
 #include <functional>
+#include <thread>
 #include <condition_variable>
 
 namespace utils {
