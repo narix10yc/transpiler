@@ -41,7 +41,7 @@ public:
   /// compare case-insensitive
   int compare_ci(StringRef other) const;
 
-  constexpr operator std::string() const {
+  operator std::string() const {
     return std::string(_bufferBegin, _length);
   }
 
@@ -53,6 +53,8 @@ public:
   }
 
   char operator[](size_t i) const {
+    if (i == _length)
+      return '\0';
     assert(i < _length);
     return _bufferBegin[i];
   }

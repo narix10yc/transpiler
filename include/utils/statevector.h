@@ -253,6 +253,7 @@ public:
 
   double norm() const { return std::sqrt(normSquared()); }
 
+  /// @brief Initialize to the |00...00> state.
   void initialize() {
     std::memset(data, 0, memSize);
     data[0] = 1.0;
@@ -264,6 +265,7 @@ public:
       data[i] /= n;
   }
 
+  /// @brief Uniform randomize statevector (by the Haar-measure on sphere).
   void randomize() {
     std::random_device rd;
     std::mt19937 gen{rd()};

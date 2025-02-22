@@ -350,7 +350,6 @@ void cl::DisplayArguments() {
   std::cerr << "--------------- End of Arguments ---------------\n";
 }
 
-
 void cl::DisplayHelp() {
   std::cerr << "<-help>\n";
 }
@@ -360,7 +359,6 @@ void cl::unregisterAllArguments() {
     delete a;
   ArgumentRegistry::arguments().clear();
 }
-
 
 template<>
 bool cl::ArgumentParser<std::string>::operator()(
