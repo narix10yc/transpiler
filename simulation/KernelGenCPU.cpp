@@ -1,6 +1,7 @@
 #define DEBUG_TYPE "codegen-cpu"
-#include "llvm/Support/Debug.h"
+#include <llvm/Support/Debug.h>
 // #define LLVM_DEBUG(X) X
+#include <llvm/IR/IntrinsicsX86.h>
 
 #include "cast/QuantumGate.h"
 #include "cast/CircuitGraph.h"
@@ -12,7 +13,6 @@
 #include "utils/Formats.h"
 #include "utils/PODVector.h"
 
-#include "llvm/IR/IntrinsicsX86.h"
 
 #include <cmath>
 
@@ -124,7 +124,7 @@ KernelManager& KernelManager::genCPUKernel(
 
   LLVM_DEBUG(
     std::cerr << CYAN("=== DEBUG genCPUKernel funcName " << funcName << " ===\n");
-    std::cerr << "Matrix:\n";
+    utils::printArray(std::cerr << "Matrix on qubits ", gate.qubits) << "\n";
     gate.gateMatrix.printCMat(std::cerr) << "\n";
   );
 
@@ -150,7 +150,7 @@ KernelManager& KernelManager::genCPUKernel(
 
   // split qubits
   int sepBit;
-  SmallVector<int, 8U> simdBits, hiBits, loBits;
+  SmallVector<int, 6U> simdBits, hiBits, loBits;
   { /* split qubits */
   unsigned q = 0;
   auto qubitsIt = gate.qubits.begin();
@@ -310,7 +310,7 @@ KernelManager& KernelManager::genCPUKernel(
   /* load amplitude registers
     There are a total of 2K size-S amplitude registers (K real and K imag).
     In Alt Format, we load HK size-(2*S*LK) LLVM registers. i.e. Loop over
-    higher qubits
+    higher qubits.
     There are two stages of shuffling (splits)
     - Stage 1:
       Each size-(2*S*LK) reg is shuffled into 2 size-(S*LK) regs, the reFull

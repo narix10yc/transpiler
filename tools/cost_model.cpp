@@ -141,7 +141,8 @@ int main(int argc, char** argv) {
 
   inFile.open(ArgOutputFilename, std::ios::in);
   if (!outFile || !inFile) {
-    std::cerr << "Unable to open file '" << ArgOutputFilename << "'.\n";
+    std::cerr << BOLDRED("[Error]: ")
+              << "Unable to open file '" << ArgOutputFilename << "'.\n";
     return ERR_FILE_IO;
   }
 
