@@ -316,7 +316,7 @@ public:
       const auto& im = imag(idx);
       p += (re * re + im * im);
     }
-    return 1 - p;
+    return 1.0 - p;
   }
 
   std::ostream& printProbabilities(std::ostream& os = std::cerr) const {
@@ -338,7 +338,7 @@ public:
 
     size_t pdepMaskTask = ~static_cast<size_t>(0);
     size_t pdepMaskAmp = 0;
-    for (const auto& q : gate.qubits) {
+    for (const auto q : gate.qubits) {
       pdepMaskTask ^= (1ULL << q);
       pdepMaskAmp |= (1ULL << q);
     }
