@@ -30,14 +30,14 @@ cmake --build release-build
 
 cmake --install release-build --prefix "release-install"
 
-cmake -S llvm-project-19.1.0.src/llvm -G Ninja \
+cmake -S llvm-project-19.1.6.src/llvm -G Ninja \
 -B debug-build \
 -DCMAKE_BUILD_TYPE=Debug \
 -DLLVM_ENABLE_RTTI=ON \
 -DLLVM_TARGETS_TO_BUILD="Native" \
--DCMAKE_C_COMPILER="$llvm_root/bin/clang" \
--DCMAKE_CXX_COMPILER="$llvm_root/bin/clang++" \
--DLLVM_USE_LINKER="$llvm_root/bin/ld64.lld"
+-DCMAKE_C_COMPILER="$llvm_root/release-install/bin/clang" \
+-DCMAKE_CXX_COMPILER="$llvm_root/release-install/bin/clang++" \
+-DLLVM_USE_LINKER="$llvm_root/release-install/bin/ld.lld"
 
 cmake --build debug-build
 
