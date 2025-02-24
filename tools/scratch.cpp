@@ -1,19 +1,16 @@
-#include "utils/CommandLine.h"
+#include "simulation/KernelManager.h"
 
-using namespace utils;
+using namespace cast;
 
-cl::ArgInt ArgMyInteger("hello");
+int main() {
 
-ArgMyInteger.desc("This is my integer");
+  KernelManager kernelMgr;
+  CPUKernelGenConfig kernelGenConfig;
+  kernelGenConfig.simd_s = 3;
 
-int main(int argc, char** argv) {
-
-  utils::cl::ParseCommandLineArguments(argc, argv);
-
-  utils::cl::DisplayArguments();
-
-
+  kernelMgr.genCPUKernel(kernelGenConfig, QuantumGate::RandomUnitary(4, 6), "myKernel");
 
   
+
   return 0;
 }

@@ -432,7 +432,6 @@ void PerformanceCache::runExperiments(
     prob = ratio * 1.0f + (1.0f - ratio) * 0.25f;
     randAdd();
   }
-  std::cerr << "nGates = " << gates.size() << std::endl;
 
   KernelManager kernelMgr;
   utils::timedExecute([&]() {
@@ -451,7 +450,7 @@ void PerformanceCache::runExperiments(
 
   utils::StatevectorAlt<double> sv(nQubits, cpuConfig.simd_s);
   utils::timedExecute([&]() {
-    sv.randomize();
+    sv.randomize(nThreads);
   }, "Initialize statevector");
 
   for (auto& kernel : kernelMgr.kernels()) {

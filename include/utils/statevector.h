@@ -11,6 +11,7 @@
 #include "cast/QuantumGate.h"
 #include "utils/iocolor.h"
 #include "utils/utils.h"
+#include "utils/TaskDispatcher.h"
 
 namespace utils {
 
@@ -218,7 +219,7 @@ public:
   size_t memSize;
   RealType* data;
 
-  StatevectorAlt(int nQubits, int simd_s, bool init = true)
+  StatevectorAlt(int nQubits, int simd_s, bool init = false)
     : simd_s(simd_s)
     , nQubits(nQubits)
     , N(1ULL << nQubits)
@@ -254,25 +255,47 @@ public:
   double norm() const { return std::sqrt(normSquared()); }
 
   /// @brief Initialize to the |00...00> state.
-  void initialize() {
+  void initialize(int nThreads = 1) {
     std::memset(data, 0, memSize);
     data[0] = 1.0;
   }
 
-  void normalize() {
+  void normalize(int nThreads = 1) {
     double n = norm();
     for (size_t i = 0; i < 2 * N; i++)
       data[i] /= n;
   }
 
   /// @brief Uniform randomize statevector (by the Haar-measure on sphere).
-  void randomize() {
+  void randomize(int nThreads = 1) {
     std::random_device rd;
     std::mt19937 gen{rd()};
-    std::normal_distribution<RealType> d{0, 1};
-    for (size_t i = 0; i < 2 * N; i++)
-      data[i] = d(gen);
-    normalize();
+    std::normal_distribution<RealType> d(0.0, 1.0);
+
+    if (nThreads == 1) {
+      for (size_t i = 0; i < 2 * N; i++)
+        data[i] = d(gen);
+      normalize();
+      return;
+    }
+    // multi-thread
+    std::vector<std::thread> threads;
+    threads.reserve(nThreads);
+    size_t nTasksPerThread = 2ULL * N / nThreads;
+    for (int t = 0; t < nThreads; ++t) {
+      size_t t0 = nTasksPerThread * t;
+      size_t t1 = (t == nThreads - 1) ? 2ULL * N : nTasksPerThread * (t + 1);
+      threads.emplace_back([&, t0=t0, t1=t1]() {
+        for (size_t i = t0; i < t0; ++i)
+          data[i] = d(gen);
+      });
+    }
+    for (auto& t : threads) {
+      if (t.joinable())
+        t.join();
+    }
+
+    normalize(nThreads);
   }
 
   RealType& real(size_t idx) {
