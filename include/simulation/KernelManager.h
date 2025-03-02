@@ -92,6 +92,12 @@ class KernelManager {
       std::move(ctx), std::make_unique<llvm::Module>(name, *ctx));
     return llvmContextModulePairs.back();
   }
+
+  /// Apply LLVM optimization to all modules inside \c llvmContextModulePairs
+  /// As a private member function, this function will be called by \c initJIT
+  /// and \c initJITForPTXEmission
+  void applyLLVMOptimization(
+      int nThreads, llvm::OptimizationLevel optLevel, bool progressBar);
 public:
   KernelManager()
     : llvmContextModulePairs()
@@ -100,6 +106,10 @@ public:
 
   const std::vector<KernelInfo>& kernels() const { return _kernels; }
   std::vector<KernelInfo>& kernels() { return _kernels; }
+
+  void setTargetNative();
+
+  void setTargetNVPTX();
 
   /// Initialize JIT session. When succeeds, \c llvmContextModulePairs
   /// will be cleared and \c llvmJIT will be non-null. This function can only be
@@ -115,6 +125,11 @@ public:
       llvm::OptimizationLevel optLevel = llvm::OptimizationLevel::O0,
       bool useLazyJIT = false,
       int verbose = 0);
+
+  void initJITForPTXEmission(
+    int nThreads = 1,
+    llvm::OptimizationLevel optLevel = llvm::OptimizationLevel::O0,
+    int verbose = 0);
 
   bool isJITed() const {
     assert(llvmJIT == nullptr ||

@@ -13,5 +13,7 @@ int main() {
     gpuGenConfig, QuantumGate::RandomUnitary(4, 6), "my_gpu_kernel");
 
 
+  kernelMgr.initJITForPTXEmission();
+
   return 0;
 }
