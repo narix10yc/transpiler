@@ -146,14 +146,13 @@ void KernelManager::initJITForPTXEmission(
     if (llvm::verifyModule(*mod, &llvm::errs())) {
       llvm::errs() << "Module verification failed!\n";
       return;
-    }    
-    // mod->dump();
+    }
     passManager.run(*mod);
   }
 
   auto ptxCode = dest_ptx.str();
-  // std::cerr.write(ptxCode.begin(), ptxCode.size());
-  // std::cerr << "\n";
+  std::cerr.write(ptxCode.begin(), ptxCode.size());
+  std::cerr << "\n";
 }
 
 void KernelManager::ensureAllExecutable(int nThreads, bool progressBar) {
