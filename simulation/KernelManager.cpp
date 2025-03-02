@@ -4,9 +4,14 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
 
+#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/IR/Verifier.h"
+
 #include "simulation/KernelManager.h"
 
-#include <cast/Fusion.h>
+#include "cast/Fusion.h"
 
 #include "utils/TaskDispatcher.h"
 #include "utils/iocolor.h"
@@ -15,6 +20,41 @@
 
 using namespace cast;
 using namespace llvm;
+
+void KernelManager::applyLLVMOptimization(
+    int nThreads, OptimizationLevel optLevel, bool progressBar) {
+  assert(nThreads > 0);
+  if (optLevel == OptimizationLevel::O0)
+    return;
+
+  utils::TaskDispatcher dispatcher(nThreads);
+  for (auto& [ctx, mod] : llvmContextModulePairs) {
+    // TODO: For some reason, MPM cannot be reused. For now we construct it
+    // afresh for every module. Overhead is okay though.
+    dispatcher.enqueue([&]() {
+      // These must be declared in this order so that they are destroyed in
+      // the correct order due to inter-analysis-manager references.
+      LoopAnalysisManager LAM;
+      FunctionAnalysisManager FAM;
+      CGSCCAnalysisManager CGAM;
+      ModuleAnalysisManager MAM;
+
+      PassBuilder PB;
+
+      PB.registerLoopAnalyses(LAM);
+      PB.registerFunctionAnalyses(FAM);
+      PB.registerCGSCCAnalyses(CGAM);
+      PB.registerModuleAnalyses(MAM);
+      PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+      ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(optLevel);
+
+      MPM.run(*mod, MAM);
+    });
+  }
+  if (progressBar)
+    std::cout << "Applying LLVM Optimization....\n";
+  dispatcher.sync(progressBar);
+}
 
 void KernelManager::initJIT(
     int nThreads, OptimizationLevel optLevel, bool useLazyJIT, int verbose) {
@@ -25,42 +65,15 @@ void KernelManager::initJIT(
   InitializeNativeTargetAsmParser();
   InitializeNativeTargetAsmPrinter();
 
-  if (optLevel != OptimizationLevel::O0) {
-    utils::TaskDispatcher dispatcher(nThreads);
-    for (auto& [ctx, mod] :
-        std::ranges::views::reverse(llvmContextModulePairs)) {
-      // TODO: For some reason, MPM cannot be reused. For now we construct it
-      // afresh for every module. Overhead is okay though.
-      dispatcher.enqueue([&]() {
-        // ChatGPT:
-        // These must be declared in this order so that they are destroyed in
-        // the correct order due to inter-analysis-manager references.
-        LoopAnalysisManager LAM;
-        FunctionAnalysisManager FAM;
-        CGSCCAnalysisManager CGAM;
-        ModuleAnalysisManager MAM;
-
-        PassBuilder PB;
-
-        PB.registerLoopAnalyses(LAM);
-        PB.registerFunctionAnalyses(FAM);
-        PB.registerCGSCCAnalyses(CGAM);
-        PB.registerModuleAnalyses(MAM);
-        PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
-        ModulePassManager MPM = PB.buildPerModuleDefaultPipeline(optLevel);
-
-        MPM.run(*mod, MAM);
-      });
-    }
-    if (verbose > 0)
-      std::cout << "Applying LLVM Optimization....\n";
-    dispatcher.sync(/* progressBar */ verbose > 0);
-  }
+  applyLLVMOptimization(nThreads, optLevel, /* progressBar */ verbose > 0);
 
   if (useLazyJIT) {
     // lazy JIT engine
   	orc::LLLazyJITBuilder jitBuilder;
-  	jitBuilder.setNumCompileThreads(std::thread::hardware_concurrency());
+    /// It seems not matter how many concurrency we set here.
+    /// As long as we set it, we can invoke multiple lookup, and we can 
+    /// control the actual number of threads via our custom TaskDispatcher
+  	jitBuilder.setNumCompileThreads(nThreads);
   	auto lazyJIT = cantFail(jitBuilder.create());
     for (auto& [ctx, mod] : llvmContextModulePairs) {
       cantFail(lazyJIT->addLazyIRModule(
@@ -72,10 +85,7 @@ void KernelManager::initJIT(
   } else {
     // eager JIT engine
     orc::LLJITBuilder eagerJitBuilder;
-
-    /// It seems not matter how many concurrency we set here.
-    /// As long as we set it, we can invoke multiple lookup
-  	eagerJitBuilder.setNumCompileThreads(10);
+  	eagerJitBuilder.setNumCompileThreads(nThreads);
   	auto eagerJIT = cantFail(eagerJitBuilder.create());
     for (auto& [ctx, mod] : llvmContextModulePairs) {
       cantFail(eagerJIT->addIRModule(
@@ -86,6 +96,64 @@ void KernelManager::initJIT(
     ensureAllExecutable(nThreads, /* progressBar */ verbose > 0);
   }
   this->llvmContextModulePairs.clear();
+}
+
+
+void KernelManager::initJITForPTXEmission(
+    int nThreads, OptimizationLevel optLevel, int verbose) {
+  assert(nThreads > 0);
+  assert(!isJITed() && "Already initialized");
+
+  InitializeAllTargets();
+  InitializeAllTargetMCs();
+  InitializeAllAsmParsers();
+  InitializeAllAsmPrinters();
+
+  applyLLVMOptimization(nThreads, optLevel, /* progressBar */ verbose > 0);
+
+  // std::string targetTriple = sys::getDefaultTargetTriple();
+  std::string targetTriple = "nvptx64-nvidia-cuda";
+  std::string err;
+  const auto* target = TargetRegistry::lookupTarget(targetTriple, err);
+  if (!target) {
+    errs() << RED("[Error]: ") << err << "\n";
+    return;
+  }
+  errs() << "Target " << target->getName() << "\n";
+
+  std::string cpu = "sm_70";
+  // std::string cpu = "generic";
+  auto* targetMachine = target->createTargetMachine(
+    targetTriple,   // target triple
+    cpu,            // cpu
+    "",             // features
+    {},             // options
+    std::nullopt    // RM
+  );
+
+  llvm::SmallString<8U> data_ptx;
+  llvm::raw_svector_ostream dest_ptx(data_ptx);
+
+  legacy::PassManager passManager;
+  if (targetMachine->addPassesToEmitFile(
+      passManager, dest_ptx, nullptr, CodeGenFileType::AssemblyFile)) {
+    errs() << "The target machine can't emit a file of this type\n";
+    return;
+  }
+  for (auto& [ctx, mod] : llvmContextModulePairs) {
+    mod->setTargetTriple(targetTriple);
+    mod->setDataLayout(targetMachine->createDataLayout());
+    if (llvm::verifyModule(*mod, &llvm::errs())) {
+      llvm::errs() << "Module verification failed!\n";
+      return;
+    }    
+    // mod->dump();
+    passManager.run(*mod);
+  }
+
+  auto ptxCode = dest_ptx.str();
+  // std::cerr.write(ptxCode.begin(), ptxCode.size());
+  // std::cerr << "\n";
 }
 
 void KernelManager::ensureAllExecutable(int nThreads, bool progressBar) {

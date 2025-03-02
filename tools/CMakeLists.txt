@@ -27,7 +27,8 @@ else()
 endif()
 
 add_executable(scratch "scratch.cpp")
-target_link_libraries(scratch utils cast simulation timeit)
+llvm_map_components_to_libnames(LLVM_LIBS ${LLVM_TARGETS_TO_BUILD})
+target_link_libraries(scratch utils cast simulation timeit ${LLVM_LIBS})
 
 add_executable(fpga_playground "fpga_playground.cpp")
 target_link_libraries(fpga_playground qasm cast simulation)
