@@ -3,6 +3,9 @@
 
 #define CPU_KERNEL_TYPE void(void*, uint64_t, uint64_t, const void*)
 
+// TODO: We will need to adjust all kernels to take void* and void** to fix this
+#define GPU_KERNEL_TYPE void(void*, uint64_t, uint64_t, const void*)
+
 #include <llvm/IR/Module.h>
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
 #include <llvm/Passes/OptimizationLevel.h>
@@ -50,6 +53,20 @@ struct CPUKernelGenConfig {
   // TODO: set up default configurations
   static const CPUKernelGenConfig NativeDefaultF32;
   static const CPUKernelGenConfig NativeDefaultF64;
+};
+
+struct GPUKernelGenConfig {
+  enum MatrixLoadMode { 
+    UseMatImmValues, LoadInDefaultMemSpace, LoadInConstMemSpace
+  };
+
+  int precision = 64;
+  double zeroTol = 1e-8;
+  double oneTol = 1e-8;
+  bool forceDenseKernel = false;
+  MatrixLoadMode matrixLoadMode = UseMatImmValues;
+
+  std::ostream& displayInfo(std::ostream& os) const;
 };
 
 class KernelManager {
@@ -123,6 +140,10 @@ public:
       const CircuitGraph& graph, const std::string& graphName);
 
   std::vector<KernelInfo*> collectCPUGraphKernels(const std::string& graphName);
+
+  KernelManager& genGPUKernel(
+    const GPUKernelGenConfig& config,
+    const QuantumGate& gate, const std::string& funcName);
 
   void ensureExecutable(KernelInfo& kernel) {
     // Note: We do not actually need the lock here

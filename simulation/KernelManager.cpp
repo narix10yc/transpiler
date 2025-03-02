@@ -142,3 +142,25 @@ std::ostream& CPUKernelGenConfig::displayInfo(std::ostream& os) const {
   os << CYAN("================================\n");
   return os;
 }
+
+std::ostream& GPUKernelGenConfig::displayInfo(std::ostream& os) const {
+  os << std::scientific;
+  os << CYAN("=== GPU Kernel Gen Config ===\n")
+     << "precision:  " << precision << "\n";
+
+  os << "forceDenseKernel : " << forceDenseKernel << "\n"
+     << "zeroTolerance : " << zeroTol << "\n"
+     << "oneTolerance : " << oneTol << "\n"
+     << "matrixLoadMode: ";
+  switch (this->matrixLoadMode) {
+    case UseMatImmValues:
+      os << "UseMatImmValues\n"; break;
+    case LoadInDefaultMemSpace:
+      os << "LoadInDefaultMemSpace\n"; break;
+    case LoadInConstMemSpace:
+      os << "LoadInConstMemSpace\n"; break;
+  }
+
+  os << CYAN("================================\n");
+  return os;
+}

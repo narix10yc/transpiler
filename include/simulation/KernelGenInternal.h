@@ -1,8 +1,8 @@
 #ifndef SIMULATION_KERNEL_GEN_INTERNAL_H
 #define SIMULATION_KERNEL_GEN_INTERNAL_H
 
-#include "cast/ScalarKind.h"
 #include <llvm/IR/IRBuilder.h>
+#include "cast/ScalarKind.h"
 
 #include <vector>
 

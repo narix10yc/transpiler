@@ -5,12 +5,13 @@ using namespace cast;
 int main() {
 
   KernelManager kernelMgr;
-  CPUKernelGenConfig kernelGenConfig;
-  kernelGenConfig.simd_s = 3;
+  GPUKernelGenConfig gpuGenConfig;
+  gpuGenConfig.displayInfo(std::cerr) << "\n";
 
-  kernelMgr.genCPUKernel(kernelGenConfig, QuantumGate::RandomUnitary(4, 6), "myKernel");
 
-  
+  kernelMgr.genGPUKernel(
+    gpuGenConfig, QuantumGate::RandomUnitary(4, 6), "my_gpu_kernel");
+
 
   return 0;
 }
