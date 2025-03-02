@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(simulation LANGUAGES C CXX)
+project(cast_simulator LANGUAGES CXX)
+option(CAST_USE_CUDA "Enable LLVM NVPTX Backend for CUDA Support" OFF)
+if (CAST_USE_CUDA)
+    add_compile_definitions(CAST_USE_CUDA)
+endif()
 
 message("############ Custom Setups ############")
 # Apple has a system LLVM. We need to use a specific version
@@ -19,32 +23,19 @@ set(LLVM_DEBUG_INSTALL_ROOT "${LLVM_ROOT}/debug-install")
 
 set(CMAKE_C_COMPILER "${LLVM_RELEASE_INSTALL_ROOT}/bin/clang")
 set(CMAKE_CXX_COMPILER "${LLVM_RELEASE_INSTALL_ROOT}/bin/clang++")
+message(STATUS "C++ Compiler: ${CMAKE_CXX_COMPILER}")
 
-find_package(CUDA)
-set(CUDA_HOST_COMPILER "${CMAKE_CXX_COMPILER}")
-set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12.5/bin/nvcc")
-
-message(STATUS "CUDA COMPILER ${CMAKE_CUDA_COMPILER}")
-
-### Skip cmake checks for working compiler ###
-# set(CMAKE_C_COMPILER_WORKS 1)
-# set(CMAKE_CXX_COMPILER_WORKS 1)
+if (CAST_USE_CUDA)
+    find_package(CUDAToolkit REQUIRED)
+    set(CUDA_HOST_COMPILER "${CMAKE_CXX_COMPILER}")
+    set(CMAKE_CUDA_COMPILER "/usr/local/cuda-12.5/bin/nvcc")
+    message(STATUS "CUDA COMPILER ${CMAKE_CUDA_COMPILER}")
+endif()
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED on)
 add_link_options("-fuse-ld=lld")
 
-message(STATUS "C Compiler: ${CMAKE_C_COMPILER}")
-message(STATUS "C++ Compiler: ${CMAKE_CXX_COMPILER}")
-
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -march=native")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
-
-if(DEFINED ENV{SELECT_GCC_TOOLCHAIN})
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --gcc-install-dir=$ENV{SELECT_GCC_TOOLCHAIN}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --gcc-install-dir=$ENV{SELECT_GCC_TOOLCHAIN}")
-    message(WARNING "Selected gcc toolchain $ENV{SELECT_GCC_TOOLCHAIN}")
-endif()
 
 string(TOUPPER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_UPPER)
 if(CMAKE_BUILD_TYPE_UPPER STREQUAL "DEBUG")
@@ -57,6 +48,12 @@ find_package(LLVM REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 message(STATUS "LLVM is built for targets: ${LLVM_TARGETS_TO_BUILD}")
+
+if (CAST_USE_CUDA AND NOT "NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
+    message(WARNING
+        "CUDA is enabled in the project, "
+        "but LLVM build does not support NVPTX backend.")
+endif()
 
 include_directories(${LLVM_INCLUDE_DIRS} include)
 separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
@@ -71,4 +68,3 @@ add_subdirectory(timeit)
 add_subdirectory(simulation)
 add_subdirectory(tools)
 add_subdirectory(tests)
-
