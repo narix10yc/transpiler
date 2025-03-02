@@ -241,10 +241,10 @@ int main(int argc, const char** argv) {
 
   // G.print(std::cerr);
 
-  runExperiment([arg = argv[1]](CircuitGraph& graph) {
-    openqasm::Parser qasmParser(arg, -1);
-    qasmParser.parse()->toCircuitGraph(graph);
-  });
+  // runExperiment([arg = argv[1]](CircuitGraph& graph) {
+  //   openqasm::Parser qasmParser(arg, -1);
+  //   qasmParser.parse()->toCircuitGraph(graph);
+  // });
 
   // runExperiment([arg = argv[1]]() {
   // return CircuitGraph::QFTCircuit(std::stoi(arg));
@@ -252,6 +252,46 @@ int main(int argc, const char** argv) {
   // graph.addGate(QuantumGate(GateMatrix::FromName("u3", {M_PI_2, 0.0, M_PI}),
   // 0)); return graph;
   // });
+
+  openqasm::Parser qasmParser(argv[1], -1);
+  CircuitGraph graph;
+
+  qasmParser.parse()->toCircuitGraph(graph);
+
+  int nLocalQubits = 14;
+  int gridSize = 4;
+
+  FPGACostConfig costConfig{.lowestQIdxForTwiceExtTime = 7};
+
+  FPGAInstGenConfig instGenConfigWithFusion {
+    .nLocalQubits = nLocalQubits,
+    .gridSize = gridSize,
+    .selectiveGenerationMode = true,
+    .maxUpSize = 8,
+    .tolerances = FPGAGateCategoryTolerance::Default,
+  };
+
+  FPGAInstGenConfig instGenConfigWithoutFusion {
+    .nLocalQubits = nLocalQubits,
+    .gridSize = gridSize,
+    .selectiveGenerationMode = true,
+    .maxUpSize = 0,
+    .tolerances = FPGAGateCategoryTolerance::Default,
+  };
+
+  auto instructionsWithFusion =
+  fpga::genInstruction(graph, instGenConfigWithFusion);
+
+
+  auto instructionsWithoutFusion =
+  fpga::genInstruction(graph, instGenConfigWithoutFusion);
+
+  for (const auto& inst : instructionsWithFusion)
+    inst.print(std::cerr);
+
+  std::cerr << "\n\n";
+  for (const auto& inst : instructionsWithoutFusion)
+  inst.print(std::cerr);
 
   return 0;
 }

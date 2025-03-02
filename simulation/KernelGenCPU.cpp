@@ -13,7 +13,6 @@
 #include "utils/Formats.h"
 #include "utils/PODVector.h"
 
-
 #include <cmath>
 
 using namespace llvm;
@@ -28,7 +27,7 @@ struct CPUArgs {
   Argument* pMatArg;      // ptr to matrix
 };
 
-inline Function* cpuGetFunctionDeclaration(
+Function* cpuGetFunctionDeclaration(
     IRBuilder<>& B, Module& M, const std::string& funcName,
     const CPUKernelGenConfig& config, CPUArgs& args) {
   SmallVector<Type*> argType {
@@ -583,22 +582,15 @@ KernelManager& KernelManager::genCPUKernel(
   B.SetInsertPoint(retBB);
   B.CreateRetVoid();
 
-  auto llvmFuncName = func->getName();
-  int opCount = 0;
-  for (const auto& d : matrixData) {
-    if (d.reKind != SK_Zero)
-      ++opCount;
-    if (d.imKind != SK_Zero)
-      ++opCount;
-  }
-  _kernels.emplace_back(
+  // append the newly generated kernel
+  this->_kernels.emplace_back(
     std::function<CPU_KERNEL_TYPE>(),
     KernelInfo::CPU_Gate,
     config.precision,
-    std::string(llvmFuncName.begin(), llvmFuncName.end()),
+    func->getName().str(),
     gate,
     config.simd_s,
-    2 * opCount,
+    gate.opCount(config.zeroTol), // TODO: zeroTol here is different from zTol used in sigMat
     lk);
   return *this;
 }
