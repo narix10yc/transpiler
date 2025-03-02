@@ -317,6 +317,5 @@ KernelManager& KernelManager::genGPUKernel(
     gate.opCount(config.zeroTol),
     0 /* lk */
   );
-
   return *this;
 }
