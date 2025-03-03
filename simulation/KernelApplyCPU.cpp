@@ -3,7 +3,7 @@
 
 using namespace cast;
 
-void KernelManager::applyCPUKernel(
+void CPUKernelManager::applyCPUKernel(
     void* sv, int nQubits, const std::string& funcName) {
   assert(isJITed() && "Must initialize JIT session "
                       "before calling KernelManager::applyCPUKernel");
@@ -16,31 +16,31 @@ void KernelManager::applyCPUKernel(
   llvm_unreachable("KernelManager::applyCPUKernel: kernel not found by name");
 }
 
-void KernelManager::applyCPUKernel(
-    void* sv, int nQubits, KernelInfo& kernel) {
+void CPUKernelManager::applyCPUKernel(
+    void* sv, int nQubits, CPUKernelInfo& kernel) {
   assert(isJITed() && "Must initialize JIT session "
                       "before calling KernelManager::applyCPUKernel");
   ensureExecutable(kernel);
-  int tmp = nQubits - kernel.gate.nQubits() - kernel.simd_s;
+  int tmp = nQubits - kernel.gate->nQubits() - kernel.simd_s;
   assert(tmp > 0);
   uint64_t idxEnd = 1ULL << tmp;
   const void* pMat = nullptr;
-  if (kernel.gate.gateMatrix.getConstantMatrix() != nullptr)
-    pMat = kernel.gate.gateMatrix.getConstantMatrix()->data();
+  if (kernel.gate->gateMatrix.getConstantMatrix() != nullptr)
+    pMat = kernel.gate->gateMatrix.getConstantMatrix()->data();
   kernel.executable(sv, 0ULL, idxEnd, pMat);
 }
 
-void KernelManager::applyCPUKernelMultithread(
-    void* sv, int nQubits, KernelInfo& kernel, int nThreads) {
+void CPUKernelManager::applyCPUKernelMultithread(
+    void* sv, int nQubits, CPUKernelInfo& kernel, int nThreads) {
   assert(isJITed() && "Must initialize JIT session "
                       "before calling KernelManager::applyCPUKernel");
   ensureExecutable(kernel);
-  int tmp = nQubits - kernel.gate.nQubits() - kernel.simd_s;
+  int tmp = nQubits - kernel.gate->nQubits() - kernel.simd_s;
   assert(tmp > 0);
   uint64_t nTasks = 1ULL << tmp;
   const void* pMat = nullptr;
-  if (kernel.gate.gateMatrix.getConstantMatrix() != nullptr)
-    pMat = kernel.gate.gateMatrix.getConstantMatrix()->data();
+  if (kernel.gate->gateMatrix.getConstantMatrix() != nullptr)
+    pMat = kernel.gate->gateMatrix.getConstantMatrix()->data();
 
   std::vector<std::thread> threads;
   threads.reserve(nThreads);
@@ -56,7 +56,7 @@ void KernelManager::applyCPUKernelMultithread(
     t.join();
 }
 
-void KernelManager::applyCPUKernelMultithread(
+void CPUKernelManager::applyCPUKernelMultithread(
     void* sv, int nQubits, const std::string& funcName, int nThreads) {
   assert(isJITed() && "Must initialize JIT session "
                       "before calling KernelManager::applyCPUKernel");
@@ -98,23 +98,23 @@ namespace {
 } // anonymous namespace
 
 
-KernelManager& KernelManager::genCPUFromGraph(
+CPUKernelManager& CPUKernelManager::genCPUFromGraph(
     const CPUKernelGenConfig& config, const CircuitGraph& graph,
     const std::string& graphName) {
   const auto allBlocks = graph.getAllBlocks();
   const auto mangledName = mangleGraphName(graphName);
   for (const auto& block : allBlocks) {
     genCPUKernel(
-      config, *block->quantumGate,mangledName + std::to_string(block->id));
+      config, block->quantumGate, mangledName + std::to_string(block->id));
   }
   return *this;
 }
 
-std::vector<KernelInfo*> KernelManager::collectCPUGraphKernels(
+std::vector<CPUKernelInfo*> CPUKernelManager::collectCPUGraphKernels(
     const std::string& graphName) {
   assert(isJITed() && "Must initialize JIT session "
                       "before calling KernelManager::collectCPUGraphKernels");
-  std::vector<KernelInfo*> kernelInfos;
+  std::vector<CPUKernelInfo*> kernelInfos;
   const auto mangledName = mangleGraphName(graphName);
   for (auto& kernel : _kernels) {
     if (kernel.llvmFuncName.starts_with(mangledName)) {

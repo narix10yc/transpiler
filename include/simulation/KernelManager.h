@@ -4,28 +4,53 @@
 #define CPU_KERNEL_TYPE void(void*, uint64_t, uint64_t, const void*)
 
 // TODO: We will need to adjust all kernels to take void* and void** to fix this
-#define GPU_KERNEL_TYPE void(void*, uint64_t, uint64_t, const void*)
+#define CUDA_KERNEL_TYPE void(void*, uint64_t, uint64_t, const void*)
 
 #include <llvm/IR/Module.h>
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
 #include <llvm/Passes/OptimizationLevel.h>
 
 #include "cast/QuantumGate.h"
+#include <memory>
 
 namespace cast {
 
 class CircuitGraph;
 
-struct KernelInfo {
+class KernelManagerBase {
+protected:
+  struct ContextModulePair {
+    std::unique_ptr<llvm::LLVMContext> llvmContext;
+    std::unique_ptr<llvm::Module> llvmModule;
+  };
+  // A vector of pairs of LLVM context and module. Expected to be cleared after
+  // calling \c initJIT
+  std::vector<ContextModulePair> llvmContextModulePairs;
+  std::mutex mtx;
+
+  /// A thread-safe version that creates a new llvm Module
+  ContextModulePair& createNewLLVMModule(const std::string& name);
+
+  /// Apply LLVM optimization to all modules inside \c llvmContextModulePairs
+  /// As a private member function, this function will be called by \c initJIT
+  /// and \c initJITForPTXEmission
+  void applyLLVMOptimization(
+      int nThreads, llvm::OptimizationLevel optLevel, bool progressBar);
+};
+
+/*
+  CPU
+*/
+struct CPUKernelInfo {
   enum KernelType {
-    CPU_Gate, CPU_Measure, GPU_Gate, GPU_Measure
+    CPU_Gate, CPU_Measure
   };
   std::function<CPU_KERNEL_TYPE> executable;
 
   KernelType type;
   int precision;
   std::string llvmFuncName;
-  QuantumGate gate;
+  std::shared_ptr<QuantumGate> gate;
   // extra information
   int simd_s;
   int opCount;
@@ -55,61 +80,17 @@ struct CPUKernelGenConfig {
   static const CPUKernelGenConfig NativeDefaultF64;
 };
 
-struct GPUKernelGenConfig {
-  enum MatrixLoadMode { 
-    UseMatImmValues, LoadInDefaultMemSpace, LoadInConstMemSpace
-  };
-
-  int precision = 64;
-  double zeroTol = 1e-8;
-  double oneTol = 1e-8;
-  bool forceDenseKernel = false;
-  MatrixLoadMode matrixLoadMode = UseMatImmValues;
-
-  std::ostream& displayInfo(std::ostream& os) const;
-};
-
-class KernelManager {
-  struct ContextModulePair {
-    std::unique_ptr<llvm::LLVMContext> llvmContext;
-    std::unique_ptr<llvm::Module> llvmModule;
-  };
-
-  std::vector<ContextModulePair> llvmContextModulePairs;
-
+class CPUKernelManager : public KernelManagerBase {
+  std::vector<CPUKernelInfo> _kernels;
   std::unique_ptr<llvm::orc::LLJIT> llvmJIT;
-
-  std::vector<KernelInfo> _kernels;
-
-  std::mutex mtx;
-
-  /// A thread-safe version that creates a new llvm Module
-  ContextModulePair& createNewLLVMModule(const std::string& name) {
-    assert(!isJITed());
-    std::lock_guard<std::mutex> lock(mtx);
-    auto ctx = std::make_unique<llvm::LLVMContext>();
-    llvmContextModulePairs.emplace_back(
-      std::move(ctx), std::make_unique<llvm::Module>(name, *ctx));
-    return llvmContextModulePairs.back();
-  }
-
-  /// Apply LLVM optimization to all modules inside \c llvmContextModulePairs
-  /// As a private member function, this function will be called by \c initJIT
-  /// and \c initJITForPTXEmission
-  void applyLLVMOptimization(
-      int nThreads, llvm::OptimizationLevel optLevel, bool progressBar);
 public:
-  KernelManager()
-    : llvmContextModulePairs()
-    , llvmJIT(nullptr)
-    , _kernels() {}
+  CPUKernelManager()
+    : KernelManagerBase()
+    , _kernels()
+    , llvmJIT(nullptr) {}
 
-  const std::vector<KernelInfo>& kernels() const { return _kernels; }
-  std::vector<KernelInfo>& kernels() { return _kernels; }
-
-  void setTargetNative();
-
-  void setTargetNVPTX();
+  const std::vector<CPUKernelInfo>& kernels() const { return _kernels; }
+  std::vector<CPUKernelInfo>& kernels() { return _kernels; }
 
   /// Initialize JIT session. When succeeds, \c llvmContextModulePairs
   /// will be cleared and \c llvmJIT will be non-null. This function can only be
@@ -126,11 +107,6 @@ public:
       bool useLazyJIT = false,
       int verbose = 0);
 
-  void initJITForPTXEmission(
-    int nThreads = 1,
-    llvm::OptimizationLevel optLevel = llvm::OptimizationLevel::O0,
-    int verbose = 0);
-
   bool isJITed() const {
     assert(llvmJIT == nullptr ||
            (llvmContextModulePairs.empty() && llvmJIT != nullptr));
@@ -140,27 +116,24 @@ public:
   /// A function that takes in 4 arguments (void*, uint64_t, uint64_t,
   /// void*) and returns void. Arguments are: pointer to statevector array,
   /// taskID begin, taskID end, and pointer to matrix array (could be null).
-  KernelManager& genCPUKernel(
+  CPUKernelManager& genCPUKernel(
       const CPUKernelGenConfig& config,
-      const QuantumGate& gate, const std::string& funcName);
+      std::shared_ptr<QuantumGate> gate, const std::string& funcName);
 
   /// A function that takes in 4 arguments (void*, uint64_t, uint64_t,
   /// void*) and returns void. Arguments are: pointer to statevector array,
   /// taskID begin, taskID end, and pointer to measurement probability to write on
-  KernelManager& genCPUMeasure(
+  CPUKernelManager& genCPUMeasure(
       const CPUKernelGenConfig& config, int q, const std::string& funcName);
 
-  KernelManager& genCPUFromGraph(
+  CPUKernelManager& genCPUFromGraph(
       const CPUKernelGenConfig& config,
       const CircuitGraph& graph, const std::string& graphName);
 
-  std::vector<KernelInfo*> collectCPUGraphKernels(const std::string& graphName);
+  std::vector<CPUKernelInfo*>
+  collectCPUGraphKernels(const std::string& graphName);
 
-  KernelManager& genGPUKernel(
-    const GPUKernelGenConfig& config,
-    const QuantumGate& gate, const std::string& funcName);
-
-  void ensureExecutable(KernelInfo& kernel) {
+  void ensureExecutable(CPUKernelInfo& kernel) {
     // Note: We do not actually need the lock here
     // as it is expected (at least now) each KernelInfo is accesses by a unique
     // thread
@@ -182,15 +155,95 @@ public:
   void ensureAllExecutable(int nThreads = 1, bool progressBar = false);
 
   void applyCPUKernel(
-      void* sv, int nQubits, KernelInfo& kernelInfo);
+      void* sv, int nQubits, CPUKernelInfo& kernelInfo);
 
   void applyCPUKernel(void* sv, int nQubits, const std::string& funcName);
 
   void applyCPUKernelMultithread(
-      void* sv, int nQubits, KernelInfo& kernelInfo, int nThreads);
+      void* sv, int nQubits, CPUKernelInfo& kernelInfo, int nThreads);
 
   void applyCPUKernelMultithread(
       void* sv, int nQubits, const std::string& funcName, int nThreads);
+};
+
+struct CUDAKernelInfo {
+  enum KernelType {
+    CUDA_Gate, CUDA_Measure
+  };
+  // We expect large stream writes anyway, so always trigger heap allocation.
+  using PTXStringType = llvm::SmallString<0>;
+  PTXStringType ptxString;
+  KernelType type;
+  int precision;
+  std::string llvmFuncName;
+  std::shared_ptr<QuantumGate> gate;
+  // extra information
+  int opCount;
+};
+
+struct CUDAKernelGenConfig {
+  enum MatrixLoadMode { 
+    UseMatImmValues, LoadInDefaultMemSpace, LoadInConstMemSpace
+  };
+  int precision = 64;
+  double zeroTol = 1e-8;
+  double oneTol = 1e-8;
+  bool forceDenseKernel = false;
+  MatrixLoadMode matrixLoadMode = UseMatImmValues;
+
+  std::ostream& displayInfo(std::ostream& os) const;
+};
+
+#ifdef CAST_USE_CUDA
+#include <cuda.h>
+#include <cuda_runtime.h>
+
+class CUDAKernelExecutor {
+private:
+  struct CUContextModulePair {
+    CUcontext cuContext;
+    CUmodule cuModule;
+  };
+  std::vector<CUContextModulePair> cuContextModulePairs;
+  std::vector<CUfunction> cuFunctions;
+public:
+  /// @brief Initialize CUDA JIT session by loading PTX strings into CUDA
+  /// context and module. This function can only be called once and cannot be
+  /// undone. This function calls \c emitPTX if not already done.
+  void initCUJIT();
+}
+#endif // CAST_USE_CUDA
+
+class CUDAKernelManager
+  : public KernelManagerBase
+#ifdef CAST_USE_CUDA
+  , public CUDAKernelExecutor
+#endif // CAST_USE_CUDA
+{
+  std::vector<CUDAKernelInfo> _kernels;
+
+  enum JITState { JIT_Uninited, JIT_PTXEmitted, JIT_CUFunctionLoaded };
+  JITState jitState;
+public:
+  CUDAKernelManager()
+    : KernelManagerBase()
+#ifdef CAST_USE_CUDA
+    , CUDAKernelExecutor()
+#endif // CAST_USE_CUDA
+    , _kernels()
+    , jitState(JIT_Uninited) {}
+
+  std::vector<CUDAKernelInfo>& kernels() { return _kernels; }
+  const std::vector<CUDAKernelInfo>& kernels() const { return _kernels; }
+
+  CUDAKernelManager& genCUDAKernel(
+      const CUDAKernelGenConfig& config,
+      std::shared_ptr<QuantumGate> gate, const std::string& funcName);
+
+  void emitPTX(
+      int nThreads = 1,
+      llvm::OptimizationLevel optLevel = llvm::OptimizationLevel::O0,
+      int verbose = 0);
 };
 
 

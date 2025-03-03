@@ -19,13 +19,15 @@ static void internal_U1q() {
     sv2 = sv0;
   };
 
-  KernelManager kernelMgr;
+  CPUKernelManager kernelMgr;
 
   // generate random unitary gates
-  std::vector<QuantumGate> gates;
+  std::vector<std::shared_ptr<QuantumGate>> gates;
   gates.reserve(nQubits);
-  for (int q = 0; q < nQubits; q++)
-    gates.emplace_back(QuantumGate::RandomUnitary(q));
+  for (int q = 0; q < nQubits; q++) {
+    gates.emplace_back(
+      std::make_shared<QuantumGate>(QuantumGate::RandomUnitary(q)));
+  }
 
   CPUKernelGenConfig cpuConfig;
   cpuConfig.simd_s = simd_s;
@@ -42,12 +44,12 @@ static void internal_U1q() {
   for (unsigned i = 0; i < nQubits; i++) {
     randomizeSV();
     std::stringstream ss;
-    ss << "Apply U1q at " << gates[i].qubits[0];
+    ss << "Apply U1q at " << gates[i]->qubits[0];
     auto immFuncName = "gateImm_" + std::to_string(i);
     auto loadFuncName = "gateLoad_" + std::to_string(i);
     kernelMgr.applyCPUKernel(sv0.data, sv0.nQubits, immFuncName);
     kernelMgr.applyCPUKernel(sv1.data, sv1.nQubits, loadFuncName);
-    sv2.applyGate(gates[i]);
+    sv2.applyGate(*gates[i]);
     suite.assertClose(sv0.norm(), 1.0, ss.str() + ": Imm Norm", GET_INFO());
     suite.assertClose(sv1.norm(), 1.0, ss.str() + ": Load Norm", GET_INFO());
     suite.assertClose(utils::fidelity(sv0, sv2), 1.0,
@@ -72,11 +74,10 @@ static void internal_U2q() {
     sv2 = sv0;
   };
 
-  KernelManager kernelMgr;
+  CPUKernelManager kernelMgr;
 
   // generate random gates, set up kernel names
-  std::vector<QuantumGate> gates;
-  gates.reserve(nQubits);
+  std::vector<std::shared_ptr<QuantumGate>> gates;
   std::random_device rd;
   std::mt19937 gen(rd());
   std::uniform_int_distribution<> d(0, nQubits - 1);
@@ -84,7 +85,8 @@ static void internal_U2q() {
     int a, b;
     a = d(gen);
     do { b = d(gen); } while (b == a);
-    gates.emplace_back(QuantumGate::RandomUnitary(a, b));
+    gates.emplace_back(
+      std::make_shared<QuantumGate>(QuantumGate::RandomUnitary(a, b)));
   }
 
   CPUKernelGenConfig cpuConfig;
@@ -100,15 +102,15 @@ static void internal_U2q() {
   kernelMgr.initJIT();
   for (unsigned i = 0; i < nQubits; i++) {
     randomizeSV();
-    int a = gates[i].qubits[0];
-    int b = gates[i].qubits[1];
+    int a = gates[i]->qubits[0];
+    int b = gates[i]->qubits[1];
     std::stringstream ss;
     ss << "Apply U2q at " << a << " and " << b;
     auto immFuncName = "gateImm_" + std::to_string(i);
     auto loadFuncName = "gateLoad_" + std::to_string(i);
     kernelMgr.applyCPUKernel(sv0.data, sv0.nQubits, immFuncName);
     kernelMgr.applyCPUKernel(sv1.data, sv1.nQubits, loadFuncName);
-    sv2.applyGate(gates[i]);
+    sv2.applyGate(*gates[i]);
     suite.assertClose(sv0.norm(), 1.0, ss.str() + ": Imm Norm", GET_INFO());
     suite.assertClose(sv1.norm(), 1.0, ss.str() + ": Load Norm", GET_INFO());
     suite.assertClose(utils::fidelity(sv0, sv2), 1.0,
