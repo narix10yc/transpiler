@@ -49,7 +49,7 @@ Function* cpuGetFunctionDeclaration(
   return func;
 }
 
-struct MatData {
+struct IRMatDataCUDA {
   Value* reElemVal;
   Value* imElemVal;
   Value* reVecVal;
@@ -58,14 +58,14 @@ struct MatData {
   ScalarKind imKind;
 };
 
-inline std::vector<MatData> getMatrixData(
+inline std::vector<IRMatDataCUDA> getMatrixData(
     IRBuilder<>& B, const GateMatrix& gateMatrix,
     const CPUKernelGenConfig& config) {
   const int k = gateMatrix.nQubits();
   const unsigned K = 1 << k;
   const unsigned KK = K * K;
 
-  std::vector<MatData> data(KK);
+  std::vector<IRMatDataCUDA> data(KK);
 
   const double zTol = config.zeroTol / K;
   const double oTol = config.oneTol / K;
@@ -112,19 +112,19 @@ inline std::vector<MatData> getMatrixData(
 
 } // anonymous namespace
 
-KernelManager& KernelManager::genCPUKernel(
+CPUKernelManager& CPUKernelManager::genCPUKernel(
     const CPUKernelGenConfig& config,
-    const QuantumGate& gate, const std::string& funcName) {
+    std::shared_ptr<QuantumGate> gate, const std::string& funcName) {
   const unsigned s = config.simd_s;
   const unsigned S = 1ULL << s;
-  const unsigned k = gate.qubits.size();
+  const unsigned k = gate->qubits.size();
   const unsigned K = 1ULL << k;
   const unsigned KK = K * K;
 
   LLVM_DEBUG(
     std::cerr << CYAN("=== DEBUG genCPUKernel funcName " << funcName << " ===\n");
-    utils::printArray(std::cerr << "Matrix on qubits ", gate.qubits) << "\n";
-    gate.gateMatrix.printCMat(std::cerr) << "\n";
+    utils::printArray(std::cerr << "Matrix on qubits ", gate->qubits) << "\n";
+    gate->gateMatrix.printCMat(std::cerr) << "\n";
   );
 
   auto& llvmContextModulePair = createNewLLVMModule(funcName + "Module");
@@ -139,7 +139,7 @@ KernelManager& KernelManager::genCPUKernel(
     B, *llvmContextModulePair.llvmModule, funcName, config, args);
 
   // init matrix
-  auto matrixData = getMatrixData(B, gate.gateMatrix, config);
+  auto matrixData = getMatrixData(B, gate->gateMatrix, config);
 
   // init basic blocks
   BasicBlock* entryBB = BasicBlock::Create(B.getContext(), "entry", func);
@@ -152,8 +152,8 @@ KernelManager& KernelManager::genCPUKernel(
   SmallVector<int, 6U> simdBits, hiBits, loBits;
   { /* split qubits */
   unsigned q = 0;
-  auto qubitsIt = gate.qubits.begin();
-  const auto qubitsEnd = gate.qubits.end();
+  auto qubitsIt = gate->qubits.begin();
+  const auto qubitsEnd = gate->qubits.end();
   while (simdBits.size() != s) {
     if (qubitsIt != qubitsEnd && *qubitsIt == q) {
       loBits.push_back(q);
@@ -585,17 +585,17 @@ KernelManager& KernelManager::genCPUKernel(
   // append the newly generated kernel
   this->_kernels.emplace_back(
     std::function<CPU_KERNEL_TYPE>(),
-    KernelInfo::CPU_Gate,
+    CPUKernelInfo::CPU_Gate,
     config.precision,
     func->getName().str(),
     gate,
     config.simd_s,
-    gate.opCount(config.zeroTol), // TODO: zeroTol here is different from zTol used in sigMat
+    gate->opCount(config.zeroTol), // TODO: zeroTol here is different from zTol used in sigMat
     lk);
   return *this;
 }
 
-KernelManager& KernelManager::genCPUMeasure(
+CPUKernelManager& CPUKernelManager::genCPUMeasure(
     const CPUKernelGenConfig& config, int q, const std::string& funcName) {
   assert(0 && "Not Implemented");
   return *this;

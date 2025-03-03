@@ -1,5 +1,8 @@
-llvm_map_components_to_libnames(LLVM_LIBS support core irreader orcjit native)
+llvm_map_components_to_libnames(
+  LLVM_LIBS support core irreader orcjit ${LLVM_TARGETS_TO_BUILD})
 target_link_libraries(simulation utils ${LLVM_LIBS})
+llvm_map_components_to_libnames(
+  LLVM_LIBS support core irreader orcjit)
 target_link_libraries(cast utils ${LLVM_LIBS})
 
 add_executable(unit_test "test_main.cpp")
@@ -19,16 +22,14 @@ add_executable(jit_playground "jit_playground.cpp")
 target_link_libraries(jit_playground cast simulation qasm)
 
 add_executable(ptx_playground "ptx_playground.cpp")
-llvm_map_components_to_libnames(LLVM_LIBS ${LLVM_TARGETS_TO_BUILD})
 if (CAST_ENABLE_CUDA)
-    target_link_libraries(ptx_playground qasm cast simulation ${LLVM_LIBS} CUDA::cudart)
+    target_link_libraries(ptx_playground qasm cast simulation CUDA::cudart)
 else()
-    target_link_libraries(ptx_playground qasm cast simulation ${LLVM_LIBS})
+    target_link_libraries(ptx_playground qasm cast simulation)
 endif()
 
 add_executable(scratch "scratch.cpp")
-llvm_map_components_to_libnames(LLVM_LIBS ${LLVM_TARGETS_TO_BUILD})
-target_link_libraries(scratch utils cast simulation timeit ${LLVM_LIBS})
+target_link_libraries(scratch utils cast simulation timeit)
 
 add_executable(fpga_playground "fpga_playground.cpp")
 target_link_libraries(fpga_playground qasm cast simulation)

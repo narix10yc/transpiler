@@ -433,11 +433,11 @@ void PerformanceCache::runExperiments(
     randAdd();
   }
 
-  KernelManager kernelMgr;
+  CPUKernelManager kernelMgr;
   utils::timedExecute([&]() {
     int i = 0;
     for (const auto& gate : gates)
-      kernelMgr.genCPUKernel(cpuConfig, *gate, "gate_" + std::to_string(i++));
+      kernelMgr.genCPUKernel(cpuConfig, gate, "gate_" + std::to_string(i++));
   }, "Code Generation");
 
   utils::timedExecute([&]() {
@@ -465,11 +465,11 @@ void PerformanceCache::runExperiments(
       });
     auto memSpd = calculateMemUpdateSpeed(nQubits, kernel.precision, tr.min);
     items.emplace_back(
-      kernel.gate.nQubits(), kernel.opCount, 64,
+      kernel.gate->nQubits(), kernel.opCount, 64,
       kernel.nLoBits, nThreads, memSpd);
     std::cerr << "Gate @ ";
     utils::printArray(
-      std::cerr, ArrayRef(kernel.gate.qubits.begin(), kernel.gate.qubits.size()));
+      std::cerr, ArrayRef(kernel.gate->qubits.begin(), kernel.gate->qubits.size()));
     std::cerr << ": " << memSpd << " GiBps\n";
   }
 }

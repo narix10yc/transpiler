@@ -1,6 +1,3 @@
-#define DEBUG_TYPE "codegen-gpu"
-#include <llvm/Support/Debug.h>
-// #define LLVM_DEBUG(X) X
 #include <llvm/IR/IntrinsicsNVPTX.h>
 
 #include "cast/QuantumGate.h"
@@ -13,6 +10,9 @@
 #include "utils/iocolor.h"
 #include "utils/Formats.h"
 
+#define DEBUG_TYPE "codegen-cuda"
+#include <llvm/Support/Debug.h>
+// #define LLVM_DEBUG(X) X
 
 using namespace cast;
 using namespace llvm;
@@ -35,26 +35,26 @@ Value* genOptFMul(Value* a, Value* b, ScalarKind aKind, IRBuilder<>& B) {
   }
 }
 
-struct GPUArgs {
-  Value* svPtrV;
-  Value* matPtrV;
+struct IRArgsCUDA {
+  Argument* pSvArg;       // ptr to statevector
+  Argument* pMatArg;      // ptr to matrix
 };
 
-struct MatData {
+struct IRMatDataCUDA {
   Value* reVal;
   Value* imVal;
   ScalarKind reKind;
   ScalarKind imKind;
 };
 
-inline std::vector<MatData> getMatrixData(
+std::vector<IRMatDataCUDA> getMatDataCUDA(
     IRBuilder<>& B, const GateMatrix& gateMatrix,
-    const GPUKernelGenConfig& config) {
+    const CUDAKernelGenConfig& config) {
   const int k = gateMatrix.nQubits();
   const unsigned K = 1 << k;
   const unsigned KK = K * K;
 
-  std::vector<MatData> data(KK);
+  std::vector<IRMatDataCUDA> data(KK);
 
   const double zTol = config.zeroTol / K;
   const double oTol = config.oneTol / K;
@@ -76,7 +76,7 @@ inline std::vector<MatData> getMatrixData(
       data[i].reKind = SK_One;
     else if (std::abs(real + 1.0) < oTol)
       data[i].reKind = SK_MinusOne;
-    else if (config.matrixLoadMode == GPUKernelGenConfig::UseMatImmValues) {
+    else if (config.matrixLoadMode == CUDAKernelGenConfig::UseMatImmValues) {
       data[i].reKind = SK_ImmValue;
       data[i].reVal = ConstantFP::get(B.getContext(), APFloat(real));
     }
@@ -89,7 +89,7 @@ inline std::vector<MatData> getMatrixData(
       data[i].imKind = SK_One;
     else if (std::abs(imag + 1.0) < oTol)
       data[i].imKind = SK_MinusOne;
-    else if (config.matrixLoadMode == GPUKernelGenConfig::UseMatImmValues) {
+    else if (config.matrixLoadMode == CUDAKernelGenConfig::UseMatImmValues) {
       data[i].imKind = SK_ImmValue;
       data[i].imVal = ConstantFP::get(B.getContext(), APFloat(imag));
     }
@@ -101,18 +101,17 @@ inline std::vector<MatData> getMatrixData(
   
 } // anonymous namespace
 
-KernelManager& KernelManager::genGPUKernel(
-    const GPUKernelGenConfig& config, const QuantumGate& gate,
-    const std::string& funcName) {
-
-  const unsigned k = gate.qubits.size();
+CUDAKernelManager& CUDAKernelManager::genCUDAKernel(
+    const CUDAKernelGenConfig& config,
+    std::shared_ptr<QuantumGate> gate, const std::string& funcName) {
+  const unsigned k = gate->qubits.size();
   const unsigned K = 1ULL << k;
   const unsigned KK = K * K;
 
   LLVM_DEBUG(
     std::cerr << CYAN("=== DEBUG genGPUKernel '" << funcName << "' ===\n");
-    utils::printArray(std::cerr << "Matrix on qubits ", gate.qubits) << "\n";
-    gate.gateMatrix.printCMat(std::cerr) << "\n";
+    utils::printArray(std::cerr << "Matrix on qubits ", gate->qubits) << "\n";
+    gate->gateMatrix.printCMat(std::cerr) << "\n";
   );
 
   auto& llvmContextModulePair = createNewLLVMModule(funcName + "Module");
@@ -122,7 +121,7 @@ KernelManager& KernelManager::genGPUKernel(
   Type* scalarTy = (config.precision == 32) ? B.getFloatTy() : B.getDoubleTy();
     
   Function* func;
-  Argument* pSvArg, *pMatArg;
+  IRArgsCUDA args;
   { /* function declaration */
 
   /*
@@ -138,9 +137,12 @@ KernelManager& KernelManager::genGPUKernel(
   */
   func = Function::Create(
     FunctionType::get(
-      B.getVoidTy(),                  // returns void
-      { B.getPtrTy(), B.getPtrTy()},  // takes (void*, void**)
-      false),                         // not variadic
+      // returns void
+      B.getVoidTy(),
+      // takes (void*, void**)
+      { B.getPtrTy(), B.getPtrTy()},  
+      // not variadic
+      false),
     Function::ExternalLinkage,
     funcName,
     *llvmContextModulePair.llvmModule);
@@ -151,10 +153,10 @@ KernelManager& KernelManager::genGPUKernel(
   } else
     func->setName(funcName);
 
-  pSvArg = func->getArg(0);
-  pSvArg->setName("p.sv");
-  pMatArg = func->getArg(1);
-  pMatArg->setName("p.mat");
+  args.pSvArg = func->getArg(0);
+  args.pSvArg->setName("p.sv");
+  args.pMatArg = func->getArg(1);
+  args.pMatArg->setName("p.mat");
 
   // mark this function as a kernel
   auto* mdString = MDString::get(*llvmContextModulePair.llvmContext, "kernel");
@@ -205,17 +207,17 @@ KernelManager& KernelManager::genGPUKernel(
   // utils::printVector(qubits, std::cerr << "target qubits: ") << "\n";
 
   // the pointer of sv start in this thread
-  auto matData = getMatrixData(B, gate.gateMatrix, config);
+  auto matData = getMatDataCUDA(B, gate->gateMatrix, config);
   Value* svPtrV;
   {
   Value* idxStartV = B.getInt64(0ULL);
   Value* tmpCounterV;
   uint64_t mask = 0ULL;
-  int highestQ = gate.qubits.back();
+  int highestQ = gate->qubits.back();
   int qIdx = 0;
   int counterQ = 0;
   for (int q = 0; q <= highestQ; q++) {
-    if (q < gate.qubits[qIdx]) {
+    if (q < gate->qubits[qIdx]) {
       mask |= (1 << counterQ++);
       continue;
     }
@@ -230,7 +232,7 @@ KernelManager& KernelManager::genGPUKernel(
     // " << (qIdx - 1) << "\n";
     mask = 0ULL;
   }
-  mask = ~((1ULL << (gate.qubits.back() - k + 1)) - 1);
+  mask = ~((1ULL << (gate->qubits.back() - k + 1)) - 1);
   // std::cerr << "  (globalThreadIdx & " << utils::as0b(mask, 32) << ") << "
   // << (k) << "\n";
 
@@ -238,7 +240,7 @@ KernelManager& KernelManager::genGPUKernel(
   tmpCounterV = B.CreateShl(tmpCounterV, k, "tmpCounter");
   idxStartV = B.CreateAdd(idxStartV, tmpCounterV, "idxStart");
   idxStartV = B.CreateShl(idxStartV, 1, "idxStart");
-  svPtrV = B.CreateGEP(scalarTy, pSvArg, idxStartV, "sv.ptr");
+  svPtrV = B.CreateGEP(scalarTy, args.pSvArg, idxStartV, "sv.ptr");
   }
 
   // load amplitude set
@@ -247,7 +249,7 @@ KernelManager& KernelManager::genGPUKernel(
   uint64_t delta = 0ULL;
   for (int b = 0; b < k; b++) {
     if (i & (1 << b))
-      delta |= (1 << gate.qubits[b]);
+      delta |= (1 << gate->qubits[b]);
   }
   // std::cerr << "amp idx " << utils::as0b(i, k) << ", delta = " <<
   // utils::as0b(delta, 32) << "\n";
@@ -262,60 +264,60 @@ KernelManager& KernelManager::genGPUKernel(
     scalarTy, imAmpPtrs[i], "amp.im." + std::to_string(i));
   }
 
-  const auto* gateCMat = gate.gateMatrix.getConstantMatrix();
+  const auto* gateCMat = gate->gateMatrix.getConstantMatrix();
   assert(gateCMat && "Only supporting constant matrix for now");
   for (unsigned r = 0; r < K; ++r) {
-  // matrix-vector multiplication
-  // updatedReAmp = sum(reAmps_i * reMats_i) - sum(imAmps_i * imMats_i)
-  // updatedImAmp = sum(reAmps_i * imMats_i) + sum(imAmps_i * reMats_i)
+    // matrix-vector multiplication
+    // updatedReAmp = sum(reAmps_i * reMats_i) - sum(imAmps_i * imMats_i)
+    // updatedImAmp = sum(reAmps_i * imMats_i) + sum(imAmps_i * reMats_i)
 
-  Value* updatedReAmp0 = internal::genMulAdd(
-    B, matData[0].reVal, reAmps[0], nullptr, matData[0].reKind);
-  Value* updatedReAmp1 = internal::genMulAdd(
-    B, matData[0].imVal, imAmps[0], nullptr, matData[0].imKind);
-  Value* updatedImAmp = internal::genMulAdd(
-    B, matData[0].reVal, imAmps[0], nullptr, matData[0].reKind);
-  updatedImAmp = internal::genMulAdd(
-    B, matData[0].imVal, reAmps[0], updatedImAmp, matData[0].imKind);
-
-  for (unsigned c = 0; c < K; ++c) {
-    auto& md = matData[r * K + c];
-    updatedReAmp0 = internal::genMulAdd(
-      B, md.reVal, reAmps[c], updatedReAmp0, md.reKind);
-    updatedReAmp1 = internal::genMulAdd(
-      B, md.imVal, imAmps[c], updatedReAmp1, md.imKind);
+    Value* updatedReAmp0 = internal::genMulAdd(
+      B, matData[0].reVal, reAmps[0], nullptr, matData[0].reKind);
+    Value* updatedReAmp1 = internal::genMulAdd(
+      B, matData[0].imVal, imAmps[0], nullptr, matData[0].imKind);
+    Value* updatedImAmp = internal::genMulAdd(
+      B, matData[0].reVal, imAmps[0], nullptr, matData[0].reKind);
     updatedImAmp = internal::genMulAdd(
-      B, md.reVal, imAmps[c], updatedImAmp, md.reKind);
-    updatedImAmp = internal::genMulAdd(
-      B, md.imVal, reAmps[c], updatedImAmp, md.imKind);
-  }
-  
-  Value* updatedReAmp = nullptr;
-  if (updatedReAmp0 && updatedReAmp1)
-    updatedReAmp = B.CreateFSub(updatedReAmp0, updatedReAmp1);
-  else if (updatedReAmp0)
-    updatedReAmp = updatedReAmp0;
-  else if (updatedReAmp1)
-    updatedReAmp = B.CreateFNeg(updatedReAmp1);
-  else
-    llvm_unreachable("updatedReAmp should not be zero");
+      B, matData[0].imVal, reAmps[0], updatedImAmp, matData[0].imKind);
 
-  B.CreateStore(updatedReAmp, reAmpPtrs[r]);
-  B.CreateStore(updatedImAmp, imAmpPtrs[r]);
+    for (unsigned c = 0; c < K; ++c) {
+      auto& md = matData[r * K + c];
+      updatedReAmp0 = internal::genMulAdd(
+        B, md.reVal, reAmps[c], updatedReAmp0, md.reKind);
+      updatedReAmp1 = internal::genMulAdd(
+        B, md.imVal, imAmps[c], updatedReAmp1, md.imKind);
+      updatedImAmp = internal::genMulAdd(
+        B, md.reVal, imAmps[c], updatedImAmp, md.reKind);
+      updatedImAmp = internal::genMulAdd(
+        B, md.imVal, reAmps[c], updatedImAmp, md.imKind);
+    }
+    
+    Value* updatedReAmp = nullptr;
+    if (updatedReAmp0 && updatedReAmp1)
+      updatedReAmp = B.CreateFSub(updatedReAmp0, updatedReAmp1);
+    else if (updatedReAmp0)
+      updatedReAmp = updatedReAmp0;
+    else if (updatedReAmp1)
+      updatedReAmp = B.CreateFNeg(updatedReAmp1);
+    else
+      llvm_unreachable("updatedReAmp should not be zero");
+
+    B.CreateStore(updatedReAmp, reAmpPtrs[r]);
+    B.CreateStore(updatedImAmp, imAmpPtrs[r]);
   }
 
   B.CreateRetVoid();
 
   // append the newly generated kernel
   this->_kernels.emplace_back(
-    std::function<GPU_KERNEL_TYPE>(),
-    KernelInfo::GPU_Gate,
+    CUDAKernelInfo::PTXStringType(), // empty ptxString
+    CUDAKernelInfo::CUDA_Gate,
     config.precision,
     func->getName().str(),
     gate,
-    0, /* simd_s */
-    gate.opCount(config.zeroTol),
-    0 /* lk */
+    gate->opCount(config.zeroTol)
   );
   return *this;
 }
+
+#undef DEBUG_TYPE

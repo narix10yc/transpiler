@@ -37,7 +37,7 @@ int main(int argc, const char** argv) {
   StandardCostModel standardCostModel(&cache);
   applyCPUGateFusion(fusionConfig, &standardCostModel, graphAdaptiveFuse);
 
-  KernelManager kernelMgr;
+  CPUKernelManager kernelMgr;
   CPUKernelGenConfig kernelGenConfig;
   kernelGenConfig.simd_s = 1;
 
@@ -53,7 +53,7 @@ int main(int argc, const char** argv) {
     kernelMgr.genCPUFromGraph(kernelGenConfig, graphAdaptiveFuse, "graphAdaptiveFuse");
   }, "Generate Adaptive-fused Kernels");
 
-  std::vector<KernelInfo*> kernelsNoFuse, kernelsNaiveFuse, kernelAdaptiveFuse;
+  std::vector<CPUKernelInfo*> kernelsNoFuse, kernelsNaiveFuse, kernelAdaptiveFuse;
   utils::timedExecute([&]() {
     kernelMgr.initJIT(
       N_THREADS, llvm::OptimizationLevel::O1,

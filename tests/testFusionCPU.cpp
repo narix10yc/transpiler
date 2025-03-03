@@ -16,8 +16,8 @@ template<unsigned simd_s>
 static void internal() {
   test::TestSuite suite("Fusion CPU (s = " + std::to_string(simd_s) + ")");
 
-  KernelManager kernelMgrBeforeFusion;
-  KernelManager kernelMgrAfterFusion;
+  CPUKernelManager kernelMgrBeforeFusion;
+  CPUKernelManager kernelMgrAfterFusion;
 
   CPUKernelGenConfig kernelGenConfig;
   kernelGenConfig.simd_s = simd_s;
@@ -42,7 +42,7 @@ static void internal() {
     auto allBlocks = graph.getAllBlocks();
     for (const auto& block : allBlocks) {
       kernelMgrBeforeFusion.genCPUKernel(
-        kernelGenConfig, *block->quantumGate,
+        kernelGenConfig, block->quantumGate,
         "beforeFusion" + std::to_string(block->id));
     }
 
@@ -52,7 +52,7 @@ static void internal() {
     allBlocks = graph.getAllBlocks();
     for (const auto& block : allBlocks) {
       kernelMgrAfterFusion.genCPUKernel(
-        kernelGenConfig, *block->quantumGate,
+        kernelGenConfig, block->quantumGate,
         "afterFusion" + std::to_string(block->id));
     }
 

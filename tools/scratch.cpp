@@ -4,16 +4,18 @@ using namespace cast;
 
 int main() {
 
-  KernelManager kernelMgr;
-  GPUKernelGenConfig gpuGenConfig;
-  gpuGenConfig.displayInfo(std::cerr) << "\n";
+  CUDAKernelManager cudaKernelMgr;
+  CUDAKernelGenConfig cudaGenConfig;
+  cudaGenConfig.displayInfo(std::cerr) << "\n";
 
+  cudaKernelMgr.genCUDAKernel(
+    cudaGenConfig,
+    std::make_shared<QuantumGate>(QuantumGate::RandomUnitary(4, 6)),
+    "my_cuda_kernel");
 
-  kernelMgr.genGPUKernel(
-    gpuGenConfig, QuantumGate::RandomUnitary(4, 6), "my_gpu_kernel");
+  cudaKernelMgr.emitPTX(1);
 
-
-  kernelMgr.initJITForPTXEmission();
+  llvm::errs() << cudaKernelMgr.kernels()[0].ptxString << "\n";
 
   return 0;
 }
