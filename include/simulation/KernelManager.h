@@ -13,6 +13,12 @@
 #include "cast/QuantumGate.h"
 #include <memory>
 
+#ifdef CAST_USE_CUDA
+  #include <cuda.h>
+  // TODO: We may not need cuda_runtime (also no need to link CUDA::cudart)
+  #include <cuda_runtime.h>
+#endif // CAST_USE_CUDA
+
 namespace cast {
 
 class CircuitGraph;
@@ -166,6 +172,9 @@ public:
       void* sv, int nQubits, const std::string& funcName, int nThreads);
 };
 
+/*
+  CUDA
+*/
 struct CUDAKernelInfo {
   enum KernelType {
     CUDA_Gate, CUDA_Measure
@@ -195,9 +204,6 @@ struct CUDAKernelGenConfig {
 };
 
 #ifdef CAST_USE_CUDA
-#include <cuda.h>
-#include <cuda_runtime.h>
-
 class CUDAKernelExecutor {
 private:
   struct CUContextModulePair {
@@ -211,7 +217,7 @@ public:
   /// context and module. This function can only be called once and cannot be
   /// undone. This function calls \c emitPTX if not already done.
   void initCUJIT();
-}
+};
 #endif // CAST_USE_CUDA
 
 class CUDAKernelManager

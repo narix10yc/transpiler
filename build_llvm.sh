@@ -16,6 +16,12 @@
 # # unicode/ucnv.h file
 # conda install icu
 
+## To remove all cuda packages in conda enviroment
+## After activate the enviroment, run
+# conda remove $(conda list | grep cuda | awk '{print $1}')
+## To also clean cache, run
+# conda clean --all
+
 export llvm_root=`pwd`
 
 cmake -S llvm-project-19.1.0.src/llvm -G Ninja \

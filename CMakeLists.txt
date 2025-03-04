@@ -31,7 +31,15 @@ if (CAST_USE_CUDA)
     message(STATUS "CUDA Toolkit Version: ${CUDAToolkit_VERSION}")
     message(STATUS "CUDA Include Path: ${CUDAToolkit_INCLUDE_DIR}")
     message(STATUS "CUDA Library Path: ${CUDAToolkit_LIBRARY_DIR}")
+
+    # FindCUDAToolkit.cmake (provided by Nvidia) does not automatically adjust
+    # include and link directories. For safely we append it before other include
+    # paths. Otherwise, enviroment managers such as conda may interfere with the
+    # selected CUDAToolkit version.
+    include_directories(BEFORE ${CUDAToolkit_INCLUDE_DIR})
+    link_directories(BEFORE ${CUDAToolkit_LIBRARY_DIR})
     message(STATUS "CUDART Library Path: ${CUDAToolkit_rt_LIBRARY}")
+    
     # get_cmake_property(_variableNames VARIABLES)
     # foreach (_variableName ${_variableNames})
     #     if (_variableName MATCHES "^CUDAToolkit")
