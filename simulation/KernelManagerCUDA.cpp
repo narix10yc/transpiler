@@ -157,14 +157,18 @@ void CUDAKernelManager::initCUJIT(int nThreads, int verbose) {
   // Load PTX codes
   cuModuleFunctionPairs.resize(nKernels);
   assert(nKernels == llvmContextModulePairs.size());
+  
+  // TODO: Currently ptxString is captured by value. This seems to be due to the
+  // property of llvm::SmallVector<char, 0> -- calling str() returns an empty
+  // StringRef.
+  // One fix is to replace PTXStringType from SmallVector<char, 0> to 
+  // std::string. Then we need to adjust emitPTX accordingly.
   for (unsigned i = 0; i < nKernels; ++i) {
-    
-    dispatcher.enqueue([&, i=i]() {
-      std::string ptxString(_kernels[i].ptxString.str());
-      CUmodule* cuModulePtr = &(cuModuleFunctionPairs[i].cuModule);
-      CUfunction* cuFunctionPtr = &(cuModuleFunctionPairs[i].cuFunction);
-      const char* funcName = _kernels[i].llvmFuncName.c_str();
-
+    std::string ptxString(_kernels[i].ptxString.str());
+    CUmodule* cuModulePtr = &(cuModuleFunctionPairs[i].cuModule);
+    CUfunction* cuFunctionPtr = &(cuModuleFunctionPairs[i].cuFunction);
+    const char* funcName = _kernels[i].llvmFuncName.c_str();
+    dispatcher.enqueue([=, this, &dispatcher]() {
       auto workerID = dispatcher.getWorkerID();
       CUresult cuResult;
 
@@ -177,11 +181,9 @@ void CUDAKernelManager::initCUJIT(int nThreads, int verbose) {
       }
       cuResult = cuModuleLoadData(cuModulePtr, ptxString.c_str());
       if (cuResult != CUDA_SUCCESS) {
-        LLVM_DEBUG(
-          std::cerr << RED("[CUDA Err] ") << "Worker " << workerID
-                  << " failed to create CUDA module " << i << ". Error code "
-                  << cuResult << "\n";
-        );
+        std::cerr << RED("[CUDA Err] ") << "Worker " << workerID
+                << " failed to create CUDA module " << i << ". Error code "
+                << cuResult << "\n";
         return;
       } else {
         LLVM_DEBUG(
@@ -209,10 +211,6 @@ void CUDAKernelManager::initCUJIT(int nThreads, int verbose) {
   if (verbose > 0)
     std::cout << "Loading PTX codes and getting CUDA functions...\n";
   dispatcher.sync(/* progressBar */ verbose > 0);
-
-  // Let the main thread manage all CUDA contexts.
-  for (const auto& ctx : cuContexts)
-    cuCtxSetCurrent(ctx);
 
   jitState = JIT_CUFunctionLoaded;
 }
