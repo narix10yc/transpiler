@@ -40,7 +40,7 @@ protected:
   std::mutex mtx;
 
   /// A thread-safe version that creates a new llvm Module
-  ContextModulePair& createNewLLVMModule(const std::string& name);
+  ContextModulePair& createNewLLVMContextModulePair(const std::string& name);
 
   /// Apply LLVM optimization to all modules inside \c llvmContextModulePairs
   /// As a private member function, this function will be called by \c initJIT
@@ -127,7 +127,7 @@ public:
   /// A function that takes in 4 arguments (void*, uint64_t, uint64_t,
   /// void*) and returns void. Arguments are: pointer to statevector array,
   /// taskID begin, taskID end, and pointer to matrix array (could be null).
-  CPUKernelManager& genCPUKernel(
+  CPUKernelManager& genCPUGate(
       const CPUKernelGenConfig& config,
       std::shared_ptr<QuantumGate> gate, const std::string& funcName);
 
@@ -137,12 +137,12 @@ public:
   CPUKernelManager& genCPUMeasure(
       const CPUKernelGenConfig& config, int q, const std::string& funcName);
 
-  CPUKernelManager& genCPUFromGraph(
+  CPUKernelManager& genCPUGatesFromCircuitGraph(
       const CPUKernelGenConfig& config,
       const CircuitGraph& graph, const std::string& graphName);
 
   std::vector<CPUKernelInfo*>
-  collectCPUGraphKernels(const std::string& graphName);
+  collectCPUKernelsFromCircuitGraph(const std::string& graphName);
 
   void ensureExecutable(CPUKernelInfo& kernel) {
     // Note: We do not actually need the lock here

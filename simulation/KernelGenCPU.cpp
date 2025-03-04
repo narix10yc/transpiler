@@ -112,7 +112,7 @@ inline std::vector<IRMatDataCUDA> getMatrixData(
 
 } // anonymous namespace
 
-CPUKernelManager& CPUKernelManager::genCPUKernel(
+CPUKernelManager& CPUKernelManager::genCPUGate(
     const CPUKernelGenConfig& config,
     std::shared_ptr<QuantumGate> gate, const std::string& funcName) {
   const unsigned s = config.simd_s;
@@ -127,7 +127,7 @@ CPUKernelManager& CPUKernelManager::genCPUKernel(
     gate->gateMatrix.printCMat(std::cerr) << "\n";
   );
 
-  auto& llvmContextModulePair = createNewLLVMModule(funcName + "Module");
+  auto& llvmContextModulePair = createNewLLVMContextModulePair(funcName + "Module");
 
   IRBuilder<> B(*llvmContextModulePair.llvmContext);
   assert(config.precision == 32 || config.precision == 64);
@@ -595,13 +595,13 @@ CPUKernelManager& CPUKernelManager::genCPUKernel(
   return *this;
 }
 
-CPUKernelManager& CPUKernelManager::genCPUFromGraph(
+CPUKernelManager& CPUKernelManager::genCPUGatesFromCircuitGraph(
     const CPUKernelGenConfig& config, const CircuitGraph& graph,
     const std::string& graphName) {
   const auto allBlocks = graph.getAllBlocks();
   const auto mangledName = internal::mangleGraphName(graphName);
   for (const auto& block : allBlocks) {
-    genCPUKernel(
+    genCPUGate(
       config, block->quantumGate, mangledName + std::to_string(block->id));
   }
   return *this;

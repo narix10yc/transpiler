@@ -50,7 +50,7 @@ int main(int argc, const char** argv) {
     // kernelMgr.genCPUFromGraph(kernelGenConfig, graphNaiveFuse, "graphNaiveFuse");
   // }, "Generate Naive-fused Kernels");
   utils::timedExecute([&]() {
-    kernelMgr.genCPUFromGraph(kernelGenConfig, graphAdaptiveFuse, "graphAdaptiveFuse");
+    kernelMgr.genCPUGatesFromCircuitGraph(kernelGenConfig, graphAdaptiveFuse, "graphAdaptiveFuse");
   }, "Generate Adaptive-fused Kernels");
 
   std::vector<CPUKernelInfo*> kernelsNoFuse, kernelsNaiveFuse, kernelAdaptiveFuse;
@@ -60,7 +60,7 @@ int main(int argc, const char** argv) {
       /* useLazyJIT */ false, /* verbose */ 1);
     // kernelsNoFuse = kernelMgr.collectCPUGraphKernels("graphNoFuse");
     // kernelsNaiveFuse = kernelMgr.collectCPUGraphKernels("graphNaiveFuse");
-    kernelAdaptiveFuse = kernelMgr.collectCPUGraphKernels("graphAdaptiveFuse");
+    kernelAdaptiveFuse = kernelMgr.collectCPUKernelsFromCircuitGraph("graphAdaptiveFuse");
   }, "JIT compile kernels");
 
   utils::StatevectorAlt<double> sv(graphNoFuse.nQubits, kernelGenConfig.simd_s);
