@@ -52,7 +52,7 @@ TaskDispatcher::TaskDispatcher(int nWorkers)
 
 int TaskDispatcher::getWorkerID() const {
   auto threadID = std::this_thread::get_id();
-  std::lock_guard lock(mtx);
+  // std::lock_guard lock(mtx);
   for (int n = workers.size(), i = 0; i < n; ++i) {
     if (workers[i].get_id() == threadID)
       return i;

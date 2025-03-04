@@ -59,29 +59,29 @@ void CUDAKernelManager::emitPTX(
 
   applyLLVMOptimization(nThreads, optLevel, /* progressBar */ verbose > 0);
 
-  // std::string targetTriple = sys::getDefaultTargetTriple();
+  // Check registry info to make sure LLVM is built for NVPTX
   std::string targetTriple = "nvptx64-nvidia-cuda";
   std::string err;
   const auto* target = TargetRegistry::lookupTarget(targetTriple, err);
   if (!target) {
-    errs() << RED("[Error]: ") << err << "\n";
+    errs() << RED("[Error]: ") << "Failed to lookup target. Error trace: "
+           << err << "\n";
     return;
   }
-  errs() << "Target " << target->getName() << "\n";
 
-  std::string cpu = "sm_70";
-  // std::string cpu = "generic";
-  auto* targetMachine = target->createTargetMachine(
-    targetTriple,   // target triple
-    cpu,            // cpu
-    "",             // features
-    {},             // options
-    std::nullopt    // RM
-  );
+  const auto createTargetMachine = [&]() -> TargetMachine* {
+    return target->createTargetMachine(
+      targetTriple,   // target triple
+      "sm_70",        // cpu
+      "",             // features
+      {},             // options
+      std::nullopt    // RM
+    );
+  };
 
   for (auto& [ctx, mod] : llvmContextModulePairs) {
     mod->setTargetTriple(targetTriple);
-    mod->setDataLayout(targetMachine->createDataLayout());
+    mod->setDataLayout(createTargetMachine()->createDataLayout());
     if (llvm::verifyModule(*mod, &llvm::errs())) {
       llvm::errs() << "Module verification failed!\n";
       return;
@@ -92,21 +92,20 @@ void CUDAKernelManager::emitPTX(
   utils::TaskDispatcher dispatcher(nThreads);
 
   for (unsigned i = 0; i < _kernels.size(); i++) {
-    dispatcher.enqueue(
-      [&llvmModule=*llvmContextModulePairs[i].llvmModule,
-       &ptxString=_kernels[i].ptxString,
-       tm=targetMachine]() {
-      raw_svector_ostream sstream(ptxString);
+    dispatcher.enqueue([&, i=i]() {
+      raw_svector_ostream sstream(_kernels[i].ptxString);
       legacy::PassManager passManager;
-      if (tm->addPassesToEmitFile(
+      if (createTargetMachine()->addPassesToEmitFile(
           passManager, sstream, nullptr, CodeGenFileType::AssemblyFile)) {
         errs() << "The target machine can't emit a file of this type\n";
         return;
       }
-      passManager.run(llvmModule);
+      passManager.run(*llvmContextModulePairs[i].llvmModule);
     });
   }
-  dispatcher.sync();
+  if (verbose > 0)
+    std::cout << "Emitting PTX codes...\n";
+  dispatcher.sync(/* progressBar */ verbose > 0);
   jitState = JIT_PTXEmitted;
 }
 
@@ -128,58 +127,82 @@ void CUDAKernelManager::initCUJIT(int nThreads, int verbose) {
   CUdevice cuDevice;
   cuDeviceGet(&cuDevice, 0);
 
-  utils::TaskDispatcher dispatcher(nThreads);
+  utils::TaskDispatcher ctxCreateDispatcher(nThreads);
 
   // Create CUDA contexts. Each thread creates and manages its own CUDA context.
   cuContexts.resize(nThreads);
   for (unsigned t = 0; t < nThreads; ++t) {
-    dispatcher.enqueue([&]() {
-      auto workerID = dispatcher.getWorkerID();
-      CUresult cuResult = cuCtxCreate(&cuContexts[workerID], 0, cuDevice);
+    ctxCreateDispatcher.enqueue([&]() {
+      auto workerID = ctxCreateDispatcher.getWorkerID();
+      CUcontext* cuContextPtr = &cuContexts[workerID];
+      CUresult cuResult = cuCtxCreate(cuContextPtr, 0, cuDevice);
       if (cuResult != CUDA_SUCCESS) {
         std::cerr << RED("[CUDA Err] ") << "Worker " << workerID
                   << " failed to create CUDA context. Error code " 
                   << cuResult << "\n";
+        return;
       } else {
-        std::cerr << GREEN("[CUDA] ") << "Worker " << workerID
-                  << " created CUcontext at "
-                  << cuContexts[workerID] << "\n";
+        LLVM_DEBUG(
+          std::cerr << GREEN("[CUDA] ") << "Worker " << workerID
+                    << " created CUcontext " << *cuContextPtr
+                    << " at " << cuContextPtr << "\n";
+        );
       }
     });
   }
-  dispatcher.sync();
+  ctxCreateDispatcher.sync();
+
+  utils::TaskDispatcher dispatcher(nThreads);
 
   // Load PTX codes
   cuModuleFunctionPairs.resize(nKernels);
   assert(nKernels == llvmContextModulePairs.size());
-  for (unsigned i = 0; i < _kernels.size(); i++) {
-    llvm::StringRef ptx(_kernels[i].ptxString);
+  for (unsigned i = 0; i < nKernels; ++i) {
+    
+    dispatcher.enqueue([&, i=i]() {
+      std::string ptxString(_kernels[i].ptxString.str());
+      CUmodule* cuModulePtr = &(cuModuleFunctionPairs[i].cuModule);
+      CUfunction* cuFunctionPtr = &(cuModuleFunctionPairs[i].cuFunction);
+      const char* funcName = _kernels[i].llvmFuncName.c_str();
 
-    dispatcher.enqueue([&, ptx=ptx, i=i]() {
       auto workerID = dispatcher.getWorkerID();
-      CUcontext cuContext = cuContexts[workerID];
-      CUmodule cuModule = cuModuleFunctionPairs[i].cuModule;
-      CUfunction cuFunction = cuModuleFunctionPairs[i].cuFunction;
       CUresult cuResult;
-      
-      cuResult = cuModuleLoadData(&cuModule, ptx.data());
+
+      cuResult = cuCtxSetCurrent(cuContexts[workerID]);
       if (cuResult != CUDA_SUCCESS) {
         std::cerr << RED("[CUDA Err] ") << "Worker " << workerID
+                  << " failed to set CUDA context. Error code " 
+                  << cuResult << "\n";
+        return;
+      }
+      cuResult = cuModuleLoadData(cuModulePtr, ptxString.c_str());
+      if (cuResult != CUDA_SUCCESS) {
+        LLVM_DEBUG(
+          std::cerr << RED("[CUDA Err] ") << "Worker " << workerID
                   << " failed to create CUDA module " << i << ". Error code "
                   << cuResult << "\n";
+        );
+        return;
       } else {
-        std::cerr << GREEN("[CUDA] ") << "Worker " << workerID
-                  << " created CUmodule at " << cuModule << "\n";
+        LLVM_DEBUG(
+          std::cerr << GREEN("[CUDA] ") << "Worker " << workerID
+                    << " created CUmodule " << *cuModulePtr
+                    << " at " << cuModulePtr << "\n";
+        );
       }
 
-      cuResult = cuModuleGetFunction(&cuFunction, cuModule, _kernels[i].llvmFuncName.c_str());
+      cuResult = cuModuleGetFunction(cuFunctionPtr, *cuModulePtr, funcName);
       if (cuResult != CUDA_SUCCESS) {
         std::cerr << RED("[CUDA Err] ") << "Worker " << workerID
                   << " failed to load CUDA function " << i << ". Error code "
                   << cuResult << "\n";
+        return;
       } else {
-        std::cerr << GREEN("[CUDA] ") << "Worker " << workerID
-                  << " created CUfunction at " << cuFunction << "\n";
+        LLVM_DEBUG(
+          std::cerr << GREEN("[CUDA] ") << "Worker " << workerID
+                    << " loaded CUfunction " << *cuFunctionPtr
+                    << " at " << cuFunctionPtr << "\n";
+        );
       }
     });
   }
