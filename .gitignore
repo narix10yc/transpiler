@@ -13,6 +13,7 @@ build-release/*
 debug-build/*
 release-build/*
 
+tmp.txt
 tmp/*
 */gen_file*
 performance/obj
