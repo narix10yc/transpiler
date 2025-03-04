@@ -13,7 +13,7 @@ using namespace cast;
 using namespace utils;
 
 template<unsigned simd_s>
-static void internal() {
+static void f() {
   test::TestSuite suite("Fusion CPU (s = " + std::to_string(simd_s) + ")");
 
   CPUKernelManager kernelMgrBeforeFusion;
@@ -78,6 +78,6 @@ static void internal() {
 }
 
 void test::test_fusionCPU() {
-  internal<1>();
-  internal<2>();
+  f<1>();
+  f<2>();
 }

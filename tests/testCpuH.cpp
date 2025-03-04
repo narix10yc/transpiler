@@ -10,7 +10,7 @@ static inline std::shared_ptr<QuantumGate> getH(int q) {
 }
 
 template<unsigned simd_s>
-static void internal() {
+static void f() {
   test::TestSuite suite("Gate H (s = " + std::to_string(simd_s) + ")");
 
   CPUKernelManager cpuKernelMgr;
@@ -98,6 +98,6 @@ static void internal() {
 }
 
 void test::test_cpuH() {
-  internal<1>();
-  internal<2>();
+  f<1>();
+  f<2>();
 }
