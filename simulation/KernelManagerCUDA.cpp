@@ -1,4 +1,3 @@
-
 #include "simulation/KernelManager.h"
 #include "simulation/KernelGenInternal.h"
 
@@ -93,18 +92,109 @@ void CUDAKernelManager::emitPTX(
   utils::TaskDispatcher dispatcher(nThreads);
 
   for (unsigned i = 0; i < _kernels.size(); i++) {
-    dispatcher.enqueue([&, i=i, tm=targetMachine]() {
-      raw_svector_ostream sstream(_kernels[i].ptxString);
+    dispatcher.enqueue(
+      [&llvmModule=*llvmContextModulePairs[i].llvmModule,
+       &ptxString=_kernels[i].ptxString,
+       tm=targetMachine]() {
+      raw_svector_ostream sstream(ptxString);
       legacy::PassManager passManager;
       if (tm->addPassesToEmitFile(
           passManager, sstream, nullptr, CodeGenFileType::AssemblyFile)) {
         errs() << "The target machine can't emit a file of this type\n";
         return;
       }
-      passManager.run(*llvmContextModulePairs[i].llvmModule);
+      passManager.run(llvmModule);
     });
   }
   dispatcher.sync();
+  jitState = JIT_PTXEmitted;
 }
+
+#ifdef CAST_USE_CUDA
+void CUDAKernelManager::initCUJIT(int nThreads, int verbose) {
+  assert(jitState == JIT_PTXEmitted);
+  assert(nThreads > 0);
+  auto nKernels = _kernels.size();
+  if (nKernels < nThreads) {
+    std::cerr << YELLOW("[Warning] ")
+      << "Calling initCUJIT with "
+      << nThreads << " threads when there are only "
+      << nKernels << " kernels. Set nThreads to "
+      << nKernels << " instead.\n";
+    nThreads = nKernels;
+  }
+
+  cuInit(0);
+  CUdevice cuDevice;
+  cuDeviceGet(&cuDevice, 0);
+
+  utils::TaskDispatcher dispatcher(nThreads);
+
+  // Create CUDA contexts. Each thread creates and manages its own CUDA context.
+  cuContexts.resize(nThreads);
+  for (unsigned t = 0; t < nThreads; ++t) {
+    dispatcher.enqueue([&]() {
+      auto workerID = dispatcher.getWorkerID();
+      CUresult cuResult = cuCtxCreate(&cuContexts[workerID], 0, cuDevice);
+      if (cuResult != CUDA_SUCCESS) {
+        std::cerr << RED("[CUDA Err] ") << "Worker " << workerID
+                  << " failed to create CUDA context. Error code " 
+                  << cuResult << "\n";
+      } else {
+        std::cerr << GREEN("[CUDA] ") << "Worker " << workerID
+                  << " created CUcontext at "
+                  << cuContexts[workerID] << "\n";
+      }
+    });
+  }
+  dispatcher.sync();
+
+  // Load PTX codes
+  cuModuleFunctionPairs.resize(nKernels);
+  assert(nKernels == llvmContextModulePairs.size());
+  for (unsigned i = 0; i < _kernels.size(); i++) {
+    llvm::StringRef ptx(_kernels[i].ptxString);
+
+    dispatcher.enqueue([&, ptx=ptx, i=i]() {
+      auto workerID = dispatcher.getWorkerID();
+      CUcontext cuContext = cuContexts[workerID];
+      CUmodule cuModule = cuModuleFunctionPairs[i].cuModule;
+      CUfunction cuFunction = cuModuleFunctionPairs[i].cuFunction;
+      CUresult cuResult;
+      
+      cuResult = cuModuleLoadData(&cuModule, ptx.data());
+      if (cuResult != CUDA_SUCCESS) {
+        std::cerr << RED("[CUDA Err] ") << "Worker " << workerID
+                  << " failed to create CUDA module " << i << ". Error code "
+                  << cuResult << "\n";
+      } else {
+        std::cerr << GREEN("[CUDA] ") << "Worker " << workerID
+                  << " created CUmodule at " << cuModule << "\n";
+      }
+
+      cuResult = cuModuleGetFunction(&cuFunction, cuModule, _kernels[i].llvmFuncName.c_str());
+      if (cuResult != CUDA_SUCCESS) {
+        std::cerr << RED("[CUDA Err] ") << "Worker " << workerID
+                  << " failed to load CUDA function " << i << ". Error code "
+                  << cuResult << "\n";
+      } else {
+        std::cerr << GREEN("[CUDA] ") << "Worker " << workerID
+                  << " created CUfunction at " << cuFunction << "\n";
+      }
+    });
+  }
+  if (verbose > 0)
+    std::cout << "Loading PTX codes and getting CUDA functions...\n";
+  dispatcher.sync(/* progressBar */ verbose > 0);
+
+  // Let the main thread manage all CUDA contexts.
+  for (const auto& ctx : cuContexts)
+    cuCtxSetCurrent(ctx);
+
+  jitState = JIT_CUFunctionLoaded;
+}
+
+
+#endif // CAST_USE_CUDA
 
 #undef DEBUG_TYPE

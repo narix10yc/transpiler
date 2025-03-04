@@ -2,6 +2,7 @@
 
 #include "simulation/KernelManager.h"
 #include "utils/iocolor.h"
+#include "utils/TaskDispatcher.h"
 
 using namespace cast;
 using namespace llvm;
@@ -39,6 +40,26 @@ std::ostream& CPUKernelGenConfig::displayInfo(std::ostream& os) const {
 
   os << CYAN("================================\n");
   return os;
+}
+
+void CPUKernelManager::ensureAllExecutable(int nThreads, bool progressBar) {
+  assert(nThreads > 0);
+  if (nThreads == 1) {
+    for (auto& kernel : _kernels)
+      ensureExecutable(kernel);
+    return;
+  }
+
+  // multi-thread compile
+  utils::TaskDispatcher dispatcher(nThreads);
+  for (auto& kernel : _kernels) {
+	  dispatcher.enqueue([this, &kernel]() {
+      ensureExecutable(kernel);
+	  });
+  }
+  if (progressBar)
+    std::cout << "Ensure All Executables...\n";
+  dispatcher.sync(progressBar);
 }
 
 void CPUKernelManager::initJIT(

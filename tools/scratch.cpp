@@ -1,21 +1,31 @@
+#include "cast/Parser.h"
+#include "cast/CircuitGraph.h"
 #include "simulation/KernelManager.h"
 
 using namespace cast;
 
-int main() {
+int main(int argc, char** argv) {
+  assert(argc > 1);
+  Parser parser(argv[1]);
+  auto qc = parser.parseQuantumCircuit();
+  CircuitGraph graph;
+  qc.toCircuitGraph(graph);
 
   CUDAKernelManager cudaKernelMgr;
   CUDAKernelGenConfig cudaGenConfig;
   cudaGenConfig.displayInfo(std::cerr) << "\n";
 
-  cudaKernelMgr.genCUDAKernel(
-    cudaGenConfig,
-    std::make_shared<QuantumGate>(QuantumGate::RandomUnitary(4, 6)),
-    "my_cuda_kernel");
+  utils::timedExecute([&]() {
+    cudaKernelMgr.genCUDAGatesFromCircuitGraph(cudaGenConfig, graph, "myGraph");
+  }, "CUDA Kernel Generation");
+  
+  utils::timedExecute([&]() {
+    cudaKernelMgr.emitPTX(1);
+  }, "PTX Code Emission");
 
-  cudaKernelMgr.emitPTX(1);
+  // llvm::errs() << cudaKernelMgr.kernels()[0].ptxString << "\n";
 
-  llvm::errs() << cudaKernelMgr.kernels()[0].ptxString << "\n";
+  cudaKernelMgr.initCUJIT(2, /* verbose */ 1);
 
   return 0;
 }

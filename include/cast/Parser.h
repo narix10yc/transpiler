@@ -113,6 +113,7 @@ public:
 
   explicit Lexer(const char* fileName) {
     std::ifstream file(fileName, std::ifstream::binary);
+    assert(file);
     assert(file.is_open());
 
     file.seekg(0, file.end);

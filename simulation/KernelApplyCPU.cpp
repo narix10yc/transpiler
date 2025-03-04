@@ -70,52 +70,12 @@ void CPUKernelManager::applyCPUKernelMultithread(
                    "kernel not found by name");
 }
 
-
-namespace {
-  /// mangled name is formed by 'G' + <length of graphName> + graphName
-  /// @return mangled name
-  std::string mangleGraphName(const std::string& graphName) {
-    return "G" + std::to_string(graphName.length()) + graphName;
-  }
-
-  /// @return demangled name
-  std::string demangleGraphBlockName(const std::string& mangledName) {
-    const auto* p = mangledName.data();
-    const auto* e = mangledName.data() + mangledName.size();
-    assert(p != e);
-    assert(*p == 'G' && "Mangled graph name must start with 'G'");
-    ++p;
-    assert(p != e);
-    auto p0 = p;
-    while ('0' <= *p && *p <= '9') {
-      ++p;
-      assert(p != e);
-    }
-    auto l = std::stoi(std::string(p0, p));
-    assert(p + l <= e);
-    return std::string(p, p+l);
-  }
-} // anonymous namespace
-
-
-CPUKernelManager& CPUKernelManager::genCPUFromGraph(
-    const CPUKernelGenConfig& config, const CircuitGraph& graph,
-    const std::string& graphName) {
-  const auto allBlocks = graph.getAllBlocks();
-  const auto mangledName = mangleGraphName(graphName);
-  for (const auto& block : allBlocks) {
-    genCPUKernel(
-      config, block->quantumGate, mangledName + std::to_string(block->id));
-  }
-  return *this;
-}
-
-std::vector<CPUKernelInfo*> CPUKernelManager::collectCPUGraphKernels(
-    const std::string& graphName) {
+std::vector<CPUKernelInfo*>
+CPUKernelManager::collectCPUGraphKernels(const std::string& graphName) {
   assert(isJITed() && "Must initialize JIT session "
                       "before calling KernelManager::collectCPUGraphKernels");
   std::vector<CPUKernelInfo*> kernelInfos;
-  const auto mangledName = mangleGraphName(graphName);
+  const auto mangledName = internal::mangleGraphName(graphName);
   for (auto& kernel : _kernels) {
     if (kernel.llvmFuncName.starts_with(mangledName)) {
       ensureExecutable(kernel);

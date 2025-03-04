@@ -23,11 +23,11 @@ class TaskDispatcher {
   };
   std::queue<std::function<void()>> tasks;
   std::vector<std::thread> workers;
-  std::mutex mtx;
+  mutable std::mutex mtx;
   std::condition_variable cv;
   std::condition_variable syncCV;
 
-  int nTotalTasks;
+  std::atomic<int> nTotalTasks;
   std::atomic<int> nActiveWorkers;
   std::atomic<Status> status;
 
@@ -52,7 +52,7 @@ public:
   // Add a new task to the queue
   void enqueue(const std::function<void()>& task);
 
-  int getWorkerID(std::thread::id threadID) const;
+  int getWorkerID() const;
 
   /// @brief A blocking method that waits until all tasks are finished.
   void sync(bool progressBar = false);

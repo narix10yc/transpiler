@@ -320,4 +320,16 @@ CUDAKernelManager& CUDAKernelManager::genCUDAKernel(
   return *this;
 }
 
+CUDAKernelManager& CUDAKernelManager::genCUDAGatesFromCircuitGraph(
+    const CUDAKernelGenConfig& config,
+    const CircuitGraph& graph, const std::string& graphName) {
+  const auto allBlocks = graph.getAllBlocks();
+  const auto mangledName = internal::mangleGraphName(graphName);
+  for (const auto& block : allBlocks) {
+    genCUDAKernel(
+      config, block->quantumGate, mangledName + std::to_string(block->id));
+  }
+  return *this;
+}
+
 #undef DEBUG_TYPE

@@ -8,11 +8,12 @@
 using namespace utils;
 
 void TaskDispatcher::enqueue(const std::function<void()>& task) {
+  ++nTotalTasks;
   {
     std::lock_guard lock(mtx);
-    ++nTotalTasks;
     tasks.push(std::move(task));
   }
+  status = Running;
   cv.notify_one();
 }
 
@@ -49,7 +50,9 @@ TaskDispatcher::TaskDispatcher(int nWorkers)
   }
 }
 
-int TaskDispatcher::getWorkerID(std::thread::id threadID) const {
+int TaskDispatcher::getWorkerID() const {
+  auto threadID = std::this_thread::get_id();
+  std::lock_guard lock(mtx);
   for (int n = workers.size(), i = 0; i < n; ++i) {
     if (workers[i].get_id() == threadID)
       return i;
