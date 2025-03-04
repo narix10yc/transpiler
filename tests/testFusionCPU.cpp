@@ -41,7 +41,7 @@ static void f() {
     qc.toCircuitGraph(graph);
     auto allBlocks = graph.getAllBlocks();
     for (const auto& block : allBlocks) {
-      kernelMgrBeforeFusion.genCPUKernel(
+      kernelMgrBeforeFusion.genCPUGate(
         kernelGenConfig, block->quantumGate,
         "beforeFusion" + std::to_string(block->id));
     }
@@ -51,7 +51,7 @@ static void f() {
     graph.print(std::cerr, 2);
     allBlocks = graph.getAllBlocks();
     for (const auto& block : allBlocks) {
-      kernelMgrAfterFusion.genCPUKernel(
+      kernelMgrAfterFusion.genCPUGate(
         kernelGenConfig, block->quantumGate,
         "afterFusion" + std::to_string(block->id));
     }

@@ -437,7 +437,7 @@ void PerformanceCache::runExperiments(
   utils::timedExecute([&]() {
     int i = 0;
     for (const auto& gate : gates)
-      kernelMgr.genCPUKernel(cpuConfig, gate, "gate_" + std::to_string(i++));
+      kernelMgr.genCPUGate(cpuConfig, gate, "gate_" + std::to_string(i++));
   }, "Code Generation");
 
   utils::timedExecute([&]() {

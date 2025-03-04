@@ -33,12 +33,12 @@ static void internal_U1q() {
   cpuConfig.simd_s = simd_s;
   cpuConfig.matrixLoadMode = CPUKernelGenConfig::UseMatImmValues;
   for (int q = 0; q < nQubits; q++)
-    kernelMgr.genCPUKernel(cpuConfig, gates[q], "gateImm_" + std::to_string(q));
+    kernelMgr.genCPUGate(cpuConfig, gates[q], "gateImm_" + std::to_string(q));
 
   cpuConfig.forceDenseKernel = true;
   cpuConfig.matrixLoadMode = CPUKernelGenConfig::StackLoadMatElems;
   for (int q = 0; q < nQubits; q++)
-    kernelMgr.genCPUKernel(cpuConfig, gates[q], "gateLoad_" + std::to_string(q));
+    kernelMgr.genCPUGate(cpuConfig, gates[q], "gateLoad_" + std::to_string(q));
 
   kernelMgr.initJIT();
   for (unsigned i = 0; i < nQubits; i++) {
@@ -93,11 +93,11 @@ static void internal_U2q() {
   cpuConfig.simd_s = simd_s;
   cpuConfig.matrixLoadMode = CPUKernelGenConfig::UseMatImmValues;
   for (int q = 0; q < nQubits; q++)
-    kernelMgr.genCPUKernel(cpuConfig, gates[q], "gateImm_" + std::to_string(q));
+    kernelMgr.genCPUGate(cpuConfig, gates[q], "gateImm_" + std::to_string(q));
   cpuConfig.forceDenseKernel = true;
   cpuConfig.matrixLoadMode = CPUKernelGenConfig::StackLoadMatElems;
   for (int q = 0; q < nQubits; q++)
-    kernelMgr.genCPUKernel(cpuConfig, gates[q], "gateLoad_" + std::to_string(q));
+    kernelMgr.genCPUGate(cpuConfig, gates[q], "gateLoad_" + std::to_string(q));
 
   kernelMgr.initJIT();
   for (unsigned i = 0; i < nQubits; i++) {

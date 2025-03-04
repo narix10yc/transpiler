@@ -36,7 +36,7 @@ cast::internal::demangleGraphName(const std::string& mangledName) {
 }
 
 KernelManagerBase::ContextModulePair&
-KernelManagerBase::createNewLLVMModule(const std::string& name) {
+KernelManagerBase::createNewLLVMContextModulePair(const std::string& name) {
   std::lock_guard<std::mutex> lock(mtx);
   auto ctx = std::make_unique<llvm::LLVMContext>();
   llvmContextModulePairs.emplace_back(

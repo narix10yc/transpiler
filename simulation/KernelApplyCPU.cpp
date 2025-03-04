@@ -71,7 +71,7 @@ void CPUKernelManager::applyCPUKernelMultithread(
 }
 
 std::vector<CPUKernelInfo*>
-CPUKernelManager::collectCPUGraphKernels(const std::string& graphName) {
+CPUKernelManager::collectCPUKernelsFromCircuitGraph(const std::string& graphName) {
   assert(isJITed() && "Must initialize JIT session "
                       "before calling KernelManager::collectCPUGraphKernels");
   std::vector<CPUKernelInfo*> kernelInfos;
