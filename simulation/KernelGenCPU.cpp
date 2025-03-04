@@ -595,6 +595,18 @@ CPUKernelManager& CPUKernelManager::genCPUKernel(
   return *this;
 }
 
+CPUKernelManager& CPUKernelManager::genCPUFromGraph(
+    const CPUKernelGenConfig& config, const CircuitGraph& graph,
+    const std::string& graphName) {
+  const auto allBlocks = graph.getAllBlocks();
+  const auto mangledName = internal::mangleGraphName(graphName);
+  for (const auto& block : allBlocks) {
+    genCPUKernel(
+      config, block->quantumGate, mangledName + std::to_string(block->id));
+  }
+  return *this;
+}
+
 CPUKernelManager& CPUKernelManager::genCPUMeasure(
     const CPUKernelGenConfig& config, int q, const std::string& funcName) {
   assert(0 && "Not Implemented");

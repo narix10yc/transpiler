@@ -5,6 +5,10 @@ llvm_map_components_to_libnames(
   LLVM_LIBS support core irreader orcjit)
 target_link_libraries(cast utils ${LLVM_LIBS})
 
+if (CAST_USE_CUDA)
+  target_link_libraries(simulation cuda CUDA::cudart)
+endif()
+
 add_executable(unit_test "test_main.cpp")
 target_link_libraries(unit_test cast simulation TestKit)
 
@@ -22,7 +26,7 @@ add_executable(jit_playground "jit_playground.cpp")
 target_link_libraries(jit_playground cast simulation qasm)
 
 add_executable(ptx_playground "ptx_playground.cpp")
-if (CAST_ENABLE_CUDA)
+if (CAST_USE_CUDA)
     target_link_libraries(ptx_playground qasm cast simulation CUDA::cudart)
 else()
     target_link_libraries(ptx_playground qasm cast simulation)

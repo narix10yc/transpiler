@@ -13,6 +13,28 @@
 using namespace cast;
 using namespace llvm;
 
+std::string cast::internal::mangleGraphName(const std::string& graphName) {
+  return "G" + std::to_string(graphName.length()) + graphName;
+}
+
+std::string
+cast::internal::demangleGraphName(const std::string& mangledName) {
+  const auto* p = mangledName.data();
+  const auto* e = mangledName.data() + mangledName.size();
+  assert(p != e);
+  assert(*p == 'G' && "Mangled graph name must start with 'G'");
+  ++p;
+  assert(p != e);
+  auto p0 = p;
+  while ('0' <= *p && *p <= '9') {
+    ++p;
+    assert(p != e);
+  }
+  auto l = std::stoi(std::string(p0, p));
+  assert(p + l <= e);
+  return std::string(p, p+l);
+}
+
 KernelManagerBase::ContextModulePair&
 KernelManagerBase::createNewLLVMModule(const std::string& name) {
   std::lock_guard<std::mutex> lock(mtx);
@@ -54,25 +76,5 @@ void KernelManagerBase::applyLLVMOptimization(
   }
   if (progressBar)
     std::cout << "Applying LLVM Optimization....\n";
-  dispatcher.sync(progressBar);
-}
-
-void CPUKernelManager::ensureAllExecutable(int nThreads, bool progressBar) {
-  assert(nThreads > 0);
-  if (nThreads == 1) {
-    for (auto& kernel : _kernels)
-      ensureExecutable(kernel);
-    return;
-  }
-
-  // multi-thread compile
-  utils::TaskDispatcher dispatcher(nThreads);
-  for (auto& kernel : _kernels) {
-	  dispatcher.enqueue([this, &kernel]() {
-      ensureExecutable(kernel);
-	  });
-  }
-  if (progressBar)
-    std::cout << "Ensure All Executables...\n";
   dispatcher.sync(progressBar);
 }

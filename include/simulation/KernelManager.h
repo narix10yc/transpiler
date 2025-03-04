@@ -21,6 +21,14 @@
 
 namespace cast {
 
+  namespace internal {
+    /// mangled name is formed by 'G' + <length of graphName> + graphName
+    /// @return mangled name
+    std::string mangleGraphName(const std::string& graphName);
+
+    std::string demangleGraphName(const std::string& mangledName);
+  } // namespace internal
+
 class CircuitGraph;
 
 class KernelManagerBase {
@@ -203,29 +211,7 @@ struct CUDAKernelGenConfig {
   std::ostream& displayInfo(std::ostream& os) const;
 };
 
-#ifdef CAST_USE_CUDA
-class CUDAKernelExecutor {
-private:
-  struct CUContextModulePair {
-    CUcontext cuContext;
-    CUmodule cuModule;
-  };
-  std::vector<CUContextModulePair> cuContextModulePairs;
-  std::vector<CUfunction> cuFunctions;
-public:
-  /// @brief Initialize CUDA JIT session by loading PTX strings into CUDA
-  /// context and module. This function can only be called once and cannot be
-  /// undone. This function calls \c emitPTX if not already done.
-  void initCUJIT();
-};
-#endif // CAST_USE_CUDA
-
-class CUDAKernelManager
-  : public KernelManagerBase
-#ifdef CAST_USE_CUDA
-  , public CUDAKernelExecutor
-#endif // CAST_USE_CUDA
-{
+class CUDAKernelManager : public KernelManagerBase {
   std::vector<CUDAKernelInfo> _kernels;
 
   enum JITState { JIT_Uninited, JIT_PTXEmitted, JIT_CUFunctionLoaded };
@@ -233,9 +219,6 @@ class CUDAKernelManager
 public:
   CUDAKernelManager()
     : KernelManagerBase()
-#ifdef CAST_USE_CUDA
-    , CUDAKernelExecutor()
-#endif // CAST_USE_CUDA
     , _kernels()
     , jitState(JIT_Uninited) {}
 
@@ -246,10 +229,42 @@ public:
       const CUDAKernelGenConfig& config,
       std::shared_ptr<QuantumGate> gate, const std::string& funcName);
 
+  CUDAKernelManager& genCUDAGatesFromCircuitGraph(
+    const CUDAKernelGenConfig& config,
+    const CircuitGraph& graph, const std::string& graphName);
+    
   void emitPTX(
       int nThreads = 1,
       llvm::OptimizationLevel optLevel = llvm::OptimizationLevel::O0,
       int verbose = 0);
+
+#ifdef CAST_USE_CUDA
+private:
+  struct CUDAModuleFunctionPair {
+    CUmodule cuModule;
+    CUfunction cuFunction;
+  };
+  // Every thread will manage its own CUcontext.
+  std::vector<CUcontext> cuContexts;
+  std::vector<CUDAModuleFunctionPair> cuModuleFunctionPairs;
+public:
+  /// @brief Initialize CUDA JIT session by loading PTX strings into CUDA
+  /// context and module. This function can only be called once and cannot be
+  /// undone. This function calls \c emitPTX if not already done.
+  void initCUJIT(int nThreads = 1, int verbose = 0);
+
+  CUDAKernelManager(const CUDAKernelManager&) = delete;
+  CUDAKernelManager(CUDAKernelManager&&) = delete;
+  CUDAKernelManager& operator=(const CUDAKernelManager&) = delete;
+  CUDAKernelManager& operator=(CUDAKernelManager&&) = delete;
+
+  ~CUDAKernelManager() {
+    for (auto& [mod, func] : cuModuleFunctionPairs)
+      cuModuleUnload(mod);
+    for (auto& ctx : cuContexts)
+      cuCtxDestroy(ctx);
+  }
+#endif // CAST_USE_CUDA
 };
 
 
