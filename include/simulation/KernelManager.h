@@ -3,9 +3,6 @@
 
 #define CPU_KERNEL_TYPE void(void*, uint64_t, uint64_t, const void*)
 
-// TODO: We will need to adjust all kernels to take void* and void** to fix this
-#define CUDA_KERNEL_TYPE void(void*, uint64_t, uint64_t, const void*)
-
 #include <llvm/IR/Module.h>
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
 #include <llvm/Passes/OptimizationLevel.h>
