@@ -18,14 +18,14 @@ int main(int argc, char** argv) {
   utils::timedExecute([&]() {
     cudaKernelMgr.genCUDAGatesFromCircuitGraph(cudaGenConfig, graph, "myGraph");
   }, "CUDA Kernel Generation");
-  
+
   utils::timedExecute([&]() {
-    cudaKernelMgr.emitPTX(1);
+    cudaKernelMgr.emitPTX(2, llvm::OptimizationLevel::O1, /* verbose */ 1);
   }, "PTX Code Emission");
 
-  // llvm::errs() << cudaKernelMgr.kernels()[0].ptxString << "\n";
-
-  cudaKernelMgr.initCUJIT(2, /* verbose */ 1);
+  utils::timedExecute([&]() {
+    cudaKernelMgr.initCUJIT(3, /* verbose */ 1);
+  }, "CUDA JIT Initialization");
 
   return 0;
 }
