@@ -127,13 +127,13 @@ void CUDAKernelManager::initCUJIT(int nThreads, int verbose) {
   CUdevice cuDevice;
   cuDeviceGet(&cuDevice, 0);
 
-  utils::TaskDispatcher ctxCreateDispatcher(nThreads);
+  utils::TaskDispatcher dispatcher(nThreads);
 
   // Create CUDA contexts. Each thread creates and manages its own CUDA context.
   cuContexts.resize(nThreads);
   for (unsigned t = 0; t < nThreads; ++t) {
-    ctxCreateDispatcher.enqueue([&]() {
-      auto workerID = ctxCreateDispatcher.getWorkerID();
+    dispatcher.enqueue([&]() {
+      auto workerID = dispatcher.getWorkerID();
       CUcontext* cuContextPtr = &cuContexts[workerID];
       CUresult cuResult = cuCtxCreate(cuContextPtr, 0, cuDevice);
       if (cuResult != CUDA_SUCCESS) {
@@ -150,9 +150,7 @@ void CUDAKernelManager::initCUJIT(int nThreads, int verbose) {
       }
     });
   }
-  ctxCreateDispatcher.sync();
-
-  utils::TaskDispatcher dispatcher(nThreads);
+  dispatcher.sync();
 
   // Load PTX codes
   cuModuleFunctionPairs.resize(nKernels);
