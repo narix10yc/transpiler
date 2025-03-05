@@ -11,16 +11,6 @@ namespace utils {
 
 /// Thread-safe task dispatcher
 class TaskDispatcher {
-  enum Status {
-    /// Not in use yet
-    Idle,
-    /// Running
-    Running,
-    /// All threads have finished running, but have not yet been joined
-    Synced,
-    /// All
-    Stopped
-  };
   std::queue<std::function<void()>> tasks;
   std::vector<std::thread> workers;
   mutable std::mutex mtx;
@@ -29,7 +19,7 @@ class TaskDispatcher {
 
   std::atomic<int> nTotalTasks;
   std::atomic<int> nActiveWorkers;
-  std::atomic<Status> status;
+  std::atomic<bool> stopFlag;
 
   void workerThread();
 public:
@@ -42,11 +32,10 @@ public:
   TaskDispatcher& operator=(TaskDispatcher&&) = delete;
 
   ~TaskDispatcher() {
-    if (status == Running)
+    if (stopFlag == false) {
       sync();
-    if (status == Synced)
       join();
-    assert(status == Stopped);
+    }
   }
 
   // Add a new task to the queue

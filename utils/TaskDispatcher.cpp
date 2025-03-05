@@ -13,7 +13,6 @@ void TaskDispatcher::enqueue(const std::function<void()>& task) {
     std::lock_guard lock(mtx);
     tasks.push(std::move(task));
   }
-  status = Running;
   cv.notify_one();
 }
 
@@ -23,11 +22,13 @@ void TaskDispatcher::workerThread() {
     {
       std::unique_lock lock(mtx);
       cv.wait(lock, [this]() {
-        return status != Running || !tasks.empty();
+        return stopFlag || !tasks.empty();
       });
 
-      if (status != Running && tasks.empty())
+      if (stopFlag) {
+        assert(tasks.empty() && "Must call sync() before join()");
         return;
+      }
 
       task = std::move(tasks.front());
       tasks.pop();
@@ -41,7 +42,7 @@ void TaskDispatcher::workerThread() {
 
 TaskDispatcher::TaskDispatcher(int nWorkers)
   : tasks(), workers(), mtx(), cv()
-  , syncCV(), nTotalTasks(0), nActiveWorkers(0), status(Running) {
+  , syncCV(), nTotalTasks(0), nActiveWorkers(0), stopFlag(false) {
   workers.reserve(nWorkers);
   for (int i = 0; i < nWorkers; ++i) {
     workers.emplace_back([this]() {
@@ -52,7 +53,6 @@ TaskDispatcher::TaskDispatcher(int nWorkers)
 
 int TaskDispatcher::getWorkerID() const {
   auto threadID = std::this_thread::get_id();
-  // std::lock_guard lock(mtx);
   for (int n = workers.size(), i = 0; i < n; ++i) {
     if (workers[i].get_id() == threadID)
       return i;
@@ -65,9 +65,6 @@ void TaskDispatcher::sync(bool progressBar) {
   {
     std::unique_lock lock(mtx);
     syncCV.wait(lock, [this, progressBar]() {
-      // std::cerr << "nRemainingTasks/nActiveWorkers/nWorkers: "
-                // << tasks.size() << "/" << nActiveWorkers << "/" << workers.size()
-                // << "\n";
       if (progressBar)
         utils::displayProgressBar(nTotalTasks - tasks.size(), nTotalTasks, 20);
       return tasks.empty() && nActiveWorkers == 0;
@@ -75,14 +72,14 @@ void TaskDispatcher::sync(bool progressBar) {
   }
   if (progressBar)
     std::cout << std::endl;
-  status = Synced;
   cv.notify_all();
 }
 
 void TaskDispatcher::join() {
+  stopFlag = true;
+  cv.notify_all();
   for (auto& thread : workers) {
     if (thread.joinable())
       thread.join();
   }
-  status = Stopped;
 }
