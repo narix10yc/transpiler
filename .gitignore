@@ -5,6 +5,7 @@
 examples/simple.qasm
 examples/complex.qasm
 *.rec
+.DS_Store
 
 # build folders
 build/*
@@ -18,5 +19,6 @@ tmp/*
 */gen_file*
 performance/obj
 python_perf_tests/*
-analysis/python-venv
+analysis/*
 *.csv
+asplos26_examples/*

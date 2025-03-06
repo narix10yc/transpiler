@@ -132,7 +132,7 @@ class CircuitGraph {
 private:
   std::shared_ptr<CircuitGraphContext> _context;
 public:
-  using row_t = std::array<GateBlock*, 36>;
+  using row_t = std::array<GateBlock*, 42>;
   using tile_t = utils::List<row_t>;
   using list_node_t = tile_t::Node;
 
@@ -168,6 +168,8 @@ public:
 
   tile_iter_t tile_begin() { return _tile.begin(); }
   tile_iter_t tile_end() { return _tile.end(); }
+
+  void clear();
 
   // CircuitGraphContext& getContext() { return _context; }
 

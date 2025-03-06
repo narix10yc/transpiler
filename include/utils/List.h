@@ -119,8 +119,7 @@ public:
   List() : _head(nullptr), _tail(nullptr), _size(0) {}
 
   ~List() {
-    while (_head != nullptr)
-      pop_front();
+    clear();
   }
 
   List(const List& other) {
@@ -171,6 +170,11 @@ public:
   void push_front(const T& value) { insert(_head, value); }
 
   void push_back(const T& value) { insert(nullptr, value); }
+
+  void clear() {
+    while (_head != nullptr)
+      pop_front();
+  }
 
   /// construct and insert an element to the front of the list
   template<typename... Args>

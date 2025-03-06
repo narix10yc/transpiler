@@ -55,6 +55,13 @@ void GateNode::connect(GateNode* rhsGate, int q) {
   rhsIt->lhsGate = this;
 }
 
+void CircuitGraph::clear() {
+  auto allBlocks = getAllBlocks();
+  for (auto* block : allBlocks)
+    releaseGateBlock(block);
+  _tile.clear();
+}
+
 //
 // CircuitGraph CircuitGraph::QFTCircuit(int nQubits) {
 //   CircuitGraph graph;

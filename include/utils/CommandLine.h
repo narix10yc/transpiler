@@ -138,10 +138,8 @@ namespace utils::cl {
         return static_cast<ClassType&>(*this);
       }
 
-      ClassType& setArgumentFrmat(ArgumentFormat af) {
+      ClassType& setArgumentFormat(ArgumentFormat af) {
         _argFormat = af;
-        assert((af == AF_Prefix ^ _name.length() != 1) &&
-               "Prefix argument must have length 1");
         return static_cast<ClassType&>(*this);
       }
 
@@ -157,11 +155,13 @@ namespace utils::cl {
 
       /* Convenient methods */
       ClassType& setArgumentPositional() {
-        return setArgumentFrmat(AF_Positional);
+        return setArgumentFormat(AF_Positional);
       }
 
       ClassType& setArgumentPrefix() {
-        return setArgumentFrmat(AF_Prefix);
+        assert(_name.length() == 1 && 
+          "Prefix arguments must have a single character name");
+        return setArgumentFormat(AF_Prefix);
       }
 
       ClassType& setValueRequired() {

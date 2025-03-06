@@ -8,7 +8,7 @@ using namespace cast;
 using namespace cast::fpga;
 using namespace IOColor;
 
-using tile_iter_t = utils::List<std::array<GateBlock*, 36>>::iterator;
+using tile_iter_t = CircuitGraph::tile_iter_t;
 
 namespace {
 
