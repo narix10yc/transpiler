@@ -88,12 +88,12 @@ void CUDAKernelManager::emitPTX(
     }
   }
 
-  assert(_kernels.size() == llvmContextModulePairs.size());
+  assert(_cudaKernels.size() == llvmContextModulePairs.size());
   utils::TaskDispatcher dispatcher(nThreads);
 
-  for (unsigned i = 0; i < _kernels.size(); i++) {
+  for (unsigned i = 0; i < _cudaKernels.size(); i++) {
     dispatcher.enqueue([&, i=i]() {
-      raw_svector_ostream sstream(_kernels[i].ptxString);
+      raw_svector_ostream sstream(_cudaKernels[i].ptxString);
       legacy::PassManager passManager;
       if (createTargetMachine()->addPassesToEmitFile(
           passManager, sstream, nullptr, CodeGenFileType::AssemblyFile)) {
@@ -113,7 +113,7 @@ void CUDAKernelManager::emitPTX(
 void CUDAKernelManager::initCUJIT(int nThreads, int verbose) {
   assert(jitState == JIT_PTXEmitted);
   assert(nThreads > 0);
-  auto nKernels = _kernels.size();
+  auto nKernels = _cudaKernels.size();
   if (nKernels < nThreads) {
     std::cerr << YELLOW("[Warning] ")
       << "Calling initCUJIT with "
@@ -162,10 +162,10 @@ void CUDAKernelManager::initCUJIT(int nThreads, int verbose) {
   // One fix is to replace PTXStringType from SmallVector<char, 0> to 
   // std::string. Then we need to adjust emitPTX accordingly.
   for (unsigned i = 0; i < nKernels; ++i) {
-    std::string ptxString(_kernels[i].ptxString.str());
+    std::string ptxString(_cudaKernels[i].ptxString.str());
     CUmodule* cuModulePtr = &(cuModuleFunctionPairs[i].cuModule);
     CUfunction* cuFunctionPtr = &(cuModuleFunctionPairs[i].cuFunction);
-    const char* funcName = _kernels[i].llvmFuncName.c_str();
+    const char* funcName = _cudaKernels[i].llvmFuncName.c_str();
     dispatcher.enqueue([=, this, &dispatcher]() {
       auto workerID = dispatcher.getWorkerID();
       CUresult cuResult;

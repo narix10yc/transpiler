@@ -16,10 +16,11 @@ class TestSuite {
     std::string info;
     std::string reason;
 
-    FailedInstance(const std::string& title, const std::string& info,
-                   const std::string& reason)
+    FailedInstance(
+      const std::string& title, const std::string& info,
+      const std::string& reason)
       : title(title), info(info), reason(reason) {}
-  };
+  }; // struct FailedInstance
 public:
   std::string name;
   int nTests;
@@ -63,7 +64,6 @@ public:
   void assertAllClose(
       const float* aArr, const float* bArr, size_t length,
       const std::string& title, const std::string& info, float tol=1e-4);
-
 };
 
 void test_applyGate();

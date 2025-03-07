@@ -309,7 +309,7 @@ CUDAKernelManager& CUDAKernelManager::genCUDAKernel(
   B.CreateRetVoid();
 
   // append the newly generated kernel
-  this->_kernels.emplace_back(
+  this->_cudaKernels.emplace_back(
     CUDAKernelInfo::PTXStringType(), // empty ptxString
     CUDAKernelInfo::CUDA_Gate,
     config.precision,

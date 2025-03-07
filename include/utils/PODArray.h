@@ -3,6 +3,7 @@
 
 #include "utils/is_pod.h"
 #include <cassert>
+#include <cstdlib>
 
 namespace utils {
 

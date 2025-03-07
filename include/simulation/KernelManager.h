@@ -209,18 +209,18 @@ struct CUDAKernelGenConfig {
 };
 
 class CUDAKernelManager : public KernelManagerBase {
-  std::vector<CUDAKernelInfo> _kernels;
+  std::vector<CUDAKernelInfo> _cudaKernels;
 
   enum JITState { JIT_Uninited, JIT_PTXEmitted, JIT_CUFunctionLoaded };
   JITState jitState;
 public:
   CUDAKernelManager()
     : KernelManagerBase()
-    , _kernels()
+    , _cudaKernels()
     , jitState(JIT_Uninited) {}
 
-  std::vector<CUDAKernelInfo>& kernels() { return _kernels; }
-  const std::vector<CUDAKernelInfo>& kernels() const { return _kernels; }
+  std::vector<CUDAKernelInfo>& kernels() { return _cudaKernels; }
+  const std::vector<CUDAKernelInfo>& kernels() const { return _cudaKernels; }
 
   CUDAKernelManager& genCUDAKernel(
       const CUDAKernelGenConfig& config,
@@ -237,6 +237,9 @@ public:
 
 #ifdef CAST_USE_CUDA
 private:
+  /// Every CUDA module will contain exactly one CUDA function. Multiple CUDA
+  /// modules may share the same CUDA context. For multi-threading JIT session,
+  /// we create \c nThread number of CUDA contexts.
   struct CUDAModuleFunctionPair {
     CUmodule cuModule;
     CUfunction cuFunction;
@@ -245,11 +248,6 @@ private:
   std::vector<CUcontext> cuContexts;
   std::vector<CUDAModuleFunctionPair> cuModuleFunctionPairs;
 public:
-  /// @brief Initialize CUDA JIT session by loading PTX strings into CUDA
-  /// context and module. This function can only be called once and cannot be
-  /// undone. This function calls \c emitPTX if not already done.
-  void initCUJIT(int nThreads = 1, int verbose = 0);
-
   CUDAKernelManager(const CUDAKernelManager&) = delete;
   CUDAKernelManager(CUDAKernelManager&&) = delete;
   CUDAKernelManager& operator=(const CUDAKernelManager&) = delete;
@@ -261,6 +259,14 @@ public:
     for (auto& ctx : cuContexts)
       cuCtxDestroy(ctx);
   }
+
+  /// @brief Initialize CUDA JIT session by loading PTX strings into CUDA
+  /// context and module. This function can only be called once and cannot be
+  /// undone. This function assumes \c emitPTX is already called.
+  void initCUJIT(int nThreads = 1, int verbose = 0);
+
+  ///
+  
 #endif // CAST_USE_CUDA
 };
 
