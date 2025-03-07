@@ -153,7 +153,7 @@ void CUDAKernelManager::initCUJIT(int nThreads, int verbose) {
   dispatcher.sync();
 
   // Load PTX codes
-  cuModuleFunctionPairs.resize(nKernels);
+  cuTuples.resize(nKernels);
   assert(nKernels == llvmContextModulePairs.size());
   
   // TODO: Currently ptxString is captured by value. This seems to be due to the
@@ -163,14 +163,16 @@ void CUDAKernelManager::initCUJIT(int nThreads, int verbose) {
   // std::string. Then we need to adjust emitPTX accordingly.
   for (unsigned i = 0; i < nKernels; ++i) {
     std::string ptxString(_cudaKernels[i].ptxString.str());
-    CUmodule* cuModulePtr = &(cuModuleFunctionPairs[i].cuModule);
-    CUfunction* cuFunctionPtr = &(cuModuleFunctionPairs[i].cuFunction);
+    CUcontext* cuContextPtr = &(cuTuples[i].cuContext);
+    CUmodule* cuModulePtr = &(cuTuples[i].cuModule);
+    CUfunction* cuFunctionPtr = &(cuTuples[i].cuFunction);
     const char* funcName = _cudaKernels[i].llvmFuncName.c_str();
     dispatcher.enqueue([=, this, &dispatcher]() {
       auto workerID = dispatcher.getWorkerID();
       CUresult cuResult;
 
       cuResult = cuCtxSetCurrent(cuContexts[workerID]);
+      *cuContextPtr = cuContexts[workerID];
       if (cuResult != CUDA_SUCCESS) {
         std::cerr << RED("[CUDA Err] ") << "Worker " << workerID
                   << " failed to set CUDA context. Error code " 
@@ -211,6 +213,30 @@ void CUDAKernelManager::initCUJIT(int nThreads, int verbose) {
   dispatcher.sync(/* progressBar */ verbose > 0);
 
   jitState = JIT_CUFunctionLoaded;
+}
+
+void CUDAKernelManager::launchCUDAKernel(
+    void* dData, int nQubits, int kernelIdx) {
+  auto cuTuple = cuTuples[kernelIdx];
+  cuCtxSetCurrent(cuTuple.cuContext);
+
+  int nThreadsInBits = 7;
+
+  int nThreads = 1 << nThreadsInBits;
+  int nGateQubits = _cudaKernels[kernelIdx].gate->nQubits();
+  int nBlocks = 1 << (nQubits - nThreadsInBits - nGateQubits);
+
+  void* cMatPtr = _cudaKernels[kernelIdx].gate->gateMatrix.getConstantMatrix()->data();
+  void* kernelParams[] = { &dData, &cMatPtr };
+
+  cuLaunchKernel(cuTuple.cuFunction, 
+    nBlocks, 1, 1,  // grid dim
+    nThreads, 1, 1, // block dim
+    0,              // shared mem sizecd
+    0,              // stream
+    kernelParams,  // kernel params
+    nullptr         // extra options
+  );
 }
 
 

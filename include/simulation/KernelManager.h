@@ -240,13 +240,14 @@ private:
   /// Every CUDA module will contain exactly one CUDA function. Multiple CUDA
   /// modules may share the same CUDA context. For multi-threading JIT session,
   /// we create \c nThread number of CUDA contexts.
-  struct CUDAModuleFunctionPair {
+  struct CUDATuple {
+    CUcontext cuContext;
     CUmodule cuModule;
     CUfunction cuFunction;
   };
   // Every thread will manage its own CUcontext.
   std::vector<CUcontext> cuContexts;
-  std::vector<CUDAModuleFunctionPair> cuModuleFunctionPairs;
+  std::vector<CUDATuple> cuTuples;
 public:
   CUDAKernelManager(const CUDAKernelManager&) = delete;
   CUDAKernelManager(CUDAKernelManager&&) = delete;
@@ -254,7 +255,7 @@ public:
   CUDAKernelManager& operator=(CUDAKernelManager&&) = delete;
 
   ~CUDAKernelManager() {
-    for (auto& [mod, func] : cuModuleFunctionPairs)
+    for (auto& [ctx, mod, func] : cuTuples)
       cuModuleUnload(mod);
     for (auto& ctx : cuContexts)
       cuCtxDestroy(ctx);
@@ -266,7 +267,9 @@ public:
   void initCUJIT(int nThreads = 1, int verbose = 0);
 
   ///
-  
+  void launchCUDAKernel(
+      void* dData, int nQubits, int kernelIdx);
+
 #endif // CAST_USE_CUDA
 };
 

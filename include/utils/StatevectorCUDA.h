@@ -8,17 +8,17 @@ namespace utils {
 
 template<typename RealType>
 class StatevectorCUDA {
-private:
+public:
   int nQubits;
   // device data
   RealType* dData;
   // host data
   RealType* hData;
 
+private:
   enum SyncState {
     UnInited, Synced, DeviceIsNewer, HostIsNewer
   };
-
   SyncState syncState;
   // cuResult is for CUDA Driver API calls
   CUresult cuResult;

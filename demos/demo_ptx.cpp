@@ -2,6 +2,9 @@
 #include "cast/CircuitGraph.h"
 #include "simulation/KernelManager.h"
 
+#include "timeit/timeit.h"
+#include "utils/StatevectorCUDA.h"
+
 using namespace cast;
 
 int main(int argc, char** argv) {
@@ -26,6 +29,17 @@ int main(int argc, char** argv) {
   utils::timedExecute([&]() {
     cudaKernelMgr.initCUJIT(3, /* verbose */ 1);
   }, "CUDA JIT Initialization");
+
+  utils::StatevectorCUDA<double> sv(28);
+  sv.initialize();
+
+  timeit::Timer timer;
+  auto tr = timer.timeit([&]() {
+    cudaKernelMgr.launchCUDAKernel(sv.dData, sv.nQubits, 0);
+    cuCtxSynchronize();
+  });
+
+  tr.display();
 
   return 0;
 }
