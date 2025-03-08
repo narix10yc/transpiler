@@ -46,9 +46,7 @@ static void f() {
         "beforeFusion" + std::to_string(block->id));
     }
 
-    graph.print(std::cerr, 2) << "\n";
     applyCPUGateFusion(fusionConfig, &costModel, graph);
-    graph.print(std::cerr, 2);
     allBlocks = graph.getAllBlocks();
     for (const auto& block : allBlocks) {
       kernelMgrAfterFusion.genCPUGate(

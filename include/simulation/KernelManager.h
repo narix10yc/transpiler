@@ -222,7 +222,7 @@ public:
   std::vector<CUDAKernelInfo>& kernels() { return _cudaKernels; }
   const std::vector<CUDAKernelInfo>& kernels() const { return _cudaKernels; }
 
-  CUDAKernelManager& genCUDAKernel(
+  CUDAKernelManager& genCUDAGate(
       const CUDAKernelGenConfig& config,
       std::shared_ptr<QuantumGate> gate, const std::string& funcName);
 

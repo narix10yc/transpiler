@@ -210,21 +210,21 @@ public:
 /// For example,
 /// memory index: 000 001 010 011 100 101 110 111
 /// amplitudes:   r00 r01 i00 i01 r10 r11 i10 i11
-template<typename RealType>
+template<typename ScalarType>
 class StatevectorAlt {
 public:
   int simd_s;
   int nQubits;
   uint64_t N;
   size_t memSize;
-  RealType* data;
+  ScalarType* data;
 
   StatevectorAlt(int nQubits, int simd_s, bool init = false)
     : simd_s(simd_s)
     , nQubits(nQubits)
     , N(1ULL << nQubits)
-    , memSize((2ULL << nQubits) * sizeof(RealType))
-    , data(static_cast<RealType*>(
+    , memSize((2ULL << nQubits) * sizeof(ScalarType))
+    , data(static_cast<ScalarType*>(
         ::operator new(memSize, static_cast<std::align_val_t>(64)))) {
     if (init)
       initialize();
@@ -270,7 +270,7 @@ public:
   void randomize(int nThreads = 1) {
     std::random_device rd;
     std::mt19937 gen{rd()};
-    std::normal_distribution<RealType> d(0.0, 1.0);
+    std::normal_distribution<ScalarType> d(0.0, 1.0);
 
     if (nThreads == 1) {
       for (size_t i = 0; i < 2 * N; i++)
@@ -298,20 +298,20 @@ public:
     normalize(nThreads);
   }
 
-  RealType& real(size_t idx) {
+  ScalarType& real(size_t idx) {
     return data[utils::insertZeroToBit(idx, simd_s)];
   }
-  RealType& imag(size_t idx) {
+  ScalarType& imag(size_t idx) {
     return data[utils::insertOneToBit(idx, simd_s)];
   }
-  const RealType& real(size_t idx) const {
+  const ScalarType& real(size_t idx) const {
     return data[utils::insertZeroToBit(idx, simd_s)];
   }
-  const RealType& imag(size_t idx) const {
+  const ScalarType& imag(size_t idx) const {
     return data[utils::insertOneToBit(idx, simd_s)];
   }
 
-  std::complex<RealType> amp(size_t idx) const {
+  std::complex<ScalarType> amp(size_t idx) const {
     size_t tmp = utils::insertZeroToBit(idx, simd_s);
     return { data[tmp], data[tmp | (1 << simd_s)] };
   }
@@ -357,7 +357,7 @@ public:
     const unsigned K = 1 << k;
     assert(cMat->edgeSize() == K);
     std::vector<size_t> ampIndices(K);
-    std::vector<std::complex<RealType>> ampUpdated(K);
+    std::vector<std::complex<ScalarType>> ampUpdated(K);
 
     size_t pdepMaskTask = ~static_cast<size_t>(0);
     size_t pdepMaskAmp = 0;

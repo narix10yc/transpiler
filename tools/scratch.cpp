@@ -1,4 +1,5 @@
 #include "utils/TaskDispatcher.h"
+#include "utils/StatevectorCUDA.h"
 #include "utils/iocolor.h"
 
 #include <iostream>
@@ -7,6 +8,8 @@
 #include <chrono>
 
 int main() {
-  std::cerr << "sizeof unique ptr " << sizeof(std::unique_ptr<int>) << "\n";
+  utils::StatevectorCUDA<double> svCUDA(6);
+
+  svCUDA.randomize();
   return 0;
 }

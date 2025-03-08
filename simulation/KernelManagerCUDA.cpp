@@ -220,6 +220,7 @@ void CUDAKernelManager::launchCUDAKernel(
   auto cuTuple = cuTuples[kernelIdx];
   cuCtxSetCurrent(cuTuple.cuContext);
 
+  // This corresponds to 128 threads per block
   int nThreadsInBits = 7;
 
   int nThreads = 1 << nThreadsInBits;

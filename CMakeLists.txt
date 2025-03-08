@@ -46,6 +46,9 @@ if (CAST_USE_CUDA)
     #         message(STATUS "${_variableName}=${${_variableName}}")
     #     endif()
     # endforeach()
+
+    enable_language(CUDA)
+    
 endif()
 
 set(CMAKE_CXX_STANDARD 20)

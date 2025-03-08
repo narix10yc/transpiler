@@ -101,7 +101,7 @@ std::vector<IRMatDataCUDA> getMatDataCUDA(
   
 } // anonymous namespace
 
-CUDAKernelManager& CUDAKernelManager::genCUDAKernel(
+CUDAKernelManager& CUDAKernelManager::genCUDAGate(
     const CUDAKernelGenConfig& config,
     std::shared_ptr<QuantumGate> gate, const std::string& funcName) {
   const unsigned k = gate->qubits.size();
@@ -326,7 +326,7 @@ CUDAKernelManager& CUDAKernelManager::genCUDAGatesFromCircuitGraph(
   const auto allBlocks = graph.getAllBlocks();
   const auto mangledName = internal::mangleGraphName(graphName);
   for (const auto& block : allBlocks) {
-    genCUDAKernel(
+    genCUDAGate(
       config, block->quantumGate, mangledName + std::to_string(block->id));
   }
   return *this;

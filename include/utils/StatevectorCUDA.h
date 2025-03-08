@@ -3,17 +3,29 @@
 
 #include <cuda.h>
 #include <cuda_runtime.h>
+#include <cstring> // for std::memcpy
+#include <cassert>
 
 namespace utils {
 
-template<typename RealType>
+  namespace internal {
+    template<typename ScalarType>
+    struct HelperCUDAKernels {
+      static void randomizeStatevectorCUDA(ScalarType* dData, size_t size);
+    };
+
+    extern template struct HelperCUDAKernels<float>;
+    extern template struct HelperCUDAKernels<double>;
+  } // namespace internal
+
+template<typename ScalarType>
 class StatevectorCUDA {
 public:
   int nQubits;
   // device data
-  RealType* dData;
+  ScalarType* dData;
   // host data
-  RealType* hData;
+  ScalarType* hData;
 
 private:
   enum SyncState {
@@ -25,30 +37,42 @@ private:
   // cudaResult is for CUDA Runtime API calls
   cudaError_t cudaResult;
 
+  // Malloc device data using CUDA APIs. Users should always check \c dData is
+  // null before calling this function.
   void mallocDeviceData();
-  void mallocHostData() { hData = (RealType*)std::malloc(sizeInBytes()); }
+  void mallocHostData() {
+    assert(hData == nullptr && "Host data is already allocated.");  
+    hData = (ScalarType*)std::malloc(sizeInBytes());
+  }
 
   void freeDeviceData();
   void freeHostData() { std::free(hData);}
 public:
   StatevectorCUDA(int nQubits)
   : nQubits(nQubits), dData(nullptr), hData(nullptr)
-  , syncState(UnInited), cuResult(CUDA_SUCCESS) {}
+  , syncState(UnInited)
+  , cuResult(CUDA_SUCCESS), cudaResult(cudaSuccess) {}
 
   ~StatevectorCUDA() = default;
 
-  StatevectorCUDA(const StatevectorCUDA&) = delete;
-  StatevectorCUDA(StatevectorCUDA&&) = delete;
-  StatevectorCUDA& operator=(const StatevectorCUDA&) = delete;
-  StatevectorCUDA& operator=(StatevectorCUDA&&) = delete;
+  StatevectorCUDA(const StatevectorCUDA&);
+  StatevectorCUDA(StatevectorCUDA&&);
+  StatevectorCUDA& operator=(const StatevectorCUDA&);
+  StatevectorCUDA& operator=(StatevectorCUDA&&);
 
   size_t sizeInBytes() const {
-    return sizeof(RealType) << (nQubits + 1);
+    return (2ULL << nQubits) * sizeof(ScalarType);
   }
+
+  size_t size() const { return 2ULL << nQubits; }
 
   void initialize();
   
-  void randomize();
+  void randomize() {
+    if (dData == nullptr)
+      mallocDeviceData();
+    internal::HelperCUDAKernels<ScalarType>::randomizeStatevectorCUDA(dData, size());
+  }
 
   void sync();
 };

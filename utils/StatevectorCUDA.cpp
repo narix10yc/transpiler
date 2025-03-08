@@ -1,7 +1,6 @@
 #include "utils/StatevectorCUDA.h"
 #include "utils/iocolor.h"
 
-#include <cuda_runtime.h>
 #include <cassert>
 #include <iostream>
 
@@ -22,6 +21,55 @@
   }
 
 using namespace utils;
+
+template<typename ScalarType>
+StatevectorCUDA<ScalarType>::StatevectorCUDA(const StatevectorCUDA& other)
+: nQubits(other.nQubits), dData(nullptr), hData(nullptr)
+, syncState(other.syncState)
+, cuResult(CUDA_SUCCESS), cudaResult(cudaSuccess) {
+  // copy device data
+  if (other.dData != nullptr) {
+    mallocDeviceData();
+    CUDA_CALL(
+      cudaMemcpy(dData, other.dData, sizeInBytes(), cudaMemcpyDeviceToDevice),
+      "Failed to copy statevector on the device");
+  }
+  // copy host data
+  if (other.hData != nullptr) {
+    mallocHostData();
+    std::memcpy(hData, other.hData, sizeInBytes());
+  }
+}
+
+template<typename ScalarType>
+StatevectorCUDA<ScalarType>::StatevectorCUDA(StatevectorCUDA&& other) 
+: nQubits(other.nQubits), dData(other.dData), hData(other.hData)
+, syncState(other.syncState)
+, cuResult(CUDA_SUCCESS), cudaResult(cudaSuccess) {
+  other.dData = nullptr;
+  other.hData = nullptr;
+  other.syncState = UnInited;
+}
+
+template<typename ScalarType>
+StatevectorCUDA<ScalarType>&
+StatevectorCUDA<ScalarType>::operator=(const StatevectorCUDA& other) {
+  if (this == &other)
+    return *this;
+  this->~StatevectorCUDA();
+  new (this) StatevectorCUDA(other);
+  return *this;
+}
+
+template<typename ScalarType>
+StatevectorCUDA<ScalarType>&
+StatevectorCUDA<ScalarType>::operator=(StatevectorCUDA&& other) {
+  if (this == &other)
+    return *this;
+  this->~StatevectorCUDA();
+  new (this) StatevectorCUDA(std::move(other));
+  return *this;
+}
 
 template<typename ScalarType>
 void StatevectorCUDA<ScalarType>::mallocDeviceData() {
