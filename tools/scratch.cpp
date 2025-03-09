@@ -8,8 +8,16 @@
 #include <chrono>
 
 int main() {
-  utils::StatevectorCUDA<double> svCUDA(6);
+  utils::StatevectorCUDA<float> svCUDA(6);
+  svCUDA.initialize();
+  std::cout << "Norm: " << svCUDA.norm() << std::endl;
 
   svCUDA.randomize();
+  std::cout << "Norm: " << svCUDA.norm() << std::endl;
+  svCUDA.randomize();
+  std::cout << "Norm: " << svCUDA.norm() << std::endl;
+  cudaDeviceSynchronize();
+  std::cout << "Norm: " << svCUDA.norm() << std::endl;
+
   return 0;
 }

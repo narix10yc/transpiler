@@ -9,7 +9,6 @@
   if (cuResult != CUDA_SUCCESS) { \
     std::cerr << RED("[CUDA Err] ") << MSG << ". Error code " \
               << cuResult << "\n"; \
-    return; \
   }
 
 #define CUDA_CALL(FUNC, MSG) \
@@ -17,7 +16,6 @@
   if (cudaResult != cudaSuccess) { \
     std::cerr << RED("[CUDA Err] ") << MSG << ". " \
               << cudaGetErrorString(cudaResult) << "\n"; \
-    return; \
   }
 
 using namespace utils;
@@ -95,6 +93,40 @@ void StatevectorCUDA<ScalarType>::initialize() {
   ScalarType one = 1.0;
   CUDA_CALL(cudaMemcpy(dData, &one, sizeof(ScalarType), cudaMemcpyHostToDevice),
     "Failed to set the first element of the statevector to 1");
+  syncState = DeviceIsNewer;
+}
+
+template<typename ScalarType>
+ScalarType StatevectorCUDA<ScalarType>::normSquared() const {
+  using Helper = utils::internal::HelperCUDAKernels<ScalarType>;
+  assert(dData != nullptr && "Device statevector is not initialized");
+  ScalarType* dResult;
+  CUDA_CALL(cudaMalloc(&dResult, sizeof(ScalarType)),
+    "Failed to allocate memory for the result of norm calculation");
+  Helper::reduceSquared(dData, dResult, size());
+  ScalarType hResult;
+  CUDA_CALL(
+    cudaMemcpy(&hResult, dResult, sizeof(ScalarType), cudaMemcpyDeviceToHost),
+    "Failed to copy the result of norm calculation to the host");
+  CUDA_CALL(cudaFree(dResult),
+    "Failed to free memory for the result of norm calculation");
+
+  return hResult;
+}
+
+template<typename ScalarType>
+void StatevectorCUDA<ScalarType>::randomize() {
+  using Helper = utils::internal::HelperCUDAKernels<ScalarType>;
+  if (dData == nullptr)
+    mallocDeviceData();
+  Helper::randomizeStatevector(dData, size());
+
+  // normalize the statevector
+  auto c = 1.0 / norm();
+  std::cerr << "norm is " << 1.0 / c << "\n";
+  Helper::multiplyByConstant(dData, c, size());
+  cudaDeviceSynchronize();
+
   syncState = DeviceIsNewer;
 }
 

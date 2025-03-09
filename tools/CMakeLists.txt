@@ -25,11 +25,9 @@ add_executable(jit_playground "jit_playground.cpp")
 # llvm_map_components_to_libnames(LLVM_LIBS orcjit native)
 target_link_libraries(jit_playground cast simulation qasm)
 
-add_executable(ptx_playground "ptx_playground.cpp")
 if (CAST_USE_CUDA)
-    target_link_libraries(ptx_playground qasm cast simulation CUDA::cudart)
-else()
-    target_link_libraries(ptx_playground qasm cast simulation)
+  add_executable(cuda_playground "cuda_playground.cu")
+  target_link_libraries(cuda_playground timeit cuda CUDA::cudart)
 endif()
 
 add_executable(scratch "scratch.cpp")

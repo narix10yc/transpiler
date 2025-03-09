@@ -5,13 +5,21 @@
 #include <cuda_runtime.h>
 #include <cstring> // for std::memcpy
 #include <cassert>
+#include <cmath>
 
 namespace utils {
-
   namespace internal {
     template<typename ScalarType>
     struct HelperCUDAKernels {
-      static void randomizeStatevectorCUDA(ScalarType* dData, size_t size);
+      // Randomize the \c dArr array using standard normal distribution
+      static void randomizeStatevector(ScalarType* dArr, size_t size);
+
+      // Return the sum of the squared values of \c dArr array
+      static void reduceSquared(
+          const ScalarType* dArr, ScalarType* dResult, size_t size);
+
+      static void multiplyByConstant(
+          ScalarType* dArr, ScalarType constant, size_t size);
     };
 
     extern template struct HelperCUDAKernels<float>;
@@ -33,9 +41,9 @@ private:
   };
   SyncState syncState;
   // cuResult is for CUDA Driver API calls
-  CUresult cuResult;
+  mutable CUresult cuResult;
   // cudaResult is for CUDA Runtime API calls
-  cudaError_t cudaResult;
+  mutable cudaError_t cudaResult;
 
   // Malloc device data using CUDA APIs. Users should always check \c dData is
   // null before calling this function.
@@ -67,12 +75,11 @@ public:
   size_t size() const { return 2ULL << nQubits; }
 
   void initialize();
+
+  ScalarType normSquared() const;
+  ScalarType norm() const { return std::sqrt(normSquared()); }
   
-  void randomize() {
-    if (dData == nullptr)
-      mallocDeviceData();
-    internal::HelperCUDAKernels<ScalarType>::randomizeStatevectorCUDA(dData, size());
-  }
+  void randomize();
 
   void sync();
 };
