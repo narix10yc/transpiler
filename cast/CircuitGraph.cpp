@@ -62,20 +62,17 @@ void CircuitGraph::clear() {
   _tile.clear();
 }
 
-//
-// CircuitGraph CircuitGraph::QFTCircuit(int nQubits) {
-//   CircuitGraph graph;
-//   for (int q = 0; q < nQubits; ++q) {
-//     graph.addGate(std::make_unique<QuantumGate>(GateMatrix::MatrixH_c, q));
-//     for (int l = q + 1; l < nQubits; ++l) {
-//       double angle = M_PI_2 * std::pow(2.0, q - l);
-//       graph.addGate(std::make_unique<QuantumGate>(
-//         GateMatrix::FromName("cp", {angle}), std::initializer_list<int>{q, l}));
-//     }
-//   }
-//   return graph;
-// }
-//
+void CircuitGraph::QFTCircuit(int nQubits, CircuitGraph& graph) {
+  for (int q = 0; q < nQubits; ++q) {
+    graph.appendGate(std::make_shared<QuantumGate>(QuantumGate::H(q)));
+    for (int l = q + 1; l < nQubits; ++l) {
+      double angle = M_PI_2 * std::pow(2.0, q - l);
+      graph.appendGate(std::make_shared<QuantumGate>(QuantumGate(
+        GateMatrix::FromName("cp", {angle}), {q, l})));
+    }
+  }
+}
+
 // CircuitGraph CircuitGraph::ALACircuit(int nQubits, int nrounds) {
 //   assert(0 && "Not Implemented");
 //   CircuitGraph graph;

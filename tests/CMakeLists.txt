@@ -1,6 +1,11 @@
-file(GLOB SRC_FILES "*.cpp")
+file(GLOB ALL_SRC_FILES "*.cpp")
 
-add_library(TestKit STATIC ${SRC_FILES})
+if (NOT CAST_USE_CUDA)
+  list(REMOVE_ITEM ALL_SRC_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/testCudaU.cpp")
+endif()
+
+add_library(TestKit STATIC ${ALL_SRC_FILES})
 target_link_libraries(TestKit timeit)
 target_compile_definitions(TestKit PRIVATE
   TEST_DIR="${CMAKE_CURRENT_SOURCE_DIR}")

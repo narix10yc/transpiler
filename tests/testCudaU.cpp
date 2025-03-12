@@ -4,8 +4,6 @@
 #include "utils/StatevectorCUDA.h"
 #include <random>
 
-#ifdef CAST_USE_CUDA
-
 using namespace cast;
 using namespace cast::test;
 
@@ -71,5 +69,3 @@ void test::test_cudaU() {
   internal_U1q<8>();
   internal_U1q<12>();
 }
-
-#endif // CAST_USE_CUDA

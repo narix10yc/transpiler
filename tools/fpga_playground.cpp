@@ -243,17 +243,34 @@ void runExperiment(
   CircuitGraph tmpGraph;
   f(tmpGraph);
   auto nQubits = tmpGraph.nQubits;
+  auto allBlocks = tmpGraph.getAllBlocks();
+  auto nGates = allBlocks.size();
+
+  int opCountMax = 0;
+  int opCount = 0;
+  for (const auto& b : allBlocks) {
+    opCountMax += 1ULL << (2 * b->nQubits() + 1);
+    opCount += b->quantumGate->opCount(1e-8);
+  }
 
   // fusion, instGen, gateValueTolerance
-  os << circuitName << "," << nQubits << ",true,true,true,";
+  os << circuitName << "-up8," << nQubits << "," << nGates
+     << "," << opCount << "," << opCountMax << ",true,true,true,";
+  run(instGen11ConfigUp8);
+  os << circuitName << "," << nQubits << "," << nGates
+     << "," << opCount << "," << opCountMax << ",true,true,true,";
   run(instGen11Config);
-  os << circuitName << "," << nQubits << ",true,false,true,";
+  os << circuitName << "," << nQubits << "," << nGates
+     << "," << opCount << "," << opCountMax << ",true,false,true,";
   run(instGen10Config);
-  os << circuitName << "," << nQubits << ",false,true,true,";
+  os << circuitName << "," << nQubits << "," << nGates
+     << "," << opCount << "," << opCountMax << ",false,true,true,";
   run(instGen01Config);
-  os << circuitName << "," << nQubits << ",false,false,true,";
+  os << circuitName << "," << nQubits << "," << nGates
+     << "," << opCount << "," << opCountMax << ",false,false,true,";
   run(instGen00Config);
-  os << circuitName << "," << nQubits << ",false,false,false,";
+  os << circuitName << "," << nQubits << "," << nGates
+     << "," << opCount << "," << opCountMax << ",false,false,false,";
   run(instGenBadConfig);
 }
 
@@ -271,6 +288,14 @@ void checkOutputFileName() {
   std::exit(1);
 }
 
+void processQFT(std::ofstream& oFile, int nQubits) {
+  std::string circuit = "QFT-" + std::to_string(nQubits);
+  std::cerr << "Processing " << circuit << "\n";
+  runExperiment([nQubits](CircuitGraph& graph) {
+    CircuitGraph::QFTCircuit(nQubits, graph);
+  }, oFile, circuit);
+}
+
 void processFile(const std::filesystem::path& path, std::ofstream& oFile) {
   std::cerr << "Processing " << path << "\n";
   if (path.extension() != ".qasm") {
@@ -283,6 +308,7 @@ void processFile(const std::filesystem::path& path, std::ofstream& oFile) {
   runExperiment([path](CircuitGraph& graph) {
     openqasm::Parser qasmParser(path.string(), -1);
     qasmParser.parse()->toCircuitGraph(graph);
+    // CircuitGraph::QFTCircuit(32, graph);
   }, oFile, path.filename().stem().string());
 }
 
@@ -301,7 +327,8 @@ void openCSVToWriteOn(std::ofstream& oFile) {
     std::exit(1);
   }
   if (iFile.peek() == std::ifstream::traits_type::eof()) {
-    oFile << "circuit,nQubits,fusionOpt,instGenOpt,gateValueToleranceOpt,"
+    oFile << "circuit,nQubits,nGates,opCount,opCountMax,"
+      << "fusionOpt,instGenOpt,gateValueToleranceOpt,"
       << "nSqGateInst,nUpGateInst,nExtMemInst,nNonExtMemInst,"
       << "nTwiceExtMemTime,nExtMemTime,nNonExtMemTime,"
       << "nGeneralSQGateTime,nRealOnlySQGateTime,nUPGateTime,nOverlappingInstTime,"
@@ -330,6 +357,10 @@ int main(int argc, char** argv) {
       processFile(entry.path(), oFile);
   } else {
     processFile(static_cast<std::string>(ArgInputFileName), oFile);
+  }
+
+  for (int q = 8; q < 41; q++) {
+    processQFT(oFile, q);
   }
 
   return 0;

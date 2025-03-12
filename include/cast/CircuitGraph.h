@@ -157,7 +157,7 @@ public:
   CircuitGraph& operator=(const CircuitGraph&) = delete;
   CircuitGraph& operator=(CircuitGraph&&) = delete;
 
-  static CircuitGraph QFTCircuit(int nQubits);
+  static void QFTCircuit(int nQubits, CircuitGraph& graph);
   static CircuitGraph ALACircuit(int nQubits, int nrounds);
 
   static CircuitGraph GetTestCircuit(
