@@ -47,8 +47,8 @@ static void internal_U1q() {
     ss << "Apply U1q at " << gates[i]->qubits[0];
     auto immFuncName = "gateImm_" + std::to_string(i);
     auto loadFuncName = "gateLoad_" + std::to_string(i);
-    kernelMgr.applyCPUKernel(sv0.data, sv0.nQubits, immFuncName);
-    kernelMgr.applyCPUKernel(sv1.data, sv1.nQubits, loadFuncName);
+    kernelMgr.applyCPUKernel(sv0.data(), sv0.nQubits(), immFuncName);
+    kernelMgr.applyCPUKernel(sv1.data(), sv1.nQubits(), loadFuncName);
     sv2.applyGate(*gates[i]);
     suite.assertClose(sv0.norm(), 1.0, ss.str() + ": Imm Norm", GET_INFO());
     suite.assertClose(sv1.norm(), 1.0, ss.str() + ": Load Norm", GET_INFO());
@@ -108,8 +108,8 @@ static void internal_U2q() {
     ss << "Apply U2q at " << a << " and " << b;
     auto immFuncName = "gateImm_" + std::to_string(i);
     auto loadFuncName = "gateLoad_" + std::to_string(i);
-    kernelMgr.applyCPUKernel(sv0.data, sv0.nQubits, immFuncName);
-    kernelMgr.applyCPUKernel(sv1.data, sv1.nQubits, loadFuncName);
+    kernelMgr.applyCPUKernel(sv0.data(), sv0.nQubits(), immFuncName);
+    kernelMgr.applyCPUKernel(sv1.data(), sv1.nQubits(), loadFuncName);
     sv2.applyGate(*gates[i]);
     suite.assertClose(sv0.norm(), 1.0, ss.str() + ": Imm Norm", GET_INFO());
     suite.assertClose(sv1.norm(), 1.0, ss.str() + ": Load Norm", GET_INFO());

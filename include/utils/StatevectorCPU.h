@@ -203,7 +203,7 @@ public:
 };
 
 
-/// @brief StatevectorAlt stores statevector in a single array with alternating
+/// @brief StatevectorCPU stores statevector in a single array with alternating
 /// real and imaginary parts. The alternating pattern is controlled by
 /// \p simd_s. More precisely, the memory is stored as an iteration of $2^s$
 /// real parts followed by $2^s$ imaginary parts.
@@ -212,20 +212,18 @@ public:
 /// amplitudes:   r00 r01 i00 i01 r10 r11 i10 i11
 template<typename ScalarType>
 class StatevectorCPU {
-public:
+private:
   int simd_s;
-  int nQubits;
-  uint64_t N;
-  size_t memSize;
-  ScalarType* data;
+  int _nQubits;
+  ScalarType* _data;
+public:
 
   StatevectorCPU(int nQubits, int simd_s, bool init = false)
     : simd_s(simd_s)
-    , nQubits(nQubits)
-    , N(1ULL << nQubits)
-    , memSize((2ULL << nQubits) * sizeof(ScalarType))
-    , data(static_cast<ScalarType*>(
-        ::operator new(memSize, static_cast<std::align_val_t>(64)))) {
+    , _nQubits(nQubits)
+    , _data(static_cast<ScalarType*>(::operator new(
+        (2ULL << nQubits) * sizeof(ScalarType),
+        static_cast<std::align_val_t>(64)))) {
     if (init)
       initialize();
   }
@@ -234,21 +232,30 @@ public:
 
   StatevectorCPU(StatevectorCPU&&) = delete;
 
-  ~StatevectorCPU() { ::operator delete(data); }
+  ~StatevectorCPU() { ::operator delete(_data); }
 
   StatevectorCPU& operator=(const StatevectorCPU& that) {
     if (this == &that)
       return *this;
-    std::memcpy(data, that.data, memSize);
+    std::memcpy(_data, that._data, sizeInBytes());
     return *this;
   }
 
   StatevectorCPU& operator=(StatevectorCPU&&) = delete;
 
+  ScalarType* data() { return _data; }
+  const ScalarType* data() const { return _data; }
+
+  int nQubits() const { return _nQubits; }
+
+  size_t getN() const { return 1ULL << _nQubits; }
+
+  size_t sizeInBytes() const { return (2ULL << _nQubits) * sizeof(ScalarType); }
+
   double normSquared() const {
     double s = 0;
-    for (size_t i = 0; i < 2 * N; i++)
-      s += data[i] * data[i];
+    for (size_t i = 0; i < 2 * getN(); i++)
+      s += _data[i] * _data[i];
     return s;
   }
 
@@ -256,25 +263,26 @@ public:
 
   /// @brief Initialize to the |00...00> state.
   void initialize(int nThreads = 1) {
-    std::memset(data, 0, memSize);
-    data[0] = 1.0;
+    std::memset(_data, 0, sizeInBytes());
+    _data[0] = 1.0;
   }
 
   void normalize(int nThreads = 1) {
     double n = norm();
-    for (size_t i = 0; i < 2 * N; i++)
-      data[i] /= n;
+    for (size_t i = 0; i < 2 * getN(); ++i)
+      _data[i] /= n;
   }
 
   /// @brief Uniform randomize statevector (by the Haar-measure on sphere).
   void randomize(int nThreads = 1) {
+    auto N = getN();
     std::random_device rd;
     std::mt19937 gen{rd()};
     std::normal_distribution<ScalarType> d(0.0, 1.0);
 
     if (nThreads == 1) {
-      for (size_t i = 0; i < 2 * N; i++)
-        data[i] = d(gen);
+      for (size_t i = 0; i < 2 * N; ++i)
+        _data[i] = d(gen);
       normalize();
       return;
     }
@@ -287,7 +295,7 @@ public:
       size_t t1 = (t == nThreads - 1) ? 2ULL * N : nTasksPerThread * (t + 1);
       threads.emplace_back([&, t0=t0, t1=t1]() {
         for (size_t i = t0; i < t0; ++i)
-          data[i] = d(gen);
+          _data[i] = d(gen);
       });
     }
     for (auto& t : threads) {
@@ -299,30 +307,31 @@ public:
   }
 
   ScalarType& real(size_t idx) {
-    return data[utils::insertZeroToBit(idx, simd_s)];
+    return _data[utils::insertZeroToBit(idx, simd_s)];
   }
   ScalarType& imag(size_t idx) {
-    return data[utils::insertOneToBit(idx, simd_s)];
+    return _data[utils::insertOneToBit(idx, simd_s)];
   }
   const ScalarType& real(size_t idx) const {
-    return data[utils::insertZeroToBit(idx, simd_s)];
+    return _data[utils::insertZeroToBit(idx, simd_s)];
   }
   const ScalarType& imag(size_t idx) const {
-    return data[utils::insertOneToBit(idx, simd_s)];
+    return _data[utils::insertOneToBit(idx, simd_s)];
   }
 
   std::complex<ScalarType> amp(size_t idx) const {
     size_t tmp = utils::insertZeroToBit(idx, simd_s);
-    return { data[tmp], data[tmp | (1 << simd_s)] };
+    return { _data[tmp], _data[tmp | (1 << simd_s)] };
   }
 
   std::ostream& print(std::ostream& os = std::cerr) const {
+    auto N = getN();
     if (N > 32) {
       os << BOLDCYAN("Warning: ")
          << "statevector has more than 5 qubits, "
             "only the first 32 entries are shown.\n";
     }
-    for (size_t i = 0; i < std::min<uint64_t>(32ULL, N); i++) {
+    for (size_t i = 0; i < std::min<size_t>(32, N); i++) {
       os << i << ": ";
       utils::print_complex(os, {real(i), imag(i)}, 8);
       os << "\n";
@@ -333,7 +342,7 @@ public:
   /// @brief Compute the probability of measuring 1 on qubit q
   double prob(int q) const {
     double p = 0.0;
-    for (size_t i = 0; i < (N >> 1); i++) {
+    for (size_t i = 0; i < (getN() >> 1); i++) {
       size_t idx = utils::insertZeroToBit(i, q);
       const auto& re = real(idx);
       const auto& im = imag(idx);
@@ -343,7 +352,7 @@ public:
   }
 
   std::ostream& printProbabilities(std::ostream& os = std::cerr) const {
-    for (int q = 0; q < nQubits; q++) {
+    for (int q = 0; q < _nQubits; q++) {
       os << "qubit " << q << ": " << prob(q) << "\n";
     }
     return os;
@@ -366,7 +375,7 @@ public:
       pdepMaskAmp |= (1ULL << q);
     }
 
-    for (size_t taskId = 0; taskId < (N >> k); taskId++) {
+    for (size_t taskId = 0; taskId < (getN() >> k); taskId++) {
       auto pdepTaskId = utils::pdep64(taskId, pdepMaskTask);
       for (size_t ampId = 0; ampId < K; ampId++) {
         ampIndices[ampId] = pdepTaskId + utils::pdep64(ampId, pdepMaskAmp);
@@ -411,9 +420,9 @@ double fidelity(
 template<typename real_t>
 double fidelity(
     const StatevectorCPU<real_t>& sv0, const StatevectorCPU<real_t>& sv1) {
-  assert(sv0.nQubits == sv1.nQubits);
+  assert(sv0.nQubits() == sv1.nQubits());
   double re = 0.0, im = 0.0;
-  for (size_t i = 0; i < sv0.N; i++) {
+  for (size_t i = 0; i < sv0.getN(); i++) {
     auto amp0 = sv0.amp(i);
     auto amp1 = sv1.amp(i);
     re += amp0.real() * amp1.real() + amp0.imag() * amp1.imag();

@@ -83,7 +83,7 @@ int main(int argc, const char** argv) {
 
   tr = timer.timeit([&]() {
     for (auto* kernel : kernelAdaptiveFuse)
-      kernelMgr.applyCPUKernelMultithread(sv.data, sv.nQubits, *kernel, N_THREADS);
+      kernelMgr.applyCPUKernelMultithread(sv.data, sv._nQubits, *kernel, N_THREADS);
   });
   tr.display(3, std::cerr << "Adaptive-fused Circuit:\n");
 

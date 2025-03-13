@@ -24,16 +24,16 @@ static void internal_U1q() {
   suite.assertClose(sv.norm(), 1.0, "Rand SV: Norm", GET_INFO());
 
   // phase gates do not change probabilities
-  for (int q = 0; q < sv.nQubits; q++) {
+  for (int q = 0; q < nQubits; q++) {
     double pBefore = sv.prob(q);
     auto gate0 = QuantumGate(GateMatrix::FromName("p", {0.14}), q);
-    auto gate1 = QuantumGate(GateMatrix::FromName("p", {0.41}), (q+1) % sv.nQubits);
+    auto gate1 = QuantumGate(GateMatrix::FromName("p", {0.41}), (q+1) % nQubits);
     auto gate = gate0.lmatmul(gate1);
 
     sv.applyGate(gate);
     std::stringstream ss;
     ss << "Phase gate at qubits "
-       << q << " " << ((q+1) % sv.nQubits);
+       << q << " " << ((q+1) % nQubits);
     suite.assertClose(sv.norm(), 1.0, ss.str() + ": Norm", GET_INFO());
     suite.assertClose(pBefore, sv.prob(q), ss.str() + ": Prob", GET_INFO());
   }

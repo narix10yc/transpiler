@@ -390,9 +390,9 @@ void PerformanceCache::runExperiments(
     randRemove(*gates.back());
   };
 
-  const auto addRandU = [&](int _nQubits) {
-    assert(_nQubits != 0);
-    switch (_nQubits) {
+  const auto addRandU = [&](int nQubits) {
+    assert(nQubits != 0);
+    switch (nQubits) {
       case 1: addRandU1q(); break;
       case 2: addRandU2q(); break;
       case 3: addRandU3q(); break;
@@ -456,12 +456,12 @@ void PerformanceCache::runExperiments(
   for (auto& kernel : kernelMgr.kernels()) {
     if (nThreads == 1)
       tr = timer.timeit([&]() {
-        kernelMgr.applyCPUKernel(sv.data, sv.nQubits, kernel);
+        kernelMgr.applyCPUKernel(sv.data(), sv.nQubits(), kernel);
       });
     else
       tr = timer.timeit([&]() {
         kernelMgr.applyCPUKernelMultithread(
-          sv.data, sv.nQubits, kernel, nThreads);
+          sv.data(), sv.nQubits(), kernel, nThreads);
       });
     auto memSpd = calculateMemUpdateSpeed(nQubits, kernel.precision, tr.min);
     items.emplace_back(

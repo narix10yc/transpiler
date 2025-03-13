@@ -62,11 +62,15 @@ static void f() {
     sv0.randomize();
     sv1 = sv0;
 
-    for (const auto& k : kernelMgrBeforeFusion.kernels())
-      kernelMgrBeforeFusion.applyCPUKernel(sv0.data, sv0.nQubits, k.llvmFuncName);
+    for (const auto& k : kernelMgrBeforeFusion.kernels()) {
+      kernelMgrBeforeFusion.applyCPUKernel(
+        sv0.data(), sv0.nQubits(), k.llvmFuncName);
+    }
 
-    for (const auto& k : kernelMgrAfterFusion.kernels())
-      kernelMgrAfterFusion.applyCPUKernel(sv1.data, sv1.nQubits, k.llvmFuncName);
+    for (const auto& k : kernelMgrAfterFusion.kernels()) {
+      kernelMgrAfterFusion.applyCPUKernel(
+        sv1.data(), sv1.nQubits(), k.llvmFuncName);
+    }
 
     suite.assertClose(utils::fidelity(sv0, sv1), 1.0,
       p.path().filename(), GET_INFO(), 1e-8);
