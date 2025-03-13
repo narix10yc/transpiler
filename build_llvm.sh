@@ -28,7 +28,7 @@ cmake -S llvm-project-19.1.0.src/llvm -G Ninja \
 -B release-build \
 -DCMAKE_BUILD_TYPE=Release \
 -DLLVM_ENABLE_RTTI=ON \
--DLLVM_TARGETS_TO_BUILD="Native" \
+-DLLVM_TARGETS_TO_BUILD="Native;NVPTX" \
 -DLLVM_ENABLE_PROJECTS="clang;lld;lldb" \
 -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind"
 
@@ -36,11 +36,11 @@ cmake --build release-build
 
 cmake --install release-build --prefix "release-install"
 
-cmake -S llvm-project-19.1.6.src/llvm -G Ninja \
+cmake -S llvm-project-19.1.0.src/llvm -G Ninja \
 -B debug-build \
 -DCMAKE_BUILD_TYPE=Debug \
 -DLLVM_ENABLE_RTTI=ON \
--DLLVM_TARGETS_TO_BUILD="Native" \
+-DLLVM_TARGETS_TO_BUILD="Native;NVPTX" \
 -DCMAKE_C_COMPILER="$llvm_root/release-install/bin/clang" \
 -DCMAKE_CXX_COMPILER="$llvm_root/release-install/bin/clang++" \
 -DLLVM_USE_LINKER="$llvm_root/release-install/bin/ld.lld"
