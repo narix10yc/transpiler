@@ -39,6 +39,25 @@ std::string cast::getNameOfTokenKind(TokenKind kind) {
   }
 }
 
+Lexer::Lexer(const char* fileName) {
+  std::ifstream file(fileName, std::ifstream::binary);
+  assert(file);
+  assert(file.is_open());
+
+  file.seekg(0, file.end);
+  bufferLength = file.tellg();
+  file.seekg(0, file.beg);
+
+  bufferBegin = new char[bufferLength];
+  bufferEnd = bufferBegin + bufferLength;
+  file.read(const_cast<char*>(bufferBegin), bufferLength);
+  file.close();
+
+  curPtr = bufferBegin;
+  line = 1;
+  lineBegin = bufferBegin;
+}
+
 void Parser::printLocation(std::ostream& os) const {
   auto lineInfo = lexer.getCurLineInfo();
   os << std::setw(5) << std::setfill(' ') << lineInfo.line << " | ";
@@ -230,8 +249,7 @@ Lexer::LineInfo Lexer::getCurLineInfo() const {
     if (*lineEnd++ == '\n')
       break;
   }
-  return LineInfo{
-      .line = line, .memRefBegin = lineBegin, .memRefEnd = lineEnd};
+  return { .line = line, .memRefBegin = lineBegin, .memRefEnd = lineEnd };
 }
 
 std::complex<double> Parser::parseComplexNumber() {
@@ -363,6 +381,11 @@ QuantumCircuit Parser::parseQuantumCircuit() {
     failAndExit();
   }
   advance(tk_Identifier);
+
+  if (optionalAdvance(tk_Less)) {
+    assert(false && "Not Implemented");
+    requiredAdvance(tk_Greater);
+  }
 
   requireCurTokenIs(tk_Identifier, "Expecting a name");
   QuantumCircuit circuit(std::string(curToken.memRefBegin, curToken.memRefEnd));

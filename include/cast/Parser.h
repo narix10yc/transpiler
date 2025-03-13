@@ -111,24 +111,7 @@ public:
   int line;
   const char* lineBegin;
 
-  explicit Lexer(const char* fileName) {
-    std::ifstream file(fileName, std::ifstream::binary);
-    assert(file);
-    assert(file.is_open());
-
-    file.seekg(0, file.end);
-    bufferLength = file.tellg();
-    file.seekg(0, file.beg);
-
-    bufferBegin = new char[bufferLength];
-    bufferEnd = bufferBegin + bufferLength;
-    file.read(const_cast<char*>(bufferBegin), bufferLength);
-    file.close();
-
-    curPtr = bufferBegin;
-    line = 1;
-    lineBegin = bufferBegin;
-  }
+  explicit Lexer(const char* fileName);
 
   Lexer(const Lexer&) = delete;
   Lexer& operator=(const Lexer&) = delete;
