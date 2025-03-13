@@ -71,8 +71,8 @@ void utils::timedExecute(std::function<void()> f, const char* msg) {
             << ") " << msg << "\n";
 }
 
-std::ostream& utils::print_complex(std::ostream& os, std::complex<double> c,
-                                   int precision) {
+std::ostream& utils::print_complex(
+    std::ostream& os, std::complex<double> c, int precision) {
   const double thres = 0.5 * std::pow(0.1, precision);
   if (c.real() >= -thres)
     os << " ";
@@ -97,14 +97,13 @@ std::complex<double> utils::inner_product(
   std::complex<double> s = 0.0;
   for (size_t i = 0; i < length; i++) {
     // (ar - i ai) * (br + i bi) = (ar*br + ai*bi) + i * (ar*bi - ai*br)
-    s.real(s.real() +
-        aArr[i].real() * bArr[i].real() + aArr[i].imag() * bArr[i].imag());
-    s.imag(s.imag() +
-        aArr[i].real() * bArr[i].imag() - aArr[i].imag() * bArr[i].real());
-
-    // std::cerr << s << ", ";
+    s.real(
+      s.real() + aArr[i].real() * bArr[i].real() +
+      aArr[i].imag() * bArr[i].imag());
+    s.imag(
+      s.imag() + aArr[i].real() * bArr[i].imag() -
+      aArr[i].imag() * bArr[i].real());
   }
-
   return s;
 }
 

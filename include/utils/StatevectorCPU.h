@@ -1,5 +1,5 @@
-#ifndef UTILS_STATEVECTOR_H
-#define UTILS_STATEVECTOR_H
+#ifndef UTILS_STATEVECTOR_CPU_H
+#define UTILS_STATEVECTOR_CPU_H
 
 #include <complex>
 #include <iostream>
@@ -19,7 +19,7 @@ template<typename real_t>
 class StatevectorSep;
 
 template<typename real_t>
-class StatevectorAlt;
+class StatevectorCPU;
 
 template<typename real_t>
 class StatevectorSep {
@@ -211,7 +211,7 @@ public:
 /// memory index: 000 001 010 011 100 101 110 111
 /// amplitudes:   r00 r01 i00 i01 r10 r11 i10 i11
 template<typename ScalarType>
-class StatevectorAlt {
+class StatevectorCPU {
 public:
   int simd_s;
   int nQubits;
@@ -219,7 +219,7 @@ public:
   size_t memSize;
   ScalarType* data;
 
-  StatevectorAlt(int nQubits, int simd_s, bool init = false)
+  StatevectorCPU(int nQubits, int simd_s, bool init = false)
     : simd_s(simd_s)
     , nQubits(nQubits)
     , N(1ULL << nQubits)
@@ -230,20 +230,20 @@ public:
       initialize();
   }
 
-  StatevectorAlt(const StatevectorAlt&) = delete;
+  StatevectorCPU(const StatevectorCPU&) = delete;
 
-  StatevectorAlt(StatevectorAlt&&) = delete;
+  StatevectorCPU(StatevectorCPU&&) = delete;
 
-  ~StatevectorAlt() { ::operator delete(data); }
+  ~StatevectorCPU() { ::operator delete(data); }
 
-  StatevectorAlt& operator=(const StatevectorAlt& that) {
+  StatevectorCPU& operator=(const StatevectorCPU& that) {
     if (this == &that)
       return *this;
     std::memcpy(data, that.data, memSize);
     return *this;
   }
 
-  StatevectorAlt& operator=(StatevectorAlt&&) = delete;
+  StatevectorCPU& operator=(StatevectorCPU&&) = delete;
 
   double normSquared() const {
     double s = 0;
@@ -349,7 +349,7 @@ public:
     return os;
   }
 
-  StatevectorAlt& applyGate(const cast::QuantumGate& gate) {
+  StatevectorCPU& applyGate(const cast::QuantumGate& gate) {
     const auto* cMat = gate.gateMatrix.getConstantMatrix();
     assert(cMat && "Can only apply constant gateMatrix");
 
@@ -396,8 +396,8 @@ public:
 }; // class StatevectorAlt
 
 template<typename real_t>
-double fidelity(const StatevectorSep<real_t>& sv1,
-                       const StatevectorSep<real_t>& sv2) {
+double fidelity(
+    const StatevectorSep<real_t>& sv1, const StatevectorSep<real_t>& sv2) {
   assert(sv1.nQubits == sv2.nQubits);
 
   double re = 0.0, im = 0.0;
@@ -409,8 +409,8 @@ double fidelity(const StatevectorSep<real_t>& sv1,
 }
 
 template<typename real_t>
-double fidelity(const StatevectorAlt<real_t>& sv0,
-                const StatevectorAlt<real_t>& sv1) {
+double fidelity(
+    const StatevectorCPU<real_t>& sv0, const StatevectorCPU<real_t>& sv1) {
   assert(sv0.nQubits == sv1.nQubits);
   double re = 0.0, im = 0.0;
   for (size_t i = 0; i < sv0.N; i++) {
@@ -463,6 +463,6 @@ double fidelity(const StatevectorAlt<real_t>& sv0,
 //     }
 // }
 
-} // namespace utils::statevector
+} // namespace utils
 
-#endif // UTILS_STATEVECTOR_H
+#endif // UTILS_STATEVECTOR_CPU_H

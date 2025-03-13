@@ -1,6 +1,6 @@
 #include "simulation/KernelManager.h"
 #include "tests/TestKit.h"
-#include "utils/statevector.h"
+#include "utils/StatevectorCPU.h"
 
 using namespace cast;
 using namespace utils;
@@ -25,7 +25,7 @@ static void f() {
 
   cpuKernelMgr.initJIT();
 
-  StatevectorAlt<double> sv(6, simd_s);
+  StatevectorCPU<double> sv(6, simd_s);
   sv.initialize();
   suite.assertClose(sv.norm(), 1.0, "SV Initialization: Norm", GET_INFO());
   suite.assertClose(sv.prob(0), 0.0, "SV Initialization: Prob", GET_INFO());

@@ -76,28 +76,6 @@ void test_fusionCPU();
 
 void test_cudaU();
 
-inline void test_all() {
-  // utils::timedExecute([] {
-  //   test_applyGate();
-  //   test_gateMatMul();
-  // }, "Gate Multiplication Test Finished!");
-
-  // utils::timedExecute([] {
-  //   test_cpuH();
-  //   test_cpuU();
-  // }, "CPU Codegen Test Finished!");
-
-  // utils::timedExecute([] {
-  //   test_fusionCPU();
-  // }, "CPU Fusion Test Finished!");
-
-  #ifdef CAST_USE_CUDA
-  utils::timedExecute([] {
-    test_cudaU();
-  }, "CUDA Codegen Test Finished!");
-  #endif // CAST_USE_CUDA
-}
-
 } // namespace cast::test
 
 #endif // CAST_TESTS_TESTKIT_H

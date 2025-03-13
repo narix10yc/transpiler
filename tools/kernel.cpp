@@ -1,4 +1,4 @@
-#include "utils/statevector.h"
+#include "utils/StatevectorCPU.h"
 #include "timeit/timeit.h"
 
 #include "cast/Parser.h"
@@ -63,7 +63,7 @@ int main(int argc, const char** argv) {
     kernelAdaptiveFuse = kernelMgr.collectCPUKernelsFromCircuitGraph("graphAdaptiveFuse");
   }, "JIT compile kernels");
 
-  utils::StatevectorAlt<double> sv(graphNoFuse.nQubits, kernelGenConfig.simd_s);
+  utils::StatevectorCPU<double> sv(graphNoFuse.nQubits, kernelGenConfig.simd_s);
   // sv.randomize();
 
   timeit::Timer timer(/* replication */ 1);

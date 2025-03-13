@@ -6,7 +6,7 @@
 #include <iomanip>
 #include <llvm/IR/InlineAsm.h>
 
-#include "utils/statevector.h"
+#include "utils/StatevectorCPU.h"
 #include "utils/Formats.h"
 
 using namespace cast;
@@ -448,7 +448,7 @@ void PerformanceCache::runExperiments(
   timeit::Timer timer(3, /* verbose */ 0);
   timeit::TimingResult tr;
 
-  utils::StatevectorAlt<double> sv(nQubits, cpuConfig.simd_s);
+  utils::StatevectorCPU<double> sv(nQubits, cpuConfig.simd_s);
   utils::timedExecute([&]() {
     sv.randomize(nThreads);
   }, "Initialize statevector");

@@ -23,11 +23,11 @@ int main() {
   // cudaDeviceSynchronize();
   // std::cout << "Norm: " << svCUDA.norm() << std::endl;
 
-  CircuitGraph graph;
-  CircuitGraph::QFTCircuit(32, graph);
+  // CircuitGraph graph;
+  // CircuitGraph::QFTCircuit(32, graph);
   
-  auto qc = ast::QuantumCircuit::FromCircuitGraph(graph);
-  qc.print(std::cerr);
+  // auto qc = ast::QuantumCircuit::FromCircuitGraph(graph);
+  // qc.print(std::cerr);
   
 
   return 0;

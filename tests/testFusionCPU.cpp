@@ -3,7 +3,7 @@
 #include "cast/Fusion.h"
 #include "simulation/KernelManager.h"
 #include "tests/TestKit.h"
-#include "utils/statevector.h"
+#include "utils/StatevectorCPU.h"
 
 #include <filesystem>
 
@@ -57,8 +57,8 @@ static void f() {
     kernelMgrBeforeFusion.initJIT();
     kernelMgrAfterFusion.initJIT();
 
-    utils::StatevectorAlt<double> sv0(graph.nQubits, simd_s);
-    utils::StatevectorAlt<double> sv1(graph.nQubits, simd_s);
+    utils::StatevectorCPU<double> sv0(graph.nQubits, simd_s);
+    utils::StatevectorCPU<double> sv1(graph.nQubits, simd_s);
     sv0.randomize();
     sv1 = sv0;
 

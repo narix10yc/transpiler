@@ -1,6 +1,6 @@
 #include "simulation/KernelManager.h"
 #include "tests/TestKit.h"
-#include "utils/statevector.h"
+#include "utils/StatevectorCPU.h"
 #include <random>
 
 using namespace cast;
@@ -10,7 +10,7 @@ static void internal_U1q() {
   test::TestSuite suite(
     "Gate U1q (s=" + std::to_string(simd_s) +
     ", n=" + std::to_string(nQubits) + ")");
-  utils::StatevectorAlt<double>
+  utils::StatevectorCPU<double>
     sv0(nQubits, simd_s), sv1(nQubits, simd_s), sv2(nQubits, simd_s);
 
   const auto randomizeSV = [&sv0, &sv1, &sv2]() {
@@ -65,7 +65,7 @@ static void internal_U2q() {
   test::TestSuite suite(
     "Gate U2q (s=" + std::to_string(simd_s) +
     ", n=" + std::to_string(nQubits) + ")");
-  utils::StatevectorAlt<double>
+  utils::StatevectorCPU<double>
     sv0(nQubits, simd_s), sv1(nQubits, simd_s), sv2(nQubits, simd_s);
 
   const auto randomizeSV = [&sv0, &sv1, &sv2]() {

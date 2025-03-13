@@ -1,6 +1,6 @@
 #include "simulation/KernelManager.h"
 #include "tests/TestKit.h"
-#include "utils/statevector.h"
+#include "utils/StatevectorCPU.h"
 #include "utils/StatevectorCUDA.h"
 #include <random>
 
@@ -11,7 +11,7 @@ template<unsigned nQubits>
 static void internal_U1q() {
   test::TestSuite suite(
     "Gate U1q (" + std::to_string(nQubits) + " qubits)");
-  utils::StatevectorAlt<double> svCPU(nQubits, /* simd_s */ 1);
+  utils::StatevectorCPU<double> svCPU(nQubits, /* simd_s */ 1);
   utils::StatevectorCUDA<double> svCUDA0(nQubits), svCUDA1(nQubits);
 
   const auto randomizeSV = [&]() {
