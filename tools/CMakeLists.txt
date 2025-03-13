@@ -21,10 +21,6 @@ target_link_libraries(qasm_to_qch cast qasm utils)
 add_executable(kernel "kernel.cpp")
 target_link_libraries(kernel qasm cast simulation utils timeit)
 
-add_executable(jit_playground "jit_playground.cpp")
-# llvm_map_components_to_libnames(LLVM_LIBS orcjit native)
-target_link_libraries(jit_playground cast simulation qasm)
-
 if (CAST_USE_CUDA)
   add_executable(cuda_playground "cuda_playground.cu")
   target_link_libraries(cuda_playground timeit cuda CUDA::cudart)
