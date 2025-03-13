@@ -1,20 +1,19 @@
 cmake_minimum_required(VERSION 3.20)
 
 project(cast_simulator LANGUAGES C CXX)
-option(CAST_USE_CUDA "Enable LLVM NVPTX Backend for CUDA Support" OFF)
+option(CAST_USE_CUDA "Use LLVM NVPTX Backend for CUDA Support" OFF)
 if (CAST_USE_CUDA)
-    add_compile_definitions(CAST_USE_CUDA)
+  add_compile_definitions(CAST_USE_CUDA)
 endif()
 
 message("############ Custom Setups ############")
-# Apple has a system LLVM. We need to use a specific version
-# specified by environment variable 'LLVM_ROOT' or 'llvm_root'
+# Specified by environment variable 'LLVM_ROOT' or 'llvm_root'
 if(DEFINED ENV{llvm_root})
-    set(LLVM_ROOT "$ENV{llvm_root}")
+  set(LLVM_ROOT "$ENV{llvm_root}")
 elseif(DEFINED ENV{LLVM_ROOT})
-    set(LLVM_ROOT "$ENV{LLVM_ROOT}")
+  set(LLVM_ROOT "$ENV{LLVM_ROOT}")
 else()
-    message(FATAL_ERROR "Missing environment variable 'LLVM_ROOT' or 'llvm_root'")
+  message(FATAL_ERROR "Missing environment variable 'LLVM_ROOT' or 'llvm_root'")
 endif()
 
 message(STATUS "LLVM_ROOT: ${LLVM_ROOT}")
@@ -23,41 +22,13 @@ set(LLVM_DEBUG_INSTALL_ROOT "${LLVM_ROOT}/debug-install")
 
 set(CMAKE_C_COMPILER "${LLVM_RELEASE_INSTALL_ROOT}/bin/clang")
 set(CMAKE_CXX_COMPILER "${LLVM_RELEASE_INSTALL_ROOT}/bin/clang++")
-message(STATUS "C++ Compiler: ${CMAKE_CXX_COMPILER}")
-
-if (CAST_USE_CUDA)
-    find_package(CUDAToolkit REQUIRED)
-    set(CUDA_HOST_COMPILER "${CMAKE_CXX_COMPILER}")
-    message(STATUS "CUDA Toolkit Version: ${CUDAToolkit_VERSION}")
-    message(STATUS "CUDA Include Path: ${CUDAToolkit_INCLUDE_DIR}")
-    message(STATUS "CUDA Library Path: ${CUDAToolkit_LIBRARY_DIR}")
-
-    # FindCUDAToolkit.cmake (provided by Nvidia) does not automatically adjust
-    # include and link directories. For safely we append it before other include
-    # paths. Otherwise, enviroment managers such as conda may interfere with the
-    # selected CUDAToolkit version.
-    include_directories(BEFORE ${CUDAToolkit_INCLUDE_DIR})
-    link_directories(BEFORE ${CUDAToolkit_LIBRARY_DIR})
-    message(STATUS "CUDART Library Path: ${CUDAToolkit_rt_LIBRARY}")
-    
-    # get_cmake_property(_variableNames VARIABLES)
-    # foreach (_variableName ${_variableNames})
-    #     if (_variableName MATCHES "^CUDAToolkit")
-    #         message(STATUS "${_variableName}=${${_variableName}}")
-    #     endif()
-    # endforeach()
-
-    enable_language(CUDA)
-    message(STATUS "CMAKE_CUDA_ARCHITECTURES: ${CMAKE_CUDA_ARCHITECTURES}")
-    set(CMAKE_CUDA_ARCHITECTURES native)
-    message(STATUS "CMAKE_CUDA_ARCHITECTURES_ALL: ${CMAKE_CUDA_ARCHITECTURES_ALL}")
-    message(STATUS "CMAKE_CUDA_ARCHITECTURES: ${CMAKE_CUDA_ARCHITECTURES}")
-endif()
+message(STATUS "CMAKE_CXX_COMPILER: ${CMAKE_CXX_COMPILER}")
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED on)
 add_link_options("-fuse-ld=lld")
 
+# Find LLVM
 string(TOUPPER "${CMAKE_BUILD_TYPE}" CMAKE_BUILD_TYPE_UPPER)
 if(CMAKE_BUILD_TYPE_UPPER STREQUAL "DEBUG")
     set(LLVM_DIR "${LLVM_DEBUG_INSTALL_ROOT}/lib/cmake/llvm")
@@ -71,9 +42,43 @@ message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 message(STATUS "LLVM is built for targets: ${LLVM_TARGETS_TO_BUILD}")
 
 if (CAST_USE_CUDA AND NOT "NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
-    message(WARNING
-        "CUDA is enabled in the project, "
-        "but LLVM build does not support NVPTX backend.")
+  message(WARNING
+          "CUDA is enabled in the project, "
+          "but LLVM build does not support NVPTX backend.")
+endif()
+
+# Find CUDAToolkit (if CAST_USE_CUDA is defined)
+if (CAST_USE_CUDA)
+  set(CMAKE_CUDA_HOST_COMPILER "${CMAKE_CXX_COMPILER}")
+  find_package(CUDAToolkit REQUIRED)
+  message(STATUS "CUDAToolkit_VERSION: ${CUDAToolkit_VERSION}")
+  message(STATUS "CUDAToolkit_INCLUDE_DIR: ${CUDAToolkit_INCLUDE_DIR}")
+  message(STATUS "CUDAToolkit_LIBRARY_DIR: ${CUDAToolkit_LIBRARY_DIR}")
+
+  # FindCUDAToolkit.cmake does not automatically adjust include and link
+  # directories. For safely we append it before other include paths.
+  # Otherwise, enviroment managers such as conda may interfere with the
+  # selected CUDAToolkit version.
+  include_directories(BEFORE ${CUDAToolkit_INCLUDE_DIR})
+  link_directories(BEFORE ${CUDAToolkit_LIBRARY_DIR})
+  message(STATUS "CUDAToolkit_rt_LIBRARY: ${CUDAToolkit_rt_LIBRARY}")
+  
+  # get_cmake_property(_variableNames VARIABLES)
+  # foreach (_variableName ${_variableNames})
+  #   if (_variableName MATCHES "^CUDAToolkit")
+  #     message(STATUS "${_variableName}=${${_variableName}}")
+  #   endif()
+  # endforeach()
+
+  message(STATUS "CMAKE_CUDA_ARCHITECTURES: ${CMAKE_CUDA_ARCHITECTURES}")
+  set(CMAKE_CUDA_ARCHITECTURES native)
+  set(CMAKE_CUDA_COMPILER "${CUDAToolkit_ROOT}/bin/nvcc")
+  # Sometimes clang version is too high and nvcc does not support it
+  set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --allow-unsupported-compiler")
+  enable_language(CUDA)
+
+  message(STATUS "CMAKE_CUDA_ARCHITECTURES_ALL: ${CMAKE_CUDA_ARCHITECTURES_ALL}")
+  message(STATUS "CMAKE_CUDA_ARCHITECTURES: ${CMAKE_CUDA_ARCHITECTURES}")
 endif()
 
 include_directories(${LLVM_INCLUDE_DIRS} include)
