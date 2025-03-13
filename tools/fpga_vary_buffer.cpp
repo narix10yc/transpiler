@@ -2,7 +2,7 @@
 #include "cast/FPGAInst.h"
 #include "cast/Fusion.h"
 #include "cast/Parser.h"
-#include "cast/ast.h"
+#include "cast/AST.h"
 
 #include "openqasm/parser.h"
 

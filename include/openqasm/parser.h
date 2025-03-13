@@ -1,5 +1,5 @@
-#ifndef Parser_H_
-#define Parser_H_
+#ifndef OPENQASM_PARSER_H
+#define OPENQASM_PARSER_H
 
 #include "openqasm/ast.h"
 #include "openqasm/lexer.h"
@@ -123,4 +123,4 @@ private:
 
 } // namespace openqasm
 
-#endif // Parser_H_
+#endif // OPENQASM_PARSER_H

@@ -2,7 +2,7 @@
 // #include "utils/StatevectorCUDA.h"
 #include "utils/iocolor.h"
 #include "cast/CircuitGraph.h"
-#include "cast/ast.h"
+#include "cast/AST.h"
 
 #include <iostream>
 #include <thread>

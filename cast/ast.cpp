@@ -1,4 +1,4 @@
-#include "cast/ast.h"
+#include "cast/AST.h"
 #include "cast/CircuitGraph.h"
 
 #include "utils/iocolor.h"

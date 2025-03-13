@@ -1,7 +1,7 @@
 #ifndef CAST_NEWPARSER_H
 #define CAST_NEWPARSER_H
 
-#include "cast/ast.h"
+#include "cast/AST.h"
 
 #include <cassert>
 #include <complex>
