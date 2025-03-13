@@ -1,5 +1,5 @@
-#ifndef SIMULATION_TIMEIT_H
-#define SIMULATION_TIMEIT_H
+#ifndef TIMEIT_TIMEIT_H
+#define TIMEIT_TIMEIT_H
 
 #include <cassert>
 #include <functional>
@@ -16,7 +16,9 @@ public:
   std::vector<double> tArr;
   double min, med, q1, q3;
   int n_sig_dig = 4;
-  TimingResult() : repeat(0), replication(0), min(0), med(0), q1(0), q3(0) {}
+  TimingResult()
+  : repeat(0), replication(0), tArr(), min(0), med(0), q1(0), q3(0) {}
+  
   TimingResult(int repeat, int replication, const std::vector<double>& tArr)
       : repeat(repeat), replication(replication), tArr(tArr) {
     assert(repeat >= 1);
@@ -74,6 +76,6 @@ public:
       const std::function<void()>& teardown = []() {}) const;
 };
 
-} // end namespace timeit
+} // namespace timeit
 
-#endif // SIMULATION_TIMEIT_H
+#endif // TIMEIT_TIMEIT_H
