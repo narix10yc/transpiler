@@ -11,148 +11,123 @@ __global__ void fillArrayKernel(T* dArr, T c, size_t size) {
     dArr[idx] = c;
 }
 
+template<typename T>
+__global__ void writeIncrementalArrayKernel(T* dArr, size_t size) {
+  size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx < size)
+    dArr[idx] = static_cast<T>(idx);
+}
+
 // dArr will be a read-only array with size gridSize * blockSize
 // dOut will be a write-only array with size gridSize
-__global__ void reduceKernel0(const float* dArr, float* dResult) {
+// The effect of this function is to write
+// dOut[bid] = dArr[bid * blockSize] + 
+//             dArr[bid * blockSize + 1] +
+//             ... +
+//             dArr[bid * blockSize + (blockSize - 1)] +
+__global__ void reduceKernel0(const float* dArr, float* dOut) {
   extern __shared__ float shared[];
-
   int tid = threadIdx.x;
-  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  size_t bid = blockIdx.x;
 
   // copy to shared memory
-  shared[tid] = dArr[idx];
+  shared[tid] = dArr[bid * blockDim.x + tid];
   __syncthreads();
 
-  // Reduction in shared memory
-  for (int stride = blockDim.x >> 1; stride > 0; stride >>= 1) {
+  // Reduction in shared memory. The loop here sums the blockSize elements in 
+  // \c shared into shared[0].
+  for (size_t stride = blockDim.x >> 1; stride > 0; stride >>= 1) {
     if (tid < stride)
       shared[tid] += shared[tid + stride];
     __syncthreads();
   }
 
   if (tid == 0)
-    dResult[blockIdx.x] = shared[0];
+    dOut[bid] = shared[0];
 }
 
-__inline__ __device__ float warpReduceSumKernel(float val) {
-  val += __shfl_down_sync(0xFFFFFFFF, val, 16);
-  val += __shfl_down_sync(0xFFFFFFFF, val, 8);
-  val += __shfl_down_sync(0xFFFFFFFF, val, 4);
-  val += __shfl_down_sync(0xFFFFFFFF, val, 2);
-  val += __shfl_down_sync(0xFFFFFFFF, val, 1);
-  return val;
-}
-
-__global__ void reduceKernel1(const float* g_idata, float* g_odata) {
-  __shared__ int sdata[32];  // Store partial sums
-
+__global__ void reduceKernel1(const float* dArr, float* dOut) {
+  extern __shared__ float shared[];
   int tid = threadIdx.x;
-  int lane = tid % 32;
-  int warpID = tid / 32;
+  size_t bid = blockIdx.x;
+  int blockSize = blockDim.x;
 
-  int val = g_idata[blockIdx.x * blockDim.x + tid];
-
-  // Intra-warp reduction using __shfl_down_sync
-  val = warpReduceSumKernel(val);
-
-  // Store per-warp sum in shared memory
-  if (lane == 0) sdata[warpID] = val;
+  // copy to shared memory
+  shared[tid] = dArr[bid * blockSize + tid];
   __syncthreads();
 
-  // Final reduction by first warp
-  if (warpID == 0) {
-      val = (lane < blockDim.x / 32) ? sdata[lane] : 0;
-      val = warpReduceSumKernel(val);
-      if (lane == 0) g_odata[blockIdx.x] = val;
+  // Reduction in shared memory. The loop here sums the blockSize elements in 
+  // \c shared into shared[0].
+  // Loop unroll
+  for (size_t stride = blockSize >> 1; stride > 32; stride >>= 1) {
+    if (tid < stride)
+      shared[tid] = shared[tid] + shared[tid + stride];
+    __syncthreads();
   }
-}
-
-template <unsigned int blockSize>
-__device__ void warpReduce(float* sdata, unsigned int tid) {
-  if (blockSize >= 64) sdata[tid] += sdata[tid + 32];
-  if (blockSize >= 32) sdata[tid] += sdata[tid + 16];
-  if (blockSize >= 16) sdata[tid] += sdata[tid + 8];
-  if (blockSize >= 8) sdata[tid] += sdata[tid + 4];
-  if (blockSize >= 4) sdata[tid] += sdata[tid + 2];
-  if (blockSize >= 2) sdata[tid] += sdata[tid + 1];
-}
-
-template <unsigned int blockSize>
-__global__ void reduceKernel6(const float* g_idata, float* g_odata, size_t n) {
-  extern __shared__ float sdata[];
-  unsigned int tid = threadIdx.x;
-  unsigned int i = blockIdx.x * (blockSize * 2) + tid;
-  unsigned int gridSize = blockSize * 2 * gridDim.x;
-  sdata[tid] = 0;
-  while (i < n) {
-    sdata[tid] += g_idata[i] + g_idata[i + blockSize];
-    i += gridSize;
+  if (tid < 32) {
+    // float val = shared[tid];
+    // val += __shfl_down_sync(0xFFFFFFFF, val, 16);
+    // val += __shfl_down_sync(0xFFFFFFFF, val, 8);
+    // val += __shfl_down_sync(0xFFFFFFFF, val, 4);
+    // val += __shfl_down_sync(0xFFFFFFFF, val, 2);
+    // val += __shfl_down_sync(0xFFFFFFFF, val, 1);
+    // if (tid == 0)
+    //   shared[0] = val;
+    volatile float* vshared = shared;
+    vshared[tid] = vshared[tid] + vshared[tid + 32];
+    vshared[tid] = vshared[tid] + vshared[tid + 16];
+    vshared[tid] = vshared[tid] + vshared[tid + 8];
+    vshared[tid] = vshared[tid] + vshared[tid + 4];
+    vshared[tid] = vshared[tid] + vshared[tid + 2];
+    vshared[tid] = vshared[tid] + vshared[tid + 1];
   }
   __syncthreads();
-  if (blockSize >= 512) {
-    if (tid < 256) {
-      sdata[tid] += sdata[tid + 256];
-    }
-    __syncthreads();
-  }
-  if (blockSize >= 256) {
-    if (tid < 128) {
-      sdata[tid] += sdata[tid + 128];
-    }
-    __syncthreads();
-  }
-  if (blockSize >= 128) {
-    if (tid < 64) {
-      sdata[tid] += sdata[tid + 64];
-    }
-    __syncthreads();
-  }
-  if (tid < 32)
-    warpReduce(sdata, tid);
   if (tid == 0)
-    g_odata[blockIdx.x] = sdata[0];
+    dOut[bid] = shared[0];
 }
 
-template<size_t size>
-float gpuSum(const float* dArr) {
-  float *d_intermediate, *h_intermediate;
-  constexpr int blockSize = 256;
+
+#define kernel reduceKernel1
+
+int main() {
+  float* dArr;
+  constexpr int blockSize = 512;
+  constexpr size_t size = 1ULL << 22;
   constexpr size_t gridSize = (size + blockSize - 1) / blockSize;
 
-  cudaMalloc(&d_intermediate, gridSize * sizeof(float));
-  h_intermediate = new float[gridSize];
+  cudaMalloc(&dArr, size * sizeof(float));
+  fillArrayKernel<float><<<gridSize, blockSize>>>(dArr, 1.0f, size);
+  // writeIncrementalArrayKernel<float><<<gridSize, blockSize>>>(dArr, size);
 
-  reduceKernel6<blockSize><<<gridSize, blockSize, blockSize * sizeof(float)>>>(dArr, d_intermediate, size);
-  cudaMemcpy(h_intermediate, d_intermediate, gridSize * sizeof(float), cudaMemcpyDeviceToHost);
+  float* dIntermediate;
+  float* hIntermediate; 
+  hIntermediate = new float[gridSize];
+  
+  cudaMalloc(&dIntermediate, gridSize * sizeof(float));
+
+  size_t sharedMemSize = gridSize * sizeof(float);
+  // maintain a reasonable shared memory size
+
+  kernel<<<gridSize, blockSize, sharedMemSize>>>(dArr, dIntermediate);
+  cudaError_t err = cudaGetLastError();
+  if (err != cudaSuccess) {
+    std::cerr << "CUDA Kernel launch failed: " << cudaGetErrorString(err) << std::endl;
+  }
+  cudaMemcpy(hIntermediate, dIntermediate, gridSize * sizeof(float), cudaMemcpyDeviceToHost);
 
   // Final reduction on host
   float sum = 0;
   for (size_t i = 0; i < gridSize; ++i) {
-    // std::cerr << "i = " << i << ", h_intermediate[i] = " << h_intermediate[i] << "\n";
-    sum += h_intermediate[i];
+    // std::cerr << "i = " << i << ", hIntermediate[i] = " << hIntermediate[i] << "\n";
+    sum += hIntermediate[i];
   }
 
-  cudaFree(d_intermediate);
-  delete[] h_intermediate;
-
-  return sum;
-}
-
-int main() {
-  float* dArr;
-  constexpr size_t size = 1ULL << 30;
-  constexpr int nThreadsPerBlock = 256;
-  constexpr int nBlocks = (size + nThreadsPerBlock - 1) / nThreadsPerBlock;
-
-  cudaMalloc(&dArr, size * sizeof(float));
-  fillArrayKernel<float><<<nBlocks, nThreadsPerBlock>>>(dArr, 1.0f, size);
-
-  auto sum = gpuSum<size>(dArr);
-  std::cerr << "size: " << size << ", sum = " << sum << "\n";
+  std::cerr << "size: " << size << ", sum = " << static_cast<int>(sum) << "\n";
 
   timeit::Timer timer;
-  auto tr = timer.timeit([&]() {
-    gpuSum<size>(dArr);
+  auto tr = timer.timeit([&]() {  
+    kernel<<<gridSize, blockSize, sharedMemSize>>>(dArr, dIntermediate);
+    cudaDeviceSynchronize();
   });
   tr.display();
 
@@ -161,5 +136,7 @@ int main() {
 
   cudaFree(dArr);
 
+  cudaFree(dIntermediate);
+  delete[] hIntermediate;
   return 0;
 }
