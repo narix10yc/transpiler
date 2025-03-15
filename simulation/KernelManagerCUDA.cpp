@@ -227,7 +227,8 @@ void CUDAKernelManager::launchCUDAKernel(
   int nGateQubits = _cudaKernels[kernelIdx].gate->nQubits();
   int nBlocks = 1 << (nQubits - nThreadsInBits - nGateQubits);
 
-  void* cMatPtr = _cudaKernels[kernelIdx].gate->gateMatrix.getConstantMatrix()->data();
+  void* cMatPtr = 
+    _cudaKernels[kernelIdx].gate->gateMatrix.getConstantMatrix()->data();
   void* kernelParams[] = { &dData, &cMatPtr };
 
   cuLaunchKernel(cuTuple.cuFunction, 

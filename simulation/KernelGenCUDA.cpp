@@ -114,7 +114,8 @@ CUDAKernelManager& CUDAKernelManager::genCUDAGate(
     gate->gateMatrix.printCMat(std::cerr) << "\n";
   );
 
-  auto& llvmContextModulePair = createNewLLVMContextModulePair(funcName + "Module");
+  auto& llvmContextModulePair = 
+    createNewLLVMContextModulePair(funcName + "Module");
 
   IRBuilder<> B(*llvmContextModulePair.llvmContext);
   assert(config.precision == 32 || config.precision == 64);

@@ -36,7 +36,8 @@ void utils::internal::HelperCUDAKernels<ScalarType>::randomizeStatevector(
     ScalarType* dArr, size_t size) {
   size_t blockSize = 256;
   size_t numBlocks = (size + blockSize - 1) / blockSize;
-  initGaussianKernel<ScalarType><<<numBlocks, blockSize>>>(dArr, size, 0.0, 1.0);
+  initGaussianKernel<ScalarType>
+    <<<numBlocks, blockSize>>>(dArr, size, 0.0, 1.0);
 }
 
 template<typename ScalarType, unsigned blockSize>
