@@ -120,6 +120,14 @@ void StatevectorCUDA<ScalarType>::randomize() {
   syncState = DeviceIsNewer;
 }
 
+template<typename ScalarType>
+ScalarType StatevectorCUDA<ScalarType>::prob(int qubit) const {
+  using Helper = utils::internal::HelperCUDAKernels<ScalarType>;
+  assert(dData != nullptr);
+
+  return 1.0 - Helper::reduceSquaredOmittingBit(dData, size(), qubit + 1);
+}
+
 namespace utils {
   template class StatevectorCUDA<float>;
   template class StatevectorCUDA<double>;

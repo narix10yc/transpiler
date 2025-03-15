@@ -11,6 +11,9 @@ namespace utils {
   namespace internal {
     template<typename ScalarType>
     struct HelperCUDAKernels {
+      static void multiplyByConstant(
+        ScalarType* dArr, ScalarType constant, size_t size);
+
       // Randomize the \c dArr array using standard normal distribution
       static void randomizeStatevector(ScalarType* dArr, size_t size);
 
@@ -18,8 +21,8 @@ namespace utils {
       static ScalarType reduceSquared(
           const ScalarType* dArr, size_t size);
 
-      static void multiplyByConstant(
-          ScalarType* dArr, ScalarType constant, size_t size);
+      static ScalarType reduceSquaredOmittingBit(
+          const ScalarType* dArr, size_t size, int bit);
     };
 
     extern template struct HelperCUDAKernels<float>;
@@ -72,15 +75,19 @@ public:
     return (2ULL << nQubits) * sizeof(ScalarType);
   }
 
+  // The size of statevector array, equaling to 2ULL << nQubits.
   size_t size() const { return 2ULL << nQubits; }
 
   void initialize();
 
   ScalarType normSquared() const;
   ScalarType norm() const { return std::sqrt(normSquared()); }
-  
+
+  ScalarType prob(int qubits) const;
+
   void randomize();
 
+  // TODO: Not implemented yet. Sync hData and hData based on syncState
   void sync();
 };
 

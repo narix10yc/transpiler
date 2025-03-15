@@ -15,6 +15,12 @@ static void f() {
   suite.assertClose(svF32.norm(), 1.0f, "initialize norm F32", GET_INFO());
   suite.assertClose(svF64.norm(), 1.0, "initialize norm F64", GET_INFO());
 
+  suite.assertClose(svF32.prob(0), 0.0f, "prob of qubit 0 F32", GET_INFO());
+  suite.assertClose(svF64.prob(0), 0.0, "prob of qubit 0 F64", GET_INFO());
+
+  suite.assertClose(svF32.prob(1), 0.0f, "prob of qubit 1 F32", GET_INFO());
+  suite.assertClose(svF64.prob(1), 0.0, "prob of qubit 1 F64", GET_INFO());
+
   svF32.randomize();
   svF64.randomize();
   suite.assertClose(svF32.norm(), 1.0f, "randomize norm F32", GET_INFO());
