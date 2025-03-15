@@ -3,7 +3,7 @@
 #include "simulation/KernelManager.h"
 
 #include "timeit/timeit.h"
-#include "utils/StatevectorCUDA.h"
+#include "simulation/StatevectorCUDA.h"
 
 using namespace cast;
 

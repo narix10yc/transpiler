@@ -1,7 +1,7 @@
 #include "simulation/KernelManager.h"
 #include "tests/TestKit.h"
-#include "utils/StatevectorCPU.h"
-#include "utils/StatevectorCUDA.h"
+#include "simulation/StatevectorCPU.h"
+#include "simulation/StatevectorCUDA.h"
 #include <random>
 
 using namespace cast;

@@ -15,8 +15,8 @@ namespace utils {
       static void randomizeStatevector(ScalarType* dArr, size_t size);
 
       // Return the sum of the squared values of \c dArr array
-      static void reduceSquared(
-          const ScalarType* dArr, ScalarType* dResult, size_t size);
+      static ScalarType reduceSquared(
+          const ScalarType* dArr, size_t size);
 
       static void multiplyByConstant(
           ScalarType* dArr, ScalarType constant, size_t size);

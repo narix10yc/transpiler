@@ -1,4 +1,4 @@
-#include "utils/StatevectorCPU.h"
+#include "simulation/StatevectorCPU.h"
 #include "timeit/timeit.h"
 
 #include "cast/Parser.h"

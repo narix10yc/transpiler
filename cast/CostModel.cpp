@@ -6,7 +6,7 @@
 #include <iomanip>
 #include <llvm/IR/InlineAsm.h>
 
-#include "utils/StatevectorCPU.h"
+#include "simulation/StatevectorCPU.h"
 #include "utils/Formats.h"
 
 using namespace cast;

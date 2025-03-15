@@ -19,9 +19,15 @@ int main() {
   }, "CPU Fusion Test Finished!");
 
   #ifdef CAST_USE_CUDA
+
   utils::timedExecute([] {
-    test_cudaU();
-  }, "CUDA Codegen Test Finished!");
+    test_statevectorCUDA();
+  }, "StatevectorCUDA Test Finished!");
+
+  // utils::timedExecute([] {
+  //   test_cudaU();
+  // }, "CUDA Codegen Test Finished!");
+
   #endif // CAST_USE_CUDA
 
   

@@ -3,7 +3,7 @@
 #include "cast/Fusion.h"
 #include "simulation/KernelManager.h"
 #include "tests/TestKit.h"
-#include "utils/StatevectorCPU.h"
+#include "simulation/StatevectorCPU.h"
 
 #include <filesystem>
 

@@ -1,6 +1,6 @@
 #include "gen_file/kernel_metadata.h"
 #include "timeit/timeit.h"
-#include "utils/StatevectorCPU.h"
+#include "simulation/StatevectorCPU.h"
 #include <iomanip>
 #include <iostream>
 

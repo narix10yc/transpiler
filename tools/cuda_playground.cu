@@ -81,7 +81,7 @@ __global__ void reduceKernel1(const float* dArr, float* dOut) {
     vshared[tid] = vshared[tid] + vshared[tid + 2];
     vshared[tid] = vshared[tid] + vshared[tid + 1];
   }
-  __syncthreads();
+
   if (tid == 0)
     dOut[bid] = shared[0];
 }
@@ -91,8 +91,8 @@ __global__ void reduceKernel1(const float* dArr, float* dOut) {
 
 int main() {
   float* dArr;
-  constexpr int blockSize = 512;
-  constexpr size_t size = 1ULL << 22;
+  constexpr int blockSize = 256;
+  constexpr size_t size = 1ULL << 28;
   constexpr size_t gridSize = (size + blockSize - 1) / blockSize;
 
   cudaMalloc(&dArr, size * sizeof(float));
@@ -104,8 +104,7 @@ int main() {
   hIntermediate = new float[gridSize];
   
   cudaMalloc(&dIntermediate, gridSize * sizeof(float));
-
-  size_t sharedMemSize = gridSize * sizeof(float);
+  size_t sharedMemSize = blockSize * sizeof(float);
   // maintain a reasonable shared memory size
 
   kernel<<<gridSize, blockSize, sharedMemSize>>>(dArr, dIntermediate);

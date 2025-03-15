@@ -1,4 +1,6 @@
-#include "utils/StatevectorCUDA.h"
+#ifdef CAST_USE_CUDA
+
+#include "simulation/StatevectorCUDA.h"
 #include "utils/iocolor.h"
 
 #include <cassert>
@@ -100,18 +102,7 @@ template<typename ScalarType>
 ScalarType StatevectorCUDA<ScalarType>::normSquared() const {
   using Helper = utils::internal::HelperCUDAKernels<ScalarType>;
   assert(dData != nullptr && "Device statevector is not initialized");
-  ScalarType* dResult;
-  CUDA_CALL(cudaMalloc(&dResult, sizeof(ScalarType)),
-    "Failed to allocate memory for the result of norm calculation");
-  Helper::reduceSquared(dData, dResult, size());
-  ScalarType hResult;
-  CUDA_CALL(
-    cudaMemcpy(&hResult, dResult, sizeof(ScalarType), cudaMemcpyDeviceToHost),
-    "Failed to copy the result of norm calculation to the host");
-  CUDA_CALL(cudaFree(dResult),
-    "Failed to free memory for the result of norm calculation");
-
-  return hResult;
+  return Helper::reduceSquared(dData, size());
 }
 
 template<typename ScalarType>
@@ -123,7 +114,6 @@ void StatevectorCUDA<ScalarType>::randomize() {
 
   // normalize the statevector
   auto c = 1.0 / norm();
-  std::cerr << "norm is " << 1.0 / c << "\n";
   Helper::multiplyByConstant(dData, c, size());
   cudaDeviceSynchronize();
 
@@ -131,8 +121,8 @@ void StatevectorCUDA<ScalarType>::randomize() {
 }
 
 namespace utils {
-
-template class StatevectorCUDA<float>;
-template class StatevectorCUDA<double>;
-
+  template class StatevectorCUDA<float>;
+  template class StatevectorCUDA<double>;
 }
+
+#endif // CAST_USE_CUDA

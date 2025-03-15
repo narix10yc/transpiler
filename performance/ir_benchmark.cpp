@@ -2,7 +2,7 @@
 #include "simulation/tplt.h"
 #include "timeit/timeit.h"
 #include "utils/iocolor.h"
-#include "utils/StatevectorCPU.h"
+#include "simulation/StatevectorCPU.h"
 #include <iomanip>
 
 #ifdef USING_F32

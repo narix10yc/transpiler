@@ -1,6 +1,6 @@
 #include "cast/QuantumGate.h"
 #include "tests/TestKit.h"
-#include "utils/StatevectorCPU.h"
+#include "simulation/StatevectorCPU.h"
 
 using namespace cast;
 using namespace utils;
