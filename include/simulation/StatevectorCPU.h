@@ -15,25 +15,25 @@
 
 namespace utils {
 
-template<typename real_t>
+template<typename ScalarType>
 class StatevectorSep;
 
-template<typename real_t>
+template<typename ScalarType>
 class StatevectorCPU;
 
-template<typename real_t>
+template<typename ScalarType>
 class StatevectorSep {
 public:
   int nQubits;
   uint64_t N;
-  real_t* real;
-  real_t* imag;
+  ScalarType* real;
+  ScalarType* imag;
 
   StatevectorSep(int nQubits, bool initialize = false)
       : nQubits(nQubits), N(1ULL << nQubits) {
     assert(nQubits > 0);
-    real = (real_t*)std::aligned_alloc(64, N * sizeof(real_t));
-    imag = (real_t*)std::aligned_alloc(64, N * sizeof(real_t));
+    real = (ScalarType*)std::aligned_alloc(64, N * sizeof(ScalarType));
+    imag = (ScalarType*)std::aligned_alloc(64, N * sizeof(ScalarType));
     if (initialize) {
       for (size_t i = 0; i < (1 << nQubits); i++) {
         real[i] = 0;
@@ -46,8 +46,8 @@ public:
 
   StatevectorSep(const StatevectorSep& that)
       : nQubits(that.nQubits), N(that.N) {
-    real = (real_t*)aligned_alloc(64, N * sizeof(real_t));
-    imag = (real_t*)aligned_alloc(64, N * sizeof(real_t));
+    real = (ScalarType*)aligned_alloc(64, N * sizeof(ScalarType));
+    imag = (ScalarType*)aligned_alloc(64, N * sizeof(ScalarType));
     for (size_t i = 0; i < that.N; i++) {
       real[i] = that.real[i];
       imag[i] = that.imag[i];
@@ -92,11 +92,11 @@ public:
     return *this;
   }
 
-  // void copyValueFrom(const StatevectorAlt<real_t>&);
+  // void copyValueFrom(const StatevectorAlt<ScalarType>&);
 
-  double normSquared(int nthreads = 1) const {
-    const auto f = [&](uint64_t i0, uint64_t i1, double &rst) {
-      double sum = 0.0;
+  ScalarType normSquared(int nthreads = 1) const {
+    const auto f = [&](uint64_t i0, uint64_t i1, ScalarType &rst) {
+      ScalarType sum = 0.0;
       for (uint64_t i = i0; i < i1; i++) {
         sum += real[i] * real[i];
         sum += imag[i] * imag[i];
@@ -105,13 +105,13 @@ public:
     };
 
     if (nthreads == 1) {
-      double s;
+      ScalarType s;
       f(0, N, s);
       return s;
     }
 
     std::vector<std::thread> threads(nthreads);
-    std::vector<double> sums(nthreads);
+    std::vector<ScalarType> sums(nthreads);
     uint64_t blockSize = N / nthreads;
     for (uint64_t i = 0; i < nthreads; i++) {
       uint64_t i0 = i * blockSize;
@@ -122,18 +122,18 @@ public:
     for (auto& thread : threads)
       thread.join();
 
-    double sum = 0.0;
+    ScalarType sum = 0.0;
     for (const auto& s : sums)
       sum += s;
     return sum;
   }
 
-  double norm(int nthreads = 1) const {
+  ScalarType norm(int nthreads = 1) const {
     return std::sqrt(normSquared(nthreads));
   }
 
   void normalize(int nthreads = 1) {
-    double n = norm(nthreads);
+    ScalarType n = norm(nthreads);
     const auto f = [&](uint64_t i0, uint64_t i1) {
       for (uint64_t i = i0; i < i1; i++) {
         real[i] /= n;
@@ -161,7 +161,7 @@ public:
     const auto f = [&](uint64_t i0, uint64_t i1) {
       std::random_device rd;
       std::mt19937 gen{rd()};
-      std::normal_distribution<real_t> d{0, 1};
+      std::normal_distribution<ScalarType> d{0, 1};
       for (uint64_t i = i0; i < i1; i++) {
         real[i] = d(gen);
         imag[i] = d(gen);
@@ -252,14 +252,14 @@ public:
 
   size_t sizeInBytes() const { return (2ULL << _nQubits) * sizeof(ScalarType); }
 
-  double normSquared() const {
-    double s = 0;
+  ScalarType normSquared() const {
+    ScalarType s = 0;
     for (size_t i = 0; i < 2 * getN(); i++)
       s += _data[i] * _data[i];
     return s;
   }
 
-  double norm() const { return std::sqrt(normSquared()); }
+  ScalarType norm() const { return std::sqrt(normSquared()); }
 
   /// @brief Initialize to the |00...00> state.
   void initialize(int nThreads = 1) {
@@ -268,7 +268,7 @@ public:
   }
 
   void normalize(int nThreads = 1) {
-    double n = norm();
+    ScalarType n = norm();
     for (size_t i = 0; i < 2 * getN(); ++i)
       _data[i] /= n;
   }
@@ -340,8 +340,8 @@ public:
   }
 
   /// @brief Compute the probability of measuring 1 on qubit q
-  double prob(int q) const {
-    double p = 0.0;
+  ScalarType prob(int q) const {
+    ScalarType p = 0.0;
     for (size_t i = 0; i < (getN() >> 1); i++) {
       size_t idx = utils::insertZeroToBit(i, q);
       const auto& re = real(idx);
@@ -404,12 +404,12 @@ public:
 
 }; // class StatevectorAlt
 
-template<typename real_t>
-double fidelity(
-    const StatevectorSep<real_t>& sv1, const StatevectorSep<real_t>& sv2) {
+template<typename ScalarType>
+ScalarType fidelity(
+    const StatevectorSep<ScalarType>& sv1, const StatevectorSep<ScalarType>& sv2) {
   assert(sv1.nQubits == sv2.nQubits);
 
-  double re = 0.0, im = 0.0;
+  ScalarType re = 0.0, im = 0.0;
   for (size_t i = 0; i < sv1.N; i++) {
     re += (sv1.real[i] * sv2.real[i] + sv1.imag[i] * sv2.imag[i]);
     im += (-sv1.real[i] * sv2.imag[i] + sv1.imag[i] * sv2.real[i]);
@@ -417,11 +417,11 @@ double fidelity(
   return re * re + im * im;
 }
 
-template<typename real_t>
-double fidelity(
-    const StatevectorCPU<real_t>& sv0, const StatevectorCPU<real_t>& sv1) {
+template<typename ScalarType>
+ScalarType fidelity(
+    const StatevectorCPU<ScalarType>& sv0, const StatevectorCPU<ScalarType>& sv1) {
   assert(sv0.nQubits() == sv1.nQubits());
-  double re = 0.0, im = 0.0;
+  ScalarType re = 0.0, im = 0.0;
   for (size_t i = 0; i < sv0.getN(); i++) {
     auto amp0 = sv0.amp(i);
     auto amp1 = sv1.amp(i);
@@ -431,12 +431,12 @@ double fidelity(
   return re * re + im * im;
 }
 
-// template<typename real_t>
-// static double fidelity(const StatevectorSep<real_t>& sep, const
-// StatevectorAlt<real_t>& alt) {
+// template<typename ScalarType>
+// static ScalarType fidelity(const StatevectorSep<ScalarType>& sep, const
+// StatevectorAlt<ScalarType>& alt) {
 //     assert(sep.nQubits == alt.nQubits);
 
-//     double re = 0.0, im = 0.0;
+//     ScalarType re = 0.0, im = 0.0;
 //     for (size_t i = 0; i < sep.N; i++) {
 //         re += ( sep.real[i] * alt.data[2*i] + sep.imag[i] * alt.data[2*i+1]);
 //         im += (-sep.real[i] * alt.data[2*i+1] + sep.imag[i] * alt.data[2*i]);
@@ -444,14 +444,14 @@ double fidelity(
 //     return re * re + im * im;
 // }
 
-// template<typename real_t>
-// double fidelity(const StatevectorAlt<real_t>& alt, const
-// StatevectorSep<real_t>& sep) {
+// template<typename ScalarType>
+// ScalarType fidelity(const StatevectorAlt<ScalarType>& alt, const
+// StatevectorSep<ScalarType>& sep) {
 //     return fidelity(sep, alt);
 // }
 
-// template<typename real_t>
-// void StatevectorSep<real_t>::copyValueFrom(const StatevectorAlt<real_t>& alt)
+// template<typename ScalarType>
+// void StatevectorSep<ScalarType>::copyValueFrom(const StatevectorAlt<ScalarType>& alt)
 // {
 //     assert(nQubits == alt.nQubits);
 
@@ -461,8 +461,8 @@ double fidelity(
 //     }
 // }
 
-// template<typename real_t>
-// void StatevectorAlt<real_t>::copyValueFrom(const StatevectorSep<real_t>& sep)
+// template<typename ScalarType>
+// void StatevectorAlt<ScalarType>::copyValueFrom(const StatevectorSep<ScalarType>& sep)
 // {
 //     assert(nQubits == sep.nQubits);
 

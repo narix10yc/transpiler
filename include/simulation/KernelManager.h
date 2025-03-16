@@ -227,8 +227,8 @@ public:
       std::shared_ptr<QuantumGate> gate, const std::string& funcName);
 
   CUDAKernelManager& genCUDAGatesFromCircuitGraph(
-    const CUDAKernelGenConfig& config,
-    const CircuitGraph& graph, const std::string& graphName);
+      const CUDAKernelGenConfig& config,
+      const CircuitGraph& graph, const std::string& graphName);
     
   void emitPTX(
       int nThreads = 1,
@@ -267,8 +267,7 @@ public:
   void initCUJIT(int nThreads = 1, int verbose = 0);
 
   ///
-  void launchCUDAKernel(
-      void* dData, int nQubits, int kernelIdx);
+  void launchCUDAKernel(void* dData, int nQubits, int kernelIdx);
 
 #endif // CAST_USE_CUDA
 };

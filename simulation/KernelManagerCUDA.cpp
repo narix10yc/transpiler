@@ -221,20 +221,20 @@ void CUDAKernelManager::launchCUDAKernel(
   cuCtxSetCurrent(cuTuple.cuContext);
 
   // This corresponds to 128 threads per block
-  int nThreadsInBits = 7;
+  int blockSizeInNumBits = 7;
 
-  int nThreads = 1 << nThreadsInBits;
+  unsigned blockSize = 1 << blockSizeInNumBits;
   int nGateQubits = _cudaKernels[kernelIdx].gate->nQubits();
-  int nBlocks = 1 << (nQubits - nThreadsInBits - nGateQubits);
+  unsigned gridSize = 1 << (nQubits - blockSizeInNumBits - nGateQubits);
 
   void* cMatPtr = 
     _cudaKernels[kernelIdx].gate->gateMatrix.getConstantMatrix()->data();
   void* kernelParams[] = { &dData, &cMatPtr };
 
   cuLaunchKernel(cuTuple.cuFunction, 
-    nBlocks, 1, 1,  // grid dim
-    nThreads, 1, 1, // block dim
-    0,              // shared mem sizecd
+    gridSize, 1, 1,  // grid dim
+    blockSize, 1, 1, // block dim
+    0,              // shared mem size
     0,              // stream
     kernelParams,  // kernel params
     nullptr         // extra options
