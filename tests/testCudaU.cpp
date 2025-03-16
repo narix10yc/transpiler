@@ -17,7 +17,7 @@ static void f() {
   const auto randomizeSV = [&]() {
     svCUDA0.randomize();
     svCUDA1 = svCUDA0;
-    cudaMemcpy(svCPU.data(), svCUDA0.dData, svCUDA0.sizeInBytes(),
+    cudaMemcpy(svCPU.data(), svCUDA0.dData(), svCUDA0.sizeInBytes(),
       cudaMemcpyDeviceToHost);
   };
 
@@ -53,7 +53,7 @@ static void f() {
     ss << "Apply U1q at " << gates[i]->qubits[0];
     // auto immFuncName = "gateImm_" + std::to_string(i);
     // auto loadFuncName = "gateConstMemSpace_" + std::to_string(i);
-    kernelMgrCUDA.launchCUDAKernel(svCUDA0.dData, svCUDA0.nQubits, i);
+    kernelMgrCUDA.launchCUDAKernel(svCUDA0.dData(), svCUDA0.nQubits(), i);
     // kernelMgr.launchCUDAKernel(sv1.data, sv1.nQubits, i);
     svCPU.applyGate(*gates[i]);
     suite.assertClose(svCUDA0.norm(), 1.0, ss.str() + ": Imm Norm", GET_INFO());

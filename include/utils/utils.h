@@ -69,6 +69,20 @@ std::ostream& printArray(
   return os << "]";
 }
 
+template<typename T>
+std::ostream& printArray(
+    std::ostream& os, std::span<T> arr, const char sep = ',') {
+  if (arr.empty())
+    return os << "[]";
+  auto it = arr.begin();
+  os << "[" << *it;
+  while (++it != arr.end()) {
+    os.put(sep);
+    os << *it;
+  }
+  return os << "]";
+}
+
 template<typename T, typename Printer>
 std::ostream& printArray(
     std::ostream& os, llvm::ArrayRef<T> arr,

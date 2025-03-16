@@ -26,9 +26,9 @@ static void f() {
 
   svCudaF32.randomize();
   svCudaF64.randomize();
-  cudaMemcpy(svCpuF32.data(), svCudaF32.dData, svCudaF32.sizeInBytes(),
+  cudaMemcpy(svCpuF32.data(), svCudaF32.dData(), svCudaF32.sizeInBytes(),
     cudaMemcpyDeviceToHost);
-  cudaMemcpy(svCpuF64.data(), svCudaF64.dData, svCudaF64.sizeInBytes(),
+  cudaMemcpy(svCpuF64.data(), svCudaF64.dData(), svCudaF64.sizeInBytes(),
     cudaMemcpyDeviceToHost);
   suite.assertClose(svCudaF32.norm(), 1.0f, "randomize norm F32", GET_INFO());
   suite.assertClose(svCudaF64.norm(), 1.0, "randomize norm F64", GET_INFO());

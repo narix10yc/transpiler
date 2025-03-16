@@ -235,6 +235,10 @@ public:
       llvm::OptimizationLevel optLevel = llvm::OptimizationLevel::O0,
       int verbose = 0);
 
+  std::string getPTXString(int idx) const {
+    return std::string(_cudaKernels[idx].ptxString.str());
+  }
+
 #ifdef CAST_USE_CUDA
 private:
   /// Every CUDA module will contain exactly one CUDA function. Multiple CUDA

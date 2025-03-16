@@ -35,7 +35,7 @@ int main(int argc, char** argv) {
 
   timeit::Timer timer;
   auto tr = timer.timeit([&]() {
-    cudaKernelMgr.launchCUDAKernel(sv.dData, sv.nQubits, 0);
+    cudaKernelMgr.launchCUDAKernel(sv.dData, sv._nQubits, 0);
     cuCtxSynchronize();
   });
 
