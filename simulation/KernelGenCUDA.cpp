@@ -99,6 +99,55 @@ std::vector<IRMatDataCUDA> getMatDataCUDA(
   return data;
 }
   
+Function* cudaGetFunctionDeclaration(
+    IRBuilder<>& B, Module& M, const std::string& funcName,
+    const CUDAKernelConfi& config, CPUArgs& args) {
+  /*
+      Address space:
+      0: Generic;
+      1: Global;
+      2: Internal Use;
+      3: Shared;
+      4: Constant (often 64KB)
+      5: Local;
+
+      For a reference see https://llvm.org/docs/NVPTXUsage.html#id32
+  */
+  func = Function::Create(
+    FunctionType::get(
+      // returns void
+      B.getVoidTy(),
+      // takes (void*, void*)
+      { B.getPtrTy(), B.getPtrTy()},  
+      // not variadic
+      false
+    ),
+    Function::ExternalLinkage,
+    funcName,
+    *llvmContextModulePair.llvmModule
+  );
+  if (funcName == "")
+    func->setName("ptx_kernel_");
+  else
+    func->setName(funcName);
+
+  args.pSvArg = func->getArg(0);
+  args.pSvArg->setName("p.sv");
+  args.pMatArg = func->getArg(1);
+  args.pMatArg->setName("p.mat");
+
+  // mark this function as a kernel
+  auto* mdString = MDString::get(*llvmContextModulePair.llvmContext, "kernel");
+  auto* mdOne = ConstantAsMetadata::get(B.getInt32(1));
+  auto* kernelMetadata = MDNode::get(
+    *llvmContextModulePair.llvmContext,
+    { ValueAsMetadata::get(func), mdString, mdOne });
+  llvmContextModulePair.llvmModule
+    ->getOrInsertNamedMetadata("nvvm.annotations")
+    ->addOperand(kernelMetadata);
+
+  return func;
+}
 } // anonymous namespace
 
 CUDAKernelManager& CUDAKernelManager::genCUDAGate(
@@ -125,49 +174,6 @@ CUDAKernelManager& CUDAKernelManager::genCUDAGate(
   IRArgsCUDA args;
   { /* function declaration */
 
-  /*
-      Address space:
-      0: Generic;
-      1: Global;
-      2: Internal Use;
-      3: Shared;
-      4: Constant (often 64KB)
-      5: Local;
-
-      For a reference see https://llvm.org/docs/NVPTXUsage.html#id32
-  */
-  func = Function::Create(
-    FunctionType::get(
-      // returns void
-      B.getVoidTy(),
-      // takes (void*, void**)
-      { B.getPtrTy(), B.getPtrTy()},  
-      // not variadic
-      false),
-    Function::ExternalLinkage,
-    funcName,
-    *llvmContextModulePair.llvmModule);
-  if (funcName == "") {
-    std::stringstream ss;
-    ss << "ptx_kernel_";
-    func->setName(ss.str());
-  } else
-    func->setName(funcName);
-
-  args.pSvArg = func->getArg(0);
-  args.pSvArg->setName("p.sv");
-  args.pMatArg = func->getArg(1);
-  args.pMatArg->setName("p.mat");
-
-  // mark this function as a kernel
-  auto* mdString = MDString::get(*llvmContextModulePair.llvmContext, "kernel");
-  auto* mdOne = ConstantAsMetadata::get(B.getInt32(1));
-  auto* kernelMetadata = MDNode::get(
-    *llvmContextModulePair.llvmContext,
-    { ValueAsMetadata::get(func), mdString, mdOne });
-  llvmContextModulePair.llvmModule
-    ->getOrInsertNamedMetadata("nvvm.annotations")
-    ->addOperand(kernelMetadata);
   } // end function declearation
 
   Value* counterV;

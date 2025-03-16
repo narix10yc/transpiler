@@ -7,7 +7,7 @@ if (CAST_USE_CUDA)
 endif()
 
 message("############ Custom Setups ############")
-# Specified by environment variable 'LLVM_ROOT' or 'llvm_root'
+# Find LLVM based on environment variable 'LLVM_ROOT' or 'llvm_root'
 if(DEFINED ENV{llvm_root})
   set(LLVM_ROOT "$ENV{llvm_root}")
 elseif(DEFINED ENV{LLVM_ROOT})
@@ -76,9 +76,6 @@ if (CAST_USE_CUDA)
   # Sometimes clang version is too high and nvcc does not support it
   set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} --allow-unsupported-compiler")
   enable_language(CUDA)
-
-  message(STATUS "CMAKE_CUDA_ARCHITECTURES_ALL: ${CMAKE_CUDA_ARCHITECTURES_ALL}")
-  message(STATUS "CMAKE_CUDA_ARCHITECTURES: ${CMAKE_CUDA_ARCHITECTURES}")
 endif()
 
 include_directories(${LLVM_INCLUDE_DIRS} include)
