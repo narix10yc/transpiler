@@ -169,7 +169,8 @@ CUDAKernelManager& CUDAKernelManager::genCUDAGate(
   Type* scalarTy = (config.precision == 32) ? B.getFloatTy() : B.getDoubleTy();
     
   IRArgsCUDA args;
-  auto* func = cudaGetFunctionDeclaration(B, *llvmContextModulePair.llvmModule, funcName, config, args);
+  auto* func = cudaGetFunctionDeclaration(
+    B, *llvmContextModulePair.llvmModule, funcName, config, args);
 
   Value* counterV;
 
