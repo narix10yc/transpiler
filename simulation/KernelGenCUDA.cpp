@@ -12,7 +12,7 @@
 
 #define DEBUG_TYPE "codegen-cuda"
 #include <llvm/Support/Debug.h>
-// #define LLVM_DEBUG(X) X
+#define LLVM_DEBUG(X) X
 
 using namespace cast;
 using namespace llvm;
@@ -278,12 +278,13 @@ CUDAKernelManager& CUDAKernelManager::genCUDAGate(
       B, matData[0].reVal, reAmps[0], nullptr, matData[0].reKind);
     Value* updatedReAmp1 = internal::genMulAdd(
       B, matData[0].imVal, imAmps[0], nullptr, matData[0].imKind);
+
     Value* updatedImAmp = internal::genMulAdd(
       B, matData[0].reVal, imAmps[0], nullptr, matData[0].reKind);
     updatedImAmp = internal::genMulAdd(
       B, matData[0].imVal, reAmps[0], updatedImAmp, matData[0].imKind);
 
-    for (unsigned c = 0; c < K; ++c) {
+    for (unsigned c = 1; c < K; ++c) {
       auto& md = matData[r * K + c];
       updatedReAmp0 = internal::genMulAdd(
         B, md.reVal, reAmps[c], updatedReAmp0, md.reKind);
@@ -310,6 +311,7 @@ CUDAKernelManager& CUDAKernelManager::genCUDAGate(
   }
 
   B.CreateRetVoid();
+  func->dump();
 
   // append the newly generated kernel
   this->_cudaKernels.emplace_back(
