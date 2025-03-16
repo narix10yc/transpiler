@@ -100,8 +100,8 @@ std::vector<IRMatDataCUDA> getMatDataCUDA(
 }
   
 Function* cudaGetFunctionDeclaration(
-    IRBuilder<>& B, Module& M, const std::string& funcName,
-    const CUDAKernelConfi& config, CPUArgs& args) {
+    IRBuilder<>& B, llvm::Module& M, const std::string& funcName,
+    const CUDAKernelGenConfig& config, IRArgsCUDA& args) {
   /*
       Address space:
       0: Generic;
@@ -113,7 +113,7 @@ Function* cudaGetFunctionDeclaration(
 
       For a reference see https://llvm.org/docs/NVPTXUsage.html#id32
   */
-  func = Function::Create(
+  auto* func = Function::Create(
     FunctionType::get(
       // returns void
       B.getVoidTy(),
@@ -124,7 +124,7 @@ Function* cudaGetFunctionDeclaration(
     ),
     Function::ExternalLinkage,
     funcName,
-    *llvmContextModulePair.llvmModule
+    M
   );
   if (funcName == "")
     func->setName("ptx_kernel_");
@@ -137,14 +137,12 @@ Function* cudaGetFunctionDeclaration(
   args.pMatArg->setName("p.mat");
 
   // mark this function as a kernel
-  auto* mdString = MDString::get(*llvmContextModulePair.llvmContext, "kernel");
+  auto* mdString = MDString::get(M.getContext(), "kernel");
   auto* mdOne = ConstantAsMetadata::get(B.getInt32(1));
   auto* kernelMetadata = MDNode::get(
-    *llvmContextModulePair.llvmContext,
+    M.getContext(),
     { ValueAsMetadata::get(func), mdString, mdOne });
-  llvmContextModulePair.llvmModule
-    ->getOrInsertNamedMetadata("nvvm.annotations")
-    ->addOperand(kernelMetadata);
+  M.getOrInsertNamedMetadata("nvvm.annotations")->addOperand(kernelMetadata);
 
   return func;
 }
@@ -170,11 +168,8 @@ CUDAKernelManager& CUDAKernelManager::genCUDAGate(
   assert(config.precision == 32 || config.precision == 64);
   Type* scalarTy = (config.precision == 32) ? B.getFloatTy() : B.getDoubleTy();
     
-  Function* func;
   IRArgsCUDA args;
-  { /* function declaration */
-
-  } // end function declearation
+  auto* func = cudaGetFunctionDeclaration(B, *llvmContextModulePair.llvmModule, funcName, config, args);
 
   Value* counterV;
 

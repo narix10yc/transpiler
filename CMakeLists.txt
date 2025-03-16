@@ -53,6 +53,7 @@ if (CAST_USE_CUDA)
   find_package(CUDAToolkit REQUIRED)
   message(STATUS "CUDAToolkit_VERSION: ${CUDAToolkit_VERSION}")
   message(STATUS "CUDAToolkit_INCLUDE_DIR: ${CUDAToolkit_INCLUDE_DIR}")
+  message(STATUS "CUDAToolkit_INCLUDE_DIRS: ${CUDAToolkit_INCLUDE_DIRS}")
   message(STATUS "CUDAToolkit_LIBRARY_DIR: ${CUDAToolkit_LIBRARY_DIR}")
 
   # FindCUDAToolkit.cmake does not automatically adjust include and link
@@ -60,15 +61,16 @@ if (CAST_USE_CUDA)
   # Otherwise, enviroment managers such as conda may interfere with the
   # selected CUDAToolkit version.
   include_directories(BEFORE ${CUDAToolkit_INCLUDE_DIR})
+  include_directories(BEFORE ${CUDAToolkit_INCLUDE_DIRS})
   link_directories(BEFORE ${CUDAToolkit_LIBRARY_DIR})
   message(STATUS "CUDAToolkit_rt_LIBRARY: ${CUDAToolkit_rt_LIBRARY}")
   
-  # get_cmake_property(_variableNames VARIABLES)
-  # foreach (_variableName ${_variableNames})
-  #   if (_variableName MATCHES "^CUDAToolkit")
-  #     message(STATUS "${_variableName}=${${_variableName}}")
-  #   endif()
-  # endforeach()
+  get_cmake_property(_variableNames VARIABLES)
+  foreach (_variableName ${_variableNames})
+    if (_variableName MATCHES "^CUDAToolkit")
+      message(STATUS "${_variableName}=${${_variableName}}")
+    endif()
+  endforeach()
 
   message(STATUS "CMAKE_CUDA_ARCHITECTURES: ${CMAKE_CUDA_ARCHITECTURES}")
   set(CMAKE_CUDA_ARCHITECTURES native)
