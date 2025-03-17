@@ -38,10 +38,6 @@ private:
   // host data
   ScalarType* _hData;
 
-  enum SyncState {
-    UnInited, Synced, DeviceIsNewer
-  };
-  SyncState syncState;
   // cuResult is for CUDA Driver API calls
   mutable CUresult cuResult;
   // cudaResult is for CUDA Runtime API calls
@@ -67,7 +63,6 @@ private:
 public:
   StatevectorCUDA(int nQubits)
   : _nQubits(nQubits), _dData(nullptr), _hData(nullptr)
-  , syncState(UnInited)
   , cuResult(CUDA_SUCCESS), cudaResult(cudaSuccess) {}
 
   ~StatevectorCUDA() {
@@ -102,6 +97,8 @@ public:
 
   void randomize();
 
+  // This method will call \c cudaDeviceSynchronize(), copy device data (if 
+  // exists) to host data, and call \c cudaDeviceSynchronize() again.
   void sync();
 
   void clearHostData() { if (_hData != nullptr) freeHostData(); }

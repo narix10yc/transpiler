@@ -12,7 +12,7 @@
 
 #define DEBUG_TYPE "codegen-cuda"
 #include <llvm/Support/Debug.h>
-#define LLVM_DEBUG(X) X
+// #define LLVM_DEBUG(X) X
 
 using namespace cast;
 using namespace llvm;
@@ -78,7 +78,9 @@ std::vector<IRMatDataCUDA> getMatDataCUDA(
       data[i].reKind = SK_MinusOne;
     else if (config.matrixLoadMode == CUDAKernelGenConfig::UseMatImmValues) {
       data[i].reKind = SK_ImmValue;
-      data[i].reVal = ConstantFP::get(B.getContext(), APFloat(real));
+      data[i].reVal = ConstantFP::get(B.getContext(), 
+        (config.precision == 32) ? APFloat(static_cast<float>(real))
+                                 : APFloat(static_cast<double>(real)));
     }
     else
       data[i].reKind = SK_General;
@@ -91,7 +93,9 @@ std::vector<IRMatDataCUDA> getMatDataCUDA(
       data[i].imKind = SK_MinusOne;
     else if (config.matrixLoadMode == CUDAKernelGenConfig::UseMatImmValues) {
       data[i].imKind = SK_ImmValue;
-      data[i].imVal = ConstantFP::get(B.getContext(), APFloat(imag));
+      data[i].imVal = ConstantFP::get(B.getContext(),
+        (config.precision == 32) ? APFloat(static_cast<float>(imag))
+                                 : APFloat(static_cast<double>(imag)));
     }
     else
       data[i].imKind = SK_General;
@@ -99,7 +103,7 @@ std::vector<IRMatDataCUDA> getMatDataCUDA(
   return data;
 }
   
-Function* cudaGetFunctionDeclaration(
+Function* getFunctionDeclarationCUDA(
     IRBuilder<>& B, llvm::Module& M, const std::string& funcName,
     const CUDAKernelGenConfig& config, IRArgsCUDA& args) {
   /*
@@ -146,6 +150,26 @@ Function* cudaGetFunctionDeclaration(
 
   return func;
 }
+
+Value* getGlobalTidCUDA(IRBuilder<>& B) {
+  // thread index
+  auto* tidV = B.CreateIntrinsic(
+    B.getInt32Ty(), Intrinsic::nvvm_read_ptx_sreg_tid_x,
+    {}, nullptr, "tid");
+  // gridSize (number of threads in each block)
+  auto* gridSizeV = B.CreateIntrinsic(
+    B.getInt32Ty(), Intrinsic::nvvm_read_ptx_sreg_ntid_x,
+    {}, nullptr, "blockSize");
+  // block index
+  auto* bidV = B.CreateIntrinsic(
+    B.getInt32Ty(), Intrinsic::nvvm_read_ptx_sreg_ctaid_x,
+    {}, nullptr, "bid");
+  auto* globalTidV = B.CreateMul(bidV, gridSizeV);
+  globalTidV = B.CreateAdd(globalTidV, tidV, "counter.i32");
+  globalTidV = B.CreateIntCast(globalTidV, B.getInt64Ty(), true, "global.tid");
+
+  return globalTidV;
+}
 } // anonymous namespace
 
 CUDAKernelManager& CUDAKernelManager::genCUDAGate(
@@ -169,28 +193,15 @@ CUDAKernelManager& CUDAKernelManager::genCUDAGate(
   Type* scalarTy = (config.precision == 32) ? B.getFloatTy() : B.getDoubleTy();
     
   IRArgsCUDA args;
-  auto* func = cudaGetFunctionDeclaration(
+  auto* func = getFunctionDeclarationCUDA(
     B, *llvmContextModulePair.llvmModule, funcName, config, args);
-
-  Value* counterV;
 
   BasicBlock* entryBB = BasicBlock::Create(
     *llvmContextModulePair.llvmContext, "entry", func);
   B.SetInsertPoint(entryBB);
-  // generate thread index
-  auto* threadIdx = B.CreateIntrinsic(
-    B.getInt32Ty(), Intrinsic::nvvm_read_ptx_sreg_tid_x,
-    {}, nullptr, "threadIdx");
-  auto* nthreads = B.CreateIntrinsic(
-    B.getInt32Ty(), Intrinsic::nvvm_read_ptx_sreg_ntid_x,
-    {}, nullptr, "nthreads");
-  auto* blockIdx = B.CreateIntrinsic(
-    B.getInt32Ty(), Intrinsic::nvvm_read_ptx_sreg_ctaid_x,
-    {}, nullptr, "blockIdx");
-  counterV = B.CreateMul(blockIdx, nthreads);
-  counterV = B.CreateAdd(counterV, threadIdx, "counter.i32");
-  counterV = B.CreateIntCast(
-    counterV, B.getInt64Ty(), true, "global.thread.idx");
+  // get global tid
+  auto* counterV = getGlobalTidCUDA(B);
+
   /*
   Example: with target qubits 2, 4, 5
   counter:   xxxhgfedcba
@@ -198,17 +209,14 @@ CUDAKernelManager& CUDAKernelManager::genCUDAGate(
   idxStart:  hgfed00c0ba (in unit of <2 x scalarTy>)
 
   hgfed00c0ba = (xxxhgfedcba & 00000000011) << 0
-            + (xxxhgfedcba & 00000000100) << 1
-            + (xxxhgfedcba & 11111111000) << 3
+              + (xxxhgfedcba & 00000000100) << 1
+              + (xxxhgfedcba & 11111111000) << 3
 
   We build this segment by segment. For [2, 4, 5], there are 3 segments:
     [0, 2),      [3, 4),      [5, ),
   corresponding to masks
     00000000011, 00000000100, 11111111000
   */
-
-  // utils::printVector(qubits, std::cerr << "target qubits: ") << "\n";
-
   // the pointer of sv start in this thread
   auto matData = getMatDataCUDA(B, gate->gateMatrix, config);
   Value* svPtrV;
@@ -246,46 +254,56 @@ CUDAKernelManager& CUDAKernelManager::genCUDAGate(
   svPtrV = B.CreateGEP(scalarTy, args.pSvArg, idxStartV, "sv.ptr");
   }
 
-  // load amplitude set
+  // load amplitudes. For a k-qubit gate (with K = 1 << K), we local K real amps 
+  // and K imag amplitudes. So every iteration updates 2*K scalar elements.
   std::vector<Value*> reAmpPtrs(K), imAmpPtrs(K), reAmps(K), imAmps(K);
   for (uint64_t i = 0; i < K; i++) {
-  uint64_t delta = 0ULL;
-  for (int b = 0; b < k; b++) {
-    if (i & (1 << b))
-      delta |= (1 << gate->qubits[b]);
-  }
-  // std::cerr << "amp idx " << utils::as0b(i, k) << ", delta = " <<
-  // utils::as0b(delta, 32) << "\n";
+    uint64_t delta = 0ULL;
+    for (int b = 0; b < k; b++) {
+      if (i & (1 << b))
+        delta |= (1 << gate->qubits[b]);
+    }
+    // std::cerr << "amp idx " << utils::as0b(i, k) << ", delta = " <<
+    // utils::as0b(delta, 32) << "\n";
 
-  reAmpPtrs[i] = B.CreateConstGEP1_64(
-    scalarTy, svPtrV, 2 * delta, "amp.re.ptr." + std::to_string(i));
-  reAmps[i] = B.CreateLoad(
-    scalarTy, reAmpPtrs[i], "amp.re." + std::to_string(i));
-  imAmpPtrs[i] = B.CreateConstGEP1_64(
-    scalarTy, svPtrV, 2 * delta + 1, "amp.im.ptr." + std::to_string(i));
-  imAmps[i] = B.CreateLoad(
-    scalarTy, imAmpPtrs[i], "amp.im." + std::to_string(i));
+    reAmpPtrs[i] = B.CreateConstGEP1_64(
+      scalarTy, svPtrV, 2 * delta, "amp.re.ptr." + std::to_string(i));
+    reAmps[i] = B.CreateLoad(
+      scalarTy, reAmpPtrs[i], "amp.re." + std::to_string(i));
+    imAmpPtrs[i] = B.CreateConstGEP1_64(
+      scalarTy, svPtrV, 2 * delta + 1, "amp.im.ptr." + std::to_string(i));
+    imAmps[i] = B.CreateLoad(
+      scalarTy, imAmpPtrs[i], "amp.im." + std::to_string(i));
   }
 
   const auto* gateCMat = gate->gateMatrix.getConstantMatrix();
   assert(gateCMat && "Only supporting constant matrix for now");
+
+  // This loop updates reAmpPtrs[r] and imAmpPtrs[r].
+  // Calculated by the complex inner product of the r-th row of matrix and 
+  // the complex vector (reAmps + i * imAmps)
   for (unsigned r = 0; r < K; ++r) {
     // matrix-vector multiplication
-    // updatedReAmp = sum(reAmps_i * reMats_i) - sum(imAmps_i * imMats_i)
-    // updatedImAmp = sum(reAmps_i * imMats_i) + sum(imAmps_i * reMats_i)
+    // updatedReAmp = sum(matRe_i * ampRe_i) - sum(matIm_i * ampIm_i)
+    // updatedImAmp = sum(matRe_i * ampIm_i) + sum(matIm_i * ampRe_i)
 
+    auto& md = matData[r * K];
+    // updatedReAmp0 collects sum(matRe_i * ampRe_i)
     Value* updatedReAmp0 = internal::genMulAdd(
-      B, matData[0].reVal, reAmps[0], nullptr, matData[0].reKind);
-    Value* updatedReAmp1 = internal::genMulAdd(
-      B, matData[0].imVal, imAmps[0], nullptr, matData[0].imKind);
+      B, md.reVal, reAmps[0], nullptr, md.reKind);
 
+    // updatedReAmp1 collects sum(matIm_i * ampIm_i)
+    Value* updatedReAmp1 = internal::genMulAdd(
+      B, md.imVal, imAmps[0], nullptr, md.imKind);
+
+    // updatedImAmp equals to sum(matRe_i * ampIm_i) + sum(matIm_i * ampRe_i)
     Value* updatedImAmp = internal::genMulAdd(
-      B, matData[0].reVal, imAmps[0], nullptr, matData[0].reKind);
+      B, md.reVal, imAmps[0], nullptr, md.reKind);
     updatedImAmp = internal::genMulAdd(
-      B, matData[0].imVal, reAmps[0], updatedImAmp, matData[0].imKind);
+      B, md.imVal, reAmps[0], updatedImAmp, md.imKind);
 
     for (unsigned c = 1; c < K; ++c) {
-      auto& md = matData[r * K + c];
+      md = matData[r * K + c];
       updatedReAmp0 = internal::genMulAdd(
         B, md.reVal, reAmps[c], updatedReAmp0, md.reKind);
       updatedReAmp1 = internal::genMulAdd(
@@ -311,7 +329,7 @@ CUDAKernelManager& CUDAKernelManager::genCUDAGate(
   }
 
   B.CreateRetVoid();
-  func->dump();
+  LLVM_DEBUG(func->dump());
 
   // append the newly generated kernel
   this->_cudaKernels.emplace_back(

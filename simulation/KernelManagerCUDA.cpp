@@ -19,7 +19,7 @@
 #include "utils/utils.h"
 #include "utils/Formats.h"
 
-#define DEBUG_TYPE "codegen-cuda"
+#define DEBUG_TYPE "kernel-mgr-cuda"
 #include <llvm/Support/Debug.h>
 // #define LLVM_DEBUG(X) X
 
@@ -221,17 +221,26 @@ void CUDAKernelManager::launchCUDAKernel(
   cuCtxSetCurrent(cuTuple.cuContext);
 
   // This corresponds to 128 threads per block
-  int blockSizeInNumBits = 7;
+  int blockSizeInNumBits = 5;
+  int nGateQubits = _cudaKernels[kernelIdx].gate->nQubits();
+  int gridSizeInNumBits = nQubits - blockSizeInNumBits - nGateQubits;
+  assert(gridSizeInNumBits >= 0 && "gridSize must be positive");
 
   unsigned blockSize = 1 << blockSizeInNumBits;
-  int nGateQubits = _cudaKernels[kernelIdx].gate->nQubits();
   unsigned gridSize = 1 << (nQubits - blockSizeInNumBits - nGateQubits);
 
   void* cMatPtr = 
     _cudaKernels[kernelIdx].gate->gateMatrix.getConstantMatrix()->data();
+  CUdeviceptr dArrDevicePtr = (CUdeviceptr)dData;
   void* kernelParams[] = { &dData, &cMatPtr };
 
-  cuLaunchKernel(cuTuple.cuFunction, 
+  std::cerr << "Launching kernel <<<" << gridSize << ", " << blockSize << ">>>" << "\n";
+  std::cerr << "Kernel parameter " << (kernelParams[0])
+            << ", dArrDevicePtr = " << (void*)dArrDevicePtr
+            << ", &dArrDevicePtr = " << &dArrDevicePtr << "\n";
+
+  auto cuResult = cuLaunchKernel(
+    cuTuple.cuFunction, 
     gridSize, 1, 1,  // grid dim
     blockSize, 1, 1, // block dim
     0,              // shared mem size
@@ -239,6 +248,15 @@ void CUDAKernelManager::launchCUDAKernel(
     kernelParams,  // kernel params
     nullptr         // extra options
   );
+  if (cuResult != CUDA_SUCCESS) {
+    std::cerr << RED("[CUDA Driver Error]:") << "Failed to launch kernel"
+              << "<<<" << gridSize << ", " << blockSize << ">>>. Error code: "
+              << cuResult << "\n"; 
+  }
+  cuResult = cuCtxSynchronize();
+  if (cuResult != CUDA_SUCCESS) {
+    std::cerr << RED("[CUDA Driver Error]:") << "Failed to call cuCtxSynchronize()\n";
+  }
 }
 
 

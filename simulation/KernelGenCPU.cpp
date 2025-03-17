@@ -289,14 +289,14 @@ CPUKernelManager& CPUKernelManager::genCPUGate(
       tmpCounterV = B.CreateShl(tmpCounterV, (qIdx - 1), "tmp.taskid");
       idxStartV = B.CreateAdd(idxStartV, tmpCounterV, "tmp.idx.begin");
       LLVM_DEBUG(
-        std::cerr << "  (taskID & " << utils::as0b(mask, highestQ) << ") << "
+        std::cerr << "  (taskID & " << utils::fmt_0b(mask, highestQ) << ") << "
                   << (qIdx - 1) << "\n";
       );
       mask = 0ULL;
     }
     mask = ~((1ULL << (highestQ - sepBit - hk + 1)) - 1);
     LLVM_DEBUG(
-      std::cerr << "  (taskID & " << utils::as0b(mask, 16) << ") << "
+      std::cerr << "  (taskID & " << utils::fmt_0b(mask, 16) << ") << "
                 << hk << "\n";
     );
 
@@ -344,11 +344,11 @@ CPUKernelManager& CPUKernelManager::genCPUGate(
   LLVM_DEBUG(
     std::cerr << "- reSplitMasks: [";
     for (const auto& e : reSplitMasks)
-      std::cerr << utils::as0b(e, sepBit + 1) << ",";
+      std::cerr << utils::fmt_0b(e, sepBit + 1) << ",";
     std::cerr << "]\n";
     std::cerr << "- imSplitMasks: [";
     for (const auto& e : imSplitMasks)
-      std::cerr << utils::as0b(e, sepBit + 1) << ",";
+      std::cerr << utils::fmt_0b(e, sepBit + 1) << ",";
     std::cerr << "]\n";
   );
   } // end init [re/im]SplitMasks
@@ -370,7 +370,7 @@ CPUKernelManager& CPUKernelManager::genCPUGate(
     idxShift >>= sepBit;
     LLVM_DEBUG(
       std::cerr << "hi = " << hi << ": idxShift = "
-                << utils::as0b(idxShift, hiBits.empty() ? 1 : hiBits.back())
+                << utils::fmt_0b(idxShift, hiBits.empty() ? 1 : hiBits.back())
                 << "\n";
     );
     pSvs[hi] = B.CreateConstGEP1_64(

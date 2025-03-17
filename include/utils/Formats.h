@@ -3,20 +3,21 @@
 
 #include <iostream>
 #include <cstdlib>
+#include <span>
 
 namespace utils {
 
-// as0b: helper class to print binary of an integer
-// uses: 'std::cerr << as0b(123, 12)' to print 12 LSB of integer 123.
-class as0b {
+// fmt_0b: helper class to print binary of an integer
+// uses: 'std::cerr << fmt_0b(123, 12)' to print 12 LSB of integer 123.
+class fmt_0b {
   uint64_t v;
   int nbits;
 public:
-  as0b(uint64_t v, int nbits) : v(v), nbits(nbits) {
+  fmt_0b(uint64_t v, int nbits) : v(v), nbits(nbits) {
     assert(nbits >= 0 && nbits <= 64);
   }
 
-  friend std::ostream& operator<<(std::ostream& os, const as0b& n) {
+  friend std::ostream& operator<<(std::ostream& os, const fmt_0b& n) {
     for (int i = n.nbits - 1; i >= 0; --i)
       os.put((n.v & (1 << i)) ? '1' : '0');
     return os;
@@ -97,6 +98,28 @@ public:
   }
 };
 
+template<typename T>
+class fmt_span {
+  std::span<T> s;
+  char separator;
+public:
+  fmt_span(std::span<T> s, char separator = ',') : s(s), separator(separator) {}
+
+  friend std::ostream& operator<<(std::ostream& os, const fmt_span& fmt) {
+    auto size = fmt.s.size();
+    if (size == 0)
+      return os << "[]";
+    if (size == 1)
+      return os << "[" << fmt.s[0] << "]";
+    os << "[" << fmt.s[0];
+    for (size_t i = 1; i < size; ++i) {
+      os.put(fmt.separator);
+      os << fmt.s[i];
+    }
+    return os << "]";
+  }
+
+};
 
 } // namespace utils
 

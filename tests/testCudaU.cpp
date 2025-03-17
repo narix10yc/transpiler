@@ -45,18 +45,22 @@ static void f() {
   //     cudaGenConfig, gates[q], "gateConstMemSpace_" + std::to_string(q));
   // }
 
-  kernelMgrCUDA.emitPTX(2, llvm::OptimizationLevel::O1, /* verbose */ 1);
-  kernelMgrCUDA.initCUJIT(2, /* verbose */ 1);
+  kernelMgrCUDA.emitPTX(2, llvm::OptimizationLevel::O1, /* verbose */ 0);
+  kernelMgrCUDA.initCUJIT(2, /* verbose */ 0);
   for (unsigned i = 0; i < nQubits; i++) {
     randomizeSV();
     std::stringstream ss;
-    ss << "Apply U1q at " << gates[i]->qubits[0];
+    auto qubit = gates[i]->qubits[0];
+    ss << "Apply U1q at " << qubit << ": ";
     // auto immFuncName = "gateImm_" + std::to_string(i);
     // auto loadFuncName = "gateConstMemSpace_" + std::to_string(i);
     kernelMgrCUDA.launchCUDAKernel(svCUDA0.dData(), svCUDA0.nQubits(), i);
-    // kernelMgr.launchCUDAKernel(sv1.data, sv1.nQubits, i);
+    suite.assertClose(svCUDA0.norm(), 1.0,
+      ss.str() + "CUDA SV norm equals to 1", GET_INFO());
+      
     svCPU.applyGate(*gates[i]);
-    suite.assertClose(svCUDA0.norm(), 1.0, ss.str() + ": Imm Norm", GET_INFO());
+    suite.assertClose(svCUDA0.prob(qubit), svCPU.prob(qubit),
+      ss.str() + "CUDA and CPU SV prob match", GET_INFO());
     // suite.assertClose(sv1.norm(), 1.0, ss.str() + ": Load Norm", GET_INFO());
     // suite.assertClose(utils::fidelity(sv0, sv2), 1.0,
     //   ss.str() + ": Imm Fidelity", GET_INFO());

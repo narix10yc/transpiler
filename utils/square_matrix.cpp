@@ -19,8 +19,9 @@ utils::randomUnitaryMatrix(unsigned edgeSize) {
     // project
     for (unsigned rr = 0; rr < r; rr++) {
       auto coef = utils::inner_product(matrix.row(rr), matrix.row(r), edgeSize);
-      for (unsigned c = 0; c < edgeSize; c++)
-        matrix(r, c) -= coef * matrix(rr, c);
+      // subtract row r by coef * row rr
+      for (unsigned cc = 0; cc < edgeSize; cc++)
+        matrix(r, cc) -= coef * matrix(rr, cc);
       assert(std::abs(utils::inner_product(matrix.row(r), matrix.row(rr), edgeSize)) < 1e-8);
     }
 
