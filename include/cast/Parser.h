@@ -7,6 +7,7 @@
 #include <complex>
 #include <fstream>
 #include <iostream>
+#include <string_view>
 
 #include "utils/iocolor.h"
 
@@ -63,7 +64,9 @@ enum TokenKind : int {
   tk_Any = -1001,
 };
 
-std::string getNameOfTokenKind(TokenKind);
+namespace internal {
+  std::string getNameOfTokenKind(TokenKind);
+} // namespace internal
 
 class Token {
 public:
@@ -97,10 +100,39 @@ public:
     return std::stoi(std::string(memRefBegin, memRefEnd));
   }
 
+  std::string_view toStringView() const {
+    assert(memRefBegin < memRefEnd);
+    return std::string_view(memRefBegin, memRefEnd);
+  }
+
+  std::string toString() const {
+    assert(memRefBegin < memRefEnd);
+    return std::string(memRefBegin, memRefEnd);
+  }
+
   size_t length() const { return memRefEnd - memRefBegin; }
 };
 
 class Lexer {
+private:
+  /// lex a token with a single char.
+  /// After this function returns, curPtr always points to the next char after 
+  /// \c tok
+  void lexOneChar(Token& tok, TokenKind tk) {
+    tok = Token(tk, curPtr, curPtr + 1);
+    ++curPtr;
+  }
+  
+  /// lex a token with possibly two chars. If *(curPtr + 1) matches snd, \c tok 
+  /// is assigned with TokenKind \c tk2. Otherwise, \c tok is assigned with 
+  /// TokenKind \c tk1.
+  /// When calling this function, curPtr should point to the first char of this 
+  /// token. For example, lexTwoChar(tok, '=', tk_Less, tk_LessEqual) should be
+  /// called when curPtr points to '<', and it conditionally checks if curPtr+1
+  /// points to '='.
+  /// After this function returns, curPtr always points to the next char after 
+  /// \c tok
+  void lexTwoChar(Token& tok, char snd, TokenKind tk1, TokenKind tk2);
 public:
   const char* bufferBegin;
   const char* bufferEnd;
@@ -114,14 +146,18 @@ public:
   explicit Lexer(const char* fileName);
 
   Lexer(const Lexer&) = delete;
+  Lexer(Lexer&&) = delete;
+
   Lexer& operator=(const Lexer&) = delete;
+  Lexer& operator=(Lexer&&) = delete;
+  
   ~Lexer() {
     delete[] bufferBegin;
   }
 
-  Lexer(Lexer&&) = delete;
-  Lexer& operator=(Lexer&&) = delete;
 
+  /// After this function returns, curPtr always points to the next char after 
+  /// \c tok
   void lex(Token& tok);
 
   void skipLine();
@@ -175,7 +211,8 @@ public:
     advance();
   }
 
-  /// Advance if curToken matches @p kind; Otherwise nothing happens
+  /// If curToken matches \c kind, calls \c advance() and returns true;
+  /// Otherwise nothing happens and returns false
   bool optionalAdvance(TokenKind kind) {
     if (curToken.is(kind)) {
       advance();
@@ -184,23 +221,8 @@ public:
     return false;
   }
 
-  /// Advance such that curToken must have \p kind. Otherwise, error is thrown
-  void requiredAdvance(TokenKind kind, const char* msg = nullptr) {
-    if (curToken.is(kind)) {
-      advance();
-      return;
-    }
-
-    auto& os = logErr();
-    if (msg)
-      os << msg;
-    else
-      os << "Require TokenKind '" << getNameOfTokenKind(kind) << "'";
-    os << " (Got '" << getNameOfTokenKind(curToken.kind) << "')\n";
-    printLocation(os);
-    failAndExit();
-  }
-
+  /// Advance such that curToken must have \p kind. Otherwise, terminate the 
+  /// program with error messages
   void requireCurTokenIs(TokenKind kind, const char* msg = nullptr) const {
     if (curToken.is(kind))
       return;
@@ -208,8 +230,8 @@ public:
     if (msg)
       os << msg;
     else
-      os << "Require curToken is '" << getNameOfTokenKind(kind) << "'";
-    os << " (Got '" << getNameOfTokenKind(curToken.kind) << "')\n";
+      os << "Requires a '" << internal::getNameOfTokenKind(kind) << "' token";
+    os << " (Got '" << internal::getNameOfTokenKind(curToken.kind) << "')\n";
     printLocation(os);
     failAndExit();
   }

@@ -47,7 +47,7 @@ std::ostream& MeasureStmt::print(std::ostream& os) const {
 
 std::ostream& QuantumCircuit::print(std::ostream& os) const {
   os << "circuit<nQubits=" << nQubits
-     << ", nparams=" << nParams << "> " << name << " {\n";
+     << ", nParams=" << nParams << "> " << name << " {\n";
   for (const auto& s : chains)
     s->print(os);
 
@@ -117,7 +117,6 @@ void QuantumCircuit::addChainStmt(std::unique_ptr<GateChainStmt> chain) {
   }
   chains.emplace_back(std::move(chain));
 }
-
 
 std::shared_ptr<QuantumGate> QuantumCircuit::gateApplyToQuantumGate(
     const GateApplyStmt& gaStmt) const {

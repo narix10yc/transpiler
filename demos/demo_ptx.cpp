@@ -30,12 +30,12 @@ int main(int argc, char** argv) {
     cudaKernelMgr.initCUJIT(3, /* verbose */ 1);
   }, "CUDA JIT Initialization");
 
-  utils::StatevectorCUDA<double> sv(28);
-  sv.initialize();
+  utils::StatevectorCUDA<double> svCUDA(28);
+  svCUDA.initialize();
 
   timeit::Timer timer;
   auto tr = timer.timeit([&]() {
-    cudaKernelMgr.launchCUDAKernel(sv.dData, sv._nQubits, 0);
+    cudaKernelMgr.launchCUDAKernel(svCUDA.dData(), svCUDA.nQubits(), 0);
     cuCtxSynchronize();
   });
 

@@ -9,8 +9,10 @@
 
 #include <functional>
 
+/*
+  TODO: This implementation is known to have many issues. Use with caution...
+*/
 namespace utils::cl {
-
   void ParseCommandLineArguments(int argc, char** argv);
 
   void DisplayArguments();

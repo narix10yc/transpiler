@@ -9,16 +9,15 @@ namespace fs = std::filesystem;
 static const auto& ArgInputFile =
   utils::cl::registerArgument<std::string>("input-name")
     .desc("input file/directory name")
-    .setPositional();
+    .setArgumentPositional();
+
 static const auto& ArgOutputFile =
   utils::cl::registerArgument<std::string>("o")
-    .desc("output file name")
-    .setPrefix();
+    .desc("output file name");
 
 static const auto& ArgIsDirectory =
   utils::cl::registerArgument<bool>("r")
     .desc("recursive").init(false);
-
 
 enum ConversionResult {
   ResultSuccess, ErrCannotOpenInput, ErrCannotOpenOutput

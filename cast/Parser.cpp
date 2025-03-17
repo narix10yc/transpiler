@@ -8,14 +8,14 @@ using namespace cast;
 using namespace cast::ast;
 using namespace IOColor;
 
-std::string cast::getNameOfTokenKind(TokenKind kind) {
+std::string cast::internal::getNameOfTokenKind(TokenKind kind) {
   switch (kind) {
   case tk_Eof:
     return "EoF";
   case tk_LineFeed:
     return "\\n";
   case tk_Numeric:
-    return "Num";
+    return "Numeric";
   case tk_Identifier:
     return "Identifier";
 
@@ -27,6 +27,15 @@ std::string cast::getNameOfTokenKind(TokenKind kind) {
     return "{";
   case tk_R_CurlyBracket:
     return "}";
+
+  case tk_Less:
+    return "<";
+  case tk_Greater:
+    return ">";
+  case tk_LessEqual:
+    return "<=";
+  case tk_GreaterEqual:
+    return ">=";
 
   case tk_Comma:
     return ",";
@@ -140,82 +149,96 @@ std::ostream& Token::print(std::ostream& os) const {
   return os << IOColor::RESET << ")";
 }
 
-void Lexer::lex(Token& tok) {
-  const auto assignTok = [&](TokenKind kind, int nchars = 1) {
-    tok = Token(kind, curPtr, curPtr + nchars);
-  };
+void Lexer::lexTwoChar(Token& tok, char snd, TokenKind tk1, TokenKind tk2) {
+  if (*(curPtr + 1) == snd) {
+    tok = Token(tk2, curPtr, curPtr + 2);
+    curPtr += 2;
+    return;
+  }
+  tok = Token(tk1, curPtr, curPtr + 1);
+  ++curPtr;
+}
 
+void Lexer::lex(Token& tok) {
   if (curPtr >= bufferEnd) {
-    assignTok(tk_Eof);
+    lexOneChar(tok, tk_Eof);
+    --curPtr; // keep curPtr to its current position
     return;
   }
 
-  char c = *curPtr++;
+  char c = *curPtr;
   while (c == ' ' || c == '\r')
-    c = *curPtr++;
+    c = *(++curPtr);
 
   switch (c) {
   case '\0':
-    assignTok(tk_Eof);
+    lexOneChar(tok, tk_Eof);
     return;
   case '\n': {
-    assignTok(tk_LineFeed);
+    lexOneChar(tok, tk_LineFeed);
     ++line;
     lineBegin = curPtr;
     return;
   }
 
   case '(':
-    assignTok(tk_L_RoundBracket);
+    lexOneChar(tok, tk_L_RoundBracket);
     return;
   case ')':
-    assignTok(tk_R_RoundBracket);
+    lexOneChar(tok, tk_R_RoundBracket);
     return;
   case '[':
-    assignTok(tk_L_SquareBracket);
+    lexOneChar(tok, tk_L_SquareBracket);
     return;
   case ']':
-    assignTok(tk_R_SquareBracket);
+    lexOneChar(tok, tk_R_SquareBracket);
     return;
   case '{':
-    assignTok(tk_L_CurlyBracket);
+    lexOneChar(tok, tk_L_CurlyBracket);
     return;
   case '}':
-    assignTok(tk_R_CurlyBracket);
-    return;
-  case '<':
-    assignTok(tk_Less);
-    return;
-  case '>':
-    assignTok(tk_Greater);
+    lexOneChar(tok, tk_R_CurlyBracket);
     return;
 
+  // '<' or '<='
+  case '<': {
+    lexTwoChar(tok, '=', tk_Less, tk_LessEqual);
+    return;
+  }
+
+  // '>' or '>='
+  case '>': {
+    lexTwoChar(tok, '=', tk_Greater, tk_GreaterEqual);
+    return;
+  }
+
+  // '=' or '=='
+  case '=': {
+    lexTwoChar(tok, '=', tk_Equal, tk_EqualEqual);
+    return;
+  }
+
   case ',':
-    assignTok(tk_Comma);
+    lexOneChar(tok, tk_Comma);
     return;
   case ';':
-    assignTok(tk_Semicolon);
+    lexOneChar(tok, tk_Semicolon);
     return;
   case '%':
-    assignTok(tk_Percent);
+    lexOneChar(tok, tk_Percent);
     return;
   case '@':
-    assignTok(tk_AtSymbol);
+    lexOneChar(tok, tk_AtSymbol);
     return;
 
   // '*' or '**'
   case '*': {
-    if (*curPtr++ == '*')
-      assignTok(tk_Pow, 2);
-    else {
-      --curPtr;
-      assignTok(tk_Mul);
-    }
+    lexTwoChar(tok, '*', tk_Mul, tk_Pow);
     return;
   }
 
   default:
-    auto* memRefBegin = --curPtr;
+    auto* memRefBegin = curPtr;
     if (c == '-' || ('0' <= c && c <= '9')) {
       c = *(++curPtr);
       while (c == 'e' || c == '+' || c == '-' || c == '.' ||
@@ -224,7 +247,14 @@ void Lexer::lex(Token& tok) {
       tok = Token(tk_Numeric, memRefBegin, curPtr);
       return;
     }
-    assert(std::isalpha(c) && "Can only parse identifiers now");
+
+    if (!std::isalpha(c)) {
+      auto lineInfo = getCurLineInfo();
+      std::cerr << RED("[Lexer Error]: ") << "Unknown char "
+                << static_cast<int>(c) << " at line " << lineInfo.line
+                << ". This is likely not implemented yet.\n";
+      assert(false);
+    }
     c = *(++curPtr);
     while (c == '_' || std::isalnum(c))
       c = *(++curPtr);
@@ -276,7 +306,8 @@ std::complex<double> Parser::parseComplexNumber() {
     double im = multiple * curToken.toDouble();
     advance(tk_Numeric);
 
-    requiredAdvance(tk_R_RoundBracket);
+    requireCurTokenIs(tk_R_RoundBracket);
+    advance(tk_R_RoundBracket);
     return {re, im};
   }
 
@@ -338,7 +369,8 @@ GateApplyStmt Parser::parseGateApply() {
         optionalAdvance(tk_Comma);
       }
     }
-    requiredAdvance(tk_R_RoundBracket);
+    requireCurTokenIs(tk_R_RoundBracket);
+    advance(tk_R_RoundBracket);
   }
 
   // target qubits
@@ -367,32 +399,50 @@ GateChainStmt Parser::parseGateChain() {
       return stmt;
     if (optionalAdvance(tk_AtSymbol))
       continue;
-    logErr() << "Unexpected token '" << getNameOfTokenKind(curToken.kind)
+    logErr() << "Unexpected token '"
+             << internal::getNameOfTokenKind(curToken.kind)
              << "' Did you forget ';'?\n";
     return stmt;
   }
 }
 
 QuantumCircuit Parser::parseQuantumCircuit() {
-  requireCurTokenIs(tk_Identifier);
-  if (std::string(curToken.memRefBegin, curToken.memRefEnd) != "circuit") {
+  if (curToken.isNot(tk_Identifier) || curToken.toStringView() != "circuit") {
     printLocation(
-        logErr() << "Expect 'circuit' keyword in parsing QuantumCircuit\n");
+      logErr() << "Expect 'circuit' keyword in parsing QuantumCircuit\n");
     failAndExit();
   }
   advance(tk_Identifier);
 
+  QuantumCircuit circuit;
   if (optionalAdvance(tk_Less)) {
-    assert(false && "Not Implemented");
-    requiredAdvance(tk_Greater);
+    if (curToken.is(tk_Identifier) && curToken.toStringView() == "nQubits") {
+      advance(tk_Identifier);
+      advance(tk_Equal);
+      requireCurTokenIs(tk_Numeric, "nQubits should be an integer");
+      circuit.nQubits = curToken.toInt();
+      advance(tk_Numeric);
+      optionalAdvance(tk_Comma);
+    }
+    if (curToken.is(tk_Identifier) && curToken.toStringView() == "nParams") {
+      advance(tk_Identifier);
+      advance(tk_Equal);
+      requireCurTokenIs(tk_Numeric, "nParams should be an integer");
+      circuit.nParams = curToken.toInt();
+      advance(tk_Numeric);
+      optionalAdvance(tk_Comma);
+    }
+    requireCurTokenIs(tk_Greater);
+    advance(tk_Greater);
   }
 
   requireCurTokenIs(tk_Identifier, "Expecting a name");
-  QuantumCircuit circuit(std::string(curToken.memRefBegin, curToken.memRefEnd));
+  circuit.name = curToken.toString();
   advance(tk_Identifier);
   skipLineBreaks();
 
-  requiredAdvance(tk_L_CurlyBracket);
+  requireCurTokenIs(tk_L_CurlyBracket);
+  advance(tk_L_CurlyBracket);
   skipLineBreaks();
 
   // circuit body
