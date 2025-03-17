@@ -29,6 +29,11 @@ namespace utils {
     extern template struct HelperCUDAKernels<double>;
   } // namespace internal
 
+/// @brief A helper class that relies on CUDA Runtime API to handle device data.
+/// Notice that if using \c CUDAKernelManager, \c CUDAKernelManager instances 
+/// must appear *before* any \c StatevectorCUDA instances, due to the order they
+/// are destructed.
+/// @tparam ScalarType 
 template<typename ScalarType>
 class StatevectorCUDA {
 private:
@@ -69,7 +74,9 @@ public:
     if (_dData != nullptr)
       freeDeviceData();
     if (_hData != nullptr)
-    freeHostData();
+      freeHostData();
+    assert(_dData == nullptr);
+    assert(_hData == nullptr);
   }
 
   StatevectorCUDA(const StatevectorCUDA&);

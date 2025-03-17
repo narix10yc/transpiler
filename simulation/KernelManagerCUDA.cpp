@@ -234,10 +234,10 @@ void CUDAKernelManager::launchCUDAKernel(
   CUdeviceptr dArrDevicePtr = (CUdeviceptr)dData;
   void* kernelParams[] = { &dData, &cMatPtr };
 
-  std::cerr << "Launching kernel <<<" << gridSize << ", " << blockSize << ">>>" << "\n";
-  std::cerr << "Kernel parameter " << (kernelParams[0])
-            << ", dArrDevicePtr = " << (void*)dArrDevicePtr
-            << ", &dArrDevicePtr = " << &dArrDevicePtr << "\n";
+  // std::cerr << "Launching kernel <<<" << gridSize << ", " << blockSize << ">>>" << "\n";
+  // std::cerr << "Kernel parameter " << (kernelParams[0])
+  //           << ", dArrDevicePtr = " << (void*)dArrDevicePtr
+  //           << ", &dArrDevicePtr = " << &dArrDevicePtr << "\n";
 
   auto cuResult = cuLaunchKernel(
     cuTuple.cuFunction, 
@@ -252,10 +252,6 @@ void CUDAKernelManager::launchCUDAKernel(
     std::cerr << RED("[CUDA Driver Error]:") << "Failed to launch kernel"
               << "<<<" << gridSize << ", " << blockSize << ">>>. Error code: "
               << cuResult << "\n"; 
-  }
-  cuResult = cuCtxSynchronize();
-  if (cuResult != CUDA_SUCCESS) {
-    std::cerr << RED("[CUDA Driver Error]:") << "Failed to call cuCtxSynchronize()\n";
   }
 }
 

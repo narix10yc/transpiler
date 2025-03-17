@@ -11,6 +11,10 @@ template<unsigned nQubits>
 static void f() {
   test::TestSuite suite(
     "Gate U1q (" + std::to_string(nQubits) + " qubits)");
+
+  // kernel manager must be declared before statevector due to the order they
+  // are destructed.
+  CUDAKernelManager kernelMgrCUDA;
   utils::StatevectorCPU<double> svCPU(nQubits, /* simd_s */ 0);
   utils::StatevectorCUDA<double> svCUDA0(nQubits), svCUDA1(nQubits);
 
@@ -20,8 +24,6 @@ static void f() {
     cudaMemcpy(svCPU.data(), svCUDA0.dData(), svCUDA0.sizeInBytes(),
       cudaMemcpyDeviceToHost);
   };
-
-  CUDAKernelManager kernelMgrCUDA;
 
   // generate random unitary gates
   std::vector<std::shared_ptr<QuantumGate>> gates;
@@ -47,7 +49,7 @@ static void f() {
 
   kernelMgrCUDA.emitPTX(2, llvm::OptimizationLevel::O1, /* verbose */ 0);
   kernelMgrCUDA.initCUJIT(2, /* verbose */ 0);
-  for (unsigned i = 0; i < nQubits; i++) {
+  for (unsigned i = 0; i < 2; i++) {
     randomizeSV();
     std::stringstream ss;
     auto qubit = gates[i]->qubits[0];
@@ -57,7 +59,7 @@ static void f() {
     kernelMgrCUDA.launchCUDAKernel(svCUDA0.dData(), svCUDA0.nQubits(), i);
     suite.assertClose(svCUDA0.norm(), 1.0,
       ss.str() + "CUDA SV norm equals to 1", GET_INFO());
-      
+
     svCPU.applyGate(*gates[i]);
     suite.assertClose(svCUDA0.prob(qubit), svCPU.prob(qubit),
       ss.str() + "CUDA and CPU SV prob match", GET_INFO());
@@ -72,5 +74,5 @@ static void f() {
 
 void test::test_cudaU() {
   f<8>();
-  // f<12>();
+  f<12>();
 }

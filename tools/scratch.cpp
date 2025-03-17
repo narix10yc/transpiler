@@ -27,12 +27,12 @@ int main() {
   kernelMgrCUDA.initCUJIT(2, 0);
 
   utils::StatevectorCUDA<float> svCUDA(6);
-  svCUDA.initialize();
-  // svCUDA.randomize();
+  // svCUDA.initialize();
+  svCUDA.randomize();
+  
+  // std::cerr << kernelMgrCUDA.getPTXString(0) << "\n";
+  
   svCUDA.sync();
-
-  std::cerr << kernelMgrCUDA.getPTXString(0) << "\n";
-
   utils::printArray(std::cerr, std::span(svCUDA.hData(), svCUDA.size())) << "\n";
   kernelMgrCUDA.launchCUDAKernel(svCUDA.dData(), svCUDA.nQubits(), 0);
 
@@ -40,6 +40,9 @@ int main() {
   utils::printArray(std::cerr, std::span(svCUDA.hData(), svCUDA.size())) << "\n";
 
   std::cerr << "Norm: " << svCUDA.norm() << "\n";
+
+  auto svCUDA2 = svCUDA;
+
   // cudaDeviceSynchronize();
   // std::cout << "Norm: " << svCUDA.norm() << std::endl;
 
