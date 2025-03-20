@@ -23,8 +23,9 @@
 # conda clean --all
 
 export llvm_root=`pwd`
+export llvm_version=19.1.0
 
-cmake -S llvm-project-19.1.0.src/llvm -G Ninja \
+cmake -S llvm-project-${llvm_version}.src/llvm -G Ninja \
 -B release-build \
 -DCMAKE_BUILD_TYPE=Release \
 -DLLVM_ENABLE_RTTI=ON \
@@ -36,9 +37,11 @@ cmake --build release-build
 
 cmake --install release-build --prefix "release-install"
 
-cmake -S llvm-project-19.1.0.src/llvm -G Ninja \
+cmake -S llvm-project-${llvm_version}.src/llvm -G Ninja \
 -B debug-build \
 -DCMAKE_BUILD_TYPE=Debug \
+-DCMAKE_BUILD_WITH_INSTALL_RPATH=ON \
+-DCMAKE_INSTALL_RPATH_USE_LINK_PATH=ON \
 -DLLVM_ENABLE_RTTI=ON \
 -DLLVM_TARGETS_TO_BUILD="Native;NVPTX" \
 -DCMAKE_C_COMPILER="$llvm_root/release-install/bin/clang" \
