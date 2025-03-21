@@ -1,55 +1,33 @@
 #include "cast/CostModel.h"
-#include "utils/CommandLine.h"
+#include "utils/iocolor.h"
+#include "llvm/Support/CommandLine.h"
 
 #include <fstream>
+namespace cl = llvm::cl;
 
 #define ERR_PRECISION 1
 #define ERR_FILENAME 2
 #define ERR_FILE_IO 3
 
-namespace cl = utils::cl;
+cl::opt<std::string>
+ArgOutputFilename("o", cl::desc("Output file name"), cl::Required);
 
-static bool parsePrecision(utils::StringRef clValue, int& valueToWriteOn) {
-  if (clValue.compare("32") == 0 || clValue.compare_ci("single") == 0 || 
-      clValue.compare("F32") == 0 || clValue.compare("f32") == 0) {
-    valueToWriteOn = 32;
-    return false;
-  }
-  if (clValue.compare("64") == 0 || clValue.compare_ci("double") == 0 || 
-      clValue.compare("F64") == 0 || clValue.compare("f64") == 0) {
-    valueToWriteOn = 64;
-    return false;
-  }
-  return true;
-}
+cl::opt<bool>
+ArgForceFilename("force-name",
+  cl::desc("Force output file name as it is, possibly not ending with .csv"),
+  cl::init(false));
 
-static auto&
-ArgOutputFilename = cl::registerArgument<std::string>("o")
-  .desc("Output file name")
-  .setOccurExactlyOnce();
+cl::opt<int>
+ArgPrecision("precision", cl::desc("Precision"), cl::init(64));
 
-static auto&
-ArgForceFilename = cl::registerArgument<bool>("force")
-  .desc("Force output filename as it is (possibly not ending with '.csv')")
-  .init(false);
+cl::opt<bool>
+ArgF32("f32", cl::Optional, cl::init(false));
 
-static auto&
-ArgPrecision = cl::registerArgument<int>("precision")
-  .desc("Specify precision (f32 or f64)")
-  .setParser(parsePrecision).setOccurAtMostOnce().init(-1);
-
-static auto&
-ArgF32 = cl::registerArgument<bool>("f32")
-  .desc("Use single-precision")
-  .init(false);
-
-static auto&
-ArgF64 = cl::registerArgument<bool>("f64")
-  .desc("Use double-precision")
-  .init(false);
+cl::opt<bool>
+ArgF64("f64", cl::Optional, cl::init(false));
 
 // return true on error
-static bool checkPrecisionArgsCollision() {
+static bool checkPrecisionArgsCollision(int& precision) {
   if (ArgF32 && ArgF64) {
     std::cerr << BOLDRED("[Error]: ")
               << "-f32 and -f64 cannot be set together.\n";
@@ -61,7 +39,7 @@ static bool checkPrecisionArgsCollision() {
                 << "Precision arguments contradict with each other.\n";
       return true;
     }
-    ArgPrecision.init(32);
+    precision = 32;
     return false;
   }
   if (ArgF64) {
@@ -70,7 +48,7 @@ static bool checkPrecisionArgsCollision() {
                 << "Precision arguments contradict with each other.\n";
       return true;
     }
-    ArgPrecision.init(64);
+    precision = 64;
     return false;
   }
   if (ArgPrecision != 32 && ArgPrecision != 64) {
@@ -78,32 +56,26 @@ static bool checkPrecisionArgsCollision() {
               << "Precision should be either 32 or 64.\n";
     return true;
   }
+  precision = ArgPrecision;
   return false;
 }
 
-static auto&
-ArgNQubits = cl::registerArgument<int>("nqubits")
-  .desc("Specify number of qubits")
-  .init(26).setOccurAtMostOnce();
+cl::opt<int>
+ArgNQubits("nqubits", cl::desc("Number of qubits"), cl::init(28));
 
-static auto&
-ArgNThreads = cl::registerArgument<int>("T")
-  .desc("Specify number of threads")
-  .setArgumentPrefix().setOccurExactlyOnce();
+cl::opt<int>
+ArgNThreads("T", cl::desc("Number of threads"), cl::Prefix, cl::Required);
 
-static auto&
-ArgOverwriteMode = cl::registerArgument<bool>("overwrite")
-  .desc("Overwrite the output file with new results")
-  .init(false);
+cl::opt<bool>
+ArgOverwriteMode("overwrite",
+  cl::desc("Overwrite the output file with new results"),
+  cl::init(false));
 
-static auto&
-ArgSimdS = cl::registerArgument<int>("simd-s")
-  .desc("simd_s").init(1);
+cl::opt<int>
+ArgSimdS("simd-s", cl::desc("simd_s"), cl::init(1));
 
-static auto&
-ArgNTests = cl::registerArgument<int>("N")
-  .desc("Specify number of tests to perform")
-  .setArgumentPrefix().setOccurExactlyOnce();
+cl::opt<int>
+ArgNTests("N", cl::desc("Number of tests"), cl::Prefix, cl::Required);
 
 using namespace cast;
 
@@ -122,11 +94,10 @@ bool checkFileName() {
 }
 
 int main(int argc, char** argv) {
-  cl::ParseCommandLineArguments(argc, argv);
-  if (checkPrecisionArgsCollision())
+  cl::ParseCommandLineOptions(argc, argv);
+  int precision;
+  if (checkPrecisionArgsCollision(precision))
     return ERR_PRECISION;
-  
-  cl::DisplayArguments();
   
   if (checkFileName())
     return ERR_FILENAME;
