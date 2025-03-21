@@ -90,20 +90,23 @@ int main(int argc, const char** argv) {
       kernelsNoFuse = kernelMgr.collectCPUKernelsFromCircuitGraph("graphNoFuse");
       for (const auto* kernel : kernelsNoFuse)
         opCountTotal += kernel->gate->opCount(1e-8);
-      std::cerr << "No-fuse total opCount: " << opCountTotal << "\n";
+      std::cerr << "No-fuse: nGates = " << kernelsNoFuse.size()
+                << "; opCount = " << opCountTotal << "\n";
     }
     opCountTotal = 0.0;
     kernelsNaiveFuse = kernelMgr.collectCPUKernelsFromCircuitGraph("graphNaiveFuse");
     for (const auto* kernel : kernelsNaiveFuse)
       opCountTotal += kernel->gate->opCount(1e-8);
-    std::cerr << "Naive-fuse total opCount: " << opCountTotal << "\n";
+    std::cerr << "Naive-fuse: nGates = " << kernelsNaiveFuse.size()
+              << "; opCount = " << opCountTotal << "\n";
 
     opCountTotal = 0.0;
     kernelAdaptiveFuse = kernelMgr.collectCPUKernelsFromCircuitGraph("graphAdaptiveFuse");
     for (const auto* kernel : kernelAdaptiveFuse)
       opCountTotal += kernel->gate->opCount(1e-8);
-    std::cerr << "Adaptive-fuse total opCount: " << opCountTotal << "\n";
-  }, "JIT compile kernels");
+    std::cerr << "Adaptive-fuse: nGates = " << kernelAdaptiveFuse.size()
+              << "; opCount = " << opCountTotal << "\n";
+    }, "JIT compile kernels");
 
   // Run kernels
   utils::StatevectorCPU<double> sv(graphNoFuse.nQubits, kernelGenConfig.simd_s);
