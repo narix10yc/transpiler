@@ -423,7 +423,7 @@ void PerformanceCache::runExperiments(
     addRandU(n);
   }
 
-  nQubitsWeights = {0, 1, 2, 3, 5, 5, 3, 0};
+  nQubitsWeights = {0, 1, 2, 3, 5, 5, 3, 2};
   int initialRuns = gates.size();
   for (int run = 0; run < nRuns - initialRuns; ++run) {
     float ratio = static_cast<float>(run) / (nRuns - initialRuns);

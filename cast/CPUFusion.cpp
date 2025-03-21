@@ -265,5 +265,5 @@ void cast::applyCPUGateFusion(
       ++it;
     }
     graph.squeeze();
-  } while (nFused > 0 && ++curMaxK < maxK);
+  } while (nFused > 0 && ++curMaxK <= maxK);
 }
