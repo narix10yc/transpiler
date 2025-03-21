@@ -29,6 +29,14 @@ ArgSimd_s("simd-s", cl::desc("simd s"), cl::init(1));
 cl::opt<bool>
 ArgRunNoFuse("run-no-fuse", cl::desc("Run no-fuse circuit"), cl::init(false));
 
+cl::opt<int>
+ArgNaiveMaxK("naive-max-k",
+  cl::desc("The max size of gates in naive fusion"), cl::init(3));
+
+cl::opt<int>
+ArgReplication("replication",
+  cl::desc("Number of replications"), cl::init(1));
+
 int main(int argc, const char** argv) {
   cl::ParseCommandLineOptions(argc, argv);
 
@@ -44,9 +52,8 @@ int main(int argc, const char** argv) {
   CPUFusionConfig fusionConfig = CPUFusionConfig::Aggressive;
   fusionConfig.precision = 64;
   fusionConfig.nThreads = ArgNThreads;
-  // NaiveCostModel costModel(3, 0, 1e-8);
 
-  NaiveCostModel naiveCostModel(5, -1, 1e-8);
+  NaiveCostModel naiveCostModel(ArgNaiveMaxK, -1, 1e-8);
   applyCPUGateFusion(fusionConfig, &naiveCostModel, graphNaiveFuse);
 
   auto cache = PerformanceCache::LoadFromCSV(ArgModelPath);
@@ -111,7 +118,7 @@ int main(int argc, const char** argv) {
   // Run kernels
   utils::StatevectorCPU<double> sv(graphNoFuse.nQubits, kernelGenConfig.simd_s);
   // sv.randomize();
-  timeit::Timer timer(/* replication */ 1);
+  timeit::Timer timer(ArgReplication);
   timeit::TimingResult tr;
 
   if (ArgRunNoFuse) {

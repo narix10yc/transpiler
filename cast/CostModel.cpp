@@ -14,7 +14,7 @@ double NaiveCostModel::computeSpeed(
     const QuantumGate& gate, int precision, int nThreads) const {
   if (gate.nQubits() > maxNQubits)
     return 1e-8;
-  if (gate.opCount(zeroTol) > maxOp)
+  if (maxOp > 0 && gate.opCount(zeroTol) > maxOp)
     return 1e-8;
 
   return 1.0;
