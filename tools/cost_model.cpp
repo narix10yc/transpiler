@@ -110,7 +110,6 @@ using namespace cast;
 bool checkFileName() {
   if (ArgForceFilename)
     return false;
-
   const std::string& fileName = ArgOutputFilename;
   if (fileName.length() > 4 && fileName.ends_with(".csv"))
     return false;

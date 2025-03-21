@@ -267,13 +267,13 @@ inline int opCount_p(const GateMatrix::p_matrix_t& mat, double zeroTol) {
 
 } // anonymous namespace
 
-int QuantumGate::opCount(double zeroTol) const {
+double QuantumGate::opCount(double zeroTol) const {
   if (opCountCache >= 0)
     return opCountCache;
 
   if (const auto* cMat = gateMatrix.getConstantMatrix())
-    return opCount_c(*cMat, zeroTol);
-  return opCount_p(gateMatrix.getParametrizedMatrix(), zeroTol);
+    return opCount_c(*cMat, zeroTol) * std::pow(2.0, -nQubits());
+  return opCount_p(gateMatrix.getParametrizedMatrix(), zeroTol) * std::pow(2.0, -nQubits());
 
   assert(false && "opCount only implemented for c and p matrices");
 

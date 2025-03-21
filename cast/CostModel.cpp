@@ -1,13 +1,11 @@
 #include "cast/CostModel.h"
 #include "cast/QuantumGate.h"
+#include "simulation/StatevectorCPU.h"
+#include "utils/Formats.h"
 #include "timeit/timeit.h"
 
 #include <fstream>
 #include <iomanip>
-#include <llvm/IR/InlineAsm.h>
-
-#include "simulation/StatevectorCPU.h"
-#include "utils/Formats.h"
 
 using namespace cast;
 using namespace llvm;
@@ -441,7 +439,7 @@ void PerformanceCache::runExperiments(
   }, "Code Generation");
 
   utils::timedExecute([&]() {
-    kernelMgr.initJIT(10, OptimizationLevel::O1,
+    kernelMgr.initJIT(nThreads, OptimizationLevel::O1,
       /* useLazyJIT */ false, /* verbose */ 1);
   }, "Initialize JIT Engine");
 

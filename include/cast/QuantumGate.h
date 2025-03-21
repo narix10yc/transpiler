@@ -11,7 +11,7 @@ namespace cast {
 /// - double: parameter value
 class QuantumGate {
 private:
-  mutable int opCountCache = -1;
+  mutable double opCountCache = -1.0;
 
 public:
   /// The canonical form of qubits is in ascending order
@@ -89,7 +89,7 @@ public:
   /// @brief B.lmatmul(A) will return AB. That is, gate B will be applied first.
   QuantumGate lmatmul(const QuantumGate& other) const;
 
-  int opCount(double zeroTol) const;
+  double opCount(double zeroTol) const;
 
   bool isConvertibleToUnitaryPermGate(double tolerance) const {
     return gateMatrix.isConvertibleToUnitaryPermMatrix(tolerance);
