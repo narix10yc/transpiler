@@ -1,11 +1,11 @@
-#define DEBUG_TYPE "fusion-cpu"
-#include "llvm/Support/Debug.h"
-// #define LLVM_DEBUG(X) X
-
 #include "cast/CircuitGraph.h"
 #include "cast/Fusion.h"
 
 #include "utils/iocolor.h"
+
+#define DEBUG_TYPE "fusion-cpu"
+#include "llvm/Support/Debug.h"
+// #define LLVM_DEBUG(X) X
 
 using namespace IOColor;
 using namespace cast;
@@ -202,28 +202,30 @@ int startFusion(
   // Check benefit
   double oldTime = 0.0;
   for (const auto& [block, iter] : fusedBlocks) {
-    oldTime += 1.0 / costModel->computeSpeed(
+    oldTime += costModel->computeGiBTime(
       *block->quantumGate, config.precision, config.nThreads);
   }
-  double newTime = 1.0 / costModel->computeSpeed(
+  double newTime = costModel->computeGiBTime(
     *fusedBlock->quantumGate, config.precision, config.nThreads);
   double benefit = oldTime / newTime - 1.0;
   LLVM_DEBUG(
     utils::printArray(std::cerr,
       llvm::ArrayRef(fusedBlocks.data(), fusedBlocks.size()),
       [](std::ostream& os, const TentativeFusedItem& item) {
-        os << item.block->id;
+        os << item.block->id << "(" << item.block->nQubits()
+           << "," << item.block->quantumGate->opCount(1e-8) << ")";
       });
-    std::cerr << " => " << fusedBlock->id << "; "
+    std::cerr << " => " << fusedBlock->id << "(" << fusedBlock->nQubits()
+              << "," << fusedBlock->quantumGate->opCount(1e-8) << "). "
               << "Benefit = " << benefit << "; ";
   );
 
   if (benefit < config.benefitMargin) {
     // undo this fusion
     LLVM_DEBUG(std::cerr << "Rejected\n");
-    LLVM_DEBUG(
-      graph.print(std::cerr << "-- Before Rejection --\n", 2) << "\n";
-    );
+    // LLVM_DEBUG(
+    //   graph.print(std::cerr << "-- Before Rejection --\n", 2) << "\n";
+    // );
     for (const auto& q : fusedBlock->quantumGate->qubits) {
       assert((*fusedIt)[q] == fusedBlock);
       (*fusedIt)[q] = nullptr;
@@ -232,9 +234,9 @@ int startFusion(
       for (const auto& q : block->quantumGate->qubits)
         (*iter)[q] = block;
     }
-    LLVM_DEBUG(
-      graph.print(std::cerr << "-- After Rejection --\n", 2) << "\n";
-    );
+    // LLVM_DEBUG(
+    //   graph.print(std::cerr << "-- After Rejection --\n", 2) << "\n";
+    // );
 
     graph.releaseGateBlock(fusedBlock);
     return 0;

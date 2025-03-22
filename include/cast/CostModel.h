@@ -21,7 +21,9 @@ class CostModel {
 public:
   virtual ~CostModel() = default;
 
-  virtual double computeSpeed(
+  /// @brief Compute the expected time it will take to simulate \c gate by 
+  /// updating each 1GiB of memory. 
+  virtual double computeGiBTime(
       const QuantumGate& gate, int precision, int nThreads) const = 0;
 };
 
@@ -36,7 +38,7 @@ public:
   NaiveCostModel(int maxNQubits, int maxOp, double zeroTol)
     : maxNQubits(maxNQubits), maxOp(maxOp), zeroTol(zeroTol) {}
 
-  double computeSpeed(
+  double computeGiBTime(
       const QuantumGate& gate, int precision, int nThreads) const override;
 };
 
@@ -45,38 +47,34 @@ public:
 class StandardCostModel : public CostModel {
   PerformanceCache* cache;
   double zeroTol;
-  double maxMemUpdateSpd;
+  // Minimum time it will take to update 1GiB memory. Calculated by
+  // 1.0 / bandwidth
+  double minGibTimeCap;
 
-  /// Collect memory update speeds for quick loading and lookup
-  struct UpdateSpeedCollection {
+  struct Item {
     int nQubits;
     int precision;
     int nThreads;
     int nData; // number of data points;
-    double totalTimePerOpCount;
+    double totalGibTimePerOpCount;
 
-    double getMemSpd(int opCount) const {
-      return static_cast<double>(nData) / (totalTimePerOpCount * opCount);
-    }
-
-    double getMemSpd(int opCount, double cap) const {
-      double spd = static_cast<double>(nData) / (totalTimePerOpCount * opCount);
-      return std::min(spd, cap);
+    double getAvgGibTimePerOpCount() const {
+      return totalGibTimePerOpCount / nData;
     }
   };
-  std::vector<UpdateSpeedCollection> updateSpeeds;
+  std::vector<Item> items;
 public:
   StandardCostModel(PerformanceCache* cache, double zeroTol = 1e-8);
 
   std::ostream& display(std::ostream& os, int nLines = 0) const;
 
-  double computeSpeed(
+  double computeGiBTime(
     const QuantumGate& gate, int precision, int nThreads) const override;
 };
 
 class AdaptiveCostModel : public CostModel {
 public:
-  double computeSpeed(
+  double computeGiBTime(
       const QuantumGate &gate, int precision, int nThreads) const override {
     assert(false && "Not Implemented");
     return 0.0;

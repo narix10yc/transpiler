@@ -10,89 +10,88 @@
 using namespace cast;
 using namespace llvm;
 
-double NaiveCostModel::computeSpeed(
+double NaiveCostModel::computeGiBTime(
     const QuantumGate& gate, int precision, int nThreads) const {
   if (gate.nQubits() > maxNQubits)
-    return 1e-8;
+    return 1.0;
   if (maxOp > 0 && gate.opCount(zeroTol) > maxOp)
-    return 1e-8;
+    return 1.0;
 
-  return 1.0;
+  return 0.0;
 }
 
 StandardCostModel::StandardCostModel(PerformanceCache* cache, double zeroTol)
-  : cache(cache), zeroTol(zeroTol), updateSpeeds() {
-  updateSpeeds.reserve(32);
+  : cache(cache), zeroTol(zeroTol), items() {
+  items.reserve(32);
 
-  for (const auto& item : cache->items) {
-    auto it = updateSpeeds.begin();
-    auto end = updateSpeeds.end();
-    while (it != end) {
-      if (it->nQubits == item.nQubits && it->precision == item.precision &&
-          it->nThreads == item.nThreads)
-        break;
-      ++it;
-    }
-    if (updateSpeeds.empty() || it == end)
-      updateSpeeds.emplace_back(
-        item.nQubits, item.precision, item.nThreads, 1,
-        1.0 / (item.opCount * item.memUpdateSpeed));
+  // loop through cache and initialize this->items
+  for (const auto& cacheItem : cache->items) {
+    auto it = std::ranges::find_if(this->items,
+      [&cacheItem](const Item& thisItem) {
+      return thisItem.nQubits == cacheItem.nQubits &&
+             thisItem.precision == cacheItem.precision &&
+             thisItem.nThreads == cacheItem.nThreads;
+    });
+    if (it == this->items.end())
+      // a new item
+      items.emplace_back(
+        cacheItem.nQubits, cacheItem.precision, cacheItem.nThreads,
+        1,  // nData
+        1.0 / (cacheItem.memUpdateSpeed * cacheItem.opCount) // totalGiBTimePerOpCount
+      ); 
     else {
       it->nData++;
-      it->totalTimePerOpCount += 1.0 / (item.opCount * item.memUpdateSpeed);
+      it->totalGibTimePerOpCount += 1.0 / (cacheItem.opCount * cacheItem.memUpdateSpeed);
     }
   }
 
   // initialize maxMemUpdateSpd
-  assert(!updateSpeeds.empty());
-  auto it = updateSpeeds.begin();
-  this->maxMemUpdateSpd = it->getMemSpd(4ULL << (2 * it->nQubits));
-  while (++it != updateSpeeds.end()) {
-    double itSpd = it->getMemSpd(4ULL << (2 * it->nQubits));
-    if (itSpd > maxMemUpdateSpd)
-      maxMemUpdateSpd = itSpd;
-  }
+  assert(!items.empty());
+  auto it = items.cbegin();
+  auto end = items.cend();
+  this->minGibTimeCap = 0.0;
 
   std::cerr << "StandardCostModel: "
-               "A total of " << updateSpeeds.size() << " items found!\n";
+               "A total of " << items.size() << " items found!\n";
 }
 
-double StandardCostModel::computeSpeed(
+double StandardCostModel::computeGiBTime(
     const QuantumGate& gate, int precision, int nThreads) const {
-  assert(!updateSpeeds.empty());
-  const auto gatenQubits = gate.nQubits();
-
+  assert(!items.empty());
+  const auto gateNQubits = gate.nQubits();
   auto gateOpCount = gate.opCount(zeroTol);
 
   // Try to find an exact match
-  for (const auto& item : updateSpeeds) {
-    if (item.nQubits == gatenQubits && item.precision == precision
-        && item.nThreads == nThreads) {
-      return item.getMemSpd(gateOpCount, maxMemUpdateSpd);
+  for (const auto& item : items) {
+    if (item.nQubits == gateNQubits &&
+        item.precision == precision &&
+        item.nThreads == nThreads) {
+      auto avg = std::max(item.getAvgGibTimePerOpCount(), this->minGibTimeCap);
+      return avg * gateOpCount;
     }
   }
 
   // No exact match. Estimate it
-  auto bestMatchIt = updateSpeeds.begin();
+  auto bestMatchIt = items.begin();
 
-  auto it = updateSpeeds.cbegin();
-  const auto end = updateSpeeds.cend();
+  auto it = items.cbegin();
+  const auto end = items.cend();
   while (++it != end) {
     // priority: nThreads > nQubits > precision
-    const int bestDiffNThreads = std::abs(nThreads - bestMatchIt->nThreads);
-    const int thisDiffNThreads = std::abs(nThreads - it->nThreads);
-    if (thisDiffNThreads > bestDiffNThreads)
+    const int bestNThreadsDiff = std::abs(nThreads - bestMatchIt->nThreads);
+    const int thisNThreadsDiff = std::abs(nThreads - it->nThreads);
+    if (thisNThreadsDiff > bestNThreadsDiff)
       continue;
-    if (thisDiffNThreads < bestDiffNThreads) {
+    if (thisNThreadsDiff < bestNThreadsDiff) {
       bestMatchIt = it;
       continue;
     }
 
-    const int bestDiffnQubits = std::abs(gatenQubits - bestMatchIt->nQubits);
-    const int thisDiffnQubits = std::abs(gatenQubits - it->nQubits);
-    if (thisDiffnQubits > bestDiffnQubits)
+    const int bestNQubitsDiff = std::abs(gateNQubits - bestMatchIt->nQubits);
+    const int thisNQubitsDiff = std::abs(gateNQubits - it->nQubits);
+    if (thisNQubitsDiff > bestNQubitsDiff)
       continue;
-    if (thisDiffnQubits < bestDiffnQubits) {
+    if (thisNQubitsDiff < bestNQubitsDiff) {
       bestMatchIt = it;
       continue;
     }
@@ -105,40 +104,40 @@ double StandardCostModel::computeSpeed(
     }
   }
 
-  int bestMatchOpCount = 4 << (2 * bestMatchIt->nQubits);
-  double memSpd = bestMatchIt->getMemSpd(bestMatchOpCount);
-  double estiMemSpd = memSpd * bestMatchOpCount * nThreads /
-    (gateOpCount * bestMatchIt->nThreads);
+  // best match avg GiB time per opCount
+  auto bestMatchT0 = bestMatchIt->getAvgGibTimePerOpCount();
+  // estimated avg Gib time per opCount
+  auto estT0 = bestMatchT0 * bestMatchIt->nThreads / nThreads;
+  auto estimateTime = std::max<double>(estT0, this->minGibTimeCap) * gateOpCount;
 
   std::cerr << YELLOW("Warning: ") << "No exact match to "
-               "[nQubits, opCount, Precision, nThreads] = ["
-            << gatenQubits << ", " << gateOpCount << ", "
+               "[nQubits, precision, nThreads] = ["
+            << gateNQubits << ", " << gateOpCount << ", "
             << precision << ", " << nThreads
             << "] found. We estimate it by ["
-            << bestMatchIt->nQubits << ", " << bestMatchOpCount << ", "
-            << bestMatchIt->precision << ", " << bestMatchIt->nThreads
-            << "] @ " << memSpd << " GiBps => "
-               "Est. " << estiMemSpd << " GiBps.\n";
+            << bestMatchIt->nQubits << ", " << bestMatchIt->precision
+            << ", " << bestMatchIt->nThreads
+            << "] @ " << bestMatchT0 << " s/GiB/op => "
+               "Est. " << estT0 << " s/GiB/op.\n";
 
-  return std::min(estiMemSpd, maxMemUpdateSpd);
+  return estimateTime;
 }
 
 std::ostream& StandardCostModel::display(std::ostream& os, int nLines) const {
   const int nLinesToDisplay = nLines > 0 ?
-    std::min<int>(nLines, updateSpeeds.size()) :
-    static_cast<int>(updateSpeeds.size());
+    std::min<int>(nLines, items.size()) :
+    static_cast<int>(items.size());
 
-  os << "Fastest Mem Spd: " << this->maxMemUpdateSpd << "\n";
-  os << "  nQubits | Precision | nThreads | MemSpd | Norm'ed Spd \n";
+  os << "Gib Time Cap: " << this->minGibTimeCap << " per op\n";
+  os << "  nQubits | Precision | nThreads | Dense MemSpd \n";
   for (int i = 0; i < nLinesToDisplay; ++i) {
-    int opCount = 1ULL << (2 * updateSpeeds[i].nQubits + 2);
-    double memSpd = updateSpeeds[i].getMemSpd(opCount);
-    double normedSpd = memSpd / opCount;
-    os << "    " << std::fixed << std::setw(2) << updateSpeeds[i].nQubits
-       << "    |    f" << updateSpeeds[i].precision
-       << "    |    " << updateSpeeds[i].nThreads
-       << "    |  " << utils::fmt_1_to_1e3(memSpd, 5)
-       << " |  " << utils::fmt_1_to_1e3(normedSpd, 5)
+    int denseOpCount = 1ULL << (items[i].nQubits + 1);
+    double GibTimePerOpCount = items[i].getAvgGibTimePerOpCount();
+    double denseMemSpd = 1.0 / (GibTimePerOpCount * denseOpCount);
+    os << "    " << std::fixed << std::setw(2) << items[i].nQubits
+       << "    |    f" << items[i].precision
+       << "    |    " << items[i].nThreads
+       << "    |    " << utils::fmt_1_to_1e3(denseMemSpd, 5)
        << "\n";
   }
 
