@@ -168,19 +168,19 @@ inline void displayProgressBar(float progress, int barWidth = 50) {
   if (progress > 1.0f) progress = 1.0f;
 
   // Print the progress bar
-  std::cout.put('[');
+  std::cerr.put('[');
   int i = 0;
   while (i < barWidth * progress) {
-    std::cout.put('=');
+    std::cerr.put('=');
     ++i;
   }
   while (i < barWidth) {
-    std::cout.put(' ');
+    std::cerr.put(' ');
     ++i;
   }
 
-  std::cout << "] " << static_cast<int>(progress * 100.0f) << " %\r";
-  std::cout.flush();
+  std::cerr << "] " << static_cast<int>(progress * 100.0f) << " %\r";
+  std::cerr.flush();
 }
 
 inline void displayProgressBar(int nFinished, int nTotal, int barWidth = 50) {

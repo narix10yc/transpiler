@@ -104,7 +104,7 @@ void CUDAKernelManager::emitPTX(
     });
   }
   if (verbose > 0)
-    std::cout << "Emitting PTX codes...\n";
+    std::cerr << "Emitting PTX codes...\n";
   dispatcher.sync(/* progressBar */ verbose > 0);
   jitState = JIT_PTXEmitted;
 }
@@ -209,7 +209,7 @@ void CUDAKernelManager::initCUJIT(int nThreads, int verbose) {
     });
   }
   if (verbose > 0)
-    std::cout << "Loading PTX codes and getting CUDA functions...\n";
+    std::cerr << "Loading PTX codes and getting CUDA functions...\n";
   dispatcher.sync(/* progressBar */ verbose > 0);
 
   jitState = JIT_CUFunctionLoaded;

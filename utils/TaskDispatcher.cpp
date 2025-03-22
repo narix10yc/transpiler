@@ -71,7 +71,7 @@ void TaskDispatcher::sync(bool progressBar) {
     });
   }
   if (progressBar)
-    std::cout << std::endl;
+    std::cerr << std::endl;
   cv.notify_all();
 }
 

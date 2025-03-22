@@ -75,6 +75,6 @@ void KernelManagerBase::applyLLVMOptimization(
     });
   }
   if (progressBar)
-    std::cout << "Applying LLVM Optimization....\n";
+    std::cerr << "Applying LLVM Optimization....\n";
   dispatcher.sync(progressBar);
 }

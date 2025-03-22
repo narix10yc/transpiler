@@ -58,7 +58,7 @@ void CPUKernelManager::ensureAllExecutable(int nThreads, bool progressBar) {
 	  });
   }
   if (progressBar)
-    std::cout << "Ensure All Executables...\n";
+    std::cerr << "Ensure All Executables...\n";
   dispatcher.sync(progressBar);
 }
 
